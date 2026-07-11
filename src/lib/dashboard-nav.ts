@@ -38,7 +38,10 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/rewards", label: "My rewards", icon: "🎁" },
   ],
   admin: [
-    { href: "/dashboard/admin", label: "Admin console", icon: "🛠️" },
+    { href: "/dashboard/admin", label: "Overview", icon: "📊" },
+    { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
+    { href: "/dashboard/admin/plans", label: "Plans", icon: "💳" },
+    { href: "/dashboard/admin/events", label: "Events", icon: "🎫" },
   ],
 };
 

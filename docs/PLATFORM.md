@@ -72,9 +72,12 @@ complements the concept doc and the 26 Jun 2026 scoping call.
 - _(roadmap)_ Payment automation, analytics/funnel, custom FAQs, feedback
 
 ### Admin  ✅ console built
-- Platform overview (counts across all entities)
-- Recent sponsor requests & sponsored events with status
-- _(roadmap)_ Deep management screens, customer queries, payments
+- Overview (counts across all entities, recent requests & sponsored events)
+- **Users** — manage roles, assign plans, activate/deactivate accounts
+- **Plans** — create/edit subscription tiers, activate/deactivate
+- **Events** — monitor listings & sponsored events (registered/verified counts),
+  override statuses
+- _(roadmap)_ Customer queries inbox, payments console
 
 ---
 

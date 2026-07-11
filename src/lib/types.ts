@@ -13,7 +13,24 @@ export interface Profile {
   id: string; // == auth.users.id
   role: Role;
   full_name: string | null;
+  email: string | null;
+  is_active: boolean;
+  plan_id: string | null;
   onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Plan {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price_gbp: number;
+  billing_interval: string;
+  features: string[] | null;
+  is_active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
