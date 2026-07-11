@@ -4,14 +4,19 @@
  * (supabase/migrations).
  */
 
+/** Roles a new user can pick at sign-up. */
 export const ROLES = ["brand", "artist", "event", "audience"] as const;
-export type Role = (typeof ROLES)[number];
+export type SignupRole = (typeof ROLES)[number];
+
+/** All roles a profile can hold (admin is assigned manually, not at sign-up). */
+export type Role = SignupRole | "admin";
 
 export const ROLE_LABELS: Record<Role, string> = {
   brand: "Brand / Sponsor",
   artist: "Artist",
   event: "Event Organiser",
   audience: "Audience",
+  admin: "Admin",
 };
 
 /** How a user answers the sign-up question "Are you an Artist/Event or Sponsor?" */

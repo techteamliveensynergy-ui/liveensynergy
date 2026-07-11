@@ -25,3 +25,14 @@ export async function requireProfile() {
 
   return { supabase, user, profile: profile as Profile | null };
 }
+
+/**
+ * Like requireProfile, but also redirects to the dashboard when the user's
+ * role is not in `allowed`. Use to scope a page to specific roles.
+ */
+export async function requireRole(allowed: readonly Profile["role"][]) {
+  const ctx = await requireProfile();
+  if (!ctx.profile) redirect("/onboarding");
+  if (!allowed.includes(ctx.profile.role)) redirect("/dashboard");
+  return { ...ctx, profile: ctx.profile };
+}

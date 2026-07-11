@@ -4,9 +4,13 @@ A performance-based sponsorship platform for live events. Brands fund real
 attendance, artists and organisers secure confirmed audiences, and fans get
 their tickets reimbursed through sponsor-funded rewards.
 
-This repository is the **MVP V1** and currently ships the **landing page,
-authentication, role-based onboarding, editable profiles, a responsive
-dashboard shell, and the full database schema**.
+This repository ships the working platform: **landing + marketing pages,
+role-first authentication, role-based onboarding, editable profiles, and the
+full dashboard loop** — brand campaigns, artist/event listings, event
+discovery, sponsor↔artist chat, the sponsored-event workspace (terms, dual
+agreement, participant selection → verification → reward release), audience
+participation & rewards, and an admin console — all backed by the Postgres
+schema with Row Level Security.
 
 ## Tech stack
 

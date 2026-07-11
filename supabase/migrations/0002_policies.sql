@@ -119,6 +119,12 @@ create policy "sponsored_events: parties or admin"
     )
   );
 
+-- Confirmed / completed events are readable by any signed-in user so the
+-- audience can discover them and see the events they've registered for.
+create policy "sponsored_events: public read confirmed"
+  on sponsored_events for select
+  using (status in ('confirmed', 'completed'));
+
 -- ---------------------------------------------------------------------------
 -- participations — audience owns their own; the event's artist & admin can read
 -- ---------------------------------------------------------------------------

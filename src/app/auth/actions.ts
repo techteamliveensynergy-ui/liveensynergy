@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES, type Role } from "@/lib/constants";
+import { ROLES, type SignupRole } from "@/lib/constants";
 
 export interface AuthState {
   error?: string;
@@ -21,7 +21,7 @@ export async function signUp(
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const role = String(formData.get("role") ?? "") as Role;
+  const role = String(formData.get("role") ?? "") as SignupRole;
 
   if (!fullName || !email || !password) {
     return { error: "Please fill in your name, email and password." };

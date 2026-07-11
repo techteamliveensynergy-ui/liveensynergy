@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/profile";
-import { ROLE_LABELS, type Role } from "@/lib/constants";
+import { ROLE_LABELS, type SignupRole } from "@/lib/constants";
 
-const QUICK_START: Record<Role, { href: string; title: string; body: string }[]> =
-  {
+const QUICK_START: Record<
+  SignupRole,
+  { href: string; title: string; body: string }[]
+> = {
     brand: [
       {
         href: "/dashboard/campaigns",
@@ -77,7 +80,8 @@ const QUICK_START: Record<Role, { href: string; title: string; body: string }[]>
 export default async function DashboardHome() {
   const { profile } = await requireProfile();
   const role = profile!.role;
-  const cards = QUICK_START[role];
+  if (role === "admin") redirect("/dashboard/admin");
+  const cards = QUICK_START[role as SignupRole];
 
   return (
     <div>

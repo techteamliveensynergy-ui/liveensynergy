@@ -49,38 +49,32 @@ complements the concept doc and the 26 Jun 2026 scoping call.
 - Messages / chat  _(roadmap)_
 - Settings  _(roadmap)_
 
-### Dashboard — Brand  _(roadmap; nav + placeholders in V1)_
-- Campaigns list + create/edit campaign proposal
-- Sponsored events (auto-linked from confirmed events)
-- Discover events available for sponsorship
+### Dashboard — Brand  ✅ built
+- Campaigns list + create/edit campaign proposal (with live fee/available-budget preview)
+- Discover events available for sponsorship + "Contact organiser" (starts a chat)
+- Sponsored events: create, agree terms, run participant selection/verification/reward
 
-### Dashboard — Artist / Event  _(roadmap; nav + placeholders in V1)_
-- My events (create listing, mark available for sponsorship)
-- Sponsor offers / incoming interest
-- Sponsored events (confirmation, terms, agreed checkboxes)
+### Dashboard — Artist / Event  ✅ built
+- My events (create listing, publish/unpublish for sponsorship, edit, delete)
+- Sponsor offers / incoming interest (brand enquiries + proposals to review)
+- Sponsored events (confirmation, terms, dual agreement)
 
-### Dashboard — Audience  _(roadmap; nav + placeholders in V1)_
-- Discover events
-- My events (participations)
-- My rewards (upload ticket proof, claim reimbursement)
+### Dashboard — Audience  ✅ built
+- Discover events (open sponsored events with reward rules)
+- My events (register, submit ticket proof, consent/payout preferences)
+- My rewards (verified attendance → released rewards, running total)
 
-### Sponsored Event workspace  _(roadmap)_
-- Event setup + link brand/artist profiles
+### Sponsored Event workspace  ✅ core built
+- Event setup + link brand/artist profiles & campaign
 - Sponsorship management (budget, remaining budget, reward rules)
-- Terms + dual agreement (brand & artist checkboxes)
-- Participant data (raw → selected), eligibility & selection
-- Verification (Step 1 ticket proof, Step 2 physical/QR)
-- Payment automation
-- Event analytics (participation rate, verified attendance, funnel, audience insights)
-- Custom FAQs, feedback & testimonials
+- Terms + dual agreement (brand & artist checkboxes → auto-confirm)
+- Participant selection → attendance verification → reward release
+- _(roadmap)_ Payment automation, analytics/funnel, custom FAQs, feedback
 
-### Admin  _(roadmap)_
-- Access to all dashboards
-- Events list & status
-- Reviewing sponsor requests / matching
-- Customer queries
-- Payments
-- Audience data management
+### Admin  ✅ console built
+- Platform overview (counts across all entities)
+- Recent sponsor requests & sponsored events with status
+- _(roadmap)_ Deep management screens, customer queries, payments
 
 ---
 
@@ -166,10 +160,15 @@ between participants, public insert on the contact form).
 
 ## 7. V1 status vs. roadmap
 
-**Shipped in V1:** landing + marketing pages, role-first auth, role-based
-onboarding, editable profiles, responsive dashboard shell with role-based
-sidebar, and the complete database schema with RLS.
+**Shipped:** landing + marketing pages, role-first auth, role-based onboarding,
+editable profiles, responsive dashboard with role-based sidebar, and the full
+working platform loop — brand campaigns, artist/event listings, discovery,
+sponsor↔artist chat, the sponsored-event workspace (terms, dual agreement,
+participant selection → verification → reward release), audience participation
+& rewards, and an admin console — all on the database schema with RLS.
 
-**Next up:** campaign creation, event listing management, the sponsored-event
-workspace (terms, selection, verification, payouts), sponsor↔artist chat,
-Stripe payments, storage-backed uploads, and the admin console.
+**Next up (integrations & polish):** Stripe payments (fund-in + payouts,
+optional virtual cards), KYC identity verification, storage-backed file uploads
+(logos, banners, ticket proof), realtime chat updates, QR/box-office attendance
+capture, transactional email templates, and analytics dashboards
+(funnel, participation, audience insights).

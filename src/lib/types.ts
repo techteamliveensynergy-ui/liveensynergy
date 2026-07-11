@@ -105,3 +105,110 @@ export interface AudienceMember {
   created_at: string;
   updated_at: string;
 }
+
+export type ListingStatus = "draft" | "available" | "matched" | "closed";
+export type ParticipationStatus =
+  | "registered"
+  | "ticket_uploaded"
+  | "attendance_verified"
+  | "reward_released"
+  | "rejected";
+
+export interface Campaign {
+  id: string;
+  brand_id: string;
+  reference: string;
+  description: string;
+  budget_gbp: number;
+  category: string | null;
+  category_other: string | null;
+  preferred_location: string | null;
+  preferred_timeline: string | null;
+  target_name: string | null;
+  reward_rules: string | null;
+  additional_info: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  status: CampaignStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventListing {
+  id: string;
+  reference: string;
+  owner_profile_id: string;
+  artist_id: string | null;
+  organiser_id: string | null;
+  name: string;
+  event_date: string | null;
+  venue_name: string | null;
+  city: string | null;
+  country: string | null;
+  category: string | null;
+  capacity: number | null;
+  ticket_price_gbp: number | null;
+  ticket_buy_url: string | null;
+  budget_range: string | null;
+  existing_sponsors: string | null;
+  sponsor_benefits: string | null;
+  status: ListingStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsoredEvent {
+  id: string;
+  reference: string;
+  brand_id: string | null;
+  campaign_id: string | null;
+  listing_id: string | null;
+  artist_profile_id: string | null;
+  name: string;
+  event_date: string | null;
+  venue_details: string | null;
+  location: string | null;
+  budget_gbp: number | null;
+  remaining_budget_gbp: number | null;
+  reward_rules: string | null;
+  terms: string | null;
+  brand_agreed: boolean;
+  artist_agreed: boolean;
+  participation_deadline: string | null;
+  status: SponsorshipStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Participation {
+  id: string;
+  sponsored_event_id: string;
+  audience_profile_id: string;
+  status: ParticipationStatus;
+  selected: boolean;
+  ticket_proof_url: string | null;
+  attendance_verified_at: string | null;
+  reward_amount_gbp: number | null;
+  reward_released_at: string | null;
+  newsletter_opt_in: boolean;
+  bank_details_provided: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  brand_profile_id: string;
+  partner_profile_id: string;
+  listing_id: string | null;
+  created_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_profile_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}

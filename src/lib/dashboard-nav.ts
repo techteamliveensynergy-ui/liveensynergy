@@ -37,6 +37,9 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/participations", label: "My events", icon: "🎟️" },
     { href: "/dashboard/rewards", label: "My rewards", icon: "🎁" },
   ],
+  admin: [
+    { href: "/dashboard/admin", label: "Admin console", icon: "🛠️" },
+  ],
 };
 
 export function navForRole(role: Role): NavItem[] {

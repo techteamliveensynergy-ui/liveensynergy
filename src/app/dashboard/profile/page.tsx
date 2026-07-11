@@ -18,6 +18,20 @@ export default async function ProfilePage() {
   const { profile } = await requireProfile();
   const role = profile!.role;
 
+  if (role === "admin") {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          Your profile
+        </h1>
+        <p className="mt-2 text-[var(--color-ink-soft)]">
+          Admin accounts don&apos;t have a public profile. Manage the platform
+          from the Admin console.
+        </p>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   const { data: record } = await supabase
     .from(ROLE_TABLE[role])
