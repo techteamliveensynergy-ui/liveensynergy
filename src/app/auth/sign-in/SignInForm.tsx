@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
@@ -50,6 +51,15 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
           required
         />
       </Field>
+
+      <div className="-mt-1 text-right">
+        <Link
+          href="/auth/forgot-password"
+          className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+        >
+          Forgot password?
+        </Link>
+      </div>
 
       <SubmitButton />
     </form>

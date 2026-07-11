@@ -88,3 +88,65 @@ export async function signOut() {
   revalidatePath("/", "layout");
   redirect("/");
 }
+
+export async function requestPasswordReset(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) {
+    return { error: "Please enter your email address." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl()}/auth/callback?next=/auth/reset-password`,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  // Don't reveal whether the email exists.
+  return {
+    message:
+      "If an account exists for that email, we've sent a link to reset your password.",
+  };
+}
+
+export async function updatePassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 8) {
+    return { error: "Your password must be at least 8 characters." };
+  }
+  if (password !== confirm) {
+    return { error: "Those passwords don't match." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // The reset link signs the user in via the callback; without a session the
+  // link has expired or was already used.
+  if (!user) {
+    return {
+      error:
+        "Your reset link has expired or already been used. Please request a new one.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}

@@ -31,6 +31,16 @@ export default async function SettingsPage() {
       </div>
 
       <div className="card p-6">
+        <h2 className="text-lg font-semibold">Password</h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Set a new password for your account.
+        </p>
+        <a href="/auth/reset-password" className="btn btn-ghost mt-4">
+          Change password
+        </a>
+      </div>
+
+      <div className="card p-6">
         <h2 className="text-lg font-semibold">Sign out</h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           Sign out of your Live-En-Synergy account on this device.
