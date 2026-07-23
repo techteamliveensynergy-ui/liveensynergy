@@ -46,5 +46,13 @@ const BY_ROLE: Record<Role, NavItem[]> = {
 };
 
 export function navForRole(role: Role): NavItem[] {
+  // Admins are redirected off /dashboard onto /dashboard/admin, so the shared
+  // "Overview" entry would be a dead duplicate of the admin one.
+  if (role === "admin") {
+    return [...BY_ROLE.admin, ...COMMON_BOTTOM];
+  }
   return [...COMMON_TOP, ...BY_ROLE[role], ...COMMON_BOTTOM];
 }
+
+/** Nav hrefs that should only highlight on an exact match, not for children. */
+export const EXACT_NAV_HREFS = new Set(["/dashboard", "/dashboard/admin"]);

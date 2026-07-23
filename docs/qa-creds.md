@@ -12,6 +12,12 @@ wired up in `.env.local` (project ref `oalqfzaejflgrtyfrrrb`).
 | Brand    | `brand.tester@example.com`      | `TestPass123!`  | Northwave Coffee            |
 | Artist   | `artist.tester@example.com`     | `TestPass123!`  | The Midnight Collective     |
 | Audience | `audience.tester@example.com`   | `TestPass123!`  | Priya Shah                  |
+| Admin    | `admin.tester@example.com`      | `TestPass123!`  | Sakshi Admin                |
+
+The **admin** account lands on `/dashboard/admin` and can manage every other
+account from `/dashboard/admin/users` — including blocking them. If you block
+one of the other test accounts, remember to restore it before re-running the
+automated suites, or their sign-in steps will fail.
 
 Sign in at `/auth/sign-in`. Brand/artist have a seeded campaign / event
 listing so the dashboard home, campaigns/events lists, and discover pages

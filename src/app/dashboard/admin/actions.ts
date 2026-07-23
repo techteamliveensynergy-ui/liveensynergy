@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES } from "@/lib/constants";
+import { ROLES, type Role } from "@/lib/constants";
+import {
+  ROLE_PROFILE_SPECS,
+  SOCIAL_FIELD_KEYS,
+  specFieldNames,
+} from "@/lib/admin-user-fields";
 
 export interface AdminState {
   error?: string;
@@ -17,6 +22,15 @@ function str(v: FormDataEntryValue | null): string | null {
 function num(v: FormDataEntryValue | null): number {
   const n = Number(String(v ?? "").trim());
   return Number.isFinite(n) ? n : 0;
+}
+/** Splits a comma / newline separated string into a trimmed array. */
+function toArray(v: FormDataEntryValue | null): string[] | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  return s
+    .split(/[,\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 /** Ensures the caller is an admin (RLS also enforces this at the DB layer). */
@@ -65,8 +79,105 @@ export async function toggleUserActive(formData: FormData) {
   const userId = str(formData.get("user_id"));
   const next = str(formData.get("next")) === "true";
   if (!userId) return;
-  await supabase.from("profiles").update({ is_active: next }).eq("id", userId);
+  await supabase
+    .from("profiles")
+    .update({
+      is_active: next,
+      blocked_at: next ? null : new Date().toISOString(),
+      blocked_reason: next ? null : str(formData.get("reason")),
+    })
+    .eq("id", userId);
   revalidatePath("/dashboard/admin/users");
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+}
+
+/** Account-level fields (name, email label, role, plan) on one form. */
+export async function updateUserAccount(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const { supabase } = await requireAdmin();
+  const userId = str(formData.get("user_id"));
+  if (!userId) return { error: "Missing user id." };
+
+  const role = str(formData.get("role"));
+  if (!role || !ALL_ROLES.includes(role as (typeof ALL_ROLES)[number])) {
+    return { error: "Pick a valid role." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: str(formData.get("full_name")),
+      email: str(formData.get("email")),
+      role,
+      plan_id: str(formData.get("plan_id")),
+      onboarding_completed:
+        String(formData.get("onboarding_completed") ?? "") === "on",
+    })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/admin/users");
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  return { success: true };
+}
+
+/**
+ * Saves a user's role-specific profile (brands / artists / event_organisers /
+ * audience_members), driven by ROLE_PROFILE_SPECS so one action covers all
+ * four tables. RLS already lets admins write these rows.
+ */
+export async function updateUserRoleProfile(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const { supabase } = await requireAdmin();
+  const userId = str(formData.get("user_id"));
+  const role = str(formData.get("role")) as Role | null;
+  if (!userId || !role) return { error: "Missing user id or role." };
+
+  const spec = ROLE_PROFILE_SPECS[role];
+  if (!spec) return { error: "This role has no editable profile." };
+
+  const payload: Record<string, unknown> = { profile_id: userId };
+
+  for (const field of specFieldNames(spec)) {
+    const raw = formData.get(field.name);
+    if (field.type === "checkbox") {
+      payload[field.name] = String(raw ?? "") === "on";
+    } else if (spec.arrayFields.includes(field.name)) {
+      payload[field.name] = toArray(raw);
+    } else {
+      payload[field.name] = str(raw);
+    }
+  }
+
+  if (!payload[spec.requiredField]) {
+    const label =
+      specFieldNames(spec).find((f) => f.name === spec.requiredField)?.label ??
+      spec.requiredField;
+    return { error: `${label} is required.` };
+  }
+
+  if (spec.hasSocials) {
+    const links: Record<string, string> = {};
+    for (const key of SOCIAL_FIELD_KEYS) {
+      const v = str(formData.get(`social_${key}`));
+      if (v) links[key] = v;
+    }
+    payload.social_links = Object.keys(links).length ? links : null;
+  }
+
+  const { error } = await supabase
+    .from(spec.table)
+    .upsert(payload, { onConflict: "profile_id" });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  return { success: true };
 }
 
 // --- Plans -----------------------------------------------------------------

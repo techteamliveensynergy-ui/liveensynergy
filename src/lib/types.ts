@@ -15,6 +15,11 @@ export interface Profile {
   full_name: string | null;
   email: string | null;
   is_active: boolean;
+  /** Audit trail for `is_active = false` (set by the admin console). */
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  /** Stamped by middleware, throttled to ~once every 5 minutes. */
+  last_seen_at: string | null;
   plan_id: string | null;
   onboarding_completed: boolean;
   created_at: string;

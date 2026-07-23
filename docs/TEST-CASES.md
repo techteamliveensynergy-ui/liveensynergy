@@ -159,17 +159,36 @@ Run against a clean DB (`participations`, `sponsored_events`, `event_listings`,
 | 9.3 | Non-participant cannot read a thread | RLS blocks | 🔲 |
 | 9.4 | Realtime updates | ⛔ Not wired — requires page refresh | ⛔ |
 
-## 10. Admin console
+## 10. Admin console & user management
 
 | # | Case | Expected | Status |
 |---|---|---|---|
-| 10.1 | Admin lands on `/dashboard/admin` | Non-admins redirected away | 🔲 |
-| 10.2 | Overview counts | Match DB totals | 🔲 |
-| 10.3 | Change a user's role | Persists; user's portal changes accordingly | 🔲 |
-| 10.4 | Deactivate a user | `is_active = false`; user sees "Account deactivated" and cannot use dashboard | 🔲 |
-| 10.5 | Create / edit / deactivate a plan | Persists in `plans` | 🔲 |
-| 10.6 | Assign a plan to a user | Persists | 🔲 |
-| 10.7 | Events monitor | Lists listings + sponsored events with counts | 🔲 |
+| 10.1 | Admin signs in | `/dashboard` routes on to `/dashboard/admin` | ✅ |
+| 10.2 | Users list | Every account listed with role, last seen, last login | ✅ |
+| 10.3 | Filter by user type | Only that role shown | ✅ |
+| 10.4 | Search by name / email | List narrows to matches | ✅ |
+| 10.5 | Filter by last-active bucket | today / week / month / inactive / never | ✅ |
+| 10.6 | User detail shows activity | Last seen, last login, joined, onboarding state | ✅ |
+| 10.7 | Admin edits account fields | Name / email label / role / plan / onboarding flag persist | ✅ |
+| 10.8 | Admin edits the role profile | All role-profile fields persist (brand/artist/event/audience) | ✅ |
+| 10.9 | Profile links surfaced | Website + socials shown as outbound links | 🔲 |
+| 10.10 | Non-admin hits `/dashboard/admin/*` | Redirected away | ✅ |
+| 10.11 | Overview counts | Match DB totals | 🔲 |
+| 10.12 | Create / edit / deactivate a plan | Persists in `plans` | 🔲 |
+| 10.13 | Events monitor | Lists listings + sponsored events with counts | 🔲 |
+
+## 10b. ⭐ Blocking enforcement (platform-wide)
+
+Enforced once in middleware so it covers every route, not per-page.
+
+| # | Case | Expected | Status |
+|---|---|---|---|
+| 10b.1 | Admin blocks a user with a reason | `is_active=false`, `blocked_at` + `blocked_reason` recorded | ✅ |
+| 10b.2 | Blocked user mid-session | Signed out and sent to `/auth/blocked` on their next navigation | ✅ |
+| 10b.3 | Blocked user tries to sign in | Rejected with an explanation; session torn back down | ✅ |
+| 10b.4 | Blocked user hits a protected URL directly | Cannot reach it | ✅ |
+| 10b.5 | Admin restores access | User can sign in and use the platform again | ✅ |
+| 10b.6 | Instant revocation of an *open idle tab* | ⛔ Needs the service-role key — currently the tab survives until the next request | ⛔ |
 
 ## 11. Security / access control (RLS)
 
@@ -219,9 +238,17 @@ re-run the core loop against a local dev server:
 ```bash
 # 1. Truncate transactional tables (participations, sponsored_events,
 #    event_listings, campaigns, conversations, messages)
-# 2. Ensure the three test accounts from qa-creds.md exist and are onboarded
-# 3. BASE=http://localhost:3000 node fullflow.mjs
+# 2. Ensure the test accounts from qa-creds.md exist and are onboarded,
+#    and that none of them are left blocked from a previous run
+# 3. BASE=http://localhost:3000 node fullflow.mjs   # 24 cross-role checks
+#    BASE=http://localhost:3000 node admin.mjs      # 17 admin + blocking checks
 ```
 
 Each step prints `PASS`/`FAIL` and writes a screenshot, so a failure points at
 the exact stage of the loop that broke.
+
+> **Do not run `npm run build` while `next dev` is running.** The build
+> rewrites `.next` underneath the dev server and corrupts its client bundle —
+> the symptom is `__webpack_require__.n is not a function` in the browser,
+> React failing to hydrate, and form fields vanishing mid-test (which looks
+> exactly like an app bug but isn't). Restart the dev server to recover.

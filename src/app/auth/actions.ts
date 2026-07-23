@@ -72,10 +72,31 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Blocked accounts must not get a usable session at all. The credentials
+  // were valid, so tear the session back down immediately.
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profile && profile.is_active === false) {
+      await supabase.auth.signOut();
+      return {
+        error:
+          "This account has been blocked. Please contact the Live·En·Synergy team if you think this is a mistake.",
+      };
+    }
   }
 
   revalidatePath("/", "layout");

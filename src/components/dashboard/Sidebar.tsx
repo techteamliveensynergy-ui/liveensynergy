@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
-import type { NavItem } from "@/lib/dashboard-nav";
+import { EXACT_NAV_HREFS, type NavItem } from "@/lib/dashboard-nav";
 
 interface SidebarProps {
   nav: NavItem[];
@@ -31,8 +31,8 @@ export function Sidebar({
   const pathname = usePathname();
 
   const isActive = (href: string) =>
-    href === "/dashboard"
-      ? pathname === "/dashboard"
+    EXACT_NAV_HREFS.has(href)
+      ? pathname === href
       : pathname.startsWith(href);
 
   const navList = (
