@@ -85,7 +85,7 @@ export default async function MessagesPage({
           <section className="card flex min-h-[420px] flex-col">
             {active ? (
               <>
-                <div className="border-b border-black/5 px-5 py-3">
+                <div className="border-b border-black/10 px-5 py-3">
                   <p className="font-semibold">
                     {active.event_listings?.name ?? "Direct message"}
                   </p>
@@ -119,7 +119,7 @@ export default async function MessagesPage({
                 </div>
                 <form
                   action={sendMessage}
-                  className="flex items-center gap-2 border-t border-black/5 p-3"
+                  className="flex items-center gap-2 border-t border-black/10 p-3"
                 >
                   <input
                     type="hidden"

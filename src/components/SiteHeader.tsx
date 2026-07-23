@@ -17,7 +17,7 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-black/5 bg-[var(--color-mist)]/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-[var(--color-mist)]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <Logo />
         <nav className="hidden items-center gap-1 md:flex">

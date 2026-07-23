@@ -181,7 +181,7 @@ export default async function SponsoredEventPage({
               {participations.map((p) => (
                 <div
                   key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/5 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 px-4 py-3"
                 >
                   <div>
                     <p className="text-sm font-semibold">

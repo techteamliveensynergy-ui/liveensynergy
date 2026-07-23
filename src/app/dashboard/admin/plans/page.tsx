@@ -64,7 +64,7 @@ export default async function AdminPlansPage() {
                   ))}
                 </ul>
               )}
-              <div className="mt-4 flex items-center gap-2 border-t border-black/5 pt-3">
+              <div className="mt-4 flex items-center gap-2 border-t border-black/10 pt-3">
                 <Link
                   href={`/dashboard/admin/plans/${p.id}`}
                   className="btn btn-ghost text-sm"

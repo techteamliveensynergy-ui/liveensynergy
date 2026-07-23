@@ -71,7 +71,7 @@ export function MetricTile({
   tint?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-black/5 p-5 ${tint}`}>
+    <div className={`rounded-2xl border border-black/10 p-5 shadow-sm ${tint}`}>
       <p className="text-xs text-[var(--color-ink-soft)]">{label}</p>
       <div className="mt-1.5 flex items-baseline gap-2">
         <span className="font-display text-3xl font-semibold text-[var(--color-ink)]">

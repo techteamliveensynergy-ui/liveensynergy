@@ -56,7 +56,7 @@ export function Sidebar({
   );
 
   const account = (
-    <div className="border-t border-black/5 p-4">
+    <div className="border-t border-black/10 p-4">
       <p className="truncate text-sm font-semibold">{userName}</p>
       <p className="truncate text-xs text-[var(--color-ink-soft)]">
         {userEmail}
@@ -72,7 +72,7 @@ export function Sidebar({
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-black/5 bg-white px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between border-b border-black/10 bg-white px-4 py-3 md:hidden">
         <Logo />
         <button
           type="button"
@@ -94,7 +94,7 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-black/5 bg-white transition-transform md:static md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-black/10 bg-white shadow-[2px_0_12px_-6px_rgba(44,36,34,0.18)] transition-transform md:static md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -103,7 +103,7 @@ export function Sidebar({
         </div>
         <div className="px-5 pb-4">
           {workspaceName ? (
-            <div className="flex items-center gap-2.5 rounded-2xl border border-black/5 bg-[var(--color-mist)] p-2.5">
+            <div className="flex items-center gap-2.5 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-2.5">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-ink)] font-serif text-base italic text-white">
                 {workspaceName.charAt(0).toUpperCase()}
               </div>

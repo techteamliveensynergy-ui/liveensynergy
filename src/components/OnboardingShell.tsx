@@ -17,7 +17,7 @@ export function OnboardingShell({
 }: OnboardingShellProps) {
   return (
     <div className="min-h-screen bg-[var(--color-mist)]">
-      <header className="border-b border-black/5 bg-white">
+      <header className="border-b border-black/10 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <Logo />
           <span className="chip">{ROLE_LABELS[role]} setup</span>

@@ -33,7 +33,7 @@ export default function AboutPage() {
         </div>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-black/5 bg-white p-5">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <p className="font-display text-xl font-semibold text-[var(--color-brand-dark)]">
               3-sided
             </p>
@@ -41,7 +41,7 @@ export default function AboutPage() {
               Marketplace model
             </p>
           </div>
-          <div className="rounded-2xl border border-black/5 bg-white p-5">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <p className="font-display text-xl font-semibold text-[var(--color-purple-deep)]">
               Verified
             </p>
@@ -49,7 +49,7 @@ export default function AboutPage() {
               Two-step attendance
             </p>
           </div>
-          <div className="rounded-2xl border border-black/5 bg-white p-5">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <p className="font-display text-xl font-semibold text-[var(--color-olive-deep)]">
               Transparent
             </p>
@@ -60,7 +60,7 @@ export default function AboutPage() {
         </div>
       </div>
 
-      <div className="border-t border-black/5 bg-white">
+      <div className="border-t border-black/10 bg-white">
         <div className="mx-auto grid max-w-5xl gap-4 px-5 py-16 sm:grid-cols-3">
           {[
             {

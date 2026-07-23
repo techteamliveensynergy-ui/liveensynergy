@@ -96,7 +96,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
                 <Link
                   key={l.id}
                   href={`/dashboard/events/${l.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/5 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
                 >
                   <div>
                     <p className="font-semibold text-[var(--color-ink)]">{l.name}</p>

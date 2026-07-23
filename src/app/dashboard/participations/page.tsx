@@ -137,7 +137,7 @@ export default async function ParticipationsPage() {
                 {p.selected && (
                   <form
                     action={provideConsent}
-                    className="mt-4 grid gap-2 rounded-xl border border-black/5 p-4 text-sm"
+                    className="mt-4 grid gap-2 rounded-xl border border-black/10 p-4 text-sm"
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <p className="font-semibold">You&apos;ve been selected 🎯</p>

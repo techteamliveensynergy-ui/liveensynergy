@@ -24,7 +24,7 @@ export function EventCard({ event }: { event: SampleEvent }) {
   });
 
   return (
-    <article className="rounded-3xl border border-black/5 bg-[#f2f0f6] p-3 shadow-sm transition hover:shadow-md">
+    <article className="rounded-3xl border border-black/10 bg-[#f2f0f6] p-3 shadow-sm transition hover:shadow-md">
       <div
         className={`grid h-36 place-items-center rounded-2xl font-serif text-sm ${well}`}
       >

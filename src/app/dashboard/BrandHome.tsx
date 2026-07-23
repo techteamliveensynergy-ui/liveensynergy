@@ -138,7 +138,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                   <Link
                     key={c.id}
                     href={`/dashboard/campaigns/${c.id}`}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/5 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
                   >
                     <div>
                       <p className="font-semibold text-[var(--color-ink)]">
