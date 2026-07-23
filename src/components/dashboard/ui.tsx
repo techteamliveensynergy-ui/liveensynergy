@@ -14,7 +14,7 @@ export function PageHeader({
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)] md:text-3xl">
           {title}
         </h1>
         {subtitle && (
@@ -45,7 +45,7 @@ export function EmptyState({
       <div className="text-4xl" aria-hidden>
         {icon}
       </div>
-      <h2 className="mt-3 text-lg font-semibold">{title}</h2>
+      <h2 className="mt-3 text-lg font-semibold text-[var(--color-ink)]">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-ink-soft)]">
         {body}
       </p>
@@ -58,23 +58,52 @@ export function EmptyState({
   );
 }
 
+/** Dashboard-home metric tile — value + label on a tinted card. */
+export function MetricTile({
+  label,
+  value,
+  hint,
+  tint = "bg-[var(--color-mist)]",
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  tint?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border border-black/5 p-5 ${tint}`}>
+      <p className="text-xs text-[var(--color-ink-soft)]">{label}</p>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <span className="font-display text-3xl font-semibold text-[var(--color-ink)]">
+          {value}
+        </span>
+      </div>
+      {hint && (
+        <p className="mt-1 text-xs font-medium text-[var(--color-ink-soft)]">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const STATUS_STYLES: Record<string, string> = {
-  in_progress: "bg-amber-100 text-amber-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  closed: "bg-gray-200 text-gray-700",
-  draft: "bg-gray-200 text-gray-700",
-  available: "bg-green-100 text-green-800",
-  matched: "bg-blue-100 text-blue-800",
-  registered: "bg-amber-100 text-amber-800",
-  ticket_uploaded: "bg-blue-100 text-blue-800",
-  attendance_verified: "bg-indigo-100 text-indigo-800",
-  reward_released: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-700",
+  in_progress: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  confirmed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  completed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  closed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
+  draft: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
+  available: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  matched: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  registered: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  ticket_uploaded: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  attendance_verified: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  reward_released: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  rejected: "bg-[var(--color-pink)] text-[var(--color-accent)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_STYLES[status] ?? "bg-gray-100 text-gray-700";
+  const cls = STATUS_STYLES[status] ?? "bg-[var(--color-mist)] text-[var(--color-ink-soft)]";
   const label = status.replace(/_/g, " ");
   return (
     <span

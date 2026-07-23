@@ -1,14 +1,22 @@
 import type { SampleEvent } from "@/lib/sample-events";
 
-const GRADIENTS: Record<string, string> = {
-  Music: "from-[var(--color-brand)] to-[var(--color-accent)]",
-  Comedy: "from-[var(--color-gold)] to-[var(--color-accent)]",
-  "Visual Artists": "from-[var(--color-accent)] to-[var(--color-brand)]",
-  default: "from-[var(--color-brand)] to-[var(--color-ink)]",
+const WELL_TINTS: Record<string, string> = {
+  Music: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  Comedy: "bg-[var(--color-pink)] text-[var(--color-accent)]",
+  "Visual Artists": "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  default: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
+};
+
+const CHIP_TINTS: Record<string, string> = {
+  Music: "bg-[var(--color-purple)] text-white",
+  Comedy: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  "Visual Artists": "bg-[var(--color-olive)] text-white",
+  default: "bg-[var(--color-ink)] text-white",
 };
 
 export function EventCard({ event }: { event: SampleEvent }) {
-  const gradient = GRADIENTS[event.category] ?? GRADIENTS.default;
+  const well = WELL_TINTS[event.category] ?? WELL_TINTS.default;
+  const chip = CHIP_TINTS[event.category] ?? CHIP_TINTS.default;
   const dateLabel = new Date(event.date).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -16,22 +24,32 @@ export function EventCard({ event }: { event: SampleEvent }) {
   });
 
   return (
-    <article className="card overflow-hidden">
-      <div className={`h-36 bg-gradient-to-br ${gradient}`} />
-      <div className="space-y-3 p-5">
+    <article className="rounded-3xl border border-black/5 bg-[#f2f0f6] p-3 shadow-sm transition hover:shadow-md">
+      <div
+        className={`grid h-36 place-items-center rounded-2xl font-serif text-sm ${well}`}
+      >
+        event image
+      </div>
+      <div className="space-y-3 p-3">
         <div className="flex items-center justify-between">
-          <span className="chip">{event.category}</span>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${chip}`}
+          >
+            {event.category}
+          </span>
           <span className="text-xs text-[var(--color-ink-soft)]">
             {dateLabel}
           </span>
         </div>
         <div>
-          <h3 className="text-lg font-semibold">{event.name}</h3>
+          <h3 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+            {event.name}
+          </h3>
           <p className="text-sm text-[var(--color-ink-soft)]">
             {event.artist} · {event.city}, {event.country}
           </p>
         </div>
-        <div className="rounded-xl bg-[var(--color-mist)] px-3 py-2 text-sm">
+        <div className="rounded-xl bg-white px-3 py-2 text-sm">
           <span className="font-semibold text-[var(--color-brand-dark)]">
             Reward:
           </span>{" "}
@@ -41,7 +59,9 @@ export function EventCard({ event }: { event: SampleEvent }) {
           <span className="text-[var(--color-ink-soft)]">
             Ticket £{event.ticketPriceGbp}
           </span>
-          <span className="font-semibold">{event.budgetRange}</span>
+          <span className="font-semibold text-[var(--color-ink)]">
+            {event.budgetRange}
+          </span>
         </div>
       </div>
     </article>

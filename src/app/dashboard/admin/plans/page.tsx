@@ -39,7 +39,7 @@ export default async function AdminPlansPage() {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">{p.name}</h3>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.is_active ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.is_active ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
                 >
                   {p.is_active ? "Active" : "Inactive"}
                 </span>

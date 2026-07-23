@@ -4,12 +4,14 @@ export function Pricing() {
       <div className="mx-auto max-w-6xl px-5 py-20">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <span className="chip">Simple, transparent pricing</span>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            <span className="rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white">
+              Simple, transparent pricing
+            </span>
+            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight md:text-4xl">
               No minimum sponsorship budget
             </h2>
             <p className="mt-4 text-lg text-white/70">
-              There&apos;s no minimum amount you can allocate. Live-En-Synergy
+              There&apos;s no minimum amount you can allocate. Live·En·Synergy
               charges a minimum of{" "}
               <span className="font-semibold text-white">£315 + VAT</span> or{" "}
               <span className="font-semibold text-white">9% + VAT</span> of the

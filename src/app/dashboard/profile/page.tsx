@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   if (role === "admin") {
     return (
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--color-ink)] md:text-3xl">
           Your profile
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
@@ -42,7 +42,8 @@ export default async function ProfilePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+        <p className="font-serif text-[var(--color-ink-soft)]">Your workspace</p>
+        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-[var(--color-ink)] md:text-3xl">
           Your profile
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">

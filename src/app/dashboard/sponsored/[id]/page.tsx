@@ -190,7 +190,7 @@ export default async function SponsoredEventPage({
                     <div className="mt-1 flex items-center gap-2">
                       <StatusBadge status={p.status} />
                       {p.selected && (
-                        <span className="text-xs text-green-700">selected</span>
+                        <span className="text-xs text-[var(--color-olive-deep)]">selected</span>
                       )}
                     </div>
                   </div>
@@ -251,7 +251,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {
   return (
     <div
-      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${agreed ? "bg-green-50 text-green-800" : "bg-gray-50 text-gray-600"}`}
+      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${agreed ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
     >
       <span className="font-medium">{label}</span>
       <span>{agreed ? "✓ Agreed" : "Pending"}</span>
@@ -279,7 +279,7 @@ function ParticipationBtn({
       <input type="hidden" name="op" value={op} />
       <button
         type="submit"
-        className={`btn btn-ghost text-sm ${danger ? "text-red-600" : ""}`}
+        className={`btn btn-ghost text-sm ${danger ? "text-[var(--color-accent)]" : ""}`}
       >
         {label}
       </button>

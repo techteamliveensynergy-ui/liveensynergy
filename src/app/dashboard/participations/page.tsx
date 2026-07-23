@@ -69,7 +69,7 @@ export default async function ParticipationsPage() {
                     <input type="hidden" name="id" value={p.id} />
                     <button
                       type="submit"
-                      className="btn btn-ghost text-sm text-red-600"
+                      className="btn btn-ghost text-sm text-[var(--color-accent)]"
                     >
                       Withdraw
                     </button>
@@ -118,13 +118,13 @@ export default async function ParticipationsPage() {
                 )}
 
                 {p.status === "attendance_verified" && (
-                  <p className="mt-4 text-sm text-indigo-700">
+                  <p className="mt-4 text-sm text-[var(--color-purple-deep)]">
                     🎉 Attendance verified — your reward is being processed.
                   </p>
                 )}
 
                 {p.status === "reward_released" && (
-                  <p className="mt-4 text-sm text-green-700">
+                  <p className="mt-4 text-sm text-[var(--color-olive-deep)]">
                     💸 Reward released
                     {p.reward_amount_gbp != null
                       ? `: £${Number(p.reward_amount_gbp).toLocaleString("en-GB")}`

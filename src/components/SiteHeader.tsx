@@ -17,15 +17,15 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+    <header className="sticky top-0 z-50 border-b border-black/5 bg-[var(--color-mist)]/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <Logo />
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-brand)]"
+              className="rounded-full px-3.5 py-2 text-sm font-medium text-[var(--color-ink)] transition hover:bg-black/[0.04]"
             >
               {item.label}
             </Link>
@@ -42,7 +42,7 @@ export async function SiteHeader() {
                 Sign in
               </Link>
               <Link href="/auth/sign-up" className="btn btn-primary">
-                Get started
+                Join us
               </Link>
             </>
           )}

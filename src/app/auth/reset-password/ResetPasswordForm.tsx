@@ -23,7 +23,7 @@ export function ResetPasswordForm() {
   return (
     <form action={formAction} className="space-y-4">
       {state.error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
           {state.error}
         </p>
       )}

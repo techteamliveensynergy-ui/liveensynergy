@@ -29,18 +29,18 @@ const LINKS: { heading: string; items: { href: string; label: string }[] }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-black/5 bg-[var(--color-mist)]">
-      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="bg-[var(--color-ink)] text-[#fcf7f0]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Logo />
-          <p className="mt-3 max-w-xs text-sm text-[var(--color-ink-soft)]">
-            A performance-based sponsorship ecosystem for live events — where
-            brands, artists and audiences all win.
+          <Logo light />
+          <p className="mt-4 max-w-xs text-sm text-white/60">
+            Turning sponsorship into something everyone actually wins — for
+            brands, artists and the audiences who show up.
           </p>
         </div>
         {LINKS.map((col) => (
           <div key={col.heading}>
-            <h4 className="text-sm font-semibold text-[var(--color-ink)]">
+            <h4 className="font-display text-sm font-semibold text-white">
               {col.heading}
             </h4>
             <ul className="mt-3 space-y-2">
@@ -48,7 +48,7 @@ export function SiteFooter() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-brand)]"
+                    className="text-sm text-white/60 hover:text-[var(--color-brand-soft)]"
                   >
                     {item.label}
                   </Link>
@@ -58,9 +58,9 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="border-t border-black/5">
-        <p className="mx-auto max-w-6xl px-5 py-5 text-xs text-[var(--color-ink-soft)]">
-          © {new Date().getFullYear()} Live-En-Synergy. All rights reserved.
+      <div className="border-t border-white/10">
+        <p className="mx-auto max-w-6xl px-5 py-5 text-xs text-white/40">
+          © {new Date().getFullYear()} Live·En·Synergy. All rights reserved.
         </p>
       </div>
     </footer>

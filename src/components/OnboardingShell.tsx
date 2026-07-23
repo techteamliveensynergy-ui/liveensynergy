@@ -25,7 +25,10 @@ export function OnboardingShell({
       </header>
       <main className="mx-auto max-w-3xl px-5 py-10">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          <p className="font-serif text-sm text-[var(--color-ink-soft)]">
+            Phase 2 · onboarding
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-3xl">
             {title}
           </h1>
           <p className="mt-2 text-[var(--color-ink-soft)]">{subtitle}</p>
@@ -40,16 +43,26 @@ export function OnboardingShell({
 export function FormSection({
   title,
   description,
+  private: isPrivate,
   children,
 }: {
   title: string;
   description?: string;
+  /** Marks the section as internal-only (matching engine, not public profile). */
+  private?: boolean;
   children: ReactNode;
 }) {
   return (
     <section className="card p-6">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        {isPrivate && (
+          <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-lavender)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-purple-deep)]">
+            🔒 Private · Live·En·Synergy team only
+          </span>
+        )}
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          {title}
+        </h2>
         {description && (
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             {description}

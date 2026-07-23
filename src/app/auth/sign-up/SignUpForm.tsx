@@ -3,8 +3,12 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
-import { SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
+import { ROLES, SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
 import { signUp, type AuthState } from "../actions";
+
+function isRole(value: string | undefined): value is Role {
+  return !!value && (ROLES as readonly string[]).includes(value);
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -15,14 +19,15 @@ function SubmitButton() {
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ initialRole }: { initialRole?: string }) {
   const [state, formAction] = useActionState<AuthState, FormData>(signUp, {});
-  const [role, setRole] = useState<Role | "">("");
-  const [step, setStep] = useState<1 | 2>(1);
+  const preset = isRole(initialRole) ? initialRole : "";
+  const [role, setRole] = useState<Role | "">(preset);
+  const [step, setStep] = useState<1 | 2>(preset ? 2 : 1);
 
   if (state.message) {
     return (
-      <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+      <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
         {state.message}
       </p>
     );
@@ -47,7 +52,7 @@ export function SignUpForm() {
                   onClick={() => setRole(opt.value)}
                   className={`rounded-xl border p-4 text-left transition ${
                     active
-                      ? "border-[var(--color-brand)] bg-[var(--color-mist)] ring-2 ring-[var(--color-brand)]/30"
+                      ? "border-[var(--color-brand)] bg-[var(--color-gold)]/40 ring-2 ring-[var(--color-brand)]/30"
                       : "border-black/10 hover:border-[var(--color-brand)]/50"
                   }`}
                 >
@@ -96,7 +101,7 @@ export function SignUpForm() {
       </div>
 
       {state.error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
           {state.error}
         </p>
       )}

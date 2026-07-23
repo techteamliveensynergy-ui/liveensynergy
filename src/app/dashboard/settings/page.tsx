@@ -43,7 +43,7 @@ export default async function SettingsPage() {
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Sign out</h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Sign out of your Live-En-Synergy account on this device.
+          Sign out of your Live·En·Synergy account on this device.
         </p>
         <form action="/auth/sign-out" method="post" className="mt-4">
           <button type="submit" className="btn btn-ghost">

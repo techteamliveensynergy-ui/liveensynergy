@@ -2,42 +2,91 @@ export const metadata = { title: "About us" };
 
 export default function AboutPage() {
   return (
-    <article className="mx-auto max-w-3xl px-5 py-16">
-      <span className="chip">About us</span>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-        Creating a better sponsorship ecosystem
-      </h1>
-      <div className="mt-6 space-y-4 text-[var(--color-ink-soft)]">
-        <p>
-          Traditional sponsorship flows straight from a brand to an artist or
-          event. Live-En-Synergy brings a third party into that relationship —
-          the audience — and aligns the interests of everyone involved.
-        </p>
-        <p>
-          Brands gain measurable engagement and verified outcomes. Artists and
-          organisers gain sponsorship funding and stronger, confirmed
-          attendance. Audiences receive tangible value and enhanced experiences,
-          from ticket reimbursements to exclusive sponsor-funded rewards.
-        </p>
-        <p>
-          By transforming sponsorship into a performance-based engagement model,
-          we create a more transparent, accountable and effective ecosystem for
-          live events — so promising events don&apos;t get cancelled at the last
-          minute, and every pound of sponsorship drives real engagement.
-        </p>
+    <article className="bg-[var(--color-mist)]">
+      <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
+        <span className="chip">Our story</span>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-5xl">
+          Sponsorship, <span className="font-serif font-normal">re-imagined</span>.
+        </h1>
+        <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-[var(--color-ink-soft)] md:text-base">
+          <p>
+            Live·En·Synergy was born from a simple frustration: sponsorship
+            rarely reaches the audience. Traditional sponsorship flows straight
+            from a brand to an artist or event — the people actually showing up
+            never see a penny of it.
+          </p>
+          <p>
+            We rebuilt it as a three-sided marketplace so brands can fund what
+            matters, artists fill the room, and audiences get real value for
+            showing up. Brands gain measurable engagement and verified
+            outcomes. Artists and organisers gain sponsorship funding and
+            stronger, confirmed attendance. Audiences receive tangible value —
+            from ticket reimbursements to exclusive sponsor-funded rewards.
+          </p>
+          <p>
+            By turning sponsorship into a performance-based engagement model,
+            we create a more transparent, accountable and effective ecosystem
+            for live events — so promising events don&apos;t get cancelled at
+            the last minute, and every pound of sponsorship drives real
+            engagement.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-black/5 bg-white p-5">
+            <p className="font-display text-xl font-semibold text-[var(--color-brand-dark)]">
+              3-sided
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Marketplace model
+            </p>
+          </div>
+          <div className="rounded-2xl border border-black/5 bg-white p-5">
+            <p className="font-display text-xl font-semibold text-[var(--color-purple-deep)]">
+              Verified
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Two-step attendance
+            </p>
+          </div>
+          <div className="rounded-2xl border border-black/5 bg-white p-5">
+            <p className="font-display text-xl font-semibold text-[var(--color-olive-deep)]">
+              Transparent
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Flat pricing
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-3">
-        {[
-          { k: "Brands", v: "Measurable engagement & verified outcomes" },
-          { k: "Artists", v: "Funding & confirmed attendance" },
-          { k: "Audiences", v: "Rewards & reimbursed tickets" },
-        ].map((x) => (
-          <div key={x.k} className="rounded-2xl bg-[var(--color-mist)] p-5">
-            <p className="font-semibold">{x.k}</p>
-            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{x.v}</p>
-          </div>
-        ))}
+      <div className="border-t border-black/5 bg-white">
+        <div className="mx-auto grid max-w-5xl gap-4 px-5 py-16 sm:grid-cols-3">
+          {[
+            {
+              k: "Brands",
+              v: "Measurable engagement & verified outcomes",
+              tint: "bg-[var(--color-gold)]",
+            },
+            {
+              k: "Artists",
+              v: "Funding & confirmed attendance",
+              tint: "bg-[var(--color-lavender)]",
+            },
+            {
+              k: "Audiences",
+              v: "Rewards & reimbursed tickets",
+              tint: "bg-[var(--color-sage)]",
+            },
+          ].map((x) => (
+            <div key={x.k} className={`rounded-2xl p-6 ${x.tint}`}>
+              <p className="font-display font-semibold text-[var(--color-ink)]">
+                {x.k}
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-ink)]/75">{x.v}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </article>
   );

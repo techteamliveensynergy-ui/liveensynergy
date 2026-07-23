@@ -105,7 +105,8 @@ export function EventForm({
 
       <FormSection
         title="Additional information"
-        description="For internal use only — not shown publicly."
+        description="Helps our team match you with the right sponsors — not shown publicly."
+        private
       >
         <Field
           label="Existing partners / sponsors"

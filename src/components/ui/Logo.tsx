@@ -1,17 +1,16 @@
 import Link from "next/link";
 
-/** Live-En-Synergy wordmark. */
+/** Live·En·Synergy wordmark lockup. */
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <Link href="/" className="inline-flex items-center gap-2 font-bold text-lg">
+    <Link href="/" className="inline-flex items-baseline gap-1 text-xl leading-none">
       <span
-        aria-hidden
-        className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--color-brand)] text-white text-sm"
+        className={`font-serif italic ${light ? "text-white" : "text-[var(--color-ink)]"}`}
       >
-        LE
+        Live·En·
       </span>
-      <span className={light ? "text-white" : "text-[var(--color-ink)]"}>
-        Live-En-Synergy
+      <span className="font-display font-bold tracking-tight text-[var(--color-brand)]">
+        Synergy
       </span>
     </Link>
   );

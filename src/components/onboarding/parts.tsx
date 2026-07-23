@@ -17,7 +17,7 @@ export function OnboardingSubmit({ label }: { label: string }) {
 export function ErrorBanner({ error }: { error?: string }) {
   if (!error) return null;
   return (
-    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+    <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
       {error}
     </p>
   );
@@ -26,7 +26,7 @@ export function ErrorBanner({ error }: { error?: string }) {
 export function SuccessBanner({ show }: { show?: boolean }) {
   if (!show) return null;
   return (
-    <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+    <p className="rounded-lg bg-[var(--color-sage)] px-3 py-2 text-sm text-[var(--color-olive-deep)]">
       Your changes have been saved.
     </p>
   );

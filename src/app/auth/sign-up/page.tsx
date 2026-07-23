@@ -4,7 +4,13 @@ import { SignUpForm } from "./SignUpForm";
 
 export const metadata = { title: "Create your account" };
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
+  const { role } = await searchParams;
+
   return (
     <AuthShell
       title="Create your account"
@@ -21,7 +27,7 @@ export default function SignUpPage() {
         </>
       }
     >
-      <SignUpForm />
+      <SignUpForm initialRole={role} />
     </AuthShell>
   );
 }

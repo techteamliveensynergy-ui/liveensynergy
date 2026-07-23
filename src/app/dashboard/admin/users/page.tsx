@@ -63,7 +63,7 @@ export default async function AdminUsersPage() {
                 />
                 <button
                   type="submit"
-                  className={`btn btn-ghost text-sm ${u.is_active ? "text-red-600" : "text-green-700"}`}
+                  className={`btn btn-ghost text-sm ${u.is_active ? "text-[var(--color-accent)]" : "text-[var(--color-olive-deep)]"}`}
                 >
                   {u.is_active ? "Deactivate" : "Reactivate"}
                 </button>

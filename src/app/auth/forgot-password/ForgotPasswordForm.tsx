@@ -22,7 +22,7 @@ export function ForgotPasswordForm() {
 
   if (state.message) {
     return (
-      <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+      <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
         {state.message}
       </p>
     );
@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
   return (
     <form action={formAction} className="space-y-4">
       {state.error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
           {state.error}
         </p>
       )}

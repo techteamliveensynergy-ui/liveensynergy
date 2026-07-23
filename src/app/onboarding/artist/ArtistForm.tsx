@@ -111,7 +111,8 @@ export function ArtistForm({
 
       <FormSection
         title="Additional information"
-        description="For internal use only — not shown publicly."
+        description="Helps our team match you with the right sponsors — not shown publicly."
+        private
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Date of birth" htmlFor="date_of_birth" required>

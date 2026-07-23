@@ -79,7 +79,7 @@ export default async function CampaignsPage() {
                   <input type="hidden" name="id" value={c.id} />
                   <button
                     type="submit"
-                    className="btn btn-ghost text-sm text-red-600"
+                    className="btn btn-ghost text-sm text-[var(--color-accent)]"
                   >
                     Delete
                   </button>

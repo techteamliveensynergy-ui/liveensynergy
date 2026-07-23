@@ -8,9 +8,9 @@ export default function EventsPage() {
   const events = SAMPLE_EVENTS;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-16">
+    <div className="mx-auto max-w-6xl px-5 py-16 md:py-24">
       <span className="chip">Available for sponsorship</span>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+      <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
         Events looking for sponsors
       </h1>
       <p className="mt-3 max-w-2xl text-[var(--color-ink-soft)]">
@@ -37,13 +37,15 @@ export default function EventsPage() {
         ))}
       </div>
 
-      <div className="mt-12 rounded-2xl bg-[var(--color-mist)] p-8 text-center">
-        <h2 className="text-xl font-semibold">Want your event listed here?</h2>
+      <div className="mt-14 rounded-3xl bg-[var(--color-mist)] p-10 text-center">
+        <h2 className="font-display text-xl font-semibold text-[var(--color-ink)]">
+          Want your event listed here?
+        </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-ink-soft)]">
           Create an artist or event profile and mark your events available for
           sponsorship.
         </p>
-        <Link href="/auth/sign-up" className="btn btn-primary mt-4">
+        <Link href="/auth/sign-up?role=artist" className="btn btn-primary mt-4">
           Get started
         </Link>
       </div>

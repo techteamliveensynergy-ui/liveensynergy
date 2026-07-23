@@ -1,19 +1,42 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0d0b1f;
-  --color-ink-soft: #2a2740;
-  --color-brand: #6d3bf5;
-  --color-brand-dark: #5326d1;
-  --color-accent: #ff5c8a;
-  --color-gold: #ffc857;
-  --color-mist: #f5f3ff;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  /* ink tones */
+  --color-ink: #2c2422; /* headings, strong text, solid-ink fills */
+  --color-ink-soft: #6f6360; /* muted / secondary text */
+
+  /* brand */
+  --color-brand: #ed9a4e; /* primary CTA orange */
+  --color-brand-dark: #e08a39; /* primary, hover */
+  --color-brand-soft: #f1ae6e; /* lighter accent orange */
+  --color-accent: #a02c4a; /* rose — attention / required / decorative pair */
+  --color-gold: #f6e092; /* yellow — rewards, highlights on dark surfaces */
+  --color-mist: #fcf7f0; /* cream — the app's neutral tint background */
+
+  /* portal / status accents */
+  --color-lavender: #edebf2;
+  --color-purple: #baaae1;
+  --color-purple-deep: #8b76c2;
+  --color-olive: #c0cf72;
+  --color-olive-deep: #4f6b15;
+  --color-sage: #dee2c6;
+  --color-mint: #ecf3f2;
+  --color-pink: #ffecf1;
+
+  --font-sans: var(--font-albert-sans), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-dm-sans), var(--font-sans);
+  --font-serif: var(--font-playfair), Georgia, serif;
 }
 
 :root {
+  --background: #fcf7f0;
+  --foreground: #504644;
   color-scheme: light;
+}
+
+* {
+  border-color: rgba(44, 36, 34, 0.1);
 }
 
 html {
@@ -21,10 +44,23 @@ html {
 }
 
 body {
-  background: #ffffff;
-  color: var(--color-ink);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+  font-style: italic;
 }
 
 /* Reusable primitives ---------------------------------------------------- */
@@ -35,6 +71,7 @@ body {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 9999px;
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.95rem;
   padding: 0.7rem 1.4rem;
@@ -54,7 +91,7 @@ body {
 .btn-primary {
   background: var(--color-brand);
   color: #fff;
-  box-shadow: 0 8px 24px -10px rgba(109, 59, 245, 0.7);
+  box-shadow: 0 10px 24px -12px rgba(237, 154, 78, 0.7);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--color-brand-dark);
@@ -63,10 +100,18 @@ body {
 .btn-ghost {
   background: transparent;
   color: var(--color-ink);
-  border-color: rgba(13, 11, 31, 0.15);
+  border-color: rgba(44, 36, 34, 0.15);
 }
 .btn-ghost:hover:not(:disabled) {
-  background: var(--color-mist);
+  background: rgba(44, 36, 34, 0.05);
+}
+.btn-dark {
+  background: var(--color-ink);
+  color: #fff;
+}
+.btn-dark:hover:not(:disabled) {
+  background: #1c1615;
+  transform: translateY(-1px);
 }
 .btn-white {
   background: #fff;
@@ -85,15 +130,15 @@ body {
 }
 .field-hint {
   font-size: 0.78rem;
-  color: #6b6880;
+  color: var(--color-ink-soft);
   margin-top: 0.3rem;
 }
 .input,
 .textarea,
 .select {
   width: 100%;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(13, 11, 31, 0.16);
+  border-radius: 0.85rem;
+  border: 1px solid rgba(44, 36, 34, 0.16);
   background: #fff;
   padding: 0.65rem 0.85rem;
   font-size: 0.95rem;
@@ -107,7 +152,7 @@ body {
 .select:focus {
   outline: none;
   border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgba(109, 59, 245, 0.15);
+  box-shadow: 0 0 0 3px rgba(237, 154, 78, 0.18);
 }
 .textarea {
   min-height: 6rem;
@@ -116,9 +161,9 @@ body {
 
 .card {
   background: #fff;
-  border: 1px solid rgba(13, 11, 31, 0.08);
-  border-radius: 1.1rem;
-  box-shadow: 0 20px 45px -30px rgba(13, 11, 31, 0.35);
+  border: 1px solid rgba(44, 36, 34, 0.09);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 2px rgba(44, 36, 34, 0.05);
 }
 
 .chip {
@@ -126,9 +171,10 @@ body {
   align-items: center;
   gap: 0.35rem;
   border-radius: 9999px;
-  background: var(--color-mist);
+  background: #fff;
+  border: 1px solid rgba(44, 36, 34, 0.12);
   color: var(--color-brand-dark);
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.25rem 0.7rem;
+  padding: 0.3rem 0.75rem;
 }

@@ -14,7 +14,7 @@ export default async function SignInPage({
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your Live-En-Synergy account."
+      subtitle="Sign in to your Live·En·Synergy account."
       footer={
         <>
           Don&apos;t have an account?{" "}

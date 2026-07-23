@@ -112,7 +112,8 @@ export function BrandForm({
 
       <FormSection
         title="Additional information"
-        description="Only visible to you and the Live-En-Synergy team."
+        description="Feeds our matching engine — only visible to you and the Live·En·Synergy team."
+        private
       >
         <Field label="Brand mission & vision" htmlFor="mission_vision">
           <textarea

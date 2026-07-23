@@ -85,7 +85,7 @@ export default async function EventsPage() {
                 <form action={deleteListing}>
                   <input type="hidden" name="id" value={l.id} />
                   <button
-                    className="btn btn-ghost text-sm text-red-600"
+                    className="btn btn-ghost text-sm text-[var(--color-accent)]"
                     type="submit"
                   >
                     Delete

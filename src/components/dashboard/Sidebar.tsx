@@ -11,13 +11,22 @@ interface SidebarProps {
   roleLabel: string;
   userName: string;
   userEmail: string;
+  workspaceName?: string;
+  workspaceSubtitle?: string;
 }
 
 /**
  * Responsive dashboard navigation. Fixed rail on desktop, slide-in drawer
  * with a hamburger toggle on mobile.
  */
-export function Sidebar({ nav, roleLabel, userName, userEmail }: SidebarProps) {
+export function Sidebar({
+  nav,
+  roleLabel,
+  userName,
+  userEmail,
+  workspaceName,
+  workspaceSubtitle,
+}: SidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -93,7 +102,23 @@ export function Sidebar({ nav, roleLabel, userName, userEmail }: SidebarProps) {
           <Logo />
         </div>
         <div className="px-5 pb-4">
-          <span className="chip">{roleLabel}</span>
+          {workspaceName ? (
+            <div className="flex items-center gap-2.5 rounded-2xl border border-black/5 bg-[var(--color-mist)] p-2.5">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-ink)] font-serif text-base italic text-white">
+                {workspaceName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
+                  {workspaceName}
+                </p>
+                <p className="truncate text-[11px] text-[var(--color-ink-soft)]">
+                  {workspaceSubtitle || roleLabel}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <span className="chip">{roleLabel}</span>
+          )}
         </div>
         {navList}
         {account}
