@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { notify } from "@/lib/notifications";
 
 export interface ListingState {
   error?: string;
@@ -120,10 +121,22 @@ export async function toggleListingStatus(formData: FormData) {
   const id = str(formData.get("id"));
   const next = str(formData.get("next_status"));
   if (!id || !next) return;
-  await supabase
+  const { data: updated } = await supabase
     .from("event_listings")
     .update({ status: next })
     .eq("id", id)
-    .eq("owner_profile_id", userId);
+    .eq("owner_profile_id", userId)
+    .select("name")
+    .maybeSingle();
+
+  if (next === "available" && updated) {
+    await notify({
+      eventKey: "listing.published",
+      recipientProfileId: userId,
+      link: `/dashboard/events/${id}`,
+      variables: { event_name: updated.name },
+    });
+  }
+
   revalidatePath("/dashboard/events");
 }

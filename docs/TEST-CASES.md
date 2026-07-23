@@ -212,6 +212,22 @@ Enforced once in middleware so it covers every route, not per-page.
 > stale count. "Mark all read" is a client component calling `router.refresh()`
 > for that reason; don't convert it back to a plain form action.
 
+## 10d. Marketplace oversight (Phase B)
+
+| # | Case | Expected | Status |
+|---|---|---|---|
+| 10d.1 | Overview "needs attention" queue | Campaigns to match / awaiting agreement / open enquiries / verified-unrewarded, each linking to a filtered view | ✅ |
+| 10d.2 | Overview funnel | Registered → proof → verified → rewarded with percentages | ✅ |
+| 10d.3 | Events browser — sponsored tab | Brand, budget, participants, agreement flags | ✅ |
+| 10d.4 | Events browser — listings tab | With inline status override | ✅ |
+| 10d.5 | Sponsored event detail | Money, funnel, deal terms, agreement state, participants | ✅ |
+| 10d.6 | Admin participant controls | Select / verify / release with amount, mirroring the organiser | 🔲 |
+| 10d.7 | Campaigns browser | Gross + net budget, status, matched state | ✅ |
+| 10d.8 | Match a campaign to a listing | Creates the sponsored event, marks the listing `matched`, notifies both sides | 🔲 |
+| 10d.9 | Participants browser | Cross-event list with status/selected/reward filters | ✅ |
+| 10d.10 | Contact enquiry reaches the inbox | Public form submission appears for admin | ✅ |
+| 10d.11 | Mark an enquiry handled | Moves to the Handled filter | ✅ |
+
 ## 11. Security / access control (RLS)
 
 | # | Case | Expected | Status |
@@ -265,6 +281,9 @@ re-run the core loop against a local dev server:
 # 3. BASE=http://localhost:3000 node fullflow.mjs      # 24 cross-role checks
 #    BASE=http://localhost:3000 node admin.mjs         # 17 admin + blocking checks
 #    BASE=http://localhost:3000 node notifications.mjs # 14 notification checks
+#    BASE=http://localhost:3000 node marketplace.mjs   # 11 admin oversight checks
+#                                                      # (run after fullflow — it
+#                                                      #  needs the seeded deal)
 ```
 
 Each step prints `PASS`/`FAIL` and writes a screenshot, so a failure points at

@@ -312,12 +312,30 @@ automated checks. `notify()` is wired into the highest-value call sites so far:
 | Contact form submitted | `admin.contact_message` |
 | Admin blocks / restores | `account.blocked`, `account.restored` |
 
-Remaining events are seeded and editable but not yet wired — mostly account
-lifecycle (`account.welcome`, `account.role_changed`, `account.plan_changed`),
-`listing.published`, `message.received`, and the reminder/budget-threshold
-events which need a scheduled job.
+Account lifecycle (`account.welcome`, `onboarding_completed`, `role_changed`,
+`plan_changed`, `admin.new_signup`), `listing.published` and
+`message.received` are wired too. Still unwired: `sponsorship.budget_low`,
+`participation.reminder` and `listing.status_changed` — the first two need a
+scheduled job, which isn't built.
 
-**Phase B is not started.**
+**Phase B is built:**
+
+| Screen | Route |
+|---|---|
+| Overview with a needs-attention queue + funnel | `/dashboard/admin` |
+| Events browser (sponsored / listings tabs, filters) | `/dashboard/admin/events` |
+| Sponsored event detail — money, funnel, deal, participants | `/dashboard/admin/events/sponsored/[id]` |
+| Campaigns browser + **match action** | `/dashboard/admin/campaigns` |
+| Participants browser | `/dashboard/admin/participants` |
+| Contact enquiries inbox | `/dashboard/admin/enquiries` |
+
+The match action is the one that mattered most: it links a campaign to an
+available listing, creates the sponsored event, flips the listing to
+`matched`, and notifies both sides — previously a manual DB job the product
+assumed existed.
+
+Still deferred from B8: payments console (needs Stripe), CSV exports, and an
+audit log of admin actions (worth doing before a real launch).
 
 # Build order
 

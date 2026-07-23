@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import type { Campaign, SponsoredEvent } from "@/lib/types";
+import { PageHeader, MetricTile, StatusBadge } from "@/components/dashboard/ui";
+import { timeAgo } from "@/lib/format";
 
 export const metadata = { title: "Admin console" };
 
@@ -20,103 +21,244 @@ export default async function AdminPage() {
   const supabase = await createClient();
 
   const [
-    brands,
-    artists,
-    organisers,
-    audiences,
-    campaigns,
-    listings,
-    sponsored,
+    users,
+    campaignRows,
+    sponsoredRows,
+    listingRows,
+    participationRows,
+    enquiryRows,
   ] = await Promise.all([
-    count(supabase, "brands"),
-    count(supabase, "artists"),
-    count(supabase, "event_organisers"),
-    count(supabase, "audience_members"),
-    count(supabase, "campaigns"),
-    count(supabase, "event_listings"),
-    count(supabase, "sponsored_events"),
+    count(supabase, "profiles"),
+    supabase.from("campaigns").select("id, reference, description, status, matched_listing_id, created_at"),
+    supabase
+      .from("sponsored_events")
+      .select("id, reference, name, status, brand_agreed, artist_agreed, created_at"),
+    supabase.from("event_listings").select("id, status"),
+    supabase.from("participations").select("id, status, reward_amount_gbp"),
+    supabase.from("contact_messages").select("id, subject, name, handled_at, created_at"),
   ]);
 
-  const { data: recentCampaigns } = await supabase
-    .from("campaigns")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(5);
-  const { data: recentSponsored } = await supabase
-    .from("sponsored_events")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const campaigns = campaignRows.data ?? [];
+  const sponsored = sponsoredRows.data ?? [];
+  const listings = listingRows.data ?? [];
+  const participations = participationRows.data ?? [];
+  const enquiries = enquiryRows.data ?? [];
 
-  const stats = [
-    { label: "Brands", value: brands },
-    { label: "Artists", value: artists },
-    { label: "Organisers", value: organisers },
-    { label: "Audience", value: audiences },
-    { label: "Campaigns", value: campaigns },
-    { label: "Event listings", value: listings },
-    { label: "Sponsored events", value: sponsored },
+  // --- the queue that actually needs a human ---
+  const needsMatching = campaigns.filter((c) => !c.matched_listing_id);
+  const awaitingAgreement = sponsored.filter(
+    (e) => !e.brand_agreed || !e.artist_agreed,
+  );
+  const openEnquiries = enquiries.filter((e) => !e.handled_at);
+  const verifiedUnrewarded = participations.filter(
+    (p) => p.status === "attendance_verified",
+  );
+
+  const totalRewarded = participations.reduce(
+    (sum, p) => sum + Number(p.reward_amount_gbp ?? 0),
+    0,
+  );
+
+  const attention = [
+    {
+      label: "Campaigns to match",
+      count: needsMatching.length,
+      href: "/dashboard/admin/campaigns?matched=no",
+      tint: "bg-[var(--color-gold)]",
+    },
+    {
+      label: "Awaiting agreement",
+      count: awaitingAgreement.length,
+      href: "/dashboard/admin/events?tab=sponsored",
+      tint: "bg-[var(--color-lavender)]",
+    },
+    {
+      label: "Open enquiries",
+      count: openEnquiries.length,
+      href: "/dashboard/admin/enquiries?filter=open",
+      tint: "bg-[var(--color-pink)]",
+    },
+    {
+      label: "Verified, unrewarded",
+      count: verifiedUnrewarded.length,
+      href: "/dashboard/admin/participants?status=attendance_verified",
+      tint: "bg-[var(--color-sage)]",
+    },
   ];
+
+  const funnel = [
+    { label: "Registered", n: participations.length },
+    {
+      label: "Proof uploaded",
+      n: participations.filter((p) =>
+        ["ticket_uploaded", "attendance_verified", "reward_released"].includes(
+          p.status,
+        ),
+      ).length,
+    },
+    {
+      label: "Verified",
+      n: participations.filter((p) =>
+        ["attendance_verified", "reward_released"].includes(p.status),
+      ).length,
+    },
+    {
+      label: "Rewarded",
+      n: participations.filter((p) => p.status === "reward_released").length,
+    },
+  ];
+  const pct = (n: number) =>
+    participations.length ? Math.round((n / participations.length) * 100) : 0;
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Admin console"
-        subtitle="Platform overview across all accounts and activity."
+        subtitle="What needs attention, and how the platform is performing."
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {stats.map((s) => (
-          <div key={s.label} className="card p-4">
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-xs text-[var(--color-ink-soft)]">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
+      {/* Needs attention */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Recent sponsor requests</h2>
-        <div className="card divide-y divide-black/5">
-          {((recentCampaigns ?? []) as Campaign[]).map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between px-5 py-3 text-sm"
+        <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
+          Needs attention
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {attention.map((a) => (
+            <Link
+              key={a.label}
+              href={a.href}
+              className={`rounded-2xl border border-black/10 p-5 shadow-sm transition hover:-translate-y-0.5 ${a.tint}`}
             >
-              <span className="truncate">
-                {c.reference} — {c.description.slice(0, 50)}
-              </span>
-              <StatusBadge status={c.status} />
-            </div>
+              <p className="font-display text-3xl font-semibold text-[var(--color-ink)]">
+                {a.count}
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-ink)]/75">{a.label}</p>
+            </Link>
           ))}
-          {(!recentCampaigns || recentCampaigns.length === 0) && (
-            <p className="px-5 py-4 text-sm text-[var(--color-ink-soft)]">
-              No campaigns yet.
-            </p>
-          )}
         </div>
       </section>
 
+      {/* Scale */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Recent sponsored events</h2>
-        <div className="card divide-y divide-black/5">
-          {((recentSponsored ?? []) as SponsoredEvent[]).map((e) => (
-            <div
-              key={e.id}
-              className="flex items-center justify-between px-5 py-3 text-sm"
-            >
-              <span className="truncate">
-                {e.reference} — {e.name}
-              </span>
-              <StatusBadge status={e.status} />
+        <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
+          Platform
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricTile label="Users" value={users} />
+          <MetricTile label="Campaigns" value={campaigns.length} />
+          <MetricTile
+            label="Listings live"
+            value={listings.filter((l) => l.status === "available").length}
+          />
+          <MetricTile label="Sponsorships" value={sponsored.length} />
+          <MetricTile
+            label="Rewarded"
+            value={`£${totalRewarded.toLocaleString("en-GB")}`}
+          />
+        </div>
+      </section>
+
+      {/* Funnel */}
+      <section className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          Audience funnel
+        </h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          {funnel.map((s) => (
+            <div key={s.label}>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-[var(--color-ink-soft)]">
+                  {s.label}
+                </span>
+                <span className="font-display text-lg font-semibold text-[var(--color-ink)]">
+                  {s.n}
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/10">
+                <div
+                  className="h-full rounded-full bg-[var(--color-brand)]"
+                  style={{ width: `${pct(s.n)}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                {pct(s.n)}%
+              </p>
             </div>
           ))}
-          {(!recentSponsored || recentSponsored.length === 0) && (
-            <p className="px-5 py-4 text-sm text-[var(--color-ink-soft)]">
+        </div>
+      </section>
+
+      {/* Recent */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="card p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+              Recent campaigns
+            </h2>
+            <Link
+              href="/dashboard/admin/campaigns"
+              className="text-sm font-semibold text-[var(--color-brand-dark)]"
+            >
+              See all →
+            </Link>
+          </div>
+          {campaigns.length === 0 ? (
+            <p className="text-sm text-[var(--color-ink-soft)]">No campaigns yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {campaigns.slice(0, 5).map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-2.5 text-sm"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {c.reference} — {c.description}
+                  </span>
+                  <StatusBadge status={c.status} />
+                  <span className="text-xs text-[var(--color-ink-soft)]">
+                    {timeAgo(c.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+              Recent sponsorships
+            </h2>
+            <Link
+              href="/dashboard/admin/events"
+              className="text-sm font-semibold text-[var(--color-brand-dark)]"
+            >
+              See all →
+            </Link>
+          </div>
+          {sponsored.length === 0 ? (
+            <p className="text-sm text-[var(--color-ink-soft)]">
               No sponsored events yet.
             </p>
+          ) : (
+            <div className="space-y-2">
+              {sponsored.slice(0, 5).map((e) => (
+                <Link
+                  key={e.id}
+                  href={`/dashboard/admin/events/sponsored/${e.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-2.5 text-sm transition hover:bg-white"
+                >
+                  <span className="min-w-0 flex-1 truncate">{e.name}</span>
+                  <StatusBadge status={e.status} />
+                  <span className="text-xs text-[var(--color-ink-soft)]">
+                    {timeAgo(e.created_at)}
+                  </span>
+                </Link>
+              ))}
+            </div>
           )}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES, type SignupRole } from "@/lib/constants";
+import { ROLES, ROLE_LABELS, type SignupRole } from "@/lib/constants";
+import { notify, notifyAdmins } from "@/lib/notifications";
 
 export interface AuthState {
   error?: string;
@@ -45,6 +46,20 @@ export async function signUp(
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data.user) {
+    await notify({
+      eventKey: "account.welcome",
+      recipientProfileId: data.user.id,
+      link: "/onboarding",
+      variables: { user_name: fullName, role_label: ROLE_LABELS[role] },
+    });
+    await notifyAdmins({
+      eventKey: "admin.new_signup",
+      link: "/dashboard/admin/users",
+      variables: { user_name: fullName, role_label: ROLE_LABELS[role] },
+    });
   }
 
   // If email confirmation is required, there is no active session yet.

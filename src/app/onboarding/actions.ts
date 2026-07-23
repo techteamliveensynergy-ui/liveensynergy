@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { notify } from "@/lib/notifications";
+import { ROLE_LABELS, type Role } from "@/lib/constants";
 
 export interface OnboardingState {
   error?: string;
@@ -54,10 +56,21 @@ function socialLinks(formData: FormData): Record<string, string> | null {
 
 async function completeOnboarding(userId: string) {
   const supabase = await createClient();
-  await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .update({ onboarding_completed: true })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("role")
+    .maybeSingle();
+
+  await notify({
+    eventKey: "account.onboarding_completed",
+    recipientProfileId: userId,
+    link: "/dashboard",
+    variables: {
+      role_label: profile?.role ? ROLE_LABELS[profile.role as Role] : undefined,
+    },
+  });
 }
 
 async function getUserId() {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES, type Role } from "@/lib/constants";
+import { ROLES, ROLE_LABELS, type Role } from "@/lib/constants";
 import {
   ROLE_PROFILE_SPECS,
   SOCIAL_FIELD_KEYS,
@@ -63,6 +63,11 @@ export async function setUserRole(formData: FormData) {
   if (!userId || !role || !ALL_ROLES.includes(role as (typeof ALL_ROLES)[number]))
     return;
   await supabase.from("profiles").update({ role }).eq("id", userId);
+  await notify({
+    eventKey: "account.role_changed",
+    recipientProfileId: userId,
+    variables: { role_label: ROLE_LABELS[role as Role] ?? role },
+  });
   revalidatePath("/dashboard/admin/users");
 }
 
@@ -72,6 +77,16 @@ export async function assignPlan(formData: FormData) {
   if (!userId) return;
   const planId = str(formData.get("plan_id")); // null clears the plan
   await supabase.from("profiles").update({ plan_id: planId }).eq("id", userId);
+
+  const { data: plan } = planId
+    ? await supabase.from("plans").select("name").eq("id", planId).maybeSingle()
+    : { data: null };
+  await notify({
+    eventKey: "account.plan_changed",
+    recipientProfileId: userId,
+    variables: { plan_name: plan?.name ?? "No plan" },
+  });
+
   revalidatePath("/dashboard/admin/users");
 }
 

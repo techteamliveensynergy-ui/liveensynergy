@@ -1,0 +1,398 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireRole } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/server";
+import { StatusBadge } from "@/components/dashboard/ui";
+import { computePlatformFee } from "@/lib/constants";
+import { formatDate, formatDateTime } from "@/lib/format";
+import type { Participation } from "@/lib/types";
+import { setSponsoredStatus } from "../../../actions";
+import { adminUpdateParticipation } from "../../../marketplace-actions";
+
+export const metadata = { title: "Sponsored event · Admin" };
+
+const SPONSORED_STATUSES = ["in_progress", "confirmed", "completed"];
+
+type Row = Participation & { profiles: { full_name: string | null; email: string | null } | null };
+
+function Money({ value }: { value: number | null | undefined }) {
+  return <>{value != null ? `£${Number(value).toLocaleString("en-GB")}` : "—"}</>;
+}
+
+export default async function AdminSponsoredDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await requireRole(["admin"]);
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: event } = await supabase
+    .from("sponsored_events")
+    .select(
+      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp)",
+    )
+    .eq("id", id)
+    .maybeSingle<{
+      id: string;
+      reference: string;
+      name: string;
+      status: string;
+      event_date: string | null;
+      venue_details: string | null;
+      location: string | null;
+      budget_gbp: number | null;
+      remaining_budget_gbp: number | null;
+      reward_rules: string | null;
+      terms: string | null;
+      brand_agreed: boolean;
+      artist_agreed: boolean;
+      participation_deadline: string | null;
+      artist_profile_id: string | null;
+      brands: { brand_name: string; profile_id: string } | null;
+      campaigns: { reference: string; description: string } | null;
+      event_listings: { name: string; ticket_price_gbp: number | null } | null;
+    }>();
+  if (!event) notFound();
+
+  const [{ data: partRows }, { data: artist }] = await Promise.all([
+    supabase
+      .from("participations")
+      .select("*, profiles(full_name, email)")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: true }),
+    event.artist_profile_id
+      ? supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("id", event.artist_profile_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const participants = (partRows ?? []) as Row[];
+
+  // Funnel
+  const registered = participants.length;
+  const proofed = participants.filter((p) =>
+    ["ticket_uploaded", "attendance_verified", "reward_released"].includes(p.status),
+  ).length;
+  const verified = participants.filter((p) =>
+    ["attendance_verified", "reward_released"].includes(p.status),
+  ).length;
+  const rewarded = participants.filter((p) => p.status === "reward_released").length;
+  const released = participants.reduce(
+    (sum, p) => sum + Number(p.reward_amount_gbp ?? 0),
+    0,
+  );
+
+  const fee = event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
+  const pct = (n: number) => (registered ? Math.round((n / registered) * 100) : 0);
+
+  return (
+    <div className="space-y-6">
+      <Link
+        href="/dashboard/admin/events"
+        className="inline-block text-sm text-[var(--color-brand)]"
+      >
+        ← Back to events
+      </Link>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-serif text-[var(--color-ink-soft)]">
+            {event.brands?.brand_name ?? "No brand"} ↔{" "}
+            {artist?.full_name ?? "No artist"}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-3xl">
+            {event.name}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Ref {event.reference}
+            {event.event_date ? ` · ${formatDate(event.event_date)}` : ""}
+            {event.location ? ` · ${event.location}` : ""}
+          </p>
+        </div>
+        <StatusBadge status={event.status} />
+      </div>
+
+      {/* Money */}
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[
+          { label: "Budget", value: <Money value={event.budget_gbp} />, tint: "bg-[#faf5ee]" },
+          {
+            label: "Remaining",
+            value: <Money value={event.remaining_budget_gbp} />,
+            tint: "bg-[var(--color-sage)]",
+          },
+          {
+            label: "Released",
+            value: `£${released.toLocaleString("en-GB")}`,
+            tint: "bg-[var(--color-lavender)]",
+          },
+          {
+            label: "Platform fee",
+            value: fee ? `£${Math.round(fee.feeIncVat).toLocaleString("en-GB")}` : "—",
+            tint: "bg-[#fbeadd]",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`rounded-2xl border border-black/10 p-4 shadow-sm ${s.tint}`}
+          >
+            <p className="text-xs text-[var(--color-ink-soft)]">{s.label}</p>
+            <p className="mt-1 font-display text-xl font-semibold text-[var(--color-ink)]">
+              {s.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Funnel */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          Funnel
+        </h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          {[
+            { label: "Registered", n: registered, p: 100 },
+            { label: "Proof uploaded", n: proofed, p: pct(proofed) },
+            { label: "Verified", n: verified, p: pct(verified) },
+            { label: "Rewarded", n: rewarded, p: pct(rewarded) },
+          ].map((s) => (
+            <div key={s.label}>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-[var(--color-ink-soft)]">
+                  {s.label}
+                </span>
+                <span className="font-display text-lg font-semibold text-[var(--color-ink)]">
+                  {s.n}
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/10">
+                <div
+                  className="h-full rounded-full bg-[var(--color-brand)]"
+                  style={{ width: `${s.p}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{s.p}%</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Deal */}
+      <div className="card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+            Deal
+          </h2>
+          <form action={setSponsoredStatus} className="flex items-center gap-2">
+            <input type="hidden" name="id" value={event.id} />
+            <select
+              name="status"
+              className="select w-auto py-1.5 text-sm"
+              defaultValue={event.status}
+            >
+              {SPONSORED_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="btn btn-ghost text-sm">
+              Override status
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div
+            className={`rounded-xl px-4 py-3 text-sm ${
+              event.brand_agreed
+                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
+                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
+            }`}
+          >
+            Brand agreed · {event.brand_agreed ? "✓" : "Pending"}
+          </div>
+          <div
+            className={`rounded-xl px-4 py-3 text-sm ${
+              event.artist_agreed
+                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
+                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
+            }`}
+          >
+            Artist agreed · {event.artist_agreed ? "✓" : "Pending"}
+          </div>
+        </div>
+
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          {[
+            ["Campaign", event.campaigns?.reference ?? "—"],
+            ["Listing", event.event_listings?.name ?? "—"],
+            ["Venue", event.venue_details ?? "—"],
+            [
+              "Participation deadline",
+              event.participation_deadline
+                ? formatDate(event.participation_deadline)
+                : "—",
+            ],
+          ].map(([k, v]) => (
+            <div key={k as string} className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
+              <dt className="text-xs text-[var(--color-ink-soft)]">{k}</dt>
+              <dd className="mt-0.5 font-medium text-[var(--color-ink)]">{v}</dd>
+            </div>
+          ))}
+        </dl>
+
+        {event.reward_rules && (
+          <div className="mt-3 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+            <span className="font-semibold">Reward rules</span> — {event.reward_rules}
+          </div>
+        )}
+      </div>
+
+      {/* Participants */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          Participants ({participants.length})
+        </h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Admin can run the same selection, verification and reward steps as the
+          organiser — use this to unblock a stalled event.
+        </p>
+
+        {participants.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
+            No registrations yet.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {participants.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-[var(--color-ink)]">
+                      {p.profiles?.full_name ?? "Unnamed"}
+                    </span>
+                    <StatusBadge status={p.status} />
+                    {p.selected && (
+                      <span className="text-xs text-[var(--color-olive-deep)]">
+                        selected
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-[var(--color-ink-soft)]">
+                    {p.profiles?.email ?? "—"}
+                    {p.attendance_verified_at
+                      ? ` · verified ${formatDateTime(p.attendance_verified_at)}`
+                      : ""}
+                    {p.reward_amount_gbp != null
+                      ? ` · £${Number(p.reward_amount_gbp).toLocaleString("en-GB")}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]/70">
+                    {p.ticket_proof_url ? (
+                      <a
+                        href={p.ticket_proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--color-brand-dark)] underline"
+                      >
+                        Ticket proof ↗
+                      </a>
+                    ) : (
+                      "No ticket proof"
+                    )}
+                    {p.bank_details_provided ? " · payout consented" : ""}
+                    {p.newsletter_opt_in ? " · newsletter opt-in" : ""}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {!p.selected && p.status !== "rejected" && (
+                    <AdminBtn eventId={event.id} id={p.id} op="select" label="Select" />
+                  )}
+                  {p.selected &&
+                    (p.status === "registered" || p.status === "ticket_uploaded") && (
+                      <AdminBtn
+                        eventId={event.id}
+                        id={p.id}
+                        op="verify"
+                        label="Verify"
+                      />
+                    )}
+                  {p.status === "attendance_verified" && (
+                    <form
+                      action={adminUpdateParticipation}
+                      className="flex items-center gap-1.5"
+                    >
+                      <input type="hidden" name="event_id" value={event.id} />
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="op" value="release" />
+                      <input
+                        name="reward_amount_gbp"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        required
+                        placeholder="£"
+                        className="input w-20 px-2 py-1 text-sm"
+                        aria-label="Reward amount"
+                      />
+                      <button type="submit" className="btn btn-ghost text-sm">
+                        Release
+                      </button>
+                    </form>
+                  )}
+                  {!p.selected && p.status !== "rejected" && (
+                    <AdminBtn
+                      eventId={event.id}
+                      id={p.id}
+                      op="reject"
+                      label="Reject"
+                      danger
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminBtn({
+  eventId,
+  id,
+  op,
+  label,
+  danger,
+}: {
+  eventId: string;
+  id: string;
+  op: string;
+  label: string;
+  danger?: boolean;
+}) {
+  return (
+    <form action={adminUpdateParticipation}>
+      <input type="hidden" name="event_id" value={eventId} />
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="op" value={op} />
+      <button
+        type="submit"
+        className={`btn btn-ghost text-sm ${danger ? "text-[var(--color-accent)]" : ""}`}
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
