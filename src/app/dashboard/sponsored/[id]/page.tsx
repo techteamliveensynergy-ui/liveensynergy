@@ -203,21 +203,20 @@ export default async function SponsoredEventPage({
                         label="Select"
                       />
                     )}
-                    {p.selected && p.status !== "attendance_verified" && (
-                      <ParticipationBtn
-                        eventId={event.id}
-                        id={p.id}
-                        op="verify"
-                        label="Verify attendance"
-                      />
-                    )}
+                    {/* Only before verification — otherwise a released reward
+                        could be regressed back to "attendance verified". */}
+                    {p.selected &&
+                      (p.status === "registered" ||
+                        p.status === "ticket_uploaded") && (
+                        <ParticipationBtn
+                          eventId={event.id}
+                          id={p.id}
+                          op="verify"
+                          label="Verify attendance"
+                        />
+                      )}
                     {p.status === "attendance_verified" && (
-                      <ParticipationBtn
-                        eventId={event.id}
-                        id={p.id}
-                        op="release"
-                        label="Release reward"
-                      />
+                      <ReleaseRewardForm eventId={event.id} id={p.id} />
                     )}
                     {p.status !== "rejected" && !p.selected && (
                       <ParticipationBtn
@@ -256,6 +255,39 @@ function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {
       <span className="font-medium">{label}</span>
       <span>{agreed ? "✓ Agreed" : "Pending"}</span>
     </div>
+  );
+}
+
+/**
+ * Releasing a reward needs an amount — without it the participant's reward
+ * shows as "—" and the audience's running total stays at £0.
+ */
+function ReleaseRewardForm({ eventId, id }: { eventId: string; id: string }) {
+  return (
+    <form action={updateParticipation} className="flex items-center gap-2">
+      <input type="hidden" name="event_id" value={eventId} />
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="op" value="release" />
+      <label className="sr-only" htmlFor={`reward-${id}`}>
+        Reward amount in GBP
+      </label>
+      <div className="flex items-center gap-1">
+        <span className="text-sm text-[var(--color-ink-soft)]">£</span>
+        <input
+          id={`reward-${id}`}
+          name="reward_amount_gbp"
+          type="number"
+          min={0}
+          step="0.01"
+          required
+          placeholder="0.00"
+          className="input w-24 px-2 py-1 text-sm"
+        />
+      </div>
+      <button type="submit" className="btn btn-ghost text-sm">
+        Release reward
+      </button>
+    </form>
   );
 }
 

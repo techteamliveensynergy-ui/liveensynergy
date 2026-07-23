@@ -187,5 +187,26 @@ export async function updateParticipation(formData: FormData) {
   }
 
   await supabase.from("participations").update(patch).eq("id", id);
+
+  // A released reward is money actually spent — draw it down from the
+  // sponsored event's remaining budget so the brand's dashboard stays honest.
+  if (op === "release" && eventId) {
+    const amount = num(formData.get("reward_amount_gbp"));
+    if (amount != null && amount > 0) {
+      const { data: ev } = await supabase
+        .from("sponsored_events")
+        .select("remaining_budget_gbp")
+        .eq("id", eventId)
+        .maybeSingle();
+      if (ev?.remaining_budget_gbp != null) {
+        const next = Math.max(0, Number(ev.remaining_budget_gbp) - amount);
+        await supabase
+          .from("sponsored_events")
+          .update({ remaining_budget_gbp: next })
+          .eq("id", eventId);
+      }
+    }
+  }
+
   if (eventId) revalidatePath(`/dashboard/sponsored/${eventId}`);
 }

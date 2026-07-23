@@ -2,19 +2,23 @@
 
 Local/dev-only test accounts, seeded directly into the Supabase `auth.users`
 table (bypassing email confirmation) for manual and automated (Playwright)
-testing of the authenticated app. Both accounts have completed onboarding.
+testing of the authenticated app. All accounts have completed onboarding.
 
 **Do not use in production.** These exist only in the dev Supabase project
 wired up in `.env.local` (project ref `oalqfzaejflgrtyfrrrb`).
 
-| Role   | Email                        | Password       | Workspace name          |
-| ------ | ---------------------------- | --------------- | ------------------------ |
-| Brand  | `brand.tester@example.com`   | `TestPass123!`  | Northwave Coffee          |
-| Artist | `artist.tester@example.com`  | `TestPass123!`  | The Midnight Collective   |
+| Role     | Email                          | Password       | Workspace / name          |
+| -------- | ------------------------------- | --------------- | -------------------------- |
+| Brand    | `brand.tester@example.com`      | `TestPass123!`  | Northwave Coffee            |
+| Artist   | `artist.tester@example.com`     | `TestPass123!`  | The Midnight Collective     |
+| Audience | `audience.tester@example.com`   | `TestPass123!`  | Priya Shah                  |
 
-Sign in at `/auth/sign-in`. Both have a seeded campaign / event listing so the
-dashboard home, campaigns/events lists, and discover pages have real data to
-render.
+Sign in at `/auth/sign-in`. Brand/artist have a seeded campaign / event
+listing so the dashboard home, campaigns/events lists, and discover pages
+have real data to render. There's also a `sponsored_events` row (status
+`confirmed`, linking that campaign + listing) so the audience account can
+register, upload proof, and see the reward tracker populate on its dashboard
+home.
 
 To add another test account (e.g. for the `event` or `audience` role), run
 against the project via the Supabase SQL editor / MCP `execute_sql`:

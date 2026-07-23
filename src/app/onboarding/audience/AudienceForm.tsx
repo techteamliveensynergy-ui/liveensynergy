@@ -8,6 +8,8 @@ import {
   OnboardingSubmit,
   SuccessBanner,
 } from "@/components/onboarding/parts";
+import { Placeholder, PlaceholderChip } from "@/components/ui/Placeholder";
+import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { AudienceMember } from "@/lib/types";
 import { saveAudience, type OnboardingState } from "../actions";
 
@@ -81,6 +83,26 @@ export function AudienceForm({
           />
         </Field>
       </FormSection>
+
+      {/* --- Not yet built. Flows still to be decided — see docs/PLATFORM.md. --- */}
+
+      <Placeholder
+        title="What do you love going to?"
+        description="Pick your favourite categories and we'll surface sponsored events that match."
+        note="Not active yet — for now every confirmed sponsored event shows up under Discover events, unfiltered."
+      >
+        <div className="flex flex-wrap gap-2">
+          {EVENT_CATEGORIES.map((c) => (
+            <PlaceholderChip key={c} label={c} />
+          ))}
+        </div>
+      </Placeholder>
+
+      <Placeholder
+        title="Payout details"
+        description="Where we send your reward once your attendance is verified."
+        note="Not collected here yet. If you're selected for a reward, you'll be asked to consent and share payout details from My events."
+      />
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & explore events"}
