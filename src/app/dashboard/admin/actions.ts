@@ -9,6 +9,7 @@ import {
   SOCIAL_FIELD_KEYS,
   specFieldNames,
 } from "@/lib/admin-user-fields";
+import { notify } from "@/lib/notifications";
 
 export interface AdminState {
   error?: string;
@@ -79,14 +80,22 @@ export async function toggleUserActive(formData: FormData) {
   const userId = str(formData.get("user_id"));
   const next = str(formData.get("next")) === "true";
   if (!userId) return;
+  const reason = str(formData.get("reason"));
   await supabase
     .from("profiles")
     .update({
       is_active: next,
       blocked_at: next ? null : new Date().toISOString(),
-      blocked_reason: next ? null : str(formData.get("reason")),
+      blocked_reason: next ? null : reason,
     })
     .eq("id", userId);
+
+  await notify({
+    eventKey: next ? "account.restored" : "account.blocked",
+    recipientProfileId: userId,
+    variables: { reason: reason ?? undefined },
+  });
+
   revalidatePath("/dashboard/admin/users");
   revalidatePath(`/dashboard/admin/users/${userId}`);
 }

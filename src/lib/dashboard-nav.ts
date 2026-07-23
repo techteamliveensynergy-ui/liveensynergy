@@ -11,6 +11,7 @@ const COMMON_TOP: NavItem[] = [
 ];
 
 const COMMON_BOTTOM: NavItem[] = [
+  { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
   { href: "/dashboard/profile", label: "Profile", icon: "👤" },
   { href: "/dashboard/messages", label: "Messages", icon: "💬" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
@@ -40,6 +41,8 @@ const BY_ROLE: Record<Role, NavItem[]> = {
   admin: [
     { href: "/dashboard/admin", label: "Overview", icon: "📊" },
     { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
+    // Distinct from the personal inbox in COMMON_BOTTOM — this is the config.
+    { href: "/dashboard/admin/notifications", label: "Notification setup", icon: "🔔" },
     { href: "/dashboard/admin/plans", label: "Plans", icon: "💳" },
     { href: "/dashboard/admin/events", label: "Events", icon: "🎫" },
   ],

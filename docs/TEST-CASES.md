@@ -190,6 +190,28 @@ Enforced once in middleware so it covers every route, not per-page.
 | 10b.5 | Admin restores access | User can sign in and use the platform again | ✅ |
 | 10b.6 | Instant revocation of an *open idle tab* | ⛔ Needs the service-role key — currently the tab survives until the next request | ⛔ |
 
+## 10c. Notifications (Phase A)
+
+| # | Case | Expected | Status |
+|---|---|---|---|
+| 10c.1 | Catalogue lists the seeded events | 31 events across 6 categories | ✅ |
+| 10c.2 | Category filter | Only that category's events shown | ✅ |
+| 10c.3 | Editor shows declared `{{variables}}` | Click-to-copy chips per event | ✅ |
+| 10c.4 | Live preview | Substitutes realistic sample data as you type, for both channels | ✅ |
+| 10c.5 | Save template + CC | Persists and survives a reload | ✅ |
+| 10c.6 | Real action fires a notification | Audience registers → in-app row created | ✅ |
+| 10c.7 | Email queued to the outbox | Row with recipient, subject, body and configured CC | ✅ |
+| 10c.8 | Unread badge | Sidebar badges the Notifications entry | ✅ |
+| 10c.9 | Mark all read | Badge clears immediately, no manual refresh | ✅ |
+| 10c.10 | Channel toggle from the catalogue | Disabling persists and suppresses that channel | ✅ |
+| 10c.11 | Email actually sends | ⛔ No provider wired — rows stay `queued` by design | ⛔ |
+| 10c.12 | Per-user notification preferences | ⛔ Not built — admin-level control only this phase | ⛔ |
+
+> The unread badge lives in the dashboard **layout**, which Next keeps in the
+> client router cache across soft navigations — `revalidatePath` alone left a
+> stale count. "Mark all read" is a client component calling `router.refresh()`
+> for that reason; don't convert it back to a plain form action.
+
 ## 11. Security / access control (RLS)
 
 | # | Case | Expected | Status |
@@ -240,8 +262,9 @@ re-run the core loop against a local dev server:
 #    event_listings, campaigns, conversations, messages)
 # 2. Ensure the test accounts from qa-creds.md exist and are onboarded,
 #    and that none of them are left blocked from a previous run
-# 3. BASE=http://localhost:3000 node fullflow.mjs   # 24 cross-role checks
-#    BASE=http://localhost:3000 node admin.mjs      # 17 admin + blocking checks
+# 3. BASE=http://localhost:3000 node fullflow.mjs      # 24 cross-role checks
+#    BASE=http://localhost:3000 node admin.mjs         # 17 admin + blocking checks
+#    BASE=http://localhost:3000 node notifications.mjs # 14 notification checks
 ```
 
 Each step prints `PASS`/`FAIL` and writes a screenshot, so a failure points at

@@ -295,6 +295,30 @@ campaigns
 
 ---
 
+# Status
+
+**Phase A is built** (schema, `notify()` pipeline, admin catalogue + editor
+with live preview, outbox, in-app inbox with unread badge) and covered by 14
+automated checks. `notify()` is wired into the highest-value call sites so far:
+
+| Call site | Events fired |
+|---|---|
+| Audience registers | `participation.registered`, `participant.registered` |
+| Brand contacts organiser | `offer.received` |
+| Brand creates sponsored event | `offer.proposal_received` |
+| Artist/brand agrees terms | `sponsorship.artist_agreed`, `sponsorship.confirmed` |
+| Select / reject / verify / release | `participation.*`, `reward.released` |
+| Campaign created | `campaign.created`, `admin.campaign_request` |
+| Contact form submitted | `admin.contact_message` |
+| Admin blocks / restores | `account.blocked`, `account.restored` |
+
+Remaining events are seeded and editable but not yet wired — mostly account
+lifecycle (`account.welcome`, `account.role_changed`, `account.plan_changed`),
+`listing.published`, `message.received`, and the reminder/budget-threshold
+events which need a scheduled job.
+
+**Phase B is not started.**
+
 # Build order
 
 1. **A3** schema + seed the event catalogue

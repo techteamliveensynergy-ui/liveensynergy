@@ -13,6 +13,8 @@ interface SidebarProps {
   userEmail: string;
   workspaceName?: string;
   workspaceSubtitle?: string;
+  /** Unread in-app notifications, badged on the Notifications entry. */
+  unreadCount?: number;
 }
 
 /**
@@ -26,6 +28,7 @@ export function Sidebar({
   userEmail,
   workspaceName,
   workspaceSubtitle,
+  unreadCount = 0,
 }: SidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -49,7 +52,19 @@ export function Sidebar({
           }`}
         >
           <span aria-hidden>{item.icon}</span>
-          {item.label}
+          <span className="flex-1">{item.label}</span>
+          {item.href === "/dashboard/notifications" && unreadCount > 0 && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                isActive(item.href)
+                  ? "bg-white/25 text-white"
+                  : "bg-[var(--color-brand)] text-white"
+              }`}
+              aria-label={`${unreadCount} unread`}
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </Link>
       ))}
     </nav>

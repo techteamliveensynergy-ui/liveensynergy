@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { notifyAdmins } from "@/lib/notifications";
 
 export interface ContactState {
   error?: string;
@@ -31,6 +32,12 @@ export async function submitContactMessage(
   if (error) {
     return { error: "Something went wrong sending your message. Please try again." };
   }
+
+  // Contact submissions are invisible without this — there's no inbox screen yet.
+  await notifyAdmins({
+    eventKey: "admin.contact_message",
+    variables: { name, email, subject: subject || "(no subject)" },
+  });
 
   return { message: "Thanks — we've received your message and will be in touch soon." };
 }

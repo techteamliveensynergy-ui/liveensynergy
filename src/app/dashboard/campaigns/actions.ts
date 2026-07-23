@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { notify, notifyAdmins } from "@/lib/notifications";
 
 export interface CampaignState {
   error?: string;
@@ -61,10 +62,32 @@ export async function createCampaign(
   if (!p.description) return { error: "Campaign description is required." };
   if (p.budget_gbp == null) return { error: "Sponsorship budget is required." };
 
-  const { error } = await supabase
+  const { data: created, error } = await supabase
     .from("campaigns")
-    .insert({ ...p, brand_id: brandId });
+    .insert({ ...p, brand_id: brandId })
+    .select("id, reference")
+    .single();
   if (error) return { error: error.message };
+
+  const budget = `£${Number(p.budget_gbp).toLocaleString("en-GB")}`;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    await notify({
+      eventKey: "campaign.created",
+      recipientProfileId: user.id,
+      link: `/dashboard/campaigns/${created.id}`,
+      variables: { campaign_reference: created.reference, budget },
+    });
+  }
+  // The whole model depends on the team matching this to an event.
+  await notifyAdmins({
+    eventKey: "admin.campaign_request",
+    link: "/dashboard/admin",
+    variables: { campaign_reference: created.reference, budget },
+  });
 
   revalidatePath("/dashboard/campaigns");
   redirect("/dashboard/campaigns");

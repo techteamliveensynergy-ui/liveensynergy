@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { notify } from "@/lib/notifications";
 
 export interface SponsoredState {
   error?: string;
@@ -83,6 +84,20 @@ export async function createSponsoredEvent(
 
   if (error) return { error: error.message };
 
+  // The artist now has a proposal waiting on them.
+  if (artistProfileId) {
+    await notify({
+      eventKey: "offer.proposal_received",
+      recipientProfileId: artistProfileId,
+      link: `/dashboard/sponsored/${created.id}`,
+      variables: {
+        event_name: name,
+        budget:
+          budget != null ? `£${budget.toLocaleString("en-GB")}` : undefined,
+      },
+    });
+  }
+
   revalidatePath("/dashboard/sponsored");
   redirect(`/dashboard/sponsored/${created.id}`);
 }
@@ -120,6 +135,47 @@ export async function toggleAgreement(formData: FormData) {
   else patch.status = "in_progress";
 
   await supabase.from("sponsored_events").update(patch).eq("id", id);
+
+  // Let the *other* side know, and both sides once it's fully confirmed.
+  const { data: full } = await supabase
+    .from("sponsored_events")
+    .select("name, budget_gbp, artist_profile_id, brands(profile_id, brand_name)")
+    .eq("id", id)
+    .maybeSingle<{
+      name: string;
+      budget_gbp: number | null;
+      artist_profile_id: string | null;
+      brands: { profile_id: string; brand_name: string } | null;
+    }>();
+
+  if (full) {
+    const brandProfileId = full.brands?.profile_id ?? null;
+    const budget =
+      full.budget_gbp != null
+        ? `£${Number(full.budget_gbp).toLocaleString("en-GB")}`
+        : undefined;
+
+    if (patch.status === "confirmed") {
+      for (const pid of [brandProfileId, full.artist_profile_id]) {
+        if (pid) {
+          await notify({
+            eventKey: "sponsorship.confirmed",
+            recipientProfileId: pid,
+            link: `/dashboard/sponsored/${id}`,
+            variables: { event_name: full.name, budget },
+          });
+        }
+      }
+    } else if (isArtist && artistAgreed && brandProfileId) {
+      await notify({
+        eventKey: "sponsorship.artist_agreed",
+        recipientProfileId: brandProfileId,
+        link: `/dashboard/sponsored/${id}`,
+        variables: { event_name: full.name },
+      });
+    }
+  }
+
   revalidatePath(`/dashboard/sponsored/${id}`);
   revalidatePath("/dashboard/sponsored");
 }
@@ -205,6 +261,41 @@ export async function updateParticipation(formData: FormData) {
           .update({ remaining_budget_gbp: next })
           .eq("id", eventId);
       }
+    }
+  }
+
+  // Tell the participant what just happened to them.
+  const NOTIFY_BY_OP: Record<string, string> = {
+    select: "participation.selected",
+    reject: "participation.rejected",
+    verify: "participation.verified",
+    release: "reward.released",
+  };
+  const eventKey = NOTIFY_BY_OP[op];
+  if (eventKey) {
+    const { data: participation } = await supabase
+      .from("participations")
+      .select("audience_profile_id, reward_amount_gbp, sponsored_events(name)")
+      .eq("id", id)
+      .maybeSingle<{
+        audience_profile_id: string;
+        reward_amount_gbp: number | null;
+        sponsored_events: { name: string } | null;
+      }>();
+
+    if (participation) {
+      await notify({
+        eventKey,
+        recipientProfileId: participation.audience_profile_id,
+        link: op === "release" ? "/dashboard/rewards" : "/dashboard/participations",
+        variables: {
+          event_name: participation.sponsored_events?.name ?? "your event",
+          amount:
+            participation.reward_amount_gbp != null
+              ? `£${Number(participation.reward_amount_gbp).toLocaleString("en-GB")}`
+              : undefined,
+        },
+      });
     }
   }
 

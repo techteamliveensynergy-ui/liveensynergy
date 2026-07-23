@@ -50,11 +50,12 @@ export default async function DashboardLayout({
 
   const nav = navForRole(profile.role);
 
+  const supabase = await createClient();
+
   let workspaceName: string | undefined;
   let workspaceSubtitle: string | undefined;
   const workspace = WORKSPACE_TABLE[profile.role];
   if (workspace) {
-    const supabase = await createClient();
     const { data } = await supabase
       .from(workspace.table)
       .select(`${workspace.name}, ${workspace.category}`)
@@ -63,6 +64,12 @@ export default async function DashboardLayout({
     workspaceName = data?.[workspace.name] ?? undefined;
     workspaceSubtitle = data?.[workspace.category] ?? undefined;
   }
+
+  const { count: unreadCount } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_profile_id", profile.id)
+    .is("read_at", null);
 
   return (
     <div className="min-h-screen bg-[var(--color-mist)] md:flex">
@@ -73,6 +80,7 @@ export default async function DashboardLayout({
         userEmail={user.email ?? ""}
         workspaceName={workspaceName}
         workspaceSubtitle={workspaceSubtitle}
+        unreadCount={unreadCount ?? 0}
       />
       <div className="flex-1">
         <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
