@@ -24,7 +24,7 @@ release — it's the whole product loop in a single run.
 | 1.5 | Legal tab switcher | `/terms` ↔ `/privacy` tabs highlight the active page | 🔲 |
 | 1.6 | Landing CTA "Join as Brand" | Goes to `/auth/sign-up?role=brand` with role preselected (step 2) | ✅ |
 | 1.7 | Landing CTA "Join as Artist / Organiser" | Goes to sign-up with artist role preselected | ✅ |
-| 1.8 | Responsive check at 375px / 768px / 1440px | No horizontal scroll; nav collapses; cards stack | 🔲 |
+| 1.8 | Responsive check at 375px / 768px / 1440px | No horizontal scroll; nav collapses; cards stack | ✅ (see §13) |
 
 ## 2. Contact form
 
@@ -248,6 +248,43 @@ Enforced once in middleware so it covers every route, not per-page.
 | 12.4 | Vercel deploy | Build green; env vars set; no middleware crash | 🔲 |
 | 12.5 | Missing Supabase env vars | ⚠️ Currently 500s in middleware — should fail more gracefully | 🔲 |
 
+## 13. Mobile / responsive
+
+Run with Playwright device emulation (iPhone 13 phone, iPad Mini tablet).
+The core assertion is that `documentElement.scrollWidth` never exceeds
+`clientWidth` — i.e. the page never scrolls sideways.
+
+| # | Case | Expected | Status |
+|---|---|---|---|
+| 13.1 | Public pages on a phone | No horizontal overflow on `/`, `/about`, `/events`, `/faqs`, `/terms`, `/privacy`, `/contact` | ✅ |
+| 13.2 | Public nav reachable on a phone | Hamburger reveals How it works / Events / About / Contact / Sign in | ✅ |
+| 13.3 | Primary CTA tap target | ≥40px tall | ✅ |
+| 13.4 | Sign-in form on a phone | Usable, inputs tall enough, no overflow | ✅ |
+| 13.5 | Dashboard on a phone | No overflow; sidebar is an off-canvas drawer behind a hamburger | ✅ |
+| 13.6 | Audience pages on a phone | `/dashboard/participations`, `/rewards`, `/discover` don't overflow | ✅ |
+| 13.7 | Admin pages on a phone | Overview, users, campaigns, events, participants, notifications don't overflow | ✅ |
+| 13.8 | Tablet | `/`, `/events`, `/contact` don't overflow | ✅ |
+| 13.9 | Landscape / small-height viewports | Not covered | 🔲 |
+| 13.10 | Real device testing (iOS Safari, Android Chrome) | Emulation only — no real hardware | 🔲 |
+
+### Bugs this suite caught (both fixed)
+
+1. **The public site had no mobile navigation at all.** The header nav was
+   `hidden md:flex` with no replacement, so on a phone How it works / Events /
+   About / Contact were completely unreachable — only the logo and auth
+   buttons rendered. Added a `MobileNav` disclosure.
+2. **Admin overview scrolled sideways by 234px on a phone.** The two "recent"
+   panels are grid items, which default to `min-width: auto` and so sized to
+   their widest row instead of shrinking. Fixed with `min-w-0`.
+
+> ⚠️ **`.btn`, `.card`, `.input` and `.chip` are unlayered rules in
+> `globals.css`, so they beat Tailwind's layered utilities.** Putting `hidden`
+> (or `text-sm`, or any competing property) directly on an element that also
+> has `.btn` is silently ignored — this caused a 5px overflow that looked like
+> a layout bug. Wrap the element instead, or move those rules into
+> `@layer components` (which would make many existing `btn ... text-sm`
+> usages suddenly take effect, so it's a deliberate visual change).
+
 ---
 
 ## Known gaps (not yet built — flows to be decided)
@@ -284,6 +321,7 @@ re-run the core loop against a local dev server:
 #    BASE=http://localhost:3000 node marketplace.mjs   # 11 admin oversight checks
 #                                                      # (run after fullflow — it
 #                                                      #  needs the seeded deal)
+#    BASE=http://localhost:3000 node mobile.mjs        # 25 responsive checks
 ```
 
 Each step prints `PASS`/`FAIL` and writes a screenshot, so a failure points at

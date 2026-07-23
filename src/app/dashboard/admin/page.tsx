@@ -190,7 +190,9 @@ export default async function AdminPage() {
 
       {/* Recent */}
       <div className="grid gap-5 lg:grid-cols-2">
-        <section className="card p-6">
+        {/* min-w-0: grid items default to min-width:auto and would otherwise
+            size to the widest row's content, pushing the page sideways. */}
+        <section className="card min-w-0 p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
               Recent campaigns
@@ -224,7 +226,9 @@ export default async function AdminPage() {
           )}
         </section>
 
-        <section className="card p-6">
+        {/* min-w-0: grid items default to min-width:auto and would otherwise
+            size to the widest row's content, pushing the page sideways. */}
+        <section className="card min-w-0 p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
               Recent sponsorships

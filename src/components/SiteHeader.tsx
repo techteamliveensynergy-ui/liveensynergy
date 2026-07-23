@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "./ui/Logo";
+import { MobileNav } from "./MobileNav";
 
 const NAV = [
   { href: "/#how-it-works", label: "How it works" },
@@ -18,7 +19,7 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-[var(--color-mist)]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+      <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5">
         <Logo />
         <nav className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
@@ -38,14 +39,27 @@ export async function SiteHeader() {
             </Link>
           ) : (
             <>
-              <Link href="/auth/sign-in" className="btn btn-ghost">
-                Sign in
-              </Link>
+              {/* Wrapped rather than putting `hidden sm:block` on the link
+                  itself: `.btn` is an unlayered rule in globals.css, so it
+                  beats Tailwind's layered utilities and `hidden` would be
+                  silently ignored on any element carrying `.btn`. */}
+              <span className="hidden sm:block">
+                <Link href="/auth/sign-in" className="btn btn-ghost">
+                  Sign in
+                </Link>
+              </span>
               <Link href="/auth/sign-up" className="btn btn-primary">
                 Join us
               </Link>
             </>
           )}
+          <MobileNav
+            items={
+              user
+                ? NAV
+                : [...NAV, { href: "/auth/sign-in", label: "Sign in" }]
+            }
+          />
         </div>
       </div>
     </header>
