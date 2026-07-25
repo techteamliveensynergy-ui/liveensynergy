@@ -9,6 +9,8 @@ import {
   SocialLinksGrid,
   SuccessBanner,
 } from "@/components/onboarding/parts";
+import { FileDrop } from "@/components/ui/FileDrop";
+import { AVATAR_HINT, BANNER_HINT, MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { ARTIST_CATEGORIES } from "@/lib/constants";
 import type { Artist } from "@/lib/types";
 import { saveArtist, type OnboardingState } from "../actions";
@@ -56,12 +58,52 @@ export function ArtistForm({
           </Field>
         </div>
 
-        <Field label="Artist bio" htmlFor="bio" hint="Up to 500 words.">
+        <Field
+          label="Artist bio"
+          htmlFor="bio"
+          hint={`Up to 500 words (${MAX_BIO_CHARS.toLocaleString("en-GB")} characters).`}
+        >
           <textarea
             id="bio"
             name="bio"
             className="textarea"
+            rows={5}
+            maxLength={MAX_BIO_CHARS}
             defaultValue={d.bio ?? ""}
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Profile image" htmlFor="profile_image">
+            <FileDrop
+              name="profile_image"
+              hint={AVATAR_HINT}
+              currentUrl={d.profile_image_url ?? null}
+              label="Drag your profile photo here"
+            />
+          </Field>
+          <Field label="Banner image" htmlFor="banner">
+            <FileDrop
+              name="banner"
+              hint={BANNER_HINT}
+              currentUrl={d.banner_url ?? null}
+              label="Drag your banner here"
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Showcase video link"
+          htmlFor="video_url"
+          hint="A YouTube, Vimeo or Instagram link that shows what you do."
+        >
+          <input
+            id="video_url"
+            name="video_url"
+            type="url"
+            className="input"
+            placeholder="https://youtube.com/watch?v=…"
+            defaultValue={d.video_url ?? ""}
           />
         </Field>
 

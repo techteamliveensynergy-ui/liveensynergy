@@ -48,10 +48,17 @@ export function AudienceForm({
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Phone number" htmlFor="phone">
+          <Field
+            label="Phone number"
+            htmlFor="phone"
+            required
+            hint="Helps us confirm it's really you when a reward is released."
+          >
             <input
               id="phone"
               name="phone"
+              type="tel"
+              required
               className="input"
               defaultValue={d.phone ?? ""}
             />

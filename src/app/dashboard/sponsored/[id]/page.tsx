@@ -4,15 +4,32 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { Field } from "@/components/ui/Field";
-import type { Participation, SponsoredEvent } from "@/lib/types";
+import type {
+  EventListing,
+  Participation,
+  SponsoredEvent,
+  SponsoredEventAsset,
+} from "@/lib/types";
 import {
   toggleAgreement,
   updateSponsoredEvent,
   markCompleted,
+  contactSupport,
   updateParticipation,
 } from "../actions";
 
 export const metadata = { title: "Sponsored event" };
+
+/** `datetime-local` needs `YYYY-MM-DDTHH:mm`, not a full ISO string. */
+function toLocalInputValue(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
 
 export default async function SponsoredEventPage({
   params,
@@ -31,22 +48,44 @@ export default async function SponsoredEventPage({
   if (!ev) notFound();
   const event = ev as SponsoredEvent;
 
-  const { data: brand } = await supabase
-    .from("brands")
-    .select("id")
-    .eq("profile_id", profile.id)
-    .maybeSingle();
+  const [{ data: brand }, { data: listingRow }, { data: assetRows }, { data: parts }] =
+    await Promise.all([
+      supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle(),
+      event.listing_id
+        ? supabase
+            .from("event_listings")
+            .select("*")
+            .eq("id", event.listing_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("sponsored_event_assets")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("participations")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: true }),
+    ]);
+
+  const listing = listingRow as EventListing | null;
+  const assets = (assetRows ?? []) as SponsoredEventAsset[];
+  const participations = (parts ?? []) as Participation[];
+
   const isBrand = !!brand && brand.id === event.brand_id;
   const isArtist = event.artist_profile_id === profile.id;
-
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
+  const locked = event.status !== "in_progress";
 
-  const { data: parts } = await supabase
-    .from("participations")
-    .select("*")
-    .eq("sponsored_event_id", id)
-    .order("created_at", { ascending: true });
-  const participations = (parts ?? []) as Participation[];
+  // How far the remaining budget stretches, at the linked event's ticket price.
+  const ticketPrice = listing?.ticket_price_gbp ?? null;
+  const remaining = event.remaining_budget_gbp;
+  const sponsorableCount =
+    ticketPrice != null && ticketPrice > 0 && remaining != null
+      ? Math.floor(Number(remaining) / Number(ticketPrice))
+      : null;
 
   return (
     <div className="space-y-6">
@@ -59,14 +98,27 @@ export default async function SponsoredEventPage({
 
       <PageHeader
         title={event.name}
-        subtitle={`Ref ${event.reference}`}
+        subtitle={
+          event.artist_display_name
+            ? `Sponsorship ref ${event.reference} · with ${event.artist_display_name}`
+            : `Sponsorship ref ${event.reference}`
+        }
         action={<StatusBadge status={event.status} />}
       />
+
+      {event.banner_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={event.banner_url}
+          alt=""
+          className="h-48 w-full rounded-2xl object-cover"
+        />
+      )}
 
       {/* Sponsorship management */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Sponsorship management</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
             label="Budget"
             value={
@@ -78,60 +130,211 @@ export default async function SponsoredEventPage({
           <Stat
             label="Remaining budget"
             value={
-              event.remaining_budget_gbp != null
-                ? `£${Number(event.remaining_budget_gbp).toLocaleString("en-GB")}`
+              remaining != null
+                ? `£${Number(remaining).toLocaleString("en-GB")}`
                 : "—"
+            }
+          />
+          <Stat
+            label="People this can sponsor"
+            value={
+              sponsorableCount != null
+                ? sponsorableCount.toLocaleString("en-GB")
+                : "—"
+            }
+            hint={
+              ticketPrice != null && ticketPrice > 0
+                ? `at £${Number(ticketPrice).toLocaleString("en-GB")} a ticket`
+                : "add a ticket price on the listing"
             }
           />
           <Stat
             label="Participation deadline"
             value={
               event.participation_deadline
-                ? new Date(event.participation_deadline).toLocaleDateString(
-                    "en-GB",
-                  )
+                ? new Date(event.participation_deadline).toLocaleString("en-GB", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
                 : "—"
             }
           />
         </div>
       </div>
 
+      {/* Full event details — previously you had to leave the page for these. */}
+      <div className="card p-6">
+        <h2 className="text-lg font-semibold">Event details</h2>
+        <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <Detail label="Event name" value={event.name} />
+          <Detail
+            label="Artist / act"
+            value={event.artist_display_name ?? listing?.name ?? null}
+          />
+          <Detail
+            label="Date"
+            value={
+              event.event_date
+                ? new Date(event.event_date).toLocaleDateString("en-GB", {
+                    dateStyle: "full",
+                  })
+                : null
+            }
+          />
+          <Detail label="Venue" value={event.venue_details ?? listing?.venue_name ?? null} />
+          <Detail
+            label="Location"
+            value={
+              event.location ??
+              [listing?.city, listing?.country].filter(Boolean).join(", ") ??
+              null
+            }
+          />
+          <Detail label="Category" value={listing?.category ?? null} />
+          <Detail
+            label="Capacity"
+            value={listing?.capacity != null ? String(listing.capacity) : null}
+          />
+          <Detail
+            label="Ticket price"
+            value={
+              listing?.ticket_price_gbp != null
+                ? `£${Number(listing.ticket_price_gbp).toLocaleString("en-GB")}`
+                : null
+            }
+          />
+          {listing && (
+            <Detail label="Source listing ref" value={listing.reference} />
+          )}
+        </dl>
+
+        {listing?.ticket_buy_url && (
+          <a
+            href={listing.ticket_buy_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-block text-sm font-semibold text-[var(--color-brand-dark)]"
+          >
+            Ticket page ↗
+          </a>
+        )}
+
+        {listing?.sponsor_benefits && (
+          <div className="mt-4">
+            <p className="field-label">Benefit to sponsors</p>
+            <p className="whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
+              {listing.sponsor_benefits}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Branding */}
+      {(event.branding_guidelines || assets.length > 0) && (
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold">Branding</h2>
+          {event.branding_guidelines && (
+            <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
+              {event.branding_guidelines}
+            </p>
+          )}
+          {assets.length > 0 && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {assets.map((a) => (
+                <figure key={a.id}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={a.url}
+                    alt={a.description ?? ""}
+                    className="h-24 w-full rounded-lg object-cover"
+                  />
+                  {a.description && (
+                    <figcaption className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                      {a.description}
+                    </figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Terms & agreement */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Terms &amp; confirmation</h2>
-        <form action={updateSponsoredEvent} className="mt-4 grid gap-4">
-          <input type="hidden" name="id" value={event.id} />
-          <Field label="Reward rules" htmlFor="reward_rules">
-            <textarea
-              id="reward_rules"
-              name="reward_rules"
-              className="textarea"
-              defaultValue={event.reward_rules ?? ""}
-            />
-          </Field>
-          <Field label="Sponsorship terms" htmlFor="terms">
-            <textarea
-              id="terms"
-              name="terms"
-              className="textarea"
-              defaultValue={event.terms ?? ""}
-            />
-          </Field>
-          <Field label="Participation deadline" htmlFor="participation_deadline">
-            <input
-              id="participation_deadline"
-              name="participation_deadline"
-              type="date"
-              className="input"
-              defaultValue={event.participation_deadline ?? ""}
-            />
-          </Field>
-          <div className="flex justify-end">
-            <button type="submit" className="btn btn-ghost">
-              Save terms
-            </button>
-          </div>
-        </form>
+
+        {locked ? (
+          <>
+            <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+              These terms are locked — both parties have agreed them. To change
+              anything, contact the Live·En·Synergy team.
+            </p>
+            <dl className="mt-4 grid gap-4">
+              <Detail label="Reward rules" value={event.reward_rules} block />
+              <Detail label="Sponsorship terms" value={event.terms} block />
+              <Detail
+                label="How attendance is confirmed"
+                value={event.attendance_method}
+                block
+              />
+            </dl>
+          </>
+        ) : (
+          <form action={updateSponsoredEvent} className="mt-4 grid gap-4">
+            <input type="hidden" name="id" value={event.id} />
+            <Field label="Reward rules" htmlFor="reward_rules">
+              <textarea
+                id="reward_rules"
+                name="reward_rules"
+                className="textarea"
+                defaultValue={event.reward_rules ?? ""}
+              />
+            </Field>
+            <Field label="Sponsorship terms" htmlFor="terms">
+              <textarea
+                id="terms"
+                name="terms"
+                className="textarea"
+                defaultValue={event.terms ?? ""}
+              />
+            </Field>
+            <Field label="Branding guidelines" htmlFor="branding_guidelines">
+              <textarea
+                id="branding_guidelines"
+                name="branding_guidelines"
+                className="textarea"
+                defaultValue={event.branding_guidelines ?? ""}
+              />
+            </Field>
+            <Field
+              label="How will the audience confirm physical attendance?"
+              htmlFor="attendance_method"
+            >
+              <textarea
+                id="attendance_method"
+                name="attendance_method"
+                className="textarea"
+                placeholder="Artist will provide confirmation after ticket scan at the box office, or display a QR code at the venue."
+                defaultValue={event.attendance_method ?? ""}
+              />
+            </Field>
+            <Field label="Participation deadline" htmlFor="participation_deadline">
+              <input
+                id="participation_deadline"
+                name="participation_deadline"
+                type="datetime-local"
+                className="input"
+                defaultValue={toLocalInputValue(event.participation_deadline)}
+              />
+            </Field>
+            <div className="flex justify-end">
+              <button type="submit" className="btn btn-ghost">
+                Save terms
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <AgreeCard label="Brand agreed" agreed={event.brand_agreed} />
@@ -140,13 +343,22 @@ export default async function SponsoredEventPage({
 
         {(isBrand || isArtist) && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <form action={toggleAgreement}>
+            {!locked && (
+              <form action={toggleAgreement}>
+                <input type="hidden" name="id" value={event.id} />
+                <button
+                  type="submit"
+                  className={`btn ${myAgreed ? "btn-ghost" : "btn-primary"}`}
+                >
+                  {myAgreed ? "Withdraw my agreement" : "I agree to these terms"}
+                </button>
+              </form>
+            )}
+            <form action={contactSupport}>
               <input type="hidden" name="id" value={event.id} />
-              <button
-                type="submit"
-                className={`btn ${myAgreed ? "btn-ghost" : "btn-primary"}`}
-              >
-                {myAgreed ? "Withdraw my agreement" : "I agree to these terms"}
+              <input type="hidden" name="event_name" value={event.name} />
+              <button type="submit" className="btn btn-ghost">
+                Contact Live·En·Synergy
               </button>
             </form>
             {event.status === "confirmed" && (
@@ -238,11 +450,47 @@ export default async function SponsoredEventPage({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
       <p className="text-xs text-[var(--color-ink-soft)]">{label}</p>
       <p className="mt-0.5 text-lg font-semibold">{value}</p>
+      {hint && (
+        <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  block,
+}: {
+  label: string;
+  value: string | null | undefined;
+  block?: boolean;
+}) {
+  return (
+    <div className={block ? "" : undefined}>
+      <dt className="field-label">{label}</dt>
+      <dd
+        className={`text-sm ${
+          value
+            ? "whitespace-pre-wrap text-[var(--color-ink)]"
+            : "text-[var(--color-ink-soft)]"
+        }`}
+      >
+        {value || "—"}
+      </dd>
     </div>
   );
 }

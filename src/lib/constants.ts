@@ -66,11 +66,16 @@ export const BRAND_CATEGORIES = [
   "Other",
 ] as const;
 
-/** Artist categories */
+/**
+ * Artist categories. "Sports" replaced the older "Sportsperson" label — see
+ * migration 0008, which rewrites the stored value on existing rows.
+ */
 export const ARTIST_CATEGORIES = [
   "Music",
   "Comedy",
-  "Sportsperson",
+  "Sports",
+  "Gaming",
+  "Conference",
   "Visual Artists",
   "Digital or Multimedia Artists",
   "Other",

@@ -9,6 +9,8 @@ import {
   SocialLinksGrid,
   SuccessBanner,
 } from "@/components/onboarding/parts";
+import { FileDrop } from "@/components/ui/FileDrop";
+import { AVATAR_HINT, BANNER_HINT, MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventOrganiser } from "@/lib/types";
 import { saveEvent, type OnboardingState } from "../actions";
@@ -54,7 +56,43 @@ export function EventForm({
             id="description"
             name="description"
             className="textarea"
+            rows={5}
+            maxLength={MAX_BIO_CHARS}
             defaultValue={d.description ?? ""}
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Profile image" htmlFor="profile_image">
+            <FileDrop
+              name="profile_image"
+              hint={AVATAR_HINT}
+              currentUrl={d.profile_image_url ?? null}
+              label="Drag your profile image here"
+            />
+          </Field>
+          <Field label="Banner image" htmlFor="banner">
+            <FileDrop
+              name="banner"
+              hint={BANNER_HINT}
+              currentUrl={d.banner_url ?? null}
+              label="Drag your banner here"
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Showcase video link"
+          htmlFor="video_url"
+          hint="A YouTube or Vimeo link from a past event."
+        >
+          <input
+            id="video_url"
+            name="video_url"
+            type="url"
+            className="input"
+            placeholder="https://youtube.com/watch?v=…"
+            defaultValue={d.video_url ?? ""}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">

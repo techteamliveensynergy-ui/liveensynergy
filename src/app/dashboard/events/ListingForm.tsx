@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
+import { FileDrop } from "@/components/ui/FileDrop";
+import { IMAGE_HINT } from "@/lib/upload-limits";
 import { EVENT_CATEGORIES, BUDGET_RANGES } from "@/lib/constants";
 import type { EventListing } from "@/lib/types";
 import {
@@ -72,6 +74,18 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             </select>
           </Field>
         </div>
+        <Field
+          label="Event image"
+          htmlFor="image"
+          hint="Shown on your listing and to sponsors browsing Discover events."
+        >
+          <FileDrop
+            name="image"
+            hint={IMAGE_HINT}
+            currentUrl={d?.image_url ?? null}
+            label="Drag your event artwork here, or click to browse"
+          />
+        </Field>
         <Field label="Venue name" htmlFor="venue_name">
           <input
             id="venue_name"

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { ROLES, SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
 import { signUp, type AuthState } from "../actions";
 
@@ -136,13 +137,10 @@ export function SignUpForm({ initialRole }: { initialRole?: string }) {
         required
         hint="At least 8 characters."
       >
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
-          className="input"
-          placeholder="••••••••"
           minLength={8}
           required
         />

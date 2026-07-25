@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { notify } from "@/lib/notifications";
+import { notify, notifyAdmins } from "@/lib/notifications";
+import { uploadImage } from "@/lib/storage";
+import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 
 export interface SponsoredState {
   error?: string;
 }
+
+/** How many branding creatives a sponsorship can carry (matches the form). */
+const ASSET_SLOTS = 5;
 
 function str(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "").trim();
@@ -27,6 +32,42 @@ async function requireUser() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
   return { supabase, userId: user.id };
+}
+
+/**
+ * Uploads the `asset_0…asset_N` slots and records them against the sponsorship.
+ * Best-effort: a creative that fails to upload shouldn't roll back a deal that
+ * has already been written.
+ */
+async function saveBrandingAssets(
+  formData: FormData,
+  sponsoredEventId: string,
+  userId: string,
+) {
+  const rows: {
+    sponsored_event_id: string;
+    url: string;
+    description: string | null;
+    uploaded_by: string;
+  }[] = [];
+
+  for (let i = 0; i < ASSET_SLOTS; i++) {
+    const upload = await uploadImage(
+      formData.get(`asset_${i}`),
+      "sponsored-assets",
+    );
+    if (!upload.url) continue;
+    rows.push({
+      sponsored_event_id: sponsoredEventId,
+      url: upload.url,
+      description: str(formData.get(`asset_desc_${i}`)),
+      uploaded_by: userId,
+    });
+  }
+
+  if (rows.length === 0) return;
+  const supabase = await createClient();
+  await supabase.from("sponsored_event_assets").insert(rows);
 }
 
 /** Brand creates a sponsored-event record from one of their available matches. */
@@ -61,6 +102,9 @@ export async function createSponsoredEvent(
     listingId = null;
   }
 
+  const banner = await uploadImage(formData.get("banner"), "sponsored-banner");
+  if (banner.error) return { error: banner.error };
+
   const { data: created, error } = await supabase
     .from("sponsored_events")
     .insert({
@@ -68,6 +112,7 @@ export async function createSponsoredEvent(
       campaign_id: str(formData.get("campaign_id")),
       listing_id: listingId,
       artist_profile_id: artistProfileId,
+      artist_display_name: str(formData.get("artist_display_name")),
       name,
       event_date: str(formData.get("event_date")),
       venue_details: str(formData.get("venue_details")),
@@ -76,6 +121,9 @@ export async function createSponsoredEvent(
       remaining_budget_gbp: budget,
       reward_rules: str(formData.get("reward_rules")),
       terms: str(formData.get("terms")),
+      banner_url: banner.url ?? null,
+      branding_guidelines: str(formData.get("branding_guidelines")),
+      attendance_method: str(formData.get("attendance_method")),
       participation_deadline: str(formData.get("participation_deadline")),
       brand_agreed: true, // creator (brand) agrees on creation
     })
@@ -83,6 +131,8 @@ export async function createSponsoredEvent(
     .single();
 
   if (error) return { error: error.message };
+
+  await saveBrandingAssets(formData, created.id, userId);
 
   // The artist now has a proposal waiting on them.
   if (artistProfileId) {
@@ -180,20 +230,66 @@ export async function toggleAgreement(formData: FormData) {
   revalidatePath("/dashboard/sponsored");
 }
 
-/** Parties can edit shared terms / reward rules while in progress. */
+/**
+ * Parties can edit shared terms / reward rules while the deal is in progress.
+ *
+ * Once it's confirmed the terms are what both sides signed up to, so edits are
+ * refused here as well as hidden in the UI — otherwise one party could change
+ * the deal after the other agreed to it. Contact the team to change a
+ * confirmed sponsorship.
+ */
 export async function updateSponsoredEvent(formData: FormData) {
   const { supabase } = await requireUser();
   const id = str(formData.get("id"));
   if (!id) return;
+
+  const { data: current } = await supabase
+    .from("sponsored_events")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle<{ status: string }>();
+  if (!current || current.status !== "in_progress") return;
+
   await supabase
     .from("sponsored_events")
     .update({
       terms: str(formData.get("terms")),
       reward_rules: str(formData.get("reward_rules")),
+      branding_guidelines: str(formData.get("branding_guidelines")),
+      attendance_method: str(formData.get("attendance_method")),
       participation_deadline: str(formData.get("participation_deadline")),
     })
     .eq("id", id);
   revalidatePath(`/dashboard/sponsored/${id}`);
+}
+
+/**
+ * "Contact Live·En·Synergy" from a sponsorship — the only route to changing a
+ * confirmed deal, since neither party can edit it unilaterally.
+ */
+export async function contactSupport(formData: FormData) {
+  const { userId } = await requireUser();
+  const id = str(formData.get("id"));
+  const eventName = str(formData.get("event_name")) ?? "a sponsorship";
+
+  const conversationId = await getOrCreateSupportConversation({
+    userProfileId: userId,
+    subject: `Sponsorship: ${eventName}`,
+  });
+
+  if (!conversationId) {
+    // No admin account exists to route this to — fall back to the contact form.
+    redirect("/contact");
+  }
+
+  await notifyAdmins({
+    eventKey: "message.received",
+    link: `/dashboard/messages?c=${conversationId}`,
+    variables: { sender_name: "A user", event_name: eventName },
+  });
+
+  if (id) revalidatePath(`/dashboard/sponsored/${id}`);
+  redirect(`/dashboard/messages?c=${conversationId}&notice=support`);
 }
 
 export async function markCompleted(formData: FormData) {

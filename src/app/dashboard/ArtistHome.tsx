@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { profileCompleteness } from "@/lib/profile";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
+import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import type { EventListing, Profile, SponsoredEvent } from "@/lib/types";
 
 export async function ArtistHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
   const isEvent = profile.role === "event";
+  const completeness = await profileCompleteness(profile);
 
   const [{ data: listingData }, { data: sponsoredData }, { count: enquiryCount }] =
     await Promise.all([
@@ -59,6 +62,8 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
               : "Your events are live — keep an eye on your offers inbox."}
         </p>
       </div>
+
+      <ProfileCompleteness completeness={completeness} className="mb-6" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile label="Published events" value={published} tint="bg-[var(--color-lavender)]" />

@@ -53,7 +53,9 @@ export async function contactOrganiser(formData: FormData) {
     variables: { brand_name: brand?.brand_name ?? "A brand" },
   });
 
-  redirect(`/dashboard/messages?c=${conversationId}`);
+  // The match is reviewed by the team before anything is confirmed, so set the
+  // expectation up front rather than leaving the brand waiting on a reply.
+  redirect(`/dashboard/messages?c=${conversationId}&notice=enquiry`);
 }
 
 /** Audience registers for an open sponsored event. */

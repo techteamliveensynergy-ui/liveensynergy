@@ -9,6 +9,8 @@ import {
   SocialLinksGrid,
   SuccessBanner,
 } from "@/components/onboarding/parts";
+import { FileDrop } from "@/components/ui/FileDrop";
+import { AVATAR_HINT, BANNER_HINT, MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { BRAND_CATEGORIES } from "@/lib/constants";
 import type { Brand } from "@/lib/types";
 import { saveBrand, type OnboardingState } from "../actions";
@@ -50,13 +52,53 @@ export function BrandForm({
           />
         </Field>
 
-        <Field label="Brand profile description" htmlFor="description">
+        <Field
+          label="Brand profile description"
+          htmlFor="description"
+          hint={`Up to ${MAX_BIO_CHARS.toLocaleString("en-GB")} characters.`}
+        >
           <textarea
             id="description"
             name="description"
             className="textarea"
+            rows={5}
+            maxLength={MAX_BIO_CHARS}
             placeholder="Tell us about your brand…"
             defaultValue={d.description ?? ""}
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Brand logo" htmlFor="profile_image">
+            <FileDrop
+              name="profile_image"
+              hint={AVATAR_HINT}
+              currentUrl={d.logo_url ?? null}
+              label="Drag your logo here"
+            />
+          </Field>
+          <Field label="Banner image" htmlFor="banner">
+            <FileDrop
+              name="banner"
+              hint={BANNER_HINT}
+              currentUrl={d.banner_url ?? null}
+              label="Drag your banner here"
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Brand video link"
+          htmlFor="video_url"
+          hint="A YouTube or Vimeo link showing your brand or a past activation."
+        >
+          <input
+            id="video_url"
+            name="video_url"
+            type="url"
+            className="input"
+            placeholder="https://youtube.com/watch?v=…"
+            defaultValue={d.video_url ?? ""}
           />
         </Field>
 
@@ -191,10 +233,12 @@ export function BrandForm({
               defaultValue={d.manager_email ?? ""}
             />
           </Field>
-          <Field label="Manager phone" htmlFor="manager_phone">
+          <Field label="Manager phone" htmlFor="manager_phone" required>
             <input
               id="manager_phone"
               name="manager_phone"
+              type="tel"
+              required
               className="input"
               defaultValue={d.manager_phone ?? ""}
             />

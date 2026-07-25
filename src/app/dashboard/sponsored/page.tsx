@@ -71,7 +71,8 @@ export default async function SponsoredPage() {
                     .join(" · ") || "No date set"}
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
-                  Ref {e.reference}
+                  Sponsorship ref {e.reference}
+                  {e.artist_display_name ? ` · with ${e.artist_display_name}` : ""}
                   {e.budget_gbp != null
                     ? ` · Budget £${Number(e.budget_gbp).toLocaleString("en-GB")}`
                     : ""}

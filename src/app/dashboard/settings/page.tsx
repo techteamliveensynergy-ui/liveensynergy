@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireProfile } from "@/lib/profile";
 import { PageHeader } from "@/components/dashboard/ui";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -29,6 +30,34 @@ export default async function SettingsPage() {
           </span>
         </div>
       </div>
+
+      <Link
+        href="/dashboard/resources"
+        className="card block p-6 transition hover:-translate-y-0.5"
+      >
+        <h2 className="text-lg font-semibold">Repository</h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          How-it-works videos, blog, FAQs, sponsor and artist guidelines, terms
+          &amp; conditions and the pricing structure.
+        </p>
+        <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
+          Open repository →
+        </span>
+      </Link>
+
+      <Link
+        href="/dashboard/feedback"
+        className="card block p-6 transition hover:-translate-y-0.5"
+      >
+        <h2 className="text-lg font-semibold">Report a bug or suggest an idea</h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Spotted something broken, or want a wording change? Send it straight
+          to the team, with a screenshot if it helps.
+        </p>
+        <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
+          Open feedback form →
+        </span>
+      </Link>
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Password</h2>

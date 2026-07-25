@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { signIn, type AuthState } from "../actions";
 
 function SubmitButton() {
@@ -41,13 +42,10 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
       </Field>
 
       <Field label="Password" htmlFor="password" required>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
-          className="input"
-          placeholder="••••••••"
           required
         />
       </Field>

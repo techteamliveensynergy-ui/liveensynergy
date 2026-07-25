@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { profileCompleteness } from "@/lib/profile";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
+import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import { computePlatformFee } from "@/lib/constants";
 import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
+  const completeness = await profileCompleteness(profile);
 
   const { data: brand } = await supabase
     .from("brands")
@@ -55,7 +58,8 @@ export async function BrandHome({ profile }: { profile: Profile }) {
   }
 
   const activeCampaigns = campaigns.filter((c) => c.status === "in_progress").length;
-  const confirmed = sponsored.filter((s) => s.status === "confirmed").length;
+  const confirmedEvents = sponsored.filter((s) => s.status === "confirmed");
+  const confirmed = confirmedEvents.length;
   const budgetRemaining = sponsored.reduce(
     (sum, s) => sum + Number(s.remaining_budget_gbp ?? 0),
     0,
@@ -78,6 +82,8 @@ export async function BrandHome({ profile }: { profile: Profile }) {
               : `You have ${activeCampaigns} campaign${activeCampaigns === 1 ? "" : "s"} in progress.`}
         </p>
       </div>
+
+      <ProfileCompleteness completeness={completeness} className="mb-6" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
@@ -195,6 +201,67 @@ export async function BrandHome({ profile }: { profile: Profile }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Confirmed sponsorships get their own section — the metric tile alone
+          didn't tell the brand *which* deals are live. */}
+      <div className="card mt-5 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+              Confirmed sponsorships
+            </h2>
+            <p className="text-xs text-[var(--color-ink-soft)]">
+              Deals both sides have agreed. Remaining budget updates as rewards
+              are released.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/sponsored"
+            className="text-sm font-semibold text-[var(--color-brand-dark)]"
+          >
+            See all →
+          </Link>
+        </div>
+        {confirmedEvents.length === 0 ? (
+          <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
+            No confirmed sponsorships yet — once you and the artist both agree
+            terms, the deal shows up here.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {confirmedEvents.slice(0, 5).map((s) => (
+              <Link
+                key={s.id}
+                href={`/dashboard/sponsored/${s.id}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
+              >
+                <div>
+                  <p className="font-semibold text-[var(--color-ink)]">
+                    {s.name}
+                  </p>
+                  <p className="text-xs text-[var(--color-ink-soft)]">
+                    Ref {s.reference}
+                    {s.event_date
+                      ? ` · ${new Date(s.event_date).toLocaleDateString("en-GB")}`
+                      : ""}
+                    {s.location ? ` · ${s.location}` : ""}
+                  </p>
+                </div>
+                <span className="text-xs text-[var(--color-ink-soft)]">
+                  £
+                  {Number(s.remaining_budget_gbp ?? 0).toLocaleString("en-GB", {
+                    maximumFractionDigits: 0,
+                  })}{" "}
+                  remaining
+                </span>
+                <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
+                  Open →
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3">

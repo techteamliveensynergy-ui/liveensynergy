@@ -50,6 +50,7 @@ export interface Brand {
   product_category: string | null;
   product_category_other: string | null;
   website_url: string | null;
+  video_url: string | null;
   social_links: Record<string, string> | null;
   // Internal (only visible to the brand and the Live-En-Synergy team)
   mission_vision: string | null;
@@ -76,6 +77,7 @@ export interface Artist {
   category: string | null;
   category_other: string | null;
   website_url: string | null;
+  video_url: string | null;
   social_links: Record<string, string> | null;
   // Internal use only
   date_of_birth: string | null;
@@ -101,6 +103,7 @@ export interface EventOrganiser {
   category: string | null;
   category_other: string | null;
   website_url: string | null;
+  video_url: string | null;
   social_links: Record<string, string> | null;
   // Internal use only
   existing_partners: string | null;
@@ -148,12 +151,38 @@ export interface Campaign {
   preferred_timeline: string | null;
   target_name: string | null;
   reward_rules: string | null;
+  expected_outcomes: string | null;
   additional_info: string | null;
+  image_url: string | null;
   manager_name: string | null;
   manager_email: string | null;
+  manager_phone: string | null;
+  matched_listing_id: string | null;
   status: CampaignStatus;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Read-only projection of `campaigns` for the artist-side "Discover campaigns"
+ * browse (migration 0008). Deliberately omits campaign-manager contact details.
+ */
+export interface OpenCampaign {
+  id: string;
+  reference: string;
+  description: string;
+  expected_outcomes: string | null;
+  budget_gbp: number;
+  category: string | null;
+  category_other: string | null;
+  preferred_location: string | null;
+  preferred_timeline: string | null;
+  reward_rules: string | null;
+  image_url: string | null;
+  created_at: string;
+  brand_name: string;
+  brand_logo_url: string | null;
+  brand_category: string | null;
 }
 
 export interface EventListing {
@@ -174,6 +203,7 @@ export interface EventListing {
   budget_range: string | null;
   existing_sponsors: string | null;
   sponsor_benefits: string | null;
+  image_url: string | null;
   status: ListingStatus;
   created_at: string;
   updated_at: string;
@@ -190,16 +220,31 @@ export interface SponsoredEvent {
   event_date: string | null;
   venue_details: string | null;
   location: string | null;
+  artist_display_name: string | null;
   budget_gbp: number | null;
   remaining_budget_gbp: number | null;
   reward_rules: string | null;
   terms: string | null;
+  banner_url: string | null;
+  branding_guidelines: string | null;
+  /** Free text: how the audience proves they physically attended. */
+  attendance_method: string | null;
   brand_agreed: boolean;
   artist_agreed: boolean;
+  /** Timestamptz since 0008 — carries a time of day, not just a date. */
   participation_deadline: string | null;
   status: SponsorshipStatus;
   created_at: string;
   updated_at: string;
+}
+
+export interface SponsoredEventAsset {
+  id: string;
+  sponsored_event_id: string;
+  url: string;
+  description: string | null;
+  uploaded_by: string | null;
+  created_at: string;
 }
 
 export interface Participation {
@@ -218,11 +263,17 @@ export interface Participation {
   updated_at: string;
 }
 
+/** `support` threads are with the Live-En-Synergy team rather than a partner. */
+export type ConversationKind = "partner" | "support";
+
 export interface Conversation {
   id: string;
   brand_profile_id: string;
   partner_profile_id: string;
   listing_id: string | null;
+  campaign_id: string | null;
+  kind: ConversationKind;
+  subject: string | null;
   created_at: string;
 }
 
@@ -231,6 +282,29 @@ export interface Message {
   conversation_id: string;
   sender_profile_id: string;
   body: string;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  attachment_type: string | null;
   read_at: string | null;
   created_at: string;
+}
+
+export type FeedbackKind = "bug" | "idea" | "improvement" | "text_change";
+export type FeedbackStatus = "open" | "in_progress" | "resolved" | "wont_fix";
+
+export interface FeedbackReport {
+  id: string;
+  reference: string;
+  profile_id: string | null;
+  kind: FeedbackKind;
+  subject: string;
+  body: string;
+  page_url: string | null;
+  screenshot_url: string | null;
+  status: FeedbackStatus;
+  admin_notes: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
 }

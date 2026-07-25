@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/profile";
+import { requireRole, profileCompleteness } from "@/lib/profile";
 import { PageHeader } from "@/components/dashboard/ui";
+import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import { ListingForm } from "../ListingForm";
 
 export const metadata = { title: "New event" };
 
 export default async function NewEventPage() {
-  await requireRole(["artist", "event"]);
+  const { profile } = await requireRole(["artist", "event"]);
+  const completeness = await profileCompleteness(profile);
+  const blocked = completeness.blocking.length > 0;
+
   return (
     <div>
       <PageHeader title="Create an event" />
@@ -16,7 +20,17 @@ export default async function NewEventPage() {
       >
         ← Back to my events
       </Link>
-      <ListingForm />
+
+      {/* Sponsors can't evaluate an event behind an empty profile, so the
+          essentials have to be in place before listing one. */}
+      {blocked ? (
+        <ProfileCompleteness completeness={completeness} />
+      ) : (
+        <>
+          <ProfileCompleteness completeness={completeness} className="mb-5" />
+          <ListingForm />
+        </>
+      )}
     </div>
   );
 }

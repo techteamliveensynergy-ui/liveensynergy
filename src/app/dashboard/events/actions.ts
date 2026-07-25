@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications";
+import { uploadImage } from "@/lib/storage";
+import { assessProfile } from "@/lib/profile-completeness";
 
 export interface ListingState {
   error?: string;
@@ -59,16 +61,33 @@ export async function createListing(
 
   // Link the owning artist / organiser record if it exists.
   const [{ data: artist }, { data: organiser }] = await Promise.all([
-    supabase.from("artists").select("id").eq("profile_id", userId).maybeSingle(),
+    supabase.from("artists").select("*").eq("profile_id", userId).maybeSingle(),
     supabase
       .from("event_organisers")
-      .select("id")
+      .select("*")
       .eq("profile_id", userId)
       .maybeSingle(),
   ]);
 
+  // The page hides the form when the profile is incomplete; this is the
+  // matching server-side rule, so the check can't be skipped by posting
+  // directly to the action.
+  const role = artist ? "artist" : "event";
+  const { blocking } = assessProfile(role, artist ?? organiser);
+  if (blocking.length > 0) {
+    return {
+      error: `Complete your profile first — still missing: ${blocking
+        .map((f) => f.label)
+        .join(", ")}.`,
+    };
+  }
+
+  const image = await uploadImage(formData.get("image"), "event");
+  if (image.error) return { error: image.error };
+
   const { error } = await supabase.from("event_listings").insert({
     ...payload,
+    image_url: image.url ?? null,
     owner_profile_id: userId,
     artist_id: artist?.id ?? null,
     organiser_id: organiser?.id ?? null,
@@ -91,9 +110,13 @@ export async function updateListing(
   const payload = listingPayload(formData);
   if (!payload.name) return { error: "Event name is required." };
 
+  const image = await uploadImage(formData.get("image"), "event");
+  if (image.error) return { error: image.error };
+
   const { error } = await supabase
     .from("event_listings")
-    .update(payload)
+    // Leaving the picker empty keeps the existing artwork.
+    .update(image.url ? { ...payload, image_url: image.url } : payload)
     .eq("id", id)
     .eq("owner_profile_id", userId);
 

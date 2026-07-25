@@ -1,5 +1,7 @@
-import { requireProfile } from "@/lib/profile";
+import { requireProfile, profileCompleteness } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
+import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
+import { PUBLIC_PROFILE_PATH } from "@/lib/public-profiles";
 import { BrandForm } from "@/app/onboarding/brand/BrandForm";
 import { ArtistForm } from "@/app/onboarding/artist/ArtistForm";
 import { EventForm } from "@/app/onboarding/event/EventForm";
@@ -39,17 +41,38 @@ export default async function ProfilePage() {
     .eq("profile_id", profile!.id)
     .maybeSingle();
 
+  const completeness = await profileCompleteness(profile!);
+  // Audience members have no public page — nobody browses attendees.
+  const publicPath = PUBLIC_PROFILE_PATH[role];
+
   return (
     <div>
-      <div className="mb-8">
-        <p className="font-serif text-[var(--color-ink-soft)]">Your workspace</p>
-        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-[var(--color-ink)] md:text-3xl">
-          Your profile
-        </h1>
-        <p className="mt-2 text-[var(--color-ink-soft)]">
-          Keep your details up to date — you can edit any field here at any time.
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-serif text-[var(--color-ink-soft)]">
+            Your workspace
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-[var(--color-ink)] md:text-3xl">
+            Your profile
+          </h1>
+          <p className="mt-2 text-[var(--color-ink-soft)]">
+            Keep your details up to date — you can edit any field here at any
+            time.
+          </p>
+        </div>
+        {publicPath && (
+          <a
+            href={`/${publicPath}/${profile!.id}?preview=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost"
+          >
+            Preview public profile ↗
+          </a>
+        )}
       </div>
+
+      <ProfileCompleteness completeness={completeness} className="mb-6" />
 
       {role === "brand" && <BrandForm mode="profile" defaults={record ?? undefined} />}
       {role === "artist" && (

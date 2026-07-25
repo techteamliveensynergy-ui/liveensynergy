@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { updatePassword, type AuthState } from "../actions";
 
 function SubmitButton() {
@@ -34,26 +35,20 @@ export function ResetPasswordForm() {
         required
         hint="At least 8 characters."
       >
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
-          className="input"
-          placeholder="••••••••"
           minLength={8}
           required
         />
       </Field>
 
       <Field label="Confirm new password" htmlFor="confirm" required>
-        <input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
-          className="input"
-          placeholder="••••••••"
           minLength={8}
           required
         />

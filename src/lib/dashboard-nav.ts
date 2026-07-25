@@ -14,6 +14,7 @@ const COMMON_BOTTOM: NavItem[] = [
   { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
   { href: "/dashboard/profile", label: "Profile", icon: "👤" },
   { href: "/dashboard/messages", label: "Messages", icon: "💬" },
+  { href: "/dashboard/resources", label: "Repository", icon: "📚" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -26,11 +27,21 @@ const BY_ROLE: Record<Role, NavItem[]> = {
   artist: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },
     { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
+    {
+      href: "/dashboard/discover-campaigns",
+      label: "Discover campaigns",
+      icon: "🔎",
+    },
     { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
   ],
   event: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },
     { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
+    {
+      href: "/dashboard/discover-campaigns",
+      label: "Discover campaigns",
+      icon: "🔎",
+    },
     { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
   ],
   audience: [
@@ -45,6 +56,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin/events", label: "Events", icon: "🎫" },
     { href: "/dashboard/admin/participants", label: "Participants", icon: "🎟️" },
     { href: "/dashboard/admin/enquiries", label: "Enquiries", icon: "📨" },
+    { href: "/dashboard/admin/feedback", label: "Feedback", icon: "🐞" },
     // Distinct from the personal inbox in COMMON_BOTTOM — this is the config.
     { href: "/dashboard/admin/notifications", label: "Notification setup", icon: "🔔" },
     { href: "/dashboard/admin/plans", label: "Plans", icon: "💳" },

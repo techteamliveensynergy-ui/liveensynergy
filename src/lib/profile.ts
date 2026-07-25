@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
+import {
+  assessProfile,
+  PROFILE_TABLE,
+  type Completeness,
+} from "./profile-completeness";
 import type { Profile } from "./types";
 
 /**
@@ -35,4 +40,26 @@ export async function requireRole(allowed: readonly Profile["role"][]) {
   if (!ctx.profile) redirect("/onboarding");
   if (!allowed.includes(ctx.profile.role)) redirect("/dashboard");
   return { ...ctx, profile: ctx.profile };
+}
+
+/**
+ * Scores the caller's role-specific profile row. Used both for the "complete
+ * your profile" badge and for the gate on creating events / campaigns.
+ */
+export async function profileCompleteness(
+  profile: Profile,
+): Promise<Completeness> {
+  const table = PROFILE_TABLE[profile.role];
+  if (!table) {
+    return { percent: 100, missing: [], blocking: [], complete: true };
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from(table)
+    .select("*")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+
+  return assessProfile(profile.role, data);
 }
