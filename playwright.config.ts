@@ -32,7 +32,7 @@ export default defineConfig({
     },
     {
       name: "artist",
-      testMatch: /artist\.spec\.ts/,
+      testMatch: /(artist|standup-fixes)\.spec\.ts/,
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/artist.json" },
     },

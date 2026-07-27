@@ -41,7 +41,7 @@
   },
   {
     "id": "A-SPON-01",
-    "title": "Artist redirected away from create-sponsorship",
+    "title": "Artist can propose a sponsorship",
     "file": "A-SPON-01.png"
   },
   {
@@ -133,5 +133,50 @@
     "id": "B-SPON-05",
     "title": "Sponsored event detail",
     "file": "B-SPON-05.png"
+  },
+  {
+    "id": "S-ART-01a",
+    "title": "Artist proposing a sponsorship",
+    "file": "S-ART-01a.png"
+  },
+  {
+    "id": "S-ART-01b",
+    "title": "Artist-initiated sponsorship created",
+    "file": "S-ART-01b.png"
+  },
+  {
+    "id": "S-INT-01",
+    "title": "Register interest — standing confirmation",
+    "file": "S-INT-01.png"
+  },
+  {
+    "id": "S-PUB-01a",
+    "title": "Workspace card is now a link",
+    "file": "S-PUB-01a.png"
+  },
+  {
+    "id": "S-PUB-01b",
+    "title": "Public profile reached from the icon",
+    "file": "S-PUB-01b.png"
+  },
+  {
+    "id": "S-TZ-01a",
+    "title": "Event form with start time and time zone",
+    "file": "S-TZ-01a.png"
+  },
+  {
+    "id": "S-TZ-01b",
+    "title": "Event listed with BST time zone",
+    "file": "S-TZ-01b.png"
+  },
+  {
+    "id": "S-URL-01",
+    "title": "Website saved without a scheme",
+    "file": "S-URL-01.png"
+  },
+  {
+    "id": "S-URL-02",
+    "title": "Invalid website link reported inline",
+    "file": "S-URL-02.png"
   }
 ]

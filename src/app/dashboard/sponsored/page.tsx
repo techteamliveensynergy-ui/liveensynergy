@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { SponsoredEvent } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Sponsored events" };
 
@@ -148,7 +149,7 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
         </div>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           {[
-            e.event_date && new Date(e.event_date).toLocaleDateString("en-GB"),
+            formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone }),
             e.location,
           ]
             .filter(Boolean)

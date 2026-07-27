@@ -185,6 +185,19 @@ export interface OpenCampaign {
   brand_category: string | null;
 }
 
+/**
+ * An artist / organiser registering interest in an open campaign. Recorded
+ * rather than only notified, so the Discover Campaigns card can show a standing
+ * "Interest sent" confirmation instead of re-offering the button (0011).
+ */
+export interface CampaignInterest {
+  id: string;
+  campaign_id: string;
+  profile_id: string;
+  note: string | null;
+  created_at: string;
+}
+
 export interface EventListing {
   id: string;
   reference: string;
@@ -193,6 +206,10 @@ export interface EventListing {
   organiser_id: string | null;
   name: string;
   event_date: string | null;
+  /** Local clock time at the venue, e.g. "19:30:00" (0013). */
+  start_time: string | null;
+  /** IANA zone that `start_time` is expressed in, e.g. "Europe/London". */
+  timezone: string;
   venue_name: string | null;
   city: string | null;
   country: string | null;
@@ -218,6 +235,10 @@ export interface SponsoredEvent {
   artist_profile_id: string | null;
   name: string;
   event_date: string | null;
+  /** Local clock time at the venue, e.g. "19:30:00" (0013). */
+  start_time: string | null;
+  /** IANA zone that `start_time` is expressed in, e.g. "Europe/London". */
+  timezone: string;
   venue_details: string | null;
   location: string | null;
   artist_display_name: string | null;

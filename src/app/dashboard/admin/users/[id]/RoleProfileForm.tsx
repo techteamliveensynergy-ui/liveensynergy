@@ -162,7 +162,8 @@ export function RoleProfileForm({
                 <input
                   id={`social_${key}`}
                   name={`social_${key}`}
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   className="input capitalize-none"
                   defaultValue={socials?.[key] ?? ""}
                 />

@@ -59,7 +59,8 @@ export function SocialLinksGrid({
           <input
             id={`social_${f.key}`}
             name={`social_${f.key}`}
-            type="url"
+            type="text"
+            inputMode="url"
             className="input"
             placeholder={f.placeholder}
             defaultValue={defaults?.[f.key] ?? ""}

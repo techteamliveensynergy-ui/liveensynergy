@@ -43,16 +43,17 @@ test("A-EV-02 new event artwork upload", async ({ page }) => {
   await capture(page, "A-EV-02", "New event — artwork upload", { fullPage: true });
 });
 
-test("A-SPON-01 artist cannot create a sponsored event", async ({ page }) => {
+test("A-SPON-01 artist can create a sponsored event", async ({ page }) => {
+  // This previously documented the gap: requireRole(["brand"]) bounced every
+  // other role away. Two-way initiation was agreed in the 27 Jul standup, so
+  // the artist now reaches the form — S-ART-01 exercises the full submission.
   await page.goto("/dashboard/sponsored/new");
-  // requireRole(["brand"]) bounces every other role back to the dashboard.
-  await page.waitForURL((url) => !url.pathname.endsWith("/sponsored/new"), {
-    timeout: 30_000,
-  });
-  const landedOn = new URL(page.url()).pathname;
-  expect(landedOn).not.toContain("/sponsored/new");
-  test.info().annotations.push({ type: "redirected-to", description: landedOn });
-  await capture(page, "A-SPON-01", "Artist redirected away from create-sponsorship", {
+  await expect(page).toHaveURL(/\/dashboard\/sponsored\/new/);
+  await expect(
+    page.getByRole("heading", { name: "Create a sponsored event" }),
+  ).toBeVisible();
+  await expect(page.locator("#campaign_id")).toBeVisible();
+  await capture(page, "A-SPON-01", "Artist can propose a sponsorship", {
     fullPage: true,
   });
 });

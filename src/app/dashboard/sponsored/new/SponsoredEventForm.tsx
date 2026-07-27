@@ -7,12 +7,15 @@ import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { BANNER_HINT, IMAGE_HINT } from "@/lib/upload-limits";
+import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
 import { createSponsoredEvent, type SponsoredState } from "../actions";
 
 export interface ListingOption {
   id: string;
   name: string;
   eventDate: string | null;
+  startTime: string | null;
+  timezone: string;
   venue: string | null;
   location: string | null;
   ticketPrice: number | null;
@@ -40,14 +43,18 @@ function Submit() {
 }
 
 export function SponsoredEventForm({
+  mode = "brand",
   listings,
   campaigns,
   brandLogoUrl,
 }: {
+  /** Who is initiating. Drives which side the campaign picker identifies. */
+  mode?: "brand" | "artist";
   listings: ListingOption[];
   campaigns: CampaignOption[];
   brandLogoUrl: string | null;
 }) {
+  const isBrand = mode === "brand";
   const [state, formAction] = useActionState<SponsoredState, FormData>(
     createSponsoredEvent,
     {},
@@ -115,9 +122,24 @@ export function SponsoredEventForm({
           />
         </Field>
 
-        <Field label="Linked campaign" htmlFor="campaign_id">
-          <select id="campaign_id" name="campaign_id" className="select" defaultValue="">
-            <option value="">None</option>
+        <Field
+          label={isBrand ? "Linked campaign" : "Brand's campaign brief"}
+          htmlFor="campaign_id"
+          required={!isBrand}
+          hint={
+            isBrand
+              ? undefined
+              : "Which brief you're proposing against — this is how we know which brand to send it to."
+          }
+        >
+          <select
+            id="campaign_id"
+            name="campaign_id"
+            className="select"
+            required={!isBrand}
+            defaultValue=""
+          >
+            <option value="">{isBrand ? "None" : "Select a campaign…"}</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
@@ -148,6 +170,35 @@ export function SponsoredEventForm({
               className="input"
               defaultValue={listing?.eventDate ?? ""}
             />
+          </Field>
+          <Field label="Start time" htmlFor="start_time" hint="Local to the venue.">
+            <input
+              key={`time-${fillKey}`}
+              id="start_time"
+              name="start_time"
+              type="time"
+              className="input"
+              defaultValue={listing?.startTime?.slice(0, 5) ?? ""}
+            />
+          </Field>
+          <Field
+            label="Time zone"
+            htmlFor="timezone"
+            hint="Everyone sees the venue's local time; GMT/BST switches are handled automatically."
+          >
+            <select
+              key={`tz-${fillKey}`}
+              id="timezone"
+              name="timezone"
+              className="select"
+              defaultValue={listing?.timezone ?? DEFAULT_TIMEZONE}
+            >
+              {EVENT_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field
             label="Ticket price (GBP)"

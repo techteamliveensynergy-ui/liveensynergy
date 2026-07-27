@@ -17,6 +17,7 @@ interface Search {
   category?: string;
   budget?: string;
   registered?: string;
+  error?: string;
 }
 
 export default async function DiscoverCampaignsPage({
@@ -24,15 +25,37 @@ export default async function DiscoverCampaignsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  await requireRole(["artist", "event"]);
+  const { profile } = await requireRole(["artist", "event"]);
   const q = await searchParams;
   const supabase = await createClient();
   const hasFilters = Boolean(q.name || q.location || q.category || q.budget);
 
-  const { data } = await supabase
-    .from("open_campaigns")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data }, { data: interestRows }] = await Promise.all([
+    supabase
+      .from("open_campaigns")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    // RLS already limits this to the caller's own rows.
+    supabase
+      .from("campaign_interests")
+      .select("campaign_id, created_at")
+      .eq("profile_id", profile.id),
+  ]);
+
+  const registeredOn = new Map<string, string>();
+  for (const r of (interestRows ?? []) as {
+    campaign_id: string;
+    created_at: string;
+  }[]) {
+    registeredOn.set(
+      r.campaign_id,
+      `Sent ${new Date(r.created_at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })}`,
+    );
+  }
 
   const minBudget = q.budget ? Number(q.budget) : null;
   const campaigns = ((data ?? []) as OpenCampaign[]).filter(
@@ -52,10 +75,23 @@ export default async function DiscoverCampaignsPage({
         subtitle="Sponsorship briefs from brands looking for artists and events. Register interest and our team will pick it up within 48 hours."
       />
 
-      {q.registered && (
+      {q.registered === "1" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-          Interest registered. Our team will review the match and come back to
-          you within 48 hours.
+          ✓ Interest sent. The Live·En·Synergy team has been notified and will
+          come back to you within 48 hours — you don&apos;t need to contact the
+          brand yourself.
+        </p>
+      )}
+      {q.registered === "already" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          You&apos;ve already registered interest in that campaign — our team
+          has it.
+        </p>
+      )}
+      {q.error && (
+        <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          That didn&apos;t send. Please try again, and let us know if it keeps
+          happening.
         </p>
       )}
 
@@ -151,15 +187,31 @@ export default async function DiscoverCampaignsPage({
                   </dd>
                 </dl>
 
-                <form action={registerInterest} className="mt-4">
-                  <input type="hidden" name="campaign_id" value={c.id} />
-                  <button type="submit" className="btn btn-primary w-full">
-                    Register interest
-                  </button>
-                  <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
-                    Our team reviews every request and responds within 48 hours.
-                  </p>
-                </form>
+                {registeredOn.has(c.id) ? (
+                  // Persistent confirmation — the whole point of storing the
+                  // interest. Tells the artist it landed and stops them
+                  // wondering whether the click did anything.
+                  <div className="mt-4">
+                    <p className="rounded-lg bg-[var(--color-sage)] px-3 py-2 text-center text-sm font-semibold text-[var(--color-olive-deep)]">
+                      ✓ Interest sent
+                    </p>
+                    <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
+                      {registeredOn.get(c.id)} · Our team has been notified and
+                      will introduce you to {c.brand_name} if it&apos;s a match.
+                    </p>
+                  </div>
+                ) : (
+                  <form action={registerInterest} className="mt-4">
+                    <input type="hidden" name="campaign_id" value={c.id} />
+                    <button type="submit" className="btn btn-primary w-full">
+                      Register interest
+                    </button>
+                    <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
+                      Our team reviews every request and responds within 48
+                      hours.
+                    </p>
+                  </form>
+                )}
               </div>
             );
           })}

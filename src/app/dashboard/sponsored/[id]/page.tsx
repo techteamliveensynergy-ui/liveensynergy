@@ -10,6 +10,7 @@ import type {
   SponsoredEvent,
   SponsoredEventAsset,
 } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
 import {
   toggleAgreement,
   updateSponsoredEvent,
@@ -172,14 +173,15 @@ export default async function SponsoredEventPage({
             value={event.artist_display_name ?? listing?.name ?? null}
           />
           <Detail
-            label="Date"
-            value={
-              event.event_date
-                ? new Date(event.event_date).toLocaleDateString("en-GB", {
-                    dateStyle: "full",
-                  })
-                : null
-            }
+            label={event.start_time ? "Date & time" : "Date"}
+            value={formatEventDateTime(
+              {
+                date: event.event_date,
+                time: event.start_time,
+                timeZone: event.timezone,
+              },
+              { weekday: true },
+            )}
           />
           <Detail label="Venue" value={event.venue_details ?? listing?.venue_name ?? null} />
           <Detail

@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { navForRole } from "@/lib/dashboard-nav";
 import { ROLE_LABELS } from "@/lib/constants";
+import { PUBLIC_PROFILE_PATH } from "@/lib/public-profiles";
 
 const WORKSPACE_TABLE: Partial<
   Record<string, { table: string; name: string; category: string }>
@@ -65,6 +66,12 @@ export default async function DashboardLayout({
     workspaceSubtitle = data?.[workspace.category] ?? undefined;
   }
 
+  // Audience and admin have no public page, so the card stays unlinked.
+  const publicPath = PUBLIC_PROFILE_PATH[profile.role];
+  const publicProfileHref = publicPath
+    ? `/${publicPath}/${profile.id}`
+    : null;
+
   const { count: unreadCount } = await supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
@@ -80,6 +87,7 @@ export default async function DashboardLayout({
         userEmail={user.email ?? ""}
         workspaceName={workspaceName}
         workspaceSubtitle={workspaceSubtitle}
+        publicProfileHref={publicProfileHref}
         unreadCount={unreadCount ?? 0}
       />
       <div className="flex-1">

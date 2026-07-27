@@ -7,6 +7,7 @@ import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { IMAGE_HINT } from "@/lib/upload-limits";
+import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
 import { EVENT_CATEGORIES, BUDGET_RANGES } from "@/lib/constants";
 import type { EventListing } from "@/lib/types";
 import {
@@ -48,7 +49,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             defaultValue={d?.name ?? ""}
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Event date" htmlFor="event_date">
             <input
               id="event_date"
@@ -58,6 +59,35 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
               defaultValue={d?.event_date ?? ""}
             />
           </Field>
+          <Field label="Start time" htmlFor="start_time" hint="Local to the venue.">
+            <input
+              id="start_time"
+              name="start_time"
+              type="time"
+              className="input"
+              defaultValue={d?.start_time?.slice(0, 5) ?? ""}
+            />
+          </Field>
+          <Field
+            label="Time zone"
+            htmlFor="timezone"
+            hint="Shown to everyone in the venue's own time — GMT/BST switches are handled for you."
+          >
+            <select
+              id="timezone"
+              name="timezone"
+              className="select"
+              defaultValue={d?.timezone ?? DEFAULT_TIMEZONE}
+            >
+              {EVENT_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Category" htmlFor="category">
             <select
               id="category"
@@ -146,7 +176,8 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
           <input
             id="ticket_buy_url"
             name="ticket_buy_url"
-            type="url"
+            type="text"
+            inputMode="url"
             className="input"
             placeholder="https://…"
             defaultValue={d?.ticket_buy_url ?? ""}

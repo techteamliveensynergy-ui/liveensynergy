@@ -29,9 +29,9 @@ evidence.
 
 | | Brand Portal | Artist Portal | Total |
 | --- | --- | --- | --- |
-| Done | 14 | 4 | **18** |
+| Done | 14 | 5 | **19** |
 | Partial | 2 | 1 | **3** |
-| Not done | 2 | 2 | **4** |
+| Not done | 2 | 1 | **3** |
 | Answered (question, not a change) | — | 1 | **1** |
 | **Points covered** | **18** | **8** | **26** |
 
@@ -334,19 +334,21 @@ Artwork upload is on the event form, with the recommended size stated
 
 ---
 
-### A-SPON-01 — "Option to create Sponsor event and link brand's profile and campaign" — **Not done**
+### A-SPON-01 — "Option to create Sponsor event and link brand's profile and campaign" — **Done** *(built after the 27 Jul standup)*
 
-Creating a sponsored event is currently **restricted to brands**. An artist
-navigating to that screen is returned to their dashboard, as the screenshot
-shows.
+At the time of the first review this was restricted to brands, and an artist was
+returned to their dashboard. Following the decision aligned on 27 July, **either
+side may now initiate**.
 
-The nearest equivalent available to an artist today is **Discover campaigns →
-Register interest**, which notifies the Live·En·Synergy team to broker the match
-rather than creating the sponsorship directly. Opening this up to artists is a
-design decision as much as a build one — it would let an artist propose terms
-against a brand's budget — so we would like your direction before building it.
+An artist proposes against one of the brand's open campaign briefs — the brief
+is what identifies which brand the proposal goes to. Whoever creates the
+sponsorship has, by definition, agreed to the terms they've just written, so
+their side is marked agreed and the other party receives it to review. The deal
+confirms when both have agreed, exactly as before.
 
-![Artist redirected away](screenshots/A-SPON-01.png)
+![Artist can propose a sponsorship](screenshots/A-SPON-01.png)
+
+![Artist-initiated sponsorship created](screenshots/S-ART-01b.png)
 
 ---
 
@@ -426,6 +428,17 @@ sponsorship does not mark the underlying event listing as taken, so it continues
 to be advertised as available. The Discover tiles now make the true state
 visible, but changing the listing's own status would be the more complete fix.
 We would recommend it.
+
+### Also resolved since this review — from the 27 July standup
+
+| Item | Status |
+| --- | --- |
+| Website links wouldn't save when typed without `https://` | **Fixed** — the address is completed automatically, and only a genuinely invalid link is refused, with the reason named |
+| Artist name not populating on the sponsored-event form | **Fixed** — see [B-SPON-01](#b-spon-01--link-artist-name-autofill-from-the-linked-listing--done) |
+| "Register interest" gave no lasting feedback | **Fixed** — the interest is now recorded and the card shows a standing "✓ Interest sent" with the date |
+| Artists could not create sponsored events | **Built** — see [A-SPON-01](#a-spon-01--option-to-create-sponsor-event-and-link-brands-profile-and-campaign--done-built-after-the-27-jul-standup) |
+| Event timelines carried no time zone | **Built** — events now take a start time and a time zone, shown as e.g. *13 Aug 2026, 19:30 BST*. The GMT/BST switch is applied from the event's own date, so a December event reads GMT with nothing to configure |
+| Profile icons weren't clickable | **Fixed** — the workspace icon opens the public profile |
 
 ---
 

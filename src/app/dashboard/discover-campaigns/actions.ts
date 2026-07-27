@@ -30,6 +30,22 @@ export async function registerInterest(formData: FormData) {
 
   if (!campaign) redirect("/dashboard/discover-campaigns");
 
+  // Record it before notifying. Without a stored row the confirmation lived
+  // only in the redirect's query string, so it vanished on the next page load
+  // and the artist could never tell whether the click had registered.
+  const { error: insertError } = await supabase
+    .from("campaign_interests")
+    .insert({ campaign_id: campaignId, profile_id: user.id });
+
+  // 23505 = already registered. Treat a second click as a no-op rather than
+  // notifying the team twice about the same artist and campaign.
+  if (insertError) {
+    if (insertError.code === "23505") {
+      redirect("/dashboard/discover-campaigns?registered=already");
+    }
+    redirect("/dashboard/discover-campaigns?error=1");
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")

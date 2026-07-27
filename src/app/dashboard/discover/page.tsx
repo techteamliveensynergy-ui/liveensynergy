@@ -10,6 +10,7 @@ import {
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { contactOrganiser, registerForEvent } from "./actions";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Discover events" };
 
@@ -182,7 +183,7 @@ export default async function DiscoverPage({
                     <span className="chip">{l.category ?? "Event"}</span>
                     <span className="text-xs text-[var(--color-ink-soft)]">
                       {l.event_date
-                        ? new Date(l.event_date).toLocaleDateString("en-GB")
+                        ? formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone })
                         : "TBC"}
                     </span>
                   </div>
@@ -333,7 +334,7 @@ export default async function DiscoverPage({
                   <StatusBadge status={e.status} />
                   <span className="text-xs text-[var(--color-ink-soft)]">
                     {e.event_date
-                      ? new Date(e.event_date).toLocaleDateString("en-GB")
+                      ? formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone })
                       : "TBC"}
                   </span>
                 </div>

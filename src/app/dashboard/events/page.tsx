@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { toggleListingStatus, deleteListing } from "./actions";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "My events" };
 
@@ -94,7 +95,7 @@ export default async function EventsPage({
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {[
                         l.event_date &&
-                          new Date(l.event_date).toLocaleDateString("en-GB"),
+                          formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone }),
                         l.venue_name,
                         l.city,
                       ]
@@ -165,7 +166,7 @@ export default async function EventsPage({
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                   {[
                     e.event_date &&
-                      new Date(e.event_date).toLocaleDateString("en-GB"),
+                      formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone }),
                     e.location,
                   ]
                     .filter(Boolean)

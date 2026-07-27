@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
+import { normaliseUrl } from "@/lib/urls";
+import { DEFAULT_TIMEZONE } from "@/lib/event-time";
 
 export interface ListingState {
   error?: string;
@@ -31,23 +33,37 @@ async function currentContext() {
   return { supabase, userId: user.id };
 }
 
-/** Builds the listing column payload from the submitted form. */
+/**
+ * Builds the listing column payload from the submitted form, and reports the
+ * first bad field. The ticket link is normalised rather than stored verbatim —
+ * see `@/lib/urls`.
+ */
 function listingPayload(formData: FormData) {
+  const ticket = normaliseUrl(
+    formData.get("ticket_buy_url"),
+    "The ticket buying link",
+  );
+
   return {
-    name: str(formData.get("name")),
-    event_date: str(formData.get("event_date")),
-    venue_name: str(formData.get("venue_name")),
-    city: str(formData.get("city")),
-    country: str(formData.get("country")),
-    category: str(formData.get("category")),
-    capacity: num(formData.get("capacity")),
-    ticket_price_gbp: num(formData.get("ticket_price_gbp")),
-    ticket_buy_url: str(formData.get("ticket_buy_url")),
-    budget_range: str(formData.get("budget_range")),
-    existing_sponsors: str(formData.get("existing_sponsors")),
-    sponsor_benefits: str(formData.get("sponsor_benefits")),
-    // "available" checkbox → publish immediately, else keep as draft
-    status: formData.get("make_available") ? "available" : "draft",
+    error: ticket.error,
+    payload: {
+      name: str(formData.get("name")),
+      event_date: str(formData.get("event_date")),
+      start_time: str(formData.get("start_time")),
+      timezone: str(formData.get("timezone")) ?? DEFAULT_TIMEZONE,
+      venue_name: str(formData.get("venue_name")),
+      city: str(formData.get("city")),
+      country: str(formData.get("country")),
+      category: str(formData.get("category")),
+      capacity: num(formData.get("capacity")),
+      ticket_price_gbp: num(formData.get("ticket_price_gbp")),
+      ticket_buy_url: ticket.url,
+      budget_range: str(formData.get("budget_range")),
+      existing_sponsors: str(formData.get("existing_sponsors")),
+      sponsor_benefits: str(formData.get("sponsor_benefits")),
+      // "available" checkbox → publish immediately, else keep as draft
+      status: formData.get("make_available") ? "available" : "draft",
+    },
   };
 }
 
@@ -56,7 +72,8 @@ export async function createListing(
   formData: FormData,
 ): Promise<ListingState> {
   const { supabase, userId } = await currentContext();
-  const payload = listingPayload(formData);
+  const { payload, error: fieldError } = listingPayload(formData);
+  if (fieldError) return { error: fieldError };
   if (!payload.name) return { error: "Event name is required." };
 
   // Link the owning artist / organiser record if it exists.
@@ -107,7 +124,8 @@ export async function updateListing(
   const id = str(formData.get("id"));
   if (!id) return { error: "Missing listing id." };
 
-  const payload = listingPayload(formData);
+  const { payload, error: fieldError } = listingPayload(formData);
+  if (fieldError) return { error: fieldError };
   if (!payload.name) return { error: "Event name is required." };
 
   const image = await uploadImage(formData.get("image"), "event");

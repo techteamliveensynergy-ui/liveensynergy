@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
+import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
 
@@ -86,24 +87,53 @@ function str(value: FormDataEntryValue | null): string | null {
   return s || null;
 }
 
-/** Collects the standard set of social link fields into a JSON object. */
-function socialLinks(formData: FormData): Record<string, string> | null {
-  const keys = [
-    "facebook",
-    "youtube",
-    "instagram",
-    "tiktok",
-    "spotify",
-    "linkedin",
-    "x",
-    "pinterest",
-  ];
+const SOCIAL_KEYS = [
+  "facebook",
+  "youtube",
+  "instagram",
+  "tiktok",
+  "spotify",
+  "linkedin",
+  "x",
+  "pinterest",
+] as const;
+
+/**
+ * Collects the social link fields into a JSON object, normalising each one.
+ * A bad link reports which network it was rather than failing the whole save
+ * anonymously.
+ */
+function socialLinks(formData: FormData): {
+  links: Record<string, string> | null;
+  error?: string;
+} {
   const links: Record<string, string> = {};
-  for (const key of keys) {
-    const v = str(formData.get(`social_${key}`));
-    if (v) links[key] = v;
+  for (const key of SOCIAL_KEYS) {
+    const label = key === "x" ? "Your X (Twitter) link" : `Your ${key} link`;
+    const { url, error } = normaliseUrl(formData.get(`social_${key}`), label);
+    if (error) return { links: null, error };
+    if (url) links[key] = url;
   }
-  return Object.keys(links).length ? links : null;
+  return { links: Object.keys(links).length ? links : null };
+}
+
+/**
+ * Normalises the website and showcase-video links shared by the artist, brand
+ * and organiser forms.
+ */
+function profileUrls(formData: FormData) {
+  return normaliseUrlFields([
+    {
+      key: "website_url",
+      value: formData.get("website_url"),
+      label: "Your website link",
+    },
+    {
+      key: "video_url",
+      value: formData.get("video_url"),
+      label: "Your video link",
+    },
+  ]);
 }
 
 async function completeOnboarding(userId: string) {
@@ -152,6 +182,11 @@ export async function saveBrand(
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
 
+  const { values: urls, error: urlError } = profileUrls(formData);
+  if (urlError) return { error: urlError };
+  const { links, error: socialError } = socialLinks(formData);
+  if (socialError) return { error: socialError };
+
   const { patch: images, error: imageError } = await imagePatch(
     formData,
     "logo_url",
@@ -165,11 +200,11 @@ export async function saveBrand(
       ...images,
       brand_name: brandName,
       description: str(formData.get("description")),
-      video_url: str(formData.get("video_url")),
+      video_url: urls.video_url,
       product_category: str(formData.get("product_category")),
       product_category_other: str(formData.get("product_category_other")),
-      website_url: str(formData.get("website_url")),
-      social_links: socialLinks(formData),
+      website_url: urls.website_url,
+      social_links: links,
       mission_vision: str(formData.get("mission_vision")),
       target_audience_keywords: toArray(formData.get("target_audience_keywords")),
       brand_keywords: toArray(formData.get("brand_keywords")),
@@ -214,6 +249,11 @@ export async function saveArtist(
   const bioError = tooLong(formData.get("bio"), "Your bio");
   if (bioError) return { error: bioError };
 
+  const { values: urls, error: urlError } = profileUrls(formData);
+  if (urlError) return { error: urlError };
+  const { links, error: socialError } = socialLinks(formData);
+  if (socialError) return { error: socialError };
+
   const { patch: images, error: imageError } = await imagePatch(
     formData,
     "profile_image_url",
@@ -228,11 +268,11 @@ export async function saveArtist(
       artist_name: artistName,
       stage_name: str(formData.get("stage_name")),
       bio: str(formData.get("bio")),
-      video_url: str(formData.get("video_url")),
+      video_url: urls.video_url,
       category: str(formData.get("category")),
       category_other: str(formData.get("category_other")),
-      website_url: str(formData.get("website_url")),
-      social_links: socialLinks(formData),
+      website_url: urls.website_url,
+      social_links: links,
       date_of_birth: str(formData.get("date_of_birth")),
       location: str(formData.get("location")),
       contact_name: str(formData.get("contact_name")),
@@ -277,6 +317,11 @@ export async function saveEvent(
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
 
+  const { values: urls, error: urlError } = profileUrls(formData);
+  if (urlError) return { error: urlError };
+  const { links, error: socialError } = socialLinks(formData);
+  if (socialError) return { error: socialError };
+
   const { patch: images, error: imageError } = await imagePatch(
     formData,
     "profile_image_url",
@@ -290,11 +335,11 @@ export async function saveEvent(
       ...images,
       event_name: eventName,
       description: str(formData.get("description")),
-      video_url: str(formData.get("video_url")),
+      video_url: urls.video_url,
       category: str(formData.get("category")),
       category_other: str(formData.get("category_other")),
-      website_url: str(formData.get("website_url")),
-      social_links: socialLinks(formData),
+      website_url: urls.website_url,
+      social_links: links,
       existing_partners: str(formData.get("existing_partners")),
       contact_name: str(formData.get("contact_name")),
       contact_email: str(formData.get("contact_email")),

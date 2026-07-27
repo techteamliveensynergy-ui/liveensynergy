@@ -8,30 +8,52 @@ import { SponsoredEventForm, type ListingOption } from "./SponsoredEventForm";
 export const metadata = { title: "New sponsored event" };
 
 export default async function NewSponsoredEventPage() {
-  const { profile } = await requireRole(["brand"]);
+  // Artists and organisers may now initiate too (27 Jul standup). A brand picks
+  // any available listing and one of its own campaigns; an artist picks one of
+  // their own listings and one of the brands' open campaign briefs, which is
+  // what identifies the brand on the other side.
+  const { profile } = await requireRole(["brand", "artist", "event"]);
   const supabase = await createClient();
+  const isBrand = profile.role === "brand";
 
-  const { data: brand } = await supabase
-    .from("brands")
-    .select("id, logo_url")
-    .eq("profile_id", profile.id)
-    .maybeSingle<{ id: string; logo_url: string | null }>();
+  const { data: brand } = isBrand
+    ? await supabase
+        .from("brands")
+        .select("id, logo_url")
+        .eq("profile_id", profile.id)
+        .maybeSingle<{ id: string; logo_url: string | null }>()
+    : { data: null };
 
   const [{ data: listingRows }, { data: campaignRows }] = await Promise.all([
-    supabase
-      .from("event_listings")
-      .select(
-        "id, name, event_date, venue_name, city, country, ticket_price_gbp, capacity, image_url, owner_profile_id",
-      )
-      .eq("status", "available")
-      .order("name"),
-    brand
+    isBrand
       ? supabase
-          .from("campaigns")
-          .select("id, reference, description, budget_gbp")
-          .eq("brand_id", brand.id)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as Campaign[] }),
+          .from("event_listings")
+          .select(
+            "id, name, event_date, start_time, timezone, venue_name, city, country, ticket_price_gbp, capacity, image_url, owner_profile_id",
+          )
+          .eq("status", "available")
+          .order("name")
+      : // Own listings only, at any status — an artist proposing a sponsorship
+        // is often doing it for an event they haven't published yet.
+        supabase
+          .from("event_listings")
+          .select(
+            "id, name, event_date, start_time, timezone, venue_name, city, country, ticket_price_gbp, capacity, image_url, owner_profile_id",
+          )
+          .eq("owner_profile_id", profile.id)
+          .order("name"),
+    isBrand
+      ? brand
+        ? supabase
+            .from("campaigns")
+            .select("id, reference, description, budget_gbp")
+            .eq("brand_id", brand.id)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as Campaign[] })
+      : supabase
+          .from("open_campaigns")
+          .select("id, reference, description, budget_gbp, brand_name, brand_id")
+          .order("created_at", { ascending: false }),
   ]);
 
   type ListingRow = Pick<
@@ -39,6 +61,8 @@ export default async function NewSponsoredEventPage() {
     | "id"
     | "name"
     | "event_date"
+    | "start_time"
+    | "timezone"
     | "venue_name"
     | "city"
     | "country"
@@ -89,6 +113,8 @@ export default async function NewSponsoredEventPage() {
     id: l.id,
     name: l.name,
     eventDate: l.event_date,
+    startTime: l.start_time,
+    timezone: l.timezone,
     venue: l.venue_name,
     location: [l.city, l.country].filter(Boolean).join(", ") || null,
     ticketPrice: l.ticket_price_gbp,
@@ -97,20 +123,31 @@ export default async function NewSponsoredEventPage() {
     artistName: artistNames.get(l.owner_profile_id) ?? null,
   }));
 
+  // A brand sees its own campaign references; an artist sees whose brief it is,
+  // because that's what tells them which brand they're proposing to.
   const campaigns = (
-    (campaignRows ?? []) as Pick<
+    (campaignRows ?? []) as (Pick<
       Campaign,
       "id" | "reference" | "description" | "budget_gbp"
-    >[]
+    > & { brand_name?: string })[]
   ).map((c) => ({
     id: c.id,
-    label: `${c.reference} — ${c.description.slice(0, 40)}`,
+    label: isBrand
+      ? `${c.reference} — ${c.description.slice(0, 40)}`
+      : `${c.brand_name} — ${c.description.slice(0, 40)}`,
     budget: c.budget_gbp,
   }));
 
   return (
     <div>
-      <PageHeader title="Create a sponsored event" />
+      <PageHeader
+        title="Create a sponsored event"
+        subtitle={
+          isBrand
+            ? undefined
+            : "Propose a sponsorship against a brand's open brief. They'll be notified and the deal is confirmed once they agree."
+        }
+      />
       <Link
         href="/dashboard/sponsored"
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"
@@ -118,6 +155,7 @@ export default async function NewSponsoredEventPage() {
         ← Back to sponsored events
       </Link>
       <SponsoredEventForm
+        mode={isBrand ? "brand" : "artist"}
         listings={listings}
         campaigns={campaigns}
         brandLogoUrl={brand?.logo_url ?? null}

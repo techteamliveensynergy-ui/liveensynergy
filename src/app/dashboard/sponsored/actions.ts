@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
+import { DEFAULT_TIMEZONE } from "@/lib/event-time";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 
 export interface SponsoredState {
@@ -70,26 +71,35 @@ async function saveBrandingAssets(
   await supabase.from("sponsored_event_assets").insert(rows);
 }
 
-/** Brand creates a sponsored-event record from one of their available matches. */
+/**
+ * Creates a sponsored-event record. Either side may initiate (27 Jul standup):
+ * a brand proposes against an artist's listing, or an artist proposes against a
+ * brand's open campaign brief. Whoever starts it has, by definition, agreed to
+ * the terms they just typed — so their agreement flag is set and the other
+ * party gets a proposal to review.
+ */
 export async function createSponsoredEvent(
   _prev: SponsoredState,
   formData: FormData,
 ): Promise<SponsoredState> {
   const { supabase, userId } = await requireUser();
+  const campaignId = str(formData.get("campaign_id"));
 
   const { data: brand } = await supabase
     .from("brands")
     .select("id")
     .eq("profile_id", userId)
     .maybeSingle();
-  if (!brand) redirect("/onboarding");
+  const initiatedByBrand = Boolean(brand);
 
   const name = str(formData.get("name"));
   if (!name) return { error: "Event name is required." };
 
   const budget = num(formData.get("budget_gbp"));
-  let artistProfileId: string | null = null;
+  let brandId: string | null = brand?.id ?? null;
+  let brandProfileId: string | null = initiatedByBrand ? userId : null;
   let listingId = str(formData.get("listing_id"));
+  let listingOwnerId: string | null = null;
 
   if (listingId) {
     const { data: listing } = await supabase
@@ -97,10 +107,43 @@ export async function createSponsoredEvent(
       .select("owner_profile_id")
       .eq("id", listingId)
       .maybeSingle();
-    artistProfileId = listing?.owner_profile_id ?? null;
+    listingOwnerId = listing?.owner_profile_id ?? null;
   } else {
     listingId = null;
   }
+
+  // Brand-initiated: the artist is whoever owns the listing being sponsored.
+  // Artist-initiated: the artist is the caller, and the brand comes from the
+  // chosen brief — resolved server-side so a posted brand_id can't spoof it.
+  let artistProfileId = listingOwnerId;
+
+  if (!initiatedByBrand) {
+    artistProfileId = userId;
+
+    if (listingId && listingOwnerId !== userId) {
+      return { error: "You can only propose against your own event listing." };
+    }
+    if (!campaignId) {
+      return {
+        error: "Choose the brand's campaign brief you're proposing against.",
+      };
+    }
+
+    const { data: campaign } = await supabase
+      .from("open_campaigns")
+      .select("brand_id, brand_profile_id")
+      .eq("id", campaignId)
+      .maybeSingle<{ brand_id: string; brand_profile_id: string }>();
+    if (!campaign) {
+      return { error: "That campaign is no longer open for proposals." };
+    }
+    brandId = campaign.brand_id;
+    // Taken from the view because `brands` is owner-only under RLS — an artist
+    // querying it directly gets nothing back.
+    brandProfileId = campaign.brand_profile_id;
+  }
+
+  if (!brandId) redirect("/onboarding");
 
   const banner = await uploadImage(formData.get("banner"), "sponsored-banner");
   if (banner.error) return { error: banner.error };
@@ -108,13 +151,15 @@ export async function createSponsoredEvent(
   const { data: created, error } = await supabase
     .from("sponsored_events")
     .insert({
-      brand_id: brand.id,
-      campaign_id: str(formData.get("campaign_id")),
+      brand_id: brandId,
+      campaign_id: campaignId,
       listing_id: listingId,
       artist_profile_id: artistProfileId,
       artist_display_name: str(formData.get("artist_display_name")),
       name,
       event_date: str(formData.get("event_date")),
+      start_time: str(formData.get("start_time")),
+      timezone: str(formData.get("timezone")) ?? DEFAULT_TIMEZONE,
       venue_details: str(formData.get("venue_details")),
       location: str(formData.get("location")),
       budget_gbp: budget,
@@ -125,7 +170,10 @@ export async function createSponsoredEvent(
       branding_guidelines: str(formData.get("branding_guidelines")),
       attendance_method: str(formData.get("attendance_method")),
       participation_deadline: str(formData.get("participation_deadline")),
-      brand_agreed: true, // creator (brand) agrees on creation
+      // Whoever initiated has agreed to the terms they just wrote; the other
+      // side reviews and agrees to confirm the deal.
+      brand_agreed: initiatedByBrand,
+      artist_agreed: !initiatedByBrand,
     })
     .select("id")
     .single();
@@ -134,11 +182,14 @@ export async function createSponsoredEvent(
 
   await saveBrandingAssets(formData, created.id, userId);
 
-  // The artist now has a proposal waiting on them.
-  if (artistProfileId) {
+  // Notify whichever side didn't initiate — they're the one with a proposal
+  // waiting on them.
+  const recipientProfileId = initiatedByBrand ? artistProfileId : brandProfileId;
+
+  if (recipientProfileId) {
     await notify({
       eventKey: "offer.proposal_received",
-      recipientProfileId: artistProfileId,
+      recipientProfileId,
       link: `/dashboard/sponsored/${created.id}`,
       variables: {
         event_name: name,

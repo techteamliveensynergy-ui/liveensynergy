@@ -13,6 +13,11 @@ interface SidebarProps {
   userEmail: string;
   workspaceName?: string;
   workspaceSubtitle?: string;
+  /**
+   * Public profile URL for this workspace. Set for artist / brand / organiser
+   * accounts; absent for audience and admin, who have no public page.
+   */
+  publicProfileHref?: string | null;
   /** Unread in-app notifications, badged on the Notifications entry. */
   unreadCount?: number;
 }
@@ -28,6 +33,7 @@ export function Sidebar({
   userEmail,
   workspaceName,
   workspaceSubtitle,
+  publicProfileHref,
   unreadCount = 0,
 }: SidebarProps) {
   const [open, setOpen] = useState(false);
@@ -69,6 +75,61 @@ export function Sidebar({
       ))}
     </nav>
   );
+
+  /**
+   * The workspace identity block. Links through to the public profile when the
+   * role has one, so the icon is a route to "how everyone else sees me" rather
+   * than decoration (asked for in the 27 Jul standup).
+   */
+  function WorkspaceCard({
+    name,
+    subtitle,
+    href,
+    onNavigate,
+  }: {
+    name: string;
+    subtitle: string;
+    href?: string | null;
+    onNavigate: () => void;
+  }) {
+    const inner = (
+      <>
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-ink)] font-serif text-base italic text-white">
+          {name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
+            {name}
+          </p>
+          <p className="truncate text-[11px] text-[var(--color-ink-soft)]">
+            {subtitle}
+          </p>
+        </div>
+      </>
+    );
+
+    const base =
+      "flex items-center gap-2.5 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-2.5";
+
+    if (!href) return <div className={base}>{inner}</div>;
+
+    return (
+      <Link
+        href={href}
+        onClick={onNavigate}
+        title={`View ${name}'s public profile`}
+        className={`${base} transition hover:border-[var(--color-brand)]/50 hover:bg-[var(--color-gold)]/25`}
+      >
+        {inner}
+        <span
+          aria-hidden
+          className="ml-auto shrink-0 text-xs text-[var(--color-ink-soft)]"
+        >
+          ↗
+        </span>
+      </Link>
+    );
+  }
 
   const account = (
     <div className="border-t border-black/10 p-4">
@@ -118,19 +179,12 @@ export function Sidebar({
         </div>
         <div className="px-5 pb-4">
           {workspaceName ? (
-            <div className="flex items-center gap-2.5 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-2.5">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-ink)] font-serif text-base italic text-white">
-                {workspaceName.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
-                  {workspaceName}
-                </p>
-                <p className="truncate text-[11px] text-[var(--color-ink-soft)]">
-                  {workspaceSubtitle || roleLabel}
-                </p>
-              </div>
-            </div>
+            <WorkspaceCard
+              name={workspaceName}
+              subtitle={workspaceSubtitle || roleLabel}
+              href={publicProfileHref}
+              onNavigate={() => setOpen(false)}
+            />
           ) : (
             <span className="chip">{roleLabel}</span>
           )}

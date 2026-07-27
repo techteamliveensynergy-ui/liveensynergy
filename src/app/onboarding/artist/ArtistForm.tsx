@@ -100,7 +100,8 @@ export function ArtistForm({
           <input
             id="video_url"
             name="video_url"
-            type="url"
+            type="text"
+            inputMode="url"
             className="input"
             placeholder="https://youtube.com/watch?v=…"
             defaultValue={d.video_url ?? ""}
@@ -139,7 +140,8 @@ export function ArtistForm({
           <input
             id="website_url"
             name="website_url"
-            type="url"
+            type="text"
+            inputMode="url"
             className="input"
             placeholder="https://…"
             defaultValue={d.website_url ?? ""}
