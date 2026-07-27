@@ -55,13 +55,16 @@ export default async function NewSponsoredEventPage() {
   const ownerIds = [...new Set(rows.map((r) => r.owner_profile_id))];
   const artistNames = new Map<string, string>();
   if (ownerIds.length > 0) {
+    // Read through the public views, not `artists` / `event_organisers`: those
+    // are owner-only under RLS, so a brand querying them for someone else's
+    // profile gets zero rows back and the artist name silently never autofills.
     const [{ data: artists }, { data: organisers }] = await Promise.all([
       supabase
-        .from("artists")
+        .from("public_artist_profiles")
         .select("profile_id, artist_name, stage_name")
         .in("profile_id", ownerIds),
       supabase
-        .from("event_organisers")
+        .from("public_organiser_profiles")
         .select("profile_id, event_name")
         .in("profile_id", ownerIds),
     ]);
