@@ -1,0 +1,137 @@
+[
+  {
+    "id": "A-DC-01",
+    "title": "Discover campaigns — browse + filters",
+    "file": "A-DC-01.png"
+  },
+  {
+    "id": "A-EV-01a",
+    "title": "My events — published tab",
+    "file": "A-EV-01a.png"
+  },
+  {
+    "id": "A-EV-01b",
+    "title": "My events — sponsored tab",
+    "file": "A-EV-01b.png"
+  },
+  {
+    "id": "A-EV-02",
+    "title": "New event — artwork upload",
+    "file": "A-EV-02.png"
+  },
+  {
+    "id": "A-MSG-01",
+    "title": "Artist messages — split threads",
+    "file": "A-MSG-01.png"
+  },
+  {
+    "id": "A-OV-01",
+    "title": "Artist overview — offers pending metric",
+    "file": "A-OV-01.png"
+  },
+  {
+    "id": "A-PROF-01",
+    "title": "Artist profile — images saved",
+    "file": "A-PROF-01.png"
+  },
+  {
+    "id": "A-REPO-01",
+    "title": "Artist repository",
+    "file": "A-REPO-01.png"
+  },
+  {
+    "id": "A-SPON-01",
+    "title": "Artist redirected away from create-sponsorship",
+    "file": "A-SPON-01.png"
+  },
+  {
+    "id": "B-CAMP-01",
+    "title": "Campaign intro + description placeholder",
+    "file": "B-CAMP-01.png"
+  },
+  {
+    "id": "B-CAMP-02",
+    "title": "Estimated breakdown beside budget",
+    "file": "B-CAMP-02.png"
+  },
+  {
+    "id": "B-CAMP-03",
+    "title": "Budget below minimum guard",
+    "file": "B-CAMP-03.png"
+  },
+  {
+    "id": "B-CAMP-04",
+    "title": "Artist / event categories",
+    "file": "B-CAMP-04.png"
+  },
+  {
+    "id": "B-CAMP-05",
+    "title": "Campaign artwork + manager details",
+    "file": "B-CAMP-05.png"
+  },
+  {
+    "id": "B-DISC-01",
+    "title": "Discover events — filters + tile state",
+    "file": "B-DISC-01.png"
+  },
+  {
+    "id": "B-MSG-01",
+    "title": "Messages — split into two categories",
+    "file": "B-MSG-01.png"
+  },
+  {
+    "id": "B-MSG-02",
+    "title": "Messages — attachments and new-tab links",
+    "file": "B-MSG-02.png"
+  },
+  {
+    "id": "B-OV-01",
+    "title": "Overview — confirmed sponsorships",
+    "file": "B-OV-01.png"
+  },
+  {
+    "id": "B-PROF-01a",
+    "title": "Brand profile — logo + banner selected",
+    "file": "B-PROF-01a.png"
+  },
+  {
+    "id": "B-PROF-01b",
+    "title": "Brand profile — upload saved successfully",
+    "file": "B-PROF-01b.png"
+  },
+  {
+    "id": "B-REPO-01",
+    "title": "Repository — guides, pricing, policies",
+    "file": "B-REPO-01.png"
+  },
+  {
+    "id": "B-SPON-01a",
+    "title": "Sponsored event — before linking listing",
+    "file": "B-SPON-01a.png"
+  },
+  {
+    "id": "B-SPON-01b",
+    "title": "Sponsored event — autofilled from listing",
+    "file": "B-SPON-01b.png"
+  },
+  {
+    "id": "B-SPON-02",
+    "title": "Banner + branding guidelines & assets",
+    "file": "B-SPON-02.png"
+  },
+  {
+    "id": "B-SPON-03",
+    "title": "Audience participation — deadline + attendance",
+    "file": "B-SPON-03.png"
+  },
+  {
+    "id": "B-SPON-04",
+    "title": "Sponsored events grouped by status",
+    "file": "B-SPON-04.png"
+  },
+  {
+    "id": "B-SPON-05",
+    "title": "Sponsored event detail",
+    "file": "B-SPON-05.png"
+  }
+]

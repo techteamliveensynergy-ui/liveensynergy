@@ -34,3 +34,9 @@ next-env.d.ts
 # supabase
 /supabase/.temp
 /supabase/.branches
+
+# claude code (personal overrides, not shared with the team)
+.claude/settings.local.json
+tests/.auth/
+test-results/
+playwright-report/
