@@ -8,6 +8,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
 import { adminUpdateParticipation } from "../../../marketplace-actions";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
@@ -40,6 +41,8 @@ export default async function AdminSponsoredDetailPage({
       name: string;
       status: string;
       event_date: string | null;
+      start_time: string | null;
+      timezone: string;
       venue_details: string | null;
       location: string | null;
       budget_gbp: number | null;
@@ -110,7 +113,7 @@ export default async function AdminSponsoredDetailPage({
           </h1>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Ref {event.reference}
-            {event.event_date ? ` · ${formatDate(event.event_date)}` : ""}
+            {event.event_date ? ` · ${formatEventDateTime({ date: event.event_date, time: event.start_time, timeZone: event.timezone })}` : ""}
             {event.location ? ` · ${event.location}` : ""}
           </p>
         </div>

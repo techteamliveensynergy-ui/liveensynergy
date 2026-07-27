@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
+import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -84,14 +85,12 @@ export function EventForm({
         <Field
           label="Showcase video link"
           htmlFor="video_url"
-          hint="A YouTube or Vimeo link from a past event."
+          hint={`A YouTube or Vimeo link from a past event. ${URL_HINT}`}
         >
-          <input
+          <UrlInput
             id="video_url"
             name="video_url"
-            type="text"
-            inputMode="url"
-            className="input"
+            label="Your video link"
             placeholder="https://youtube.com/watch?v=…"
             defaultValue={d.video_url ?? ""}
           />
@@ -123,14 +122,11 @@ export function EventForm({
             />
           </Field>
         </div>
-        <Field label="Website" htmlFor="website_url">
-          <input
+        <Field label="Website" htmlFor="website_url" hint={URL_HINT}>
+          <UrlInput
             id="website_url"
             name="website_url"
-            type="text"
-            inputMode="url"
-            className="input"
-            placeholder="https://…"
+            label="Your website link"
             defaultValue={d.website_url ?? ""}
           />
         </Field>

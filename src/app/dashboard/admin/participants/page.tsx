@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Participants · Admin" };
 
@@ -25,7 +26,12 @@ interface Row {
   audience_profile_id: string;
   sponsored_event_id: string;
   profiles: { full_name: string | null; email: string | null } | null;
-  sponsored_events: { name: string; event_date: string | null } | null;
+  sponsored_events: {
+    name: string;
+    event_date: string | null;
+    start_time: string | null;
+    timezone: string;
+  } | null;
 }
 
 export default async function AdminParticipantsPage({
@@ -40,7 +46,7 @@ export default async function AdminParticipantsPage({
   const { data } = await supabase
     .from("participations")
     .select(
-      "*, profiles(full_name, email), sponsored_events(name, event_date)",
+      "*, profiles(full_name, email), sponsored_events(name, event_date, start_time, timezone)",
     )
     .order("created_at", { ascending: false });
 
@@ -140,7 +146,7 @@ export default async function AdminParticipantsPage({
                 </span>
                 <span className="block text-xs text-[var(--color-ink-soft)]">
                   {r.sponsored_events?.event_date
-                    ? formatDate(r.sponsored_events.event_date)
+                    ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
                     : "Date TBC"}
                 </span>
               </Link>

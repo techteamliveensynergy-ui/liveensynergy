@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import type { AudienceMember, Participation, Profile, SponsoredEvent } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
 
 type Row = Participation & { sponsored_events: SponsoredEvent | null };
 
@@ -104,7 +105,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
                     </p>
                     <p className="text-xs text-[var(--color-ink-soft)]">
                       {r.sponsored_events?.event_date
-                        ? new Date(r.sponsored_events.event_date).toLocaleDateString("en-GB")
+                        ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
                         : "Date TBC"}
                     </p>
                   </div>

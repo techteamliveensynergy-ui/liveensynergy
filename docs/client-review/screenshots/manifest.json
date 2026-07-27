@@ -170,6 +170,11 @@
     "file": "S-TZ-01b.png"
   },
   {
+    "id": "S-TZ-02",
+    "title": "Time zone picker defaults to London",
+    "file": "S-TZ-02.png"
+  },
+  {
     "id": "S-URL-01",
     "title": "Website saved without a scheme",
     "file": "S-URL-01.png"
@@ -178,5 +183,15 @@
     "id": "S-URL-02",
     "title": "Invalid website link reported inline",
     "file": "S-URL-02.png"
+  },
+  {
+    "id": "S-URL-03a",
+    "title": "Inline warning on a malformed link",
+    "file": "S-URL-03a.png"
+  },
+  {
+    "id": "S-URL-03b",
+    "title": "Scheme completed automatically on blur",
+    "file": "S-URL-03b.png"
   }
 ]

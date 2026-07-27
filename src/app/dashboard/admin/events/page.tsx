@@ -5,6 +5,7 @@ import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { setListingStatus } from "../actions";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Events · Admin" };
 
@@ -172,7 +173,7 @@ export default async function AdminEventsPage({
                   </div>
                   <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">
                     {e.brands?.brand_name ?? "No brand"} · Ref {e.reference}
-                    {e.event_date ? ` · ${formatDate(e.event_date)}` : ""}
+                    {e.event_date ? ` · ${formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone })}` : ""}
                   </p>
                 </div>
 
@@ -217,7 +218,7 @@ export default async function AdminEventsPage({
                 <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">
                   Ref {l.reference}
                   {l.city ? ` · ${l.city}` : ""}
-                  {l.event_date ? ` · ${formatDate(l.event_date)}` : ""}
+                  {l.event_date ? ` · ${formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone })}` : ""}
                   {l.budget_range ? ` · ${l.budget_range}` : ""}
                 </p>
               </div>

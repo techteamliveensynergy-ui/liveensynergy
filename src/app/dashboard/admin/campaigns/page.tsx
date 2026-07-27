@@ -6,6 +6,7 @@ import { computePlatformFee } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { setCampaignStatus } from "../marketplace-actions";
 import { MatchForm } from "./MatchForm";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Campaigns · Admin" };
 
@@ -42,7 +43,7 @@ export default async function AdminCampaignsPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("event_listings")
-      .select("id, name, city, event_date, budget_range")
+      .select("id, name, city, event_date, start_time, timezone, budget_range")
       .eq("status", "available")
       .order("event_date", { ascending: true }),
   ]);
@@ -53,10 +54,12 @@ export default async function AdminCampaignsPage({
     name: string;
     city: string | null;
     event_date: string | null;
+    start_time: string | null;
+    timezone: string;
     budget_range: string | null;
   }[]).map((l) => ({
     id: l.id,
-    label: [l.name, l.city, l.event_date ? formatDate(l.event_date) : null]
+    label: [l.name, l.city, l.event_date ? formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone }) : null]
       .filter(Boolean)
       .join(" · "),
   }));

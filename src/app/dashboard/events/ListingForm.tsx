@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
 import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
@@ -172,14 +173,16 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             />
           </Field>
         </div>
-        <Field label="Ticket buying link" htmlFor="ticket_buy_url">
-          <input
+        <Field
+          label="Ticket buying link"
+          htmlFor="ticket_buy_url"
+          hint={URL_HINT}
+        >
+          <UrlInput
             id="ticket_buy_url"
             name="ticket_buy_url"
-            type="text"
-            inputMode="url"
-            className="input"
-            placeholder="https://…"
+            label="The ticket buying link"
+            placeholder="e.g. seetickets.com/event/…"
             defaultValue={d?.ticket_buy_url ?? ""}
           />
         </Field>

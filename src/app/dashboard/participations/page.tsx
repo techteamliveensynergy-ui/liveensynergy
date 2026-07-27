@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { Participation, SponsoredEvent } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
 import {
   uploadTicketProof,
   provideConsent,
@@ -58,7 +59,7 @@ export default async function ParticipationsPage() {
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {[
                         ev?.event_date &&
-                          new Date(ev.event_date).toLocaleDateString("en-GB"),
+                          formatEventDateTime({ date: ev.event_date, time: ev.start_time, timeZone: ev.timezone }),
                         ev?.location,
                       ]
                         .filter(Boolean)

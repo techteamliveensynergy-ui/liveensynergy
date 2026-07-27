@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { UrlInput } from "@/components/ui/UrlInput";
 
 export function OnboardingSubmit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -56,12 +57,10 @@ export function SocialLinksGrid({
     <div className="grid gap-4 sm:grid-cols-2">
       {shown.map((f) => (
         <Field key={f.key} label={f.label} htmlFor={`social_${f.key}`}>
-          <input
+          <UrlInput
             id={`social_${f.key}`}
             name={`social_${f.key}`}
-            type="text"
-            inputMode="url"
-            className="input"
+            label={`Your ${f.label} link`}
             placeholder={f.placeholder}
             defaultValue={defaults?.[f.key] ?? ""}
           />

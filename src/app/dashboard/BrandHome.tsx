@@ -5,6 +5,7 @@ import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import { computePlatformFee } from "@/lib/constants";
 import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
@@ -243,7 +244,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                   <p className="text-xs text-[var(--color-ink-soft)]">
                     Ref {s.reference}
                     {s.event_date
-                      ? ` · ${new Date(s.event_date).toLocaleDateString("en-GB")}`
+                      ? ` · ${formatEventDateTime({ date: s.event_date, time: s.start_time, timeZone: s.timezone })}`
                       : ""}
                     {s.location ? ` · ${s.location}` : ""}
                   </p>

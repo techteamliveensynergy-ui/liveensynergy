@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { UrlInput } from "@/components/ui/UrlInput";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import {
   SOCIAL_FIELD_KEYS,
@@ -159,11 +160,10 @@ export function RoleProfileForm({
                 label={key === "x" ? "X (Twitter)" : key}
                 htmlFor={`social_${key}`}
               >
-                <input
+                <UrlInput
                   id={`social_${key}`}
                   name={`social_${key}`}
-                  type="text"
-                  inputMode="url"
+                  label={key === "x" ? "The X (Twitter) link" : `The ${key} link`}
                   className="input capitalize-none"
                   defaultValue={socials?.[key] ?? ""}
                 />

@@ -102,6 +102,50 @@ test("S-ART-01 an artist can create a sponsored event", async ({ page }) => {
   });
 });
 
+test("S-TZ-02 time zone picker defaults to the UK", async ({ page }) => {
+  await page.goto("/dashboard/events/new");
+  const tz = page.locator("#timezone");
+  await expect(tz).toHaveValue("Europe/London");
+  await expect(tz.locator("option").first()).toHaveText("London (GMT/BST)");
+  // Enough zones to be useful internationally, not a wall of 400.
+  expect(await tz.locator("option").count()).toBeGreaterThan(10);
+  await capture(page, "S-TZ-02", "Time zone picker defaults to London");
+});
+
+test("S-URL-03 link fields hint the format and flag mistakes inline", async ({
+  page,
+}) => {
+  await page.goto("/dashboard/profile");
+
+  await expect(
+    page.getByText("No need to type https:// — we'll add it for you.").first(),
+  ).toBeVisible();
+
+  // Bad input: flagged on blur, before submitting anything.
+  await page.fill("#website_url", "not a website");
+  await page.locator("#website_url").blur();
+  const inlineError = page.locator("#website_url-error");
+  await expect(inlineError).toBeVisible();
+  await expect(inlineError).toContainText(/doesn't look like a valid link/i);
+  await expect(page.locator("#website_url")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  // Scroll to the message itself — centring the input leaves it just off-screen.
+  await inlineError.scrollIntoViewIfNeeded();
+  await capture(page, "S-URL-03a", "Inline warning on a malformed link");
+
+  // Good input without a scheme: accepted and canonicalised in place, so the
+  // user can see what will be saved.
+  await page.fill("#website_url", "midnightcollective.example.com");
+  await page.locator("#website_url").blur();
+  await expect(inlineError).toHaveCount(0);
+  await expect(page.locator("#website_url")).toHaveValue(
+    "https://midnightcollective.example.com/",
+  );
+  await capture(page, "S-URL-03b", "Scheme completed automatically on blur");
+});
+
 test("S-TZ-01 event start time and zone save and display", async ({ page }) => {
   await page.goto("/dashboard/events/new");
 
