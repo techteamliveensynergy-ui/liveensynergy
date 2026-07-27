@@ -31,19 +31,34 @@ export default async function DiscoverPage({
   const hasFilters = Boolean(q.name || q.location || q.category || q.month);
 
   if (profile.role === "brand") {
-    const [{ data }, { data: convData }] = await Promise.all([
-      supabase
-        .from("event_listings")
-        .select("*")
-        .eq("status", "available")
-        .order("event_date", { ascending: true }),
-      // Which listings this brand has already reached out about, so the card
-      // shows the live conversation instead of offering to start another.
-      supabase
-        .from("conversations")
-        .select("id, listing_id")
-        .eq("brand_profile_id", profile.id),
-    ]);
+    const [{ data }, { data: convData }, { data: brandRow }, { data: sponsData }] =
+      await Promise.all([
+        supabase
+          .from("event_listings")
+          .select("*")
+          .eq("status", "available")
+          .order("event_date", { ascending: true }),
+        // Which listings this brand has already reached out about, so the card
+        // shows the live conversation instead of offering to start another.
+        supabase
+          .from("conversations")
+          .select("id, listing_id")
+          .eq("brand_profile_id", profile.id),
+        supabase
+          .from("brands")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .maybeSingle<{ id: string }>(),
+        // Creating a sponsored event doesn't flip the listing off "available",
+        // so without this every listing looks free — including ones this brand
+        // has already sponsored. RLS scopes the rows: your own sponsorships
+        // always, anyone else's only once confirmed or completed, so an
+        // unconfirmed rival proposal stays invisible.
+        supabase
+          .from("sponsored_events")
+          .select("id, listing_id, brand_id")
+          .not("listing_id", "is", null),
+      ]);
 
     const conversationByListing = new Map<string, string>();
     for (const c of (convData ?? []) as {
@@ -51,6 +66,23 @@ export default async function DiscoverPage({
       listing_id: string | null;
     }[]) {
       if (c.listing_id) conversationByListing.set(c.listing_id, c.id);
+    }
+
+    const myBrandId = brandRow?.id ?? null;
+    const sponsorshipByListing = new Map<string, { id: string; mine: boolean }>();
+    for (const s of (sponsData ?? []) as {
+      id: string;
+      listing_id: string | null;
+      brand_id: string | null;
+    }[]) {
+      if (!s.listing_id) continue;
+      const mine = myBrandId != null && s.brand_id === myBrandId;
+      const seen = sponsorshipByListing.get(s.listing_id);
+      // Your own sponsorship outranks someone else's on the same listing —
+      // "you already back this" is the more useful thing to surface.
+      if (!seen || (mine && !seen.mine)) {
+        sponsorshipByListing.set(s.listing_id, { id: s.id, mine });
+      }
     }
 
     const listings = ((data ?? []) as EventListing[]).filter(
@@ -109,8 +141,34 @@ export default async function DiscoverPage({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {listings.map((l) => (
-              <div key={l.id} className="card flex flex-col overflow-hidden">
+            {listings.map((l) => {
+              const sponsorship = sponsorshipByListing.get(l.id) ?? null;
+              return (
+              <div
+                key={l.id}
+                className={`card flex flex-col overflow-hidden ${
+                  sponsorship?.mine
+                    ? "ring-2 ring-[var(--color-brand)]"
+                    : sponsorship
+                      ? "ring-1 ring-[var(--color-purple-deep)]/25"
+                      : ""
+                }`}
+              >
+                {/* Full-width strip rather than a corner chip — whether an
+                    event is still open is the first thing to read off a tile. */}
+                {sponsorship?.mine ? (
+                  <p className="bg-[var(--color-brand)] px-4 py-1.5 text-center text-xs font-semibold text-white">
+                    ★ Sponsored by you
+                  </p>
+                ) : sponsorship ? (
+                  <p className="bg-[var(--color-lavender)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-purple-deep)]">
+                    Already sponsored
+                  </p>
+                ) : (
+                  <p className="bg-[var(--color-sage)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-olive-deep)]">
+                    Open for sponsorship
+                  </p>
+                )}
                 {l.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -145,7 +203,15 @@ export default async function DiscoverPage({
                     </span>
                     <span className="font-semibold">{l.budget_range ?? ""}</span>
                   </div>
-                  {conversationByListing.has(l.id) ? (
+                  {sponsorship?.mine ? (
+                    // Already yours — an enquiry would just restate that.
+                    <Link
+                      href={`/dashboard/sponsored/${sponsorship.id}`}
+                      className="btn btn-primary mt-4 w-full"
+                    >
+                      Open your sponsorship
+                    </Link>
+                  ) : conversationByListing.has(l.id) ? (
                     <div className="mt-4">
                       <p className="rounded-lg bg-[var(--color-sage)] px-3 py-2 text-center text-sm font-semibold text-[var(--color-olive-deep)]">
                         ✓ Enquiry sent
@@ -171,7 +237,8 @@ export default async function DiscoverPage({
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
