@@ -2,6 +2,55 @@ import path from "node:path";
 import fs from "node:fs";
 import type { Page } from "@playwright/test";
 
+/** Reads a key out of .env.local — Playwright doesn't load it automatically. */
+export function envValue(key: string): string {
+  const file = fs.readFileSync(".env.local", "utf8");
+  const line = file
+    .split(/\r?\n/)
+    .find((l) => l.startsWith(`${key}=`));
+  if (!line) throw new Error(`${key} missing from .env.local`);
+  return line.slice(key.length + 1).trim();
+}
+
+/**
+ * Creates a confirmed auth user through the admin API.
+ *
+ * The dev project has email confirmation switched on and uses Supabase's
+ * built-in mailer, which is rate-limited to a handful of messages an hour — so
+ * driving the sign-up form end to end isn't reliably possible. This is the same
+ * outcome as the SQL seeding in docs/qa-creds.md, minus the password hashing.
+ */
+export async function createConfirmedUser(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role: string;
+}): Promise<string> {
+  const url = envValue("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceKey = envValue("SUPABASE_SERVICE_ROLE_KEY");
+
+  const res = await fetch(`${url}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: input.email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { full_name: input.fullName, role: input.role },
+    }),
+  });
+
+  const body = (await res.json()) as { id?: string; msg?: string };
+  if (!res.ok || !body.id) {
+    throw new Error(`admin createUser failed: ${res.status} ${body.msg ?? ""}`);
+  }
+  return body.id;
+}
+
 /** Accounts from docs/qa-creds.md — dev Supabase project only. */
 export const ACCOUNTS = {
   brand: {

@@ -7,12 +7,25 @@ testing of the authenticated app. All accounts have completed onboarding.
 **Do not use in production.** These exist only in the dev Supabase project
 wired up in `.env.local` (project ref `oalqfzaejflgrtyfrrrb`).
 
-| Role     | Email                          | Password       | Workspace / name          |
-| -------- | ------------------------------- | --------------- | -------------------------- |
-| Brand    | `brand.tester@example.com`      | `TestPass123!`  | Northwave Coffee            |
-| Artist   | `artist.tester@example.com`     | `TestPass123!`  | The Midnight Collective     |
-| Audience | `audience.tester@example.com`   | `TestPass123!`  | Priya Shah                  |
-| Admin    | `admin.tester@example.com`      | `TestPass123!`  | Sakshi Admin                |
+| Role     | Email                                    | Password       | Workspace / name          |
+| -------- | ---------------------------------------- | --------------- | -------------------------- |
+| Brand    | `brand.tester@example.com`               | `TestPass123!`  | Northwave Coffee            |
+| Artist   | `artist.tester@example.com`              | `TestPass123!`  | The Midnight Collective     |
+| Audience | `audience.tester@example.com`            | `TestPass123!`  | Priya Shah                  |
+| Admin    | `admin.tester@example.com`               | `TestPass123!`  | Sakshi Admin                |
+| Audience | `audience.demo@qa-liveensynergy.co.uk`   | `TestPass123!`  | Jordan Avery (walkthrough)  |
+
+The last one backs the audience walkthrough recording
+(`tests/audience-journey.spec.ts`). Re-run the seeding SQL below for that
+address before re-recording — it deletes and recreates the user, which resets
+`onboarding_completed` to false so the video shows a genuine first sign-in.
+
+> **Why these are seeded rather than signed up.** This project has email
+> confirmation switched on and uses Supabase's built-in mailer, which is capped
+> at a few messages an hour. Driving the sign-up form repeatedly hits
+> `over_email_send_rate_limit`, and `@example.com` is rejected outright by the
+> auth validator. Configuring a real SMTP provider, or turning confirmation off
+> for the dev project, would let the sign-up form itself be automated.
 
 The **admin** account lands on `/dashboard/admin` and can manage every other
 account from `/dashboard/admin/users` — including blocking them. If you block

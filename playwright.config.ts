@@ -36,5 +36,19 @@ export default defineConfig({
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/artist.json" },
     },
+    {
+      // Walkthrough recording of the audience journey. Deliberately signed out
+      // — the whole point is to start from account creation — so no
+      // storageState, and no dependency on the setup project.
+      name: "audience-video",
+      testMatch: /audience-journey\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        // Slower than a test needs to be, because a person has to watch it.
+        launchOptions: { slowMo: 350 },
+      },
+    },
   ],
 });
