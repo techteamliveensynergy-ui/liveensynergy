@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { ErrorBanner } from "@/components/onboarding/parts";
-import { ATTACHMENT_HINT } from "@/lib/upload-limits";
+import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import { submitFeedback, type FeedbackState } from "./actions";
 
 const KINDS = [
@@ -93,6 +93,8 @@ export function FeedbackForm() {
         <FileDrop
           name="screenshot"
           accept="image/*,application/pdf"
+          maxBytes={MAX_ATTACHMENT_BYTES}
+          allowedTypes={null}
           hint={ATTACHMENT_HINT}
           label="Drag a screenshot here, or click to browse"
         />

@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { FileDrop } from "@/components/ui/FileDrop";
-import { ATTACHMENT_HINT } from "@/lib/upload-limits";
+import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import { sendMessage, type MessageState } from "./actions";
 
 function SendButton() {
@@ -60,6 +60,8 @@ export function Composer({ conversationId }: { conversationId: string }) {
         name="attachment"
         accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,video/*"
         preview={false}
+        maxBytes={MAX_ATTACHMENT_BYTES}
+        allowedTypes={null}
         hint={ATTACHMENT_HINT}
         label="Attach a file — images, docs or video"
       />

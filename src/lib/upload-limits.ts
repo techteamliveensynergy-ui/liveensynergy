@@ -34,3 +34,40 @@ export const ATTACHMENT_HINT =
  * `maxLength` and again server-side, since maxLength is trivially bypassed.
  */
 export const MAX_BIO_CHARS = 3000;
+
+/** Human-readable size, e.g. "5 MB" / "1.4 MB" / "820 KB". */
+export function formatBytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return `${Number(mb.toFixed(mb < 10 ? 1 : 0))} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * The single definition of "is this file acceptable?".
+ *
+ * `FileDrop` runs it in the browser so an oversized file is rejected before it
+ * is ever put on the wire — without that, the request dies at Next's Server
+ * Action body limit and the user gets an unrecoverable error screen instead of
+ * a message. `@/lib/storage` runs it again on the server, because the browser
+ * check is a courtesy, not a guarantee.
+ *
+ * `allowedTypes: null` means "any type, size limit only" — that's what the
+ * private-attachment uploads want.
+ */
+export function fileError(
+  file: File,
+  {
+    maxBytes,
+    allowedTypes,
+  }: { maxBytes: number; allowedTypes?: string[] | null },
+): string | null {
+  if (allowedTypes && !allowedTypes.includes(file.type)) {
+    return "That file type isn't supported. Use JPG, PNG or WebP.";
+  }
+  if (file.size > maxBytes) {
+    return `That file is ${formatBytes(file.size)} — the limit is ${formatBytes(
+      maxBytes,
+    )}. Please compress it and try again.`;
+  }
+  return null;
+}

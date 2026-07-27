@@ -3,6 +3,7 @@ import {
   IMAGE_TYPES,
   MAX_IMAGE_BYTES,
   MAX_ATTACHMENT_BYTES,
+  fileError,
 } from "@/lib/upload-limits";
 
 /**
@@ -44,12 +45,11 @@ export async function uploadImage(
 ): Promise<UploadResult> {
   if (!(file instanceof File) || file.size === 0) return {};
 
-  if (!IMAGE_TYPES.includes(file.type)) {
-    return { error: "That file type isn't supported. Use JPG, PNG or WebP." };
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return { error: "That image is larger than 5 MB. Please compress it first." };
-  }
+  const problem = fileError(file, {
+    maxBytes: MAX_IMAGE_BYTES,
+    allowedTypes: IMAGE_TYPES,
+  });
+  if (problem) return { error: problem };
 
   const supabase = await createClient();
   const {
@@ -78,9 +78,11 @@ export async function uploadPrivateFile(
 ): Promise<UploadResult> {
   if (!(file instanceof File) || file.size === 0) return {};
 
-  if (file.size > MAX_ATTACHMENT_BYTES) {
-    return { error: "That file is larger than 25 MB." };
-  }
+  const problem = fileError(file, {
+    maxBytes: MAX_ATTACHMENT_BYTES,
+    allowedTypes: null,
+  });
+  if (problem) return { error: problem };
 
   const supabase = await createClient();
   const {
