@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
+import {
+  computePlatformFee,
+  MIN_SPONSORSHIP_BUDGET_GBP,
+  PLATFORM_FEE,
+} from "@/lib/constants";
 
 export interface CampaignState {
   error?: string;
@@ -64,6 +69,11 @@ function payload(formData: FormData) {
 function validate(p: ReturnType<typeof payload>): string | null {
   if (!p.description) return "Campaign description is required.";
   if (p.budget_gbp == null) return "Sponsorship budget is required.";
+  // Derived from the fee itself rather than a hard-coded floor, so this guard
+  // follows automatically if the pricing model ever changes.
+  if (computePlatformFee(p.budget_gbp).availableForSponsorship <= 0) {
+    return `Sponsorship budget must be more than £${MIN_SPONSORSHIP_BUDGET_GBP.toLocaleString("en-GB")} — at or below that, the £${PLATFORM_FEE.minFlatGbp} + VAT service fee takes the whole budget and leaves nothing to sponsor with.`;
+  }
   if (!p.manager_name) return "Campaign manager's name is required.";
   if (!p.manager_email) return "Campaign manager's email is required.";
   if (!p.manager_phone) return "Campaign manager's phone number is required.";

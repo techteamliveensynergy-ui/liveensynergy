@@ -7,7 +7,11 @@ import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { IMAGE_HINT } from "@/lib/upload-limits";
-import { ARTIST_CATEGORIES, computePlatformFee } from "@/lib/constants";
+import {
+  ARTIST_CATEGORIES,
+  computePlatformFee,
+  MIN_SPONSORSHIP_BUDGET_GBP,
+} from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import {
   createCampaign,
@@ -79,7 +83,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
               id="budget_gbp"
               name="budget_gbp"
               type="number"
-              min={0}
+              min={MIN_SPONSORSHIP_BUDGET_GBP}
               step="0.01"
               className="input"
               required
@@ -89,7 +93,19 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
           </Field>
           <div>
             <p className="field-label">Estimated breakdown</p>
-            {fee ? (
+            {fee && fee.availableForSponsorship <= 0 ? (
+              // Never render a negative "available" figure — at this budget the
+              // flat minimum fee takes everything, and the action rejects it.
+              <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+                <p className="font-semibold">Budget is below the minimum</p>
+                <p className="mt-1">
+                  The service fee is {fmt(fee.feeIncVat)} inc. VAT, so a budget
+                  of {fmt(MIN_SPONSORSHIP_BUDGET_GBP)} or less leaves nothing to
+                  sponsor with. Enter more than{" "}
+                  {fmt(MIN_SPONSORSHIP_BUDGET_GBP)}.
+                </p>
+              </div>
+            ) : fee ? (
               <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm">
                 <p className="text-[var(--color-ink-soft)]">
                   Service fee {fmt(fee.feeIncVat)} inc. VAT

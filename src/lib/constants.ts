@@ -134,8 +134,20 @@ export const PLATFORM_FEE = {
 } as const;
 
 /**
+ * Smallest budget that leaves anything to sponsor with — the flat fee inc. VAT
+ * (£378). At or below this the service fee consumes the entire budget, and
+ * below £378 `availableForSponsorship` goes negative, so campaigns are
+ * rejected at this floor rather than stored with a negative remaining budget.
+ */
+export const MIN_SPONSORSHIP_BUDGET_GBP =
+  PLATFORM_FEE.minFlatGbp * (1 + PLATFORM_FEE.vatRate);
+
+/**
  * Computes the Live-En-Synergy service fee for a given gross sponsorship
  * budget: the greater of £315 + VAT or 9% + VAT of the budget.
+ *
+ * Note the flat minimum dominates until £3,500 (9% of £3,500 = £315), so small
+ * budgets are mostly fee. That's the model, not a bug.
  */
 export function computePlatformFee(grossBudgetGbp: number) {
   const flatExVat = PLATFORM_FEE.minFlatGbp;

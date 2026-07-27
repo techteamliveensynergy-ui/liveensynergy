@@ -139,10 +139,17 @@ complements the concept doc and the 26 Jun 2026 scoping call.
 
 ## 5. Pricing model (implemented as a helper)
 
-No minimum sponsorship budget. Live-En-Synergy charges **£315 + VAT** or
-**9% + VAT** of the sponsorship budget, whichever is higher. See
-`computePlatformFee()` in `src/lib/constants.ts`.
+Live-En-Synergy charges **£315 + VAT** or **9% + VAT** of the sponsorship
+budget, whichever is higher. See `computePlatformFee()` in
+`src/lib/constants.ts`.
 
+The flat minimum dominates until **£3,500** (9% of £3,500 = £315), so small
+budgets are mostly fee. Below **£378** — the flat fee inc. VAT — the fee would
+exceed the whole budget, so campaigns at or under that are rejected
+(`MIN_SPONSORSHIP_BUDGET_GBP`). This replaces the earlier "no minimum budget"
+rule, which allowed a negative amount available for sponsorship.
+
+- £400 budget → £378 inc. VAT fee → £22 available for sponsorship.
 - £1,000 budget → £378 inc. VAT fee → £622 available for sponsorship.
 - £4,000 budget → £432 inc. VAT fee → £3,568 available for sponsorship.
 
