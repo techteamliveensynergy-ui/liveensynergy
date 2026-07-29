@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
+import { VideoLinksField } from "@/components/ui/VideoLinksField";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -94,17 +95,11 @@ export function ArtistForm({
         </div>
 
         <Field
-          label="Showcase video link"
+          label="Showcase video links"
           htmlFor="video_url"
-          hint={`A YouTube, Vimeo or Instagram link that shows what you do. ${URL_HINT}`}
+          hint="Add as many as you like. YouTube and Vimeo links play right on your profile; anything else shows as a link."
         >
-          <UrlInput
-            id="video_url"
-            name="video_url"
-            label="Your video link"
-            placeholder="https://youtube.com/watch?v=…"
-            defaultValue={d.video_url ?? ""}
-          />
+          <VideoLinksField defaultValues={d.video_urls ?? (d.video_url ? [d.video_url] : null)} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

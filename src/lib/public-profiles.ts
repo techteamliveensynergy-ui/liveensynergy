@@ -21,6 +21,7 @@ export interface PublicProfile {
   bannerUrl: string | null;
   websiteUrl: string | null;
   videoUrl: string | null;
+  videoUrls: string[] | null;
   socialLinks: Record<string, string> | null;
   sponsorValue: string | null;
 }
@@ -61,6 +62,7 @@ export async function getPublicProfile(
       bannerUrl: data.banner_url,
       websiteUrl: data.website_url,
       videoUrl: data.video_url,
+      videoUrls: data.video_urls,
       socialLinks: data.social_links,
       sponsorValue: data.sponsor_value_details,
     };
@@ -84,6 +86,7 @@ export async function getPublicProfile(
       bannerUrl: data.banner_url,
       websiteUrl: data.website_url,
       videoUrl: data.video_url,
+      videoUrls: data.video_urls,
       socialLinks: data.social_links,
       sponsorValue: data.sponsor_value_details,
     };
@@ -106,6 +109,7 @@ export async function getPublicProfile(
     bannerUrl: data.banner_url,
     websiteUrl: data.website_url,
     videoUrl: data.video_url,
+      videoUrls: data.video_urls,
     socialLinks: data.social_links,
     sponsorValue: null,
   };

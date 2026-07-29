@@ -51,6 +51,8 @@ export interface Brand {
   product_category_other: string | null;
   website_url: string | null;
   video_url: string | null;
+  /** Multiple showcase links (0015). `video_url` remains as a fallback. */
+  video_urls: string[] | null;
   social_links: Record<string, string> | null;
   // Internal (only visible to the brand and the Live-En-Synergy team)
   mission_vision: string | null;
@@ -78,6 +80,8 @@ export interface Artist {
   category_other: string | null;
   website_url: string | null;
   video_url: string | null;
+  /** Multiple showcase links (0015). `video_url` remains as a fallback. */
+  video_urls: string[] | null;
   social_links: Record<string, string> | null;
   // Internal use only
   date_of_birth: string | null;
@@ -104,6 +108,8 @@ export interface EventOrganiser {
   category_other: string | null;
   website_url: string | null;
   video_url: string | null;
+  /** Multiple showcase links (0015). `video_url` remains as a fallback. */
+  video_urls: string[] | null;
   social_links: Record<string, string> | null;
   // Internal use only
   existing_partners: string | null;

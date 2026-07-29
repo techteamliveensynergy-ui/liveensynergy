@@ -9,10 +9,20 @@ import {
 } from "@/components/dashboard/FilterBar";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
-import { contactOrganiser, registerForEvent } from "./actions";
+import { contactOrganiser } from "./actions";
 import { formatEventDateTime } from "@/lib/event-time";
+import { eventImage } from "@/lib/event-images";
 
 export const metadata = { title: "Discover events" };
+
+/**
+ * A sponsored event plus the category of the listing behind it — sponsored
+ * events carry no category of their own, so that's what the audience-side
+ * category filter and the placeholder artwork key on.
+ */
+type AudienceEvent = SponsoredEvent & {
+  event_listings: { category: string | null } | null;
+};
 
 interface Search {
   name?: string;
@@ -170,14 +180,18 @@ export default async function DiscoverPage({
                     Open for sponsorship
                   </p>
                 )}
-                {l.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={l.image_url}
-                    alt=""
-                    className="h-36 w-full object-cover"
-                  />
-                )}
+                {/* Falls back to category artwork so a card is never blank. */}
+                {(() => {
+                  const art = eventImage(l.image_url, l.category);
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={art.src}
+                      alt={art.alt}
+                      className="h-36 w-full object-cover"
+                    />
+                  );
+                })()}
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-center justify-between">
                     <span className="chip">{l.category ?? "Event"}</span>
@@ -251,7 +265,8 @@ export default async function DiscoverPage({
   const [{ data }, { data: partData }] = await Promise.all([
     supabase
       .from("sponsored_events")
-      .select("*")
+      // The listing carries the category; sponsored events don't have one.
+      .select("*, event_listings(category)")
       .eq("status", "confirmed")
       .or(`participation_deadline.is.null,participation_deadline.gte.${now}`)
       .order("event_date", { ascending: true }),
@@ -271,10 +286,11 @@ export default async function DiscoverPage({
     myParticipation.set(p.sponsored_event_id, p.status);
   }
 
-  const events = ((data ?? []) as SponsoredEvent[]).filter(
+  const events = ((data ?? []) as AudienceEvent[]).filter(
     (e) =>
       matchesText([e.name], q.name) &&
       matchesText([e.location, e.venue_details], q.location) &&
+      (!q.category || e.event_listings?.category === q.category) &&
       matchesMonth(e.event_date, q.month),
   );
 
@@ -303,6 +319,13 @@ export default async function DiscoverPage({
             placeholder: "City or venue",
             value: q.location,
           },
+          {
+            name: "category",
+            label: "Category",
+            type: "select",
+            options: EVENT_CATEGORIES,
+            value: q.category,
+          },
           { name: "month", label: "Month", type: "month", value: q.month },
         ]}
       />
@@ -321,14 +344,17 @@ export default async function DiscoverPage({
         <div className="grid gap-4 sm:grid-cols-2">
           {events.map((e) => (
             <div key={e.id} className="card flex flex-col overflow-hidden">
-              {e.banner_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={e.banner_url}
-                  alt=""
-                  className="h-36 w-full object-cover"
-                />
-              )}
+              {(() => {
+                const art = eventImage(e.banner_url, e.event_listings?.category);
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={art.src}
+                    alt={art.alt}
+                    className="h-36 w-full object-cover"
+                  />
+                );
+              })()}
               <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-center justify-between">
                   <StatusBadge status={e.status} />
@@ -377,16 +403,14 @@ export default async function DiscoverPage({
                     </Link>
                   </div>
                 ) : (
-                  <form action={registerForEvent} className="mt-4">
-                    <input
-                      type="hidden"
-                      name="sponsored_event_id"
-                      value={e.id}
-                    />
-                    <button type="submit" className="btn btn-primary w-full">
-                      Register to attend
-                    </button>
-                  </form>
+                  // Goes to the details page rather than registering outright,
+                  // so nobody signs up by accident or before reading the terms.
+                  <Link
+                    href={`/dashboard/discover/${e.id}`}
+                    className="btn btn-primary mt-4 w-full"
+                  >
+                    View details &amp; register
+                  </Link>
                 )}
               </div>
             </div>

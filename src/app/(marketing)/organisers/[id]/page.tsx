@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPublicProfile } from "@/lib/public-profiles";
 import { PublicProfileView } from "@/components/PublicProfileView";
+import { canSeeSponsorSections } from "@/lib/profile-viewer";
 
 export async function generateMetadata({
   params,
@@ -22,5 +23,15 @@ export default async function OrganiserProfilePage({
   const [{ id }, { preview }] = await Promise.all([params, searchParams]);
   const profile = await getPublicProfile("event", id);
   if (!profile) notFound();
-  return <PublicProfileView profile={profile} preview={preview === "1"} />;
+
+  // Sponsor-only sections stay hidden from the general public view.
+  const showSponsorSections = await canSeeSponsorSections(profile.profileId);
+
+  return (
+    <PublicProfileView
+      profile={profile}
+      preview={preview === "1"}
+      showSponsorSections={showSponsorSections}
+    />
+  );
 }

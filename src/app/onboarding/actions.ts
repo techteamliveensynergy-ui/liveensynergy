@@ -118,8 +118,24 @@ function socialLinks(formData: FormData): {
 }
 
 /**
- * Normalises the website and showcase-video links shared by the artist, brand
- * and organiser forms.
+ * Collects the repeatable showcase video links, normalising each and dropping
+ * blanks so an empty row never becomes an error.
+ */
+function videoUrls(formData: FormData): {
+  urls: string[] | null;
+  error?: string;
+} {
+  const out: string[] = [];
+  for (const raw of formData.getAll("video_urls")) {
+    const { url, error } = normaliseUrl(raw, "A video link");
+    if (error) return { urls: null, error };
+    if (url) out.push(url);
+  }
+  return { urls: out.length ? out : null };
+}
+
+/**
+ * Normalises the website link shared by the artist, brand and organiser forms.
  */
 function profileUrls(formData: FormData) {
   return normaliseUrlFields([
@@ -127,11 +143,6 @@ function profileUrls(formData: FormData) {
       key: "website_url",
       value: formData.get("website_url"),
       label: "Your website link",
-    },
-    {
-      key: "video_url",
-      value: formData.get("video_url"),
-      label: "Your video link",
     },
   ]);
 }
@@ -184,6 +195,8 @@ export async function saveBrand(
 
   const { values: urls, error: urlError } = profileUrls(formData);
   if (urlError) return { error: urlError };
+  const { urls: videos, error: videoError } = videoUrls(formData);
+  if (videoError) return { error: videoError };
   const { links, error: socialError } = socialLinks(formData);
   if (socialError) return { error: socialError };
 
@@ -200,7 +213,9 @@ export async function saveBrand(
       ...images,
       brand_name: brandName,
       description: str(formData.get("description")),
-      video_url: urls.video_url,
+      video_urls: videos,
+      // Kept in step so anything still reading the single column keeps working.
+      video_url: videos?.[0] ?? null,
       product_category: str(formData.get("product_category")),
       product_category_other: str(formData.get("product_category_other")),
       website_url: urls.website_url,
@@ -251,6 +266,8 @@ export async function saveArtist(
 
   const { values: urls, error: urlError } = profileUrls(formData);
   if (urlError) return { error: urlError };
+  const { urls: videos, error: videoError } = videoUrls(formData);
+  if (videoError) return { error: videoError };
   const { links, error: socialError } = socialLinks(formData);
   if (socialError) return { error: socialError };
 
@@ -268,7 +285,9 @@ export async function saveArtist(
       artist_name: artistName,
       stage_name: str(formData.get("stage_name")),
       bio: str(formData.get("bio")),
-      video_url: urls.video_url,
+      video_urls: videos,
+      // Kept in step so anything still reading the single column keeps working.
+      video_url: videos?.[0] ?? null,
       category: str(formData.get("category")),
       category_other: str(formData.get("category_other")),
       website_url: urls.website_url,
@@ -319,6 +338,8 @@ export async function saveEvent(
 
   const { values: urls, error: urlError } = profileUrls(formData);
   if (urlError) return { error: urlError };
+  const { urls: videos, error: videoError } = videoUrls(formData);
+  if (videoError) return { error: videoError };
   const { links, error: socialError } = socialLinks(formData);
   if (socialError) return { error: socialError };
 
@@ -335,7 +356,9 @@ export async function saveEvent(
       ...images,
       event_name: eventName,
       description: str(formData.get("description")),
-      video_url: urls.video_url,
+      video_urls: videos,
+      // Kept in step so anything still reading the single column keeps working.
+      video_url: videos?.[0] ?? null,
       category: str(formData.get("category")),
       category_other: str(formData.get("category_other")),
       website_url: urls.website_url,

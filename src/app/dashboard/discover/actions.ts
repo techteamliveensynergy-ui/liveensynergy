@@ -58,16 +58,71 @@ export async function contactOrganiser(formData: FormData) {
   redirect(`/dashboard/messages?c=${conversationId}&notice=enquiry`);
 }
 
-/** Audience registers for an open sponsored event. */
-export async function registerForEvent(formData: FormData) {
+export interface RegistrationState {
+  error?: string;
+}
+
+/**
+ * Audience registers for an open sponsored event, from the details page.
+ *
+ * Replaces the old one-click button on Discover (aligned 29 Jul): people were
+ * signing up accidentally, and without seeing the reward terms or what taking
+ * part actually asks of them.
+ */
+export async function confirmRegistration(
+  _prev: RegistrationState,
+  formData: FormData,
+): Promise<RegistrationState> {
   const { supabase, userId } = await requireUser();
   const sponsoredEventId = String(formData.get("sponsored_event_id") ?? "");
+  if (!sponsoredEventId) return { error: "Missing event." };
 
-  await supabase.from("participations").insert({
+  if (formData.get("accept_terms") !== "yes") {
+    return { error: "Please accept the terms & conditions to register." };
+  }
+
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const dateOfBirth = String(formData.get("date_of_birth") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  if (!fullName) return { error: "Your name is required." };
+  if (!dateOfBirth) return { error: "Your date of birth is required." };
+  if (!phone) return { error: "A contact phone number is required." };
+
+  // Registration is also the moment stale profile details get corrected, so
+  // write back whatever they changed on the way through.
+  const { error: profileError } = await supabase
+    .from("audience_members")
+    .upsert(
+      {
+        profile_id: userId,
+        full_name: fullName,
+        date_of_birth: dateOfBirth,
+        phone,
+      },
+      { onConflict: "profile_id" },
+    );
+  if (profileError) return { error: profileError.message };
+
+  // The insert error used to be discarded, so a failed registration still ran
+  // the notifications and redirected to My events — where nothing new had
+  // appeared. From the outside that is indistinguishable from the button doing
+  // nothing at all.
+  const { error: insertError } = await supabase.from("participations").insert({
     sponsored_event_id: sponsoredEventId,
     audience_profile_id: userId,
     status: "registered",
+    terms_accepted_at: new Date().toISOString(),
   });
+
+  if (insertError) {
+    // 23505 = already registered for this event; treat it as success so a
+    // double submit lands them on the registration they already have.
+    if (insertError.code !== "23505") {
+      console.error("[confirmRegistration] insert failed", insertError);
+      return { error: insertError.message };
+    }
+    redirect("/dashboard/participations?notice=already-registered");
+  }
 
   const { data: ev } = await supabase
     .from("sponsored_events")
@@ -98,5 +153,7 @@ export async function registerForEvent(formData: FormData) {
   }
 
   revalidatePath("/dashboard/discover");
-  redirect("/dashboard/participations");
+  // Landing on My events with no message read as "nothing happened" even when
+  // the registration had worked.
+  redirect("/dashboard/participations?notice=registered");
 }

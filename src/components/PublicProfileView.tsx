@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PublicProfile } from "@/lib/public-profiles";
+import { toEmbed, videoList } from "@/lib/video-embeds";
 
 const SOCIAL_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -26,14 +27,18 @@ const ROLE_LABEL: Record<PublicProfile["role"], string> = {
 export function PublicProfileView({
   profile,
   preview,
+  showSponsorSections = false,
 }: {
   profile: PublicProfile;
   /** Shows a banner explaining this is how others see the page. */
   preview?: boolean;
+  /** Reveals the sponsor-only sections. See `canSeeSponsorSections`. */
+  showSponsorSections?: boolean;
 }) {
   const socials = Object.entries(profile.socialLinks ?? {}).filter(
     ([, url]) => !!url,
   );
+  const videos = videoList(profile.videoUrls, profile.videoUrl);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8">
@@ -95,35 +100,69 @@ export function PublicProfileView({
           </p>
         )}
 
-        {profile.sponsorValue && (
+        {/* Sponsor-facing, so it's hidden from the general public view and
+            shown only to signed-in brands, admins, and the owner previewing
+            their own page (aligned 29 Jul). */}
+        {profile.sponsorValue && showSponsorSections && (
           <section className="card mt-6 p-6">
-            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              What sponsors get
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+                What sponsors get
+              </h2>
+              <span className="chip">Visible to sponsors only</span>
+            </div>
             <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
               {profile.sponsorValue}
             </p>
           </section>
         )}
 
-        {profile.videoUrl && (
+        {videos.length > 0 && (
           <section className="mt-6">
             <h2 className="mb-2 font-display text-lg font-semibold text-[var(--color-ink)]">
               Watch
             </h2>
-            <a
-              href={profile.videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card flex items-center gap-3 p-4 transition hover:-translate-y-0.5"
-            >
-              <span className="text-2xl" aria-hidden>
-                ▶️
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-brand-dark)]">
-                {profile.videoUrl}
-              </span>
-            </a>
+            <div className="space-y-3">
+              {videos.map((raw) => {
+                const video = toEmbed(raw);
+                // YouTube and Vimeo play inline; anything else is just a link,
+                // which the profile form tells people up front.
+                if (video.embedUrl) {
+                  return (
+                    <div
+                      key={raw}
+                      className="overflow-hidden rounded-2xl border border-black/10 bg-black"
+                    >
+                      <iframe
+                        src={video.embedUrl}
+                        title={`${profile.name} video`}
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        className="aspect-video w-full"
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <a
+                    key={raw}
+                    href={raw}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="card flex items-center gap-3 p-4 transition hover:-translate-y-0.5"
+                  >
+                    <span className="text-2xl" aria-hidden>
+                      ▶️
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-brand-dark)]">
+                      {raw}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
           </section>
         )}
 

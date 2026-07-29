@@ -66,14 +66,24 @@ test("audience journey — first sign-in, onboard, register, submit ticket", asy
   await page.goto("/dashboard/discover");
   await beat(page, 1500);
 
-  const registerButton = page
-    .getByRole("button", { name: /Register to attend|Register/i })
+  // Registering now goes through a details page rather than one click
+  // (aligned 29 Jul), so nobody signs up without seeing the terms.
+  const viewDetails = page
+    .getByRole("link", { name: /View details & register/i })
     .first();
 
-  if (await registerButton.count()) {
-    await registerButton.click();
-    await page.waitForLoadState("networkidle");
-    await beat(page, 1500);
+  if (await viewDetails.count()) {
+    await viewDetails.click();
+    await page.waitForURL(/\/dashboard\/discover\/[0-9a-f-]{36}/, {
+      timeout: 45_000,
+    });
+    await beat(page, 2500); // time to read the reward and the steps
+
+    await page.locator('input[name="accept_terms"]').check();
+    await beat(page, 900);
+    await page.getByRole("button", { name: /Confirm registration/i }).click();
+    await page.waitForURL(/\/dashboard\/participations/, { timeout: 60_000 });
+    await beat(page, 2000);
   }
 
   // ---- 5. My events → submit ticket proof ---------------------------------

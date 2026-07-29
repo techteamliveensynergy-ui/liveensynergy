@@ -14,8 +14,13 @@ export const metadata = { title: "My events" };
 
 type Row = Participation & { sponsored_events: SponsoredEvent | null };
 
-export default async function ParticipationsPage() {
+export default async function ParticipationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string; tab?: string }>;
+}) {
   const { profile } = await requireRole(["audience"]);
+  const { notice, tab: rawTab } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -23,7 +28,23 @@ export default async function ParticipationsPage() {
     .select("*, sponsored_events(*)")
     .eq("audience_profile_id", profile.id)
     .order("created_at", { ascending: false });
-  const rows = (data ?? []) as Row[];
+  const allRows = (data ?? []) as Row[];
+
+  // "Past" is keyed on the event date, not the participation status — a reward
+  // can still be outstanding on an event that has already happened, and that's
+  // exactly what someone checking their history is looking for.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const isPast = (r: Row) => {
+    const date = r.sponsored_events?.event_date;
+    if (!date) return false; // undated events stay under Upcoming
+    return new Date(`${date}T23:59:59`) < startOfToday;
+  };
+
+  const upcoming = allRows.filter((r) => !isPast(r));
+  const past = allRows.filter(isPast);
+  const tab: "upcoming" | "past" = rawTab === "past" ? "past" : "upcoming";
+  const rows = tab === "past" ? past : upcoming;
 
   return (
     <div>
@@ -37,12 +58,53 @@ export default async function ParticipationsPage() {
         }
       />
 
+      {/* Registering used to drop you here with no acknowledgement at all,
+          which read as the button having done nothing. */}
+      {notice === "registered" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ You&apos;re registered. Buy your ticket, then come back here and add
+          your ticket reference so your attendance can be verified.
+        </p>
+      )}
+      {notice === "already-registered" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          You were already registered for that event — it&apos;s listed below.
+        </p>
+      )}
+
+      <div className="mb-5 flex flex-wrap gap-2">
+        <TabLink
+          href="/dashboard/participations"
+          label="Upcoming"
+          count={upcoming.length}
+          active={tab === "upcoming"}
+        />
+        <TabLink
+          href="/dashboard/participations?tab=past"
+          label="Past events"
+          count={past.length}
+          active={tab === "past"}
+        />
+      </div>
+
       {rows.length === 0 ? (
         <EmptyState
           icon="🎟️"
-          title="You haven't registered for any events"
-          body="Discover events with sponsor-funded rewards and register to attend."
-          cta={{ href: "/dashboard/discover", label: "Discover events" }}
+          title={
+            tab === "past"
+              ? "No past events yet"
+              : "You haven't registered for any upcoming events"
+          }
+          body={
+            tab === "past"
+              ? "Events you've attended will move here once the date has passed."
+              : "Discover events with sponsor-funded rewards and register to attend."
+          }
+          cta={
+            tab === "past"
+              ? undefined
+              : { href: "/dashboard/discover", label: "Discover events" }
+          }
         />
       ) : (
         <div className="space-y-4">
@@ -174,5 +236,31 @@ export default async function ParticipationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function TabLink({
+  href,
+  label,
+  count,
+  active,
+}: {
+  href: string;
+  label: string;
+  count: number;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+        active
+          ? "bg-[var(--color-ink)] text-white"
+          : "bg-[var(--color-mist)] text-[var(--color-ink-soft)] hover:bg-black/5"
+      }`}
+    >
+      {label}
+      <span className="ml-2 opacity-70">{count}</span>
+    </Link>
   );
 }
