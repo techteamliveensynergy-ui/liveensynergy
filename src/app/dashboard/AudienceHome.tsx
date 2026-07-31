@@ -31,6 +31,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
   const pendingCount = rows.filter((r) =>
     ["registered", "ticket_uploaded"].includes(r.status),
   ).length;
+  const selectedCount = rows.filter((r) => r.selected).length;
   const totalRewarded = rows
     .filter((r) => r.status === "reward_released")
     .reduce((sum, r) => sum + Number(r.reward_amount_gbp ?? 0), 0);
@@ -58,15 +59,24 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile label="Events registered" value={rows.length} tint="bg-[var(--color-sage)]" />
-        <MetricTile label="Verified attendances" value={verifiedCount} tint="bg-[var(--color-lavender)]" />
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+        <MetricTile
+          label="Events registered (participated)"
+          value={rows.length}
+          tint="bg-[var(--color-sage)]"
+        />
+        <MetricTile label="Selected for reward" value={selectedCount} tint="bg-[var(--color-mint)]" />
+        <MetricTile
+          label="Verified attendance at events"
+          value={verifiedCount}
+          tint="bg-[var(--color-lavender)]"
+        />
+        <MetricTile label="In progress" value={pendingCount} tint="bg-[var(--color-pink)]" />
         <MetricTile
           label="Rewarded to date"
           value={`£${totalRewarded.toLocaleString("en-GB")}`}
           tint="bg-[var(--color-gold)]"
         />
-        <MetricTile label="In progress" value={pendingCount} tint="bg-[var(--color-pink)]" />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -171,7 +181,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
           </span>
         </Link>
         <Link href="/dashboard/participations" className="card block p-5 transition hover:-translate-y-0.5">
-          <h3 className="font-semibold text-[var(--color-ink)]">My events</h3>
+          <h3 className="font-semibold text-[var(--color-ink)]">My participated events</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Track the events you&apos;ve signed up for.
           </p>

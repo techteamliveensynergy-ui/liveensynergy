@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { uploadPrivateFile } from "@/lib/storage";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -18,20 +19,28 @@ function str(v: FormDataEntryValue | null): string | null {
   return s || null;
 }
 
-/** Audience uploads proof of purchase (a ticket link/reference for the MVP). */
+/** Audience uploads their ticket as a file (photo or PDF), replacing the old paste-a-link step. */
 export async function uploadTicketProof(formData: FormData) {
   const { supabase, userId } = await requireUser();
   const id = str(formData.get("id"));
-  const proof = str(formData.get("ticket_proof_url"));
-  if (!id || !proof) return;
+  if (!id) return;
+
+  const { path, error } = await uploadPrivateFile(
+    formData.get("ticket_file"),
+    "ticket-proof",
+  );
+  if (error || !path) {
+    redirect("/dashboard/participations?notice=upload-failed");
+  }
 
   await supabase
     .from("participations")
-    .update({ ticket_proof_url: proof, status: "ticket_uploaded" })
+    .update({ ticket_proof_url: path, status: "ticket_uploaded" })
     .eq("id", id)
     .eq("audience_profile_id", userId);
 
   revalidatePath("/dashboard/participations");
+  redirect("/dashboard/participations?notice=upload-success");
 }
 
 /** Audience records consent and that they've supplied payout details. */

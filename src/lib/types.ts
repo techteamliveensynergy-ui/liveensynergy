@@ -18,6 +18,8 @@ export interface Profile {
   /** Audit trail for `is_active = false` (set by the admin console). */
   blocked_at: string | null;
   blocked_reason: string | null;
+  /** Set on an automatic 3-strikes no-show suspension; cleared on restore. */
+  suspended_until: string | null;
   /** Stamped by middleware, throttled to ~once every 5 minutes. */
   last_seen_at: string | null;
   plan_id: string | null;
@@ -129,6 +131,8 @@ export interface AudienceMember {
   profile_id: string;
   full_name: string;
   phone: string | null;
+  /** e.g. "+44". Defaults to UK; entered alongside `phone` on the form. */
+  phone_country_code: string;
   date_of_birth: string | null;
   address: string | null;
   postcode: string | null;
@@ -256,6 +260,8 @@ export interface SponsoredEvent {
   branding_guidelines: string | null;
   /** Free text: how the audience proves they physically attended. */
   attendance_method: string | null;
+  /** Stable per-event token behind the QR / link self-check-in flow. */
+  attendance_qr_token: string;
   brand_agreed: boolean;
   artist_agreed: boolean;
   /** Timestamptz since 0008 — carries a time of day, not just a date. */
@@ -280,12 +286,20 @@ export interface Participation {
   audience_profile_id: string;
   status: ParticipationStatus;
   selected: boolean;
+  /** Stamped when `selected` flips true — anchors the ticket-upload deadline. */
+  selected_at: string | null;
+  /** Private-bucket storage path (0018+) or, for pre-migration rows, the
+   *  pasted external link the old "paste your ticket link" step collected. */
   ticket_proof_url: string | null;
   attendance_verified_at: string | null;
   reward_amount_gbp: number | null;
   reward_released_at: string | null;
   newsletter_opt_in: boolean;
   bank_details_provided: boolean;
+  /** Set when selected-but-never-followed-through; 3 strikes auto-suspends. */
+  no_show: boolean;
+  no_show_marked_at: string | null;
+  terms_accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }

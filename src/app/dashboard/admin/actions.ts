@@ -102,6 +102,9 @@ export async function toggleUserActive(formData: FormData) {
       is_active: next,
       blocked_at: next ? null : new Date().toISOString(),
       blocked_reason: next ? null : reason,
+      // Restoring manually (e.g. after a successful appeal) also lifts an
+      // automatic no-show suspension rather than leaving it to time out.
+      suspended_until: next ? null : undefined,
     })
     .eq("id", userId);
 

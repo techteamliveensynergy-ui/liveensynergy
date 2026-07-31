@@ -84,6 +84,7 @@ export async function confirmRegistration(
   const fullName = String(formData.get("full_name") ?? "").trim();
   const dateOfBirth = String(formData.get("date_of_birth") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const phoneCountryCode = String(formData.get("phone_country_code") ?? "+44").trim() || "+44";
   if (!fullName) return { error: "Your name is required." };
   if (!dateOfBirth) return { error: "Your date of birth is required." };
   if (!phone) return { error: "A contact phone number is required." };
@@ -98,6 +99,7 @@ export async function confirmRegistration(
         full_name: fullName,
         date_of_birth: dateOfBirth,
         phone,
+        phone_country_code: phoneCountryCode,
       },
       { onConflict: "profile_id" },
     );

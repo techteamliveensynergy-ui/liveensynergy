@@ -148,6 +148,7 @@ export default async function EventDetailsPage({
           defaultName={member?.full_name ?? profile.full_name ?? ""}
           defaultDateOfBirth={member?.date_of_birth ?? ""}
           defaultPhone={member?.phone ?? ""}
+          defaultPhoneCountryCode={member?.phone_country_code ?? "+44"}
         />
       )}
     </div>

@@ -369,6 +369,7 @@ export async function updateParticipation(formData: FormData) {
   switch (op) {
     case "select":
       patch.selected = true;
+      patch.selected_at = new Date().toISOString();
       break;
     case "reject":
       patch.selected = false;

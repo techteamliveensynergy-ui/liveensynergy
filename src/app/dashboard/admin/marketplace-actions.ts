@@ -196,6 +196,7 @@ export async function adminUpdateParticipation(formData: FormData) {
   switch (op) {
     case "select":
       patch.selected = true;
+      patch.selected_at = new Date().toISOString();
       break;
     case "reject":
       patch.selected = false;
@@ -274,4 +275,60 @@ export async function adminUpdateParticipation(formData: FormData) {
   }
 
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+/** A year in milliseconds — kept as a constant so the suspension length reads clearly at the call site. */
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+/** Strikes tolerated before an automatic suspension. */
+const NO_SHOW_SUSPENSION_THRESHOLD = 3;
+
+/**
+ * Flags a selected participant as a no-show (selected but never followed
+ * through with a ticket / attendance). Three strikes across any events
+ * auto-suspends the account for a year — the admin team asked whether
+ * repeat no-shows could be curbed without having to track it by hand.
+ */
+export async function adminMarkNoShow(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const eventId = str(formData.get("event_id"));
+  if (!id) return;
+
+  const { data: p } = await supabase
+    .from("participations")
+    .update({ no_show: true, no_show_marked_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("audience_profile_id")
+    .maybeSingle();
+
+  if (p?.audience_profile_id) {
+    const { count } = await supabase
+      .from("participations")
+      .select("id", { count: "exact", head: true })
+      .eq("audience_profile_id", p.audience_profile_id)
+      .eq("no_show", true);
+
+    if ((count ?? 0) >= NO_SHOW_SUSPENSION_THRESHOLD) {
+      const reason = `Automatic suspension: selected but didn't follow through (no ticket/attendance) ${count} times.`;
+      const suspendedUntil = new Date(Date.now() + ONE_YEAR_MS).toISOString();
+      await supabase
+        .from("profiles")
+        .update({
+          is_active: false,
+          blocked_at: new Date().toISOString(),
+          blocked_reason: reason,
+          suspended_until: suspendedUntil,
+        })
+        .eq("id", p.audience_profile_id);
+
+      await notify({
+        eventKey: "account.blocked",
+        recipientProfileId: p.audience_profile_id,
+        variables: { reason },
+      });
+    }
+  }
+
+  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath("/dashboard/admin/participants");
 }

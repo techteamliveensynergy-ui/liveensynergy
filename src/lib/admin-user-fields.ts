@@ -292,6 +292,7 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
           "Used to verify attendance and release rewards. Handle with care.",
         fields: [
           { name: "full_name", label: "Full name", type: "text" },
+          { name: "phone_country_code", label: "Phone country code", type: "text" },
           { name: "phone", label: "Phone", type: "tel" },
           { name: "date_of_birth", label: "Date of birth", type: "date" },
           { name: "postcode", label: "Postcode", type: "text" },

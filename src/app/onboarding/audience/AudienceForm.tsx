@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -54,13 +55,10 @@ export function AudienceForm({
             required
             hint="Helps us confirm it's really you when a reward is released."
           >
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
+            <PhoneInput
+              defaultCountryCode={d.phone_country_code}
+              defaultPhone={d.phone}
               required
-              className="input"
-              defaultValue={d.phone ?? ""}
             />
           </Field>
           <Field label="Date of birth" htmlFor="date_of_birth">

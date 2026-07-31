@@ -11,6 +11,8 @@ import type {
   SponsoredEventAsset,
 } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
+import { attendUrl } from "@/lib/attendance";
+import { qrCodeDataUrl } from "@/lib/qr";
 import {
   toggleAgreement,
   updateSponsoredEvent,
@@ -87,6 +89,9 @@ export default async function SponsoredEventPage({
     ticketPrice != null && ticketPrice > 0 && remaining != null
       ? Math.floor(Number(remaining) / Number(ticketPrice))
       : null;
+
+  const checkInUrl = attendUrl(event.attendance_qr_token);
+  const checkInQr = locked ? await qrCodeDataUrl(checkInUrl) : null;
 
   return (
     <div className="space-y-6">
@@ -374,6 +379,40 @@ export default async function SponsoredEventPage({
           </div>
         )}
       </div>
+
+      {/* Attendance check-in */}
+      {(isBrand || isArtist) && checkInQr && (
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold">Attendance check-in</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Display this QR code at the venue — audience members who scan it
+            (or follow the link) confirm their own attendance, no manual
+            verification needed. Share the image or link with the artist,
+            e.g. by pasting it into your conversation under Messages.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={checkInQr}
+              alt="Attendance check-in QR code"
+              className="h-32 w-32 rounded-lg border border-black/10 bg-white p-2"
+            />
+            <div className="min-w-0">
+              <p className="field-label">Check-in link</p>
+              <p className="break-all text-sm text-[var(--color-brand-dark)]">
+                {checkInUrl}
+              </p>
+              <a
+                href={checkInQr}
+                download="attendance-qr.png"
+                className="btn btn-ghost mt-3 text-sm"
+              >
+                Download QR image
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Participants */}
       {(isBrand || isArtist) && (

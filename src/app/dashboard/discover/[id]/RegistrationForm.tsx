@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Field } from "@/components/ui/Field";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { confirmRegistration, type RegistrationState } from "../actions";
 
@@ -27,12 +28,14 @@ export function RegistrationForm({
   defaultName,
   defaultDateOfBirth,
   defaultPhone,
+  defaultPhoneCountryCode,
 }: {
   eventId: string;
   eventName: string;
   defaultName: string;
   defaultDateOfBirth: string;
   defaultPhone: string;
+  defaultPhoneCountryCode: string;
 }) {
   const [state, formAction] = useActionState<RegistrationState, FormData>(
     confirmRegistration,
@@ -79,13 +82,10 @@ export function RegistrationForm({
           />
         </Field>
         <Field label="Contact phone" htmlFor="phone" required>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            className="input"
+          <PhoneInput
+            defaultCountryCode={defaultPhoneCountryCode}
+            defaultPhone={defaultPhone}
             required
-            defaultValue={defaultPhone}
           />
         </Field>
       </div>

@@ -406,6 +406,7 @@ export async function saveAudience(
       profile_id: userId,
       full_name: fullName,
       phone: str(formData.get("phone")),
+      phone_country_code: str(formData.get("phone_country_code")) ?? "+44",
       date_of_birth: str(formData.get("date_of_birth")),
       address: str(formData.get("address")),
       postcode: str(formData.get("postcode")),

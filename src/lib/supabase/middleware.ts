@@ -58,9 +58,29 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_active")
+      .select("is_active, suspended_until")
       .eq("id", user.id)
       .maybeSingle();
+
+    // An automatic (no-show) suspension lifts itself once it has run its
+    // course, rather than staying blocked forever like a manual block does.
+    if (
+      profile &&
+      profile.is_active === false &&
+      profile.suspended_until &&
+      new Date(profile.suspended_until) <= new Date()
+    ) {
+      await supabase
+        .from("profiles")
+        .update({
+          is_active: true,
+          blocked_at: null,
+          blocked_reason: null,
+          suspended_until: null,
+        })
+        .eq("id", user.id);
+      profile.is_active = true;
+    }
 
     // Blocked: tear down the session and send them to the explainer page.
     // `/auth/blocked` itself is exempt so the page can actually render.

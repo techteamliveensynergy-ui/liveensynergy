@@ -52,6 +52,18 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
+/** Adds `days` to an ISO timestamp, returning a new ISO string. */
+export function addDays(
+  iso: string | null | undefined,
+  days: number,
+): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
 /** Buckets a timestamp for the "last active" filter. */
 export function activityBucket(
   iso: string | null | undefined,

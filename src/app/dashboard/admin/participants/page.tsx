@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import { formatEventDateTime } from "@/lib/event-time";
+import { calculateAge } from "@/lib/age";
+import { EventFilterSelect } from "./EventFilterSelect";
 
 export const metadata = { title: "Participants · Admin" };
 
@@ -37,7 +39,7 @@ interface Row {
 export default async function AdminParticipantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; selected?: string }>;
+  searchParams: Promise<{ status?: string; selected?: string; event?: string }>;
 }) {
   await requireRole(["admin"]);
   const sp = await searchParams;
@@ -53,8 +55,33 @@ export default async function AdminParticipantsPage({
   let rows = (data ?? []) as Row[];
   const total = rows.length;
 
+  // Distinct events across every participant, for the event-wise filter —
+  // computed before status/selected filtering so the dropdown always lists
+  // every event, not just the ones matching the current filter.
+  const eventOptions = Array.from(
+    new Map(
+      rows
+        .filter((r) => r.sponsored_events)
+        .map((r) => [r.sponsored_event_id, r.sponsored_events!.name]),
+    ),
+  )
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const audienceIds = Array.from(new Set(rows.map((r) => r.audience_profile_id)));
+  const { data: memberRows } = audienceIds.length
+    ? await supabase
+        .from("audience_members")
+        .select("profile_id, date_of_birth")
+        .in("profile_id", audienceIds)
+    : { data: [] as { profile_id: string; date_of_birth: string | null }[] };
+  const dobByProfile = new Map(
+    (memberRows ?? []).map((m) => [m.profile_id, m.date_of_birth]),
+  );
+
   if (sp.status) rows = rows.filter((r) => r.status === sp.status);
   if (sp.selected === "yes") rows = rows.filter((r) => r.selected);
+  if (sp.event) rows = rows.filter((r) => r.sponsored_event_id === sp.event);
 
   const totalRewarded = ((data ?? []) as Row[]).reduce(
     (sum, r) => sum + Number(r.reward_amount_gbp ?? 0),
@@ -66,14 +93,25 @@ export default async function AdminParticipantsPage({
     return `/dashboard/admin/participants${q.toString() ? `?${q}` : ""}`;
   };
 
+  const exportParams = new URLSearchParams();
+  if (sp.status) exportParams.set("status", sp.status);
+  if (sp.selected === "yes") exportParams.set("selected", "yes");
+  if (sp.event) exportParams.set("event", sp.event);
+  const exportHref = `/dashboard/admin/participants/export${exportParams.toString() ? `?${exportParams}` : ""}`;
+
   return (
     <div>
       <PageHeader
         title="Participants"
         subtitle={`${total} registrations across every sponsored event · £${totalRewarded.toLocaleString("en-GB")} rewarded to date.`}
+        action={
+          <a href={exportHref} className="btn btn-ghost text-sm">
+            ⬇ Export CSV
+          </a>
+        }
       />
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <Link
           href={link({})}
           className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
@@ -109,6 +147,10 @@ export default async function AdminParticipantsPage({
         ))}
       </div>
 
+      <div className="mb-5">
+        <EventFilterSelect events={eventOptions} />
+      </div>
+
       {rows.length === 0 ? (
         <div className="card p-10 text-center text-sm text-[var(--color-ink-soft)]">
           No participants match these filters.
@@ -134,6 +176,10 @@ export default async function AdminParticipantsPage({
                 </div>
                 <p className="truncate text-sm text-[var(--color-ink-soft)]">
                   {r.profiles?.email ?? "—"}
+                  {(() => {
+                    const age = calculateAge(dobByProfile.get(r.audience_profile_id));
+                    return age != null ? ` · Age ${age}` : "";
+                  })()}
                 </p>
               </div>
 

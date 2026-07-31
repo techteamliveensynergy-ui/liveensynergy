@@ -7,8 +7,11 @@ import { computePlatformFee } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
-import { adminUpdateParticipation } from "../../../marketplace-actions";
+import { adminUpdateParticipation, adminMarkNoShow } from "../../../marketplace-actions";
 import { formatEventDateTime } from "@/lib/event-time";
+import { attendUrl } from "@/lib/attendance";
+import { qrCodeDataUrl } from "@/lib/qr";
+import { signedUrlFor } from "@/lib/storage";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
@@ -53,6 +56,7 @@ export default async function AdminSponsoredDetailPage({
       artist_agreed: boolean;
       participation_deadline: string | null;
       artist_profile_id: string | null;
+      attendance_qr_token: string;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: { reference: string; description: string } | null;
       event_listings: { name: string; ticket_price_gbp: number | null } | null;
@@ -74,7 +78,19 @@ export default async function AdminSponsoredDetailPage({
       : Promise.resolve({ data: null }),
   ]);
 
-  const participants = (partRows ?? []) as Row[];
+  const participantsRaw = (partRows ?? []) as Row[];
+  const participants = await Promise.all(
+    participantsRaw.map(async (p) => ({
+      ...p,
+      ticketHref: p.ticket_proof_url
+        ? ((await signedUrlFor(p.ticket_proof_url)) ??
+          (/^https?:\/\//.test(p.ticket_proof_url) ? p.ticket_proof_url : null))
+        : null,
+    })),
+  );
+
+  const checkInUrl = attendUrl(event.attendance_qr_token);
+  const checkInQr = await qrCodeDataUrl(checkInUrl);
 
   // Funnel
   const registered = participants.length;
@@ -257,6 +273,39 @@ export default async function AdminSponsoredDetailPage({
         )}
       </div>
 
+      {/* Attendance check-in */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          Attendance check-in
+        </h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Pass this QR code or link on to the artist (e.g. via Messages) so
+          they can display it at the venue — attendees scan it to confirm
+          their own attendance instead of needing manual verification.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={checkInQr}
+            alt="Attendance check-in QR code"
+            className="h-32 w-32 rounded-lg border border-black/10 bg-white p-2"
+          />
+          <div className="min-w-0">
+            <p className="text-xs text-[var(--color-ink-soft)]">Check-in link</p>
+            <p className="break-all text-sm text-[var(--color-brand-dark)]">
+              {checkInUrl}
+            </p>
+            <a
+              href={checkInQr}
+              download="attendance-qr.png"
+              className="btn btn-ghost mt-3 text-sm"
+            >
+              Download QR image
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Participants */}
       <div className="card p-6">
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
@@ -289,6 +338,11 @@ export default async function AdminSponsoredDetailPage({
                         selected
                       </span>
                     )}
+                    {p.no_show && (
+                      <span className="text-xs text-[var(--color-accent)]">
+                        ⚠ no-show
+                      </span>
+                    )}
                   </div>
                   <p className="truncate text-xs text-[var(--color-ink-soft)]">
                     {p.profiles?.email ?? "—"}
@@ -300,9 +354,9 @@ export default async function AdminSponsoredDetailPage({
                       : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]/70">
-                    {p.ticket_proof_url ? (
+                    {p.ticketHref ? (
                       <a
-                        href={p.ticket_proof_url}
+                        href={p.ticketHref}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[var(--color-brand-dark)] underline"
@@ -329,6 +383,20 @@ export default async function AdminSponsoredDetailPage({
                         op="verify"
                         label="Verify"
                       />
+                    )}
+                  {p.selected &&
+                    p.status !== "reward_released" &&
+                    !p.no_show && (
+                      <form action={adminMarkNoShow}>
+                        <input type="hidden" name="event_id" value={event.id} />
+                        <input type="hidden" name="id" value={p.id} />
+                        <button
+                          type="submit"
+                          className="btn btn-ghost text-sm text-[var(--color-accent)]"
+                        >
+                          Mark no-show
+                        </button>
+                      </form>
                     )}
                   {p.status === "attendance_verified" && (
                     <form

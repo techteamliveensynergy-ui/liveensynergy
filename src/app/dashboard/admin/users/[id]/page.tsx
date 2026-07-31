@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABELS } from "@/lib/constants";
 import { ROLE_PROFILE_SPECS } from "@/lib/admin-user-fields";
 import { formatDateTime, timeAgo } from "@/lib/format";
+import { calculateAge } from "@/lib/age";
 import type { Plan, Profile } from "@/lib/types";
 import { toggleUserActive } from "../../actions";
 import { AccountForm } from "./AccountForm";
@@ -59,6 +60,10 @@ export default async function AdminUserDetailPage({
     string,
     string
   > | null;
+  const age =
+    user.role === "audience"
+      ? calculateAge(roleRecord?.date_of_birth as string | null)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -102,6 +107,7 @@ export default async function AdminUserDetailPage({
             label: "Onboarding",
             value: user.onboarding_completed ? "Complete" : "Pending",
           },
+          ...(age != null ? [{ label: "Age", value: `${age}` }] : []),
         ].map((s) => (
           <div
             key={s.label}

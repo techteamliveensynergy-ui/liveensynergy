@@ -2,8 +2,11 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
+import { FileDrop } from "@/components/ui/FileDrop";
+import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import type { Participation, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
+import { addDays, formatDateTime } from "@/lib/format";
 import {
   uploadTicketProof,
   provideConsent,
@@ -71,6 +74,16 @@ export default async function ParticipationsPage({
           You were already registered for that event — it&apos;s listed below.
         </p>
       )}
+      {notice === "upload-success" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Ticket uploaded. Your attendance will be verified at the venue.
+        </p>
+      )}
+      {notice === "upload-failed" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          That file couldn&apos;t be uploaded — check it&apos;s under 25 MB and try again.
+        </p>
+      )}
 
       <div className="mb-5 flex flex-wrap gap-2">
         <TabLink
@@ -122,6 +135,7 @@ export default async function ParticipationsPage({
                       {[
                         ev?.event_date &&
                           formatEventDateTime({ date: ev.event_date, time: ev.start_time, timeZone: ev.timezone }),
+                        ev?.venue_details,
                         ev?.location,
                       ]
                         .filter(Boolean)
@@ -145,37 +159,57 @@ export default async function ParticipationsPage({
                       Reward:
                     </span>{" "}
                     {ev.reward_rules}
+                    {ev.participation_deadline && (
+                      <span className="mt-1 block text-xs text-[var(--color-ink-soft)]">
+                        Participation deadline: {formatDateTime(ev.participation_deadline)}
+                        {" · "}Selection to be confirmed by:{" "}
+                        {formatDateTime(addDays(ev.participation_deadline, 7))}
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {/* Step 1 — proof of purchase */}
-                {p.status === "registered" && (
-                  <form
-                    action={uploadTicketProof}
-                    className="mt-4 flex flex-wrap items-end gap-3"
-                  >
+                {/* Not yet selected — nothing to do until the sponsor confirms who's in. */}
+                {p.status === "registered" && !p.selected && (
+                  <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
+                    ⏳ You&apos;re registered. We&apos;ll email you if you&apos;re
+                    selected for the reward — it&apos;ll also show here.
+                  </p>
+                )}
+
+                {/* Next step — only relevant once selection is confirmed. */}
+                {p.status === "registered" && p.selected && (
+                  <form action={uploadTicketProof} className="mt-4 space-y-3">
                     <input type="hidden" name="id" value={p.id} />
-                    <div className="flex-1">
-                      <label className="field-label" htmlFor={`proof-${p.id}`}>
-                        Step 1 — add your ticket link / reference
-                      </label>
-                      <input
-                        id={`proof-${p.id}`}
-                        name="ticket_proof_url"
-                        className="input"
-                        placeholder="Paste your ticket confirmation link"
-                        required
-                      />
+                    <div>
+                      <p className="field-label">
+                        Next Step: upload your ticket proof if and after your
+                        selection has been confirmed
+                      </p>
+                      {p.selected_at && (
+                        <p className="field-hint">
+                          Upload by {formatDateTime(addDays(p.selected_at, 7))}
+                        </p>
+                      )}
                     </div>
+                    <FileDrop
+                      name="ticket_file"
+                      accept="image/*,application/pdf"
+                      allowedTypes={null}
+                      maxBytes={MAX_ATTACHMENT_BYTES}
+                      preview={false}
+                      label="Upload your ticket (PDF or photo)"
+                      hint={ATTACHMENT_HINT}
+                    />
                     <button type="submit" className="btn btn-primary">
-                      Submit proof
+                      Upload ticket
                     </button>
                   </form>
                 )}
 
                 {p.status === "ticket_uploaded" && (
                   <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
-                    ✅ Proof submitted. Your attendance will be verified at the
+                    ✅ Ticket uploaded. Your attendance will be verified at the
                     venue.
                   </p>
                 )}
@@ -193,6 +227,13 @@ export default async function ParticipationsPage({
                       ? `: £${Number(p.reward_amount_gbp).toLocaleString("en-GB")}`
                       : ""}
                     .
+                  </p>
+                )}
+
+                {p.status === "rejected" && (
+                  <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
+                    You weren&apos;t selected for the reward this time — thanks
+                    for registering.
                   </p>
                 )}
 
@@ -235,6 +276,39 @@ export default async function ParticipationsPage({
           })}
         </div>
       )}
+
+      <div className="card mt-6 p-5">
+        <h2 className="font-semibold text-[var(--color-ink)]">
+          A few quick things to note
+        </h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--color-ink-soft)]">
+          <li>
+            You&apos;ll be notified by email if you&apos;re selected for the
+            reward — it&apos;ll also show on your Overview page when you log
+            in to the Live·En·Synergy website.
+          </li>
+          <li>
+            Selection happens within one week of the participation deadline.
+            For example, if the participation deadline is 1 Jan 2026,
+            selection is carried out before 8 Jan 2026 and selected
+            participants are informed accordingly. If you don&apos;t hear
+            anything by then, please assume you weren&apos;t selected on that
+            occasion.
+          </li>
+          <li>
+            If you&apos;re selected, buy your ticket as you normally would and
+            upload the ticket proof. Your ticket upload window is open for one
+            week (e.g. until 15 Jan 2026) — after that it expires and the spot
+            is offered to someone else.
+          </li>
+          <li>
+            Attend the event and confirm your presence — either by scanning a
+            QR code at the venue, or the artist confirming directly when your
+            ticket is scanned. The method for each event is noted on its event
+            details.
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }

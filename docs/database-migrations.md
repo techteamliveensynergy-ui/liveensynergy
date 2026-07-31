@@ -1,0 +1,42 @@
+# Database migrations
+
+Schema lives in `supabase/migrations/*.sql`, applied in numeric order (via the
+Supabase SQL editor, or `supabase db push`). This is a running log of what
+each migration does and why — new migrations should be additive whenever
+possible (new nullable-or-defaulted columns, new tables/indexes) so an
+existing database with live data can always pick up the latest file safely.
+
+| # | File | Summary |
+|---|------|---------|
+| 0001 | `0001_schema.sql` | Core schema: `profiles` (+ the `handle_new_user` trigger that creates one per sign-up) and the `is_admin()` helper; the four role tables (`brands`, `artists`, `event_organisers`, `audience_members`); `campaigns` (brand-authored proposals); `event_listings` (sponsorable events, owned by an artist or organiser); `sponsored_events` (confirmed brand↔artist deal); `participations` (audience sign-ups, with the `registered → ticket_uploaded → attendance_verified → reward_released` status enum, plus a `rejected` branch); `conversations`/`messages`; `contact_messages`. |
+| 0002 | `0002_policies.sql` | Enables Row Level Security on every table from 0001 and defines the baseline policies: owner-only read/write via `profile_id = auth.uid()` (or `is_admin()`), plus the deliberately wider reads — `event_listings` with `status = 'available'`, `sponsored_events` with `status in ('confirmed','completed')` (for audience discovery), and public insert on `contact_messages`. |
+| 0003 | `0003_admin_plans.sql` | Adds `plans` (subscription tiers) with RLS and seed data; adds `profiles.email`, `profiles.is_active`, `profiles.plan_id`; updates `handle_new_user` to capture the email at sign-up and backfills it for existing users. `is_active` becomes the single source of truth for "can this account use the platform." |
+| 0004 | `0004_participation_management.sql` | Adds the `participations` **UPDATE** RLS policy that 0002 was missing — without it, an organiser's or admin's Select/Verify/Release action silently matched zero rows. Adds `is_sponsored_event_party()`, a `security definer` helper mirroring `is_admin()`, used in the new policy. |
+| 0005 | `0005_admin_user_management.sql` | Adds the blocking audit trail (`profiles.blocked_at`, `blocked_reason`) and activity tracking (`last_seen_at`) behind `is_active`; adds indexes the admin user list filters/sorts on; adds `admin_auth_activity()`, a `security definer` RPC that hands admins the `auth.users.last_sign_in_at` mapping RLS otherwise hides from the client. |
+| 0006 | `0006_notifications.sql` | The notifications system: `notification_events` (catalogue of every notifiable thing, keyed by a stable string), `notification_settings` (per-event in-app/email toggle + CC/BCC), `notification_templates` (per-event, per-channel subject/body with `{{token}}` placeholders), `email_outbox` (queued email — draining it to a real provider is separate, unbuilt work), and `enqueue_notification()` / `touch_last_seen()` RPCs. Seeds the initial event catalogue and templates. |
+| 0007 | `0007_admin_marketplace.sql` | Adds `contact_messages.handled_at`/`handled_by` so the admin contact inbox can track what's been actioned; adds `campaigns.matched_listing_id` to make campaign↔listing matching (previously an implicit admin workflow) an explicit, queryable link. |
+| 0008 | `0008_portal_feedback.sql` | Larger batch from the 24–25 Jul Artist/Brand portal review: showcase `video_url` on artists/organisers/brands; artwork columns on campaigns/listings/sponsored events; `sponsored_events.branding_guidelines` + a `sponsored_event_assets` table (up to 5 described brand assets per event); `sponsored_events.participation_deadline` upgraded to carry a time of day; `sponsored_events.attendance_method` (free text describing how attendance is confirmed at the venue); conversation `kind` (partner vs. Live·En·Synergy support) and per-campaign threads; chat attachments; a `feedback_reports` table backing the in-product bug/idea inbox. |
+| 0009 | `0009_storage.sql` | Two Supabase Storage buckets: `media` (public read — profile/banner images, event/campaign artwork) and `private-uploads` (no public read — chat attachments, feedback screenshots, ticket proofs; served via short-lived signed URLs from `src/lib/storage.ts`). Both are namespaced by uploader profile id so a user can never overwrite another's object. |
+| 0010 | `0010_storage_listing.sql` | Tightens `media`: drops the broad public SELECT policy (object URLs don't need it — the storage CDN serves public-bucket objects without consulting RLS — and the policy only let any client enumerate every uploaded path). Owners (and admins) keep read access for managing their own objects. |
+| 0011 | `0011_campaign_interests.sql` | Adds `campaign_interests` so an artist/organiser registering interest in an open campaign is actually recorded (previously just fired notifications and redirected, with nothing persisted) — one standing interest per artist per campaign, upserted so a double click is a no-op. |
+| 0012 | `0012_artist_led_sponsorships.sql` | Lets an artist initiate a sponsored event directly against one of a brand's open campaigns (previously only the brand could start one); no RLS change needed since the existing `sponsored_events` policy already allows an insert where `artist_profile_id = auth.uid()`. Re-declares the `open_campaigns` view to also expose the owning brand id. |
+| 0013 | `0013_event_timezones.sql` | Adds `event_listings.start_time` (local clock time, nullable) and `timezone` (IANA zone, default `Europe/London`). Deliberately stores wall-clock + zone rather than a UTC instant, so a "doors 19:30" listing stays 19:30 local even across a GMT/BST clock change — `formatEventDateTime()` in `src/lib/event-time.ts` resolves the correct zone abbreviation per date. |
+| 0014 | `0014_registration_details.sql` | Adds `participations.terms_accepted_at`, stamped when an audience member accepts an event's terms on the new registration-details step (replacing the old one-click Discover registration). Null for rows created before this migration. |
+| 0015 | `0015_multiple_video_links.sql` | Adds `video_urls text[]` to artists/brands/organisers alongside the existing single `video_url`, which is kept as a fallback for older rows while the array fills in. |
+| 0016 | `0016_public_profile_videos.sql` | 0015's `video_urls` never reached the public profile pages because the `public_artist_profiles` / `public_organiser_profiles` / `public_brand_profiles` views select an explicit column list. Re-declares all three to include it. |
+| 0017 | `0017_notification_event_names.sql` | Rewrites the participation/reward notification templates to name the actual event (`{{event_name}}`) and address the recipient directly, instead of a generic third-person message; updates `notification_events.variables` so the admin template editor advertises the placeholders that are genuinely available. |
+| 0018 | `0018_portal_fixes.sql` | Batch behind the 31 Jul Admin Portal / Audience Portal review (see below). Every change is additive — new nullable-or-defaulted columns plus one new unique index — so it does not alter or drop anything existing. |
+
+## 0018 in detail
+
+| Table | Column | Purpose |
+|-------|--------|---------|
+| `audience_members` | `phone_country_code text not null default '+44'` | Splits the phone field into a country-code picker + local number on the onboarding/profile/registration forms. |
+| `sponsored_events` | `attendance_qr_token uuid not null default gen_random_uuid()` (+ unique index) | One stable per-event token behind the QR-code / link self-check-in flow at `/attend/[token]` — the artist displays the QR at the venue, attendees scan it to confirm their own attendance. |
+| `participations` | `selected_at timestamptz` | Stamped when a participant is selected; anchors the "upload your ticket within a week of selection" deadline shown on My events. |
+| `participations` | `no_show boolean not null default false`, `no_show_marked_at timestamptz` | Admin can flag a selected participant who never followed through; feeds the automatic 3-strikes suspension. |
+| `profiles` | `suspended_until timestamptz` | Set on an automatic no-show suspension so it lifts itself after a year (checked in `src/lib/supabase/middleware.ts`) instead of staying blocked forever like a manual admin block. |
+
+No existing column, constraint, enum, or RLS policy was changed or dropped —
+new columns are covered by the row-level policies already in place on their
+tables, so nothing needed to be added on the security side.
