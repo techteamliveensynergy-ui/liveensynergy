@@ -209,6 +209,12 @@ or has its type or constraints changed." That's true and still missed this:
 **the column was additive, but the *meaning* of a neighbouring column changed.**
 Additive DDL is about schema safety, not semantic safety.
 
+**Status:** fixed 1 Aug 2026 — `0019_phone_backfill.sql` written, dry-run
+against live data first, then applied. All three rows corrected
+(`+44 7700 900123` → `7700 900123`, `07775199436` → `7775199436`) and verified
+in the admin UI. Note the migration was **applied by hand after the deploy** —
+pushing the file does nothing on its own (L2).
+
 **Rules.**
 
 - When a migration changes how an existing column is *interpreted*, ship a
