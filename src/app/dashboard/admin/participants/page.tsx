@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { formatEventDateTime } from "@/lib/event-time";
 import { calculateAge } from "@/lib/age";
 import { EventFilterSelect } from "./EventFilterSelect";
@@ -24,6 +24,7 @@ interface Row {
   reward_amount_gbp: number | null;
   bank_details_provided: boolean;
   newsletter_opt_in: boolean;
+  attendance_verified_at: string | null;
   created_at: string;
   audience_profile_id: string;
   sponsored_event_id: string;
@@ -181,6 +182,11 @@ export default async function AdminParticipantsPage({
                     return age != null ? ` · Age ${age}` : "";
                   })()}
                 </p>
+                {r.attendance_verified_at && (
+                  <p className="text-xs text-[var(--color-olive-deep)]">
+                    ✓ Checked in {formatDateTime(r.attendance_verified_at)}
+                  </p>
+                )}
               </div>
 
               <Link

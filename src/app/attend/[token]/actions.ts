@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications";
@@ -50,5 +51,9 @@ export async function confirmAttendance(formData: FormData) {
     });
   }
 
+  // Without this the redirect below re-serves the cached "Confirm you're here"
+  // screen, so the attendee sees no acknowledgement that the tap registered.
+  revalidatePath(`/attend/${token}`);
+  revalidatePath("/dashboard/participations");
   redirect(`/attend/${token}`);
 }

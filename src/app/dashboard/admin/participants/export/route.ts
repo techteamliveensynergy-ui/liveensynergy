@@ -16,6 +16,7 @@ interface Row {
   bank_details_provided: boolean;
   newsletter_opt_in: boolean;
   ticket_proof_url: string | null;
+  attendance_verified_at: string | null;
   created_at: string;
   audience_profile_id: string;
   sponsored_event_id: string;
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("participations")
     .select(
-      "status, selected, reward_amount_gbp, bank_details_provided, newsletter_opt_in, ticket_proof_url, created_at, audience_profile_id, sponsored_event_id, profiles(full_name, email), sponsored_events(name, event_date)",
+      "status, selected, reward_amount_gbp, bank_details_provided, newsletter_opt_in, ticket_proof_url, attendance_verified_at, created_at, audience_profile_id, sponsored_event_id, profiles(full_name, email), sponsored_events(name, event_date)",
     )
     .order("created_at", { ascending: false });
 
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
     "Payout consent",
     "Newsletter opt-in",
     "Ticket proof",
+    "Attendance confirmed at",
     "Registered at",
   ];
   const lines = [header.map(csvCell).join(",")];
@@ -95,6 +97,7 @@ export async function GET(request: NextRequest) {
         r.bank_details_provided ? "yes" : "no",
         r.newsletter_opt_in ? "yes" : "no",
         r.ticket_proof_url ? "yes" : "no",
+        r.attendance_verified_at ?? "",
         r.created_at,
       ]
         .map(csvCell)

@@ -1,0 +1,429 @@
+# Lessons learned
+
+A running log of issues that reached the client, what actually caused them, and
+the rule that stops each one recurring. Add to this whenever something gets
+reported that a check could have caught first.
+
+The pre-push checklist at the bottom is the practical output of this file — run
+it before anything goes live.
+
+---
+
+## Quick reference: where things live
+
+| Thing | Value |
+|---|---|
+| Live site | https://liveensynergy-rho.vercel.app |
+| **Deploys from** | remote `liveensynergy` (`techteamliveensynergy-ui/liveensynergy`), branch **`main`** |
+| Working repo | remote `origin` (`Ketankham/live-en-sync`) — **deploys nothing** |
+| Local working branch | `claude/landing-signin-onboarding-ts0n3p` |
+| Supabase project | `oalqfzaejflgrtyfrrrb` (`.env.local` → `NEXT_PUBLIC_SUPABASE_URL`) |
+| Migrations | `supabase/migrations/*.sql`, applied **manually** — see `docs/database-migrations.md` |
+| Issue tracker | https://github.com/techteamliveensynergy-ui/liveensynergy/issues |
+
+Ship command:
+
+```bash
+git push liveensynergy HEAD:main
+```
+
+---
+
+## L1 — "The new changes aren't showing" was a deploy gap, not a bug
+
+**Reported:** [issue #1](https://github.com/techteamliveensynergy-ui/liveensynergy/issues/1),
+1 Aug 2026 — *"if I login to an existing audience portal, the new changes won't
+show there. For example, on the overview section having 5 cards."*
+
+**What happened.** The 31 Jul Admin/Audience Portal review batch (commit
+`4044474`) was committed locally and pushed to `origin`. It was never pushed to
+`liveensynergy`, whose `main` was still on 29 Jul's `280a6e7`. The live site had
+been serving two-day-old code the whole time. Every audience account saw the old
+4-card overview — new accounts included.
+
+**Why the report was misleading.** It was framed as an existing-account problem,
+which points you straight at data, RLS, or caching. All three were fine. Pushing
+to `origin` *feels* like shipping because the push succeeds and the branch
+updates — but nothing downstream watches that remote.
+
+**How it was actually diagnosed — the two techniques worth reusing:**
+
+1. **Find static text that changed.** The screenshot's bottom tile read
+   "My events"; the missing commit had renamed it to "My participated events"
+   (`src/app/dashboard/AudienceHome.tsx`). Hardcoded copy cannot vary by account,
+   by role, or by database state. If the deployed copy differs from the source,
+   the build is old — no further investigation needed.
+2. **Probe a route the commit added.** `/attend/[token]` was new in `4044474`.
+   On the live site it returned `404`, while `/` and `/dashboard` responded
+   normally — so the app was healthy but that route didn't exist in the build.
+   After the push it returned `307 → /auth/sign-in?redirectTo=/attend/<token>`,
+   matching the new source exactly. This is a public, unauthenticated,
+   five-second check.
+
+   ```bash
+   curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" \
+     https://liveensynergy-rho.vercel.app/attend/00000000-0000-0000-0000-000000000000
+   ```
+
+**Rules.**
+
+- Pushing to `origin` is not shipping. `git push liveensynergy HEAD:main` is.
+- Before debugging *any* "it's not showing on live" report, run
+  `git log liveensynergy/main..HEAD --oneline`. If it prints anything, that's
+  your answer — stop and check nothing else.
+- After every push to `main`, verify the deploy actually swapped (see the
+  post-deploy section below). A green push is not a green deploy.
+
+---
+
+## L2 — Code and schema deploy on separate tracks
+
+Vercel deploys code. It does **not** run `supabase/migrations/*.sql` — those are
+applied by hand via the Supabase SQL editor or `supabase db push`. So a push can
+ship code that queries columns the production database doesn't have yet, and the
+failure shows up as a runtime error in the client's face, not a build failure.
+
+`4044474` happened to be safe because `0018_portal_fixes.sql` had already been
+applied. That was luck, not process.
+
+**Rules.**
+
+- If the commits you're pushing touch `supabase/migrations/`, apply the migration
+  **before** pushing the code, not after. Additive migrations (new
+  nullable-or-defaulted columns, new tables/indexes) are safe to apply ahead of
+  the code that uses them; that's why they're written that way.
+- Verify the columns actually exist in production rather than assuming — see the
+  checklist.
+- Log every new migration in `docs/database-migrations.md` in the same commit.
+
+~~**Open item:** the Vercel deployment's own env vars have never been checked
+against `.env.local`.~~ **Settled 1 Aug 2026:** the seeded QA account
+`audience.tester@example.com` — which exists only in project
+`oalqfzaejflgrtyfrrrb` — signs in successfully on the live site, so the
+deployment does use the same Supabase project as `.env.local`. Worth
+re-confirming with `vercel env pull` if the Vercel CLI ever gets installed.
+
+---
+
+## L3 — "Resolved" in a review doc meant "code written", not "works on screen"
+
+**Found:** 1 Aug 2026, verifying the `Admin Portal.docx` / `Audience Portal.docx`
+items on the live site after L1.
+
+Every audience item in the docx was marked *Resolved (31 Jul 2026)*, and the
+code genuinely implemented each one. But the phone-split item (U1) shipped
+**visibly broken** and nobody caught it, because "resolved" was assessed from
+the diff rather than from the rendered page.
+
+**The defect.** On `/dashboard/profile`, the "Phone number *" field renders the
+country-code dropdown at full row width and collapses the actual number input to
+a 29px stub — there is nowhere to type a phone number.
+
+```
+select.select.w-[8rem].shrink-0  →  computed width: 459.2px   ← w-[8rem] (128px) ignored
+input.input.flex-1               →  computed width:  28.8px   ← padding+border only,
+                                                                 content box ≈ 0px
+```
+
+**Root cause — a Tailwind v4 cascade trap worth internalising.** `src/app/globals.css`
+defines the shared primitives as plain, *unlayered* CSS:
+
+```css
+.input, .textarea, .select { width: 100%; ... }
+```
+
+Tailwind v4 emits its utilities inside `@layer utilities`. In the CSS cascade,
+**unlayered rules beat layered ones regardless of specificity or source order**.
+So `.select { width: 100% }` wins over the `w-[8rem]` utility, every time. Add
+`shrink-0` and the select refuses to shrink back, so it eats the whole flex row
+and its sibling collapses.
+
+This is not a one-off — it silently affects every call site that tries to
+constrain a `.input`/`.select` with a width utility:
+
+| File | Class | Intended | Actual |
+|---|---|---|---|
+| `src/components/ui/PhoneInput.tsx:40` | `select w-[8rem] shrink-0` | 128px | full width — **breaks the number input** |
+| `src/app/dashboard/admin/participants/EventFilterSelect.tsx:17` | `select w-auto` | hug content | full width |
+| `src/app/dashboard/admin/users/UserFilters.tsx:138` | `select w-auto` | hug content | full width |
+| `src/app/dashboard/admin/campaigns/page.tsx:181` | `select w-auto` | hug content | full width |
+| `src/app/dashboard/admin/events/page.tsx:229` | `select w-auto` | hug content | full width |
+| `src/app/dashboard/admin/events/sponsored/[id]/page.tsx:214` | `select w-auto` | hug content | full width |
+| `src/app/dashboard/admin/events/sponsored/[id]/page.tsx:416` | `input w-20` | 80px | full width |
+| `src/app/dashboard/sponsored/[id]/page.tsx:573` | `input w-24` | 96px | full width |
+
+Only the `PhoneInput` one is functionally broken; the rest are cosmetic. But
+they all share a single root cause, so they all get fixed by one change.
+
+**The fix.** Wrap the primitives in `@layer components` in `globals.css` so
+Tailwind utilities can override them:
+
+```css
+@layer components {
+  .input, .textarea, .select { width: 100%; ... }
+}
+```
+
+**Rules.**
+
+- A width/flex utility on `.input`, `.select`, `.textarea`, `.btn` or `.card`
+  **does nothing** until `globals.css` moves those rules into `@layer components`.
+  Until then, don't trust the class you wrote — look at the rendered element.
+- "Implemented" is not "verified". Before writing *Resolved* against a review
+  item, open the actual screen in a browser and look at it. A diff cannot show
+  you a collapsed input.
+- For any item that changes a form, the verification is *use the form*, not
+  *see the form*. The country dropdown was plainly visible in the screenshot;
+  only the missing sibling revealed the bug.
+
+**Status:** fixed 1 Aug 2026 — `globals.css` now wraps the form primitives in
+`@layer components`. This also restores the intended padding on the small admin
+inputs (`px-2 py-1` was being beaten by `.input`'s own padding for the same
+reason). Re-check those screens after deploying.
+
+---
+
+## L4 — A migration that reinterprets an existing column needs a backfill
+
+**Found:** 1 Aug 2026, same sweep as L3.
+
+`0018_portal_fixes.sql` added `audience_members.phone_country_code` with
+`default '+44'` and the UI started treating `phone` as *the local part only*.
+Nothing rewrote the existing `phone` values, which still contain the dialling
+code — so the two fields now double up:
+
+| Account | `phone_country_code` | `phone` | Renders / exports as |
+|---|---|---|---|
+| Abhishek Sharma | `+44` | `07775199436` | `+44 07775199436` (trunk `0` kept) |
+| Jordan Avery | `+44` | `+44 7700 900123` | `+44 +44 7700 900123` |
+| Priya Shah | `+44` | `+44 7700 900123` | `+44 +44 7700 900123` |
+
+The admin CSV export concatenates them (`${phone_country_code} ${phone}` —
+`participants/export/route.ts:88`), so every exported number is malformed. That
+export is the artefact the client filters to run reward selection, so this is
+data they'd actually act on.
+
+**Why the migration doc's safety claim didn't cover it.** `docs/database-migrations.md`
+correctly states 0018 is "additive only — nothing existing is renamed, dropped,
+or has its type or constraints changed." That's true and still missed this:
+**the column was additive, but the *meaning* of a neighbouring column changed.**
+Additive DDL is about schema safety, not semantic safety.
+
+**Rules.**
+
+- When a migration changes how an existing column is *interpreted*, ship a
+  backfill `update` in the same migration — additive DDL is not sufficient.
+- Ask of every migration: "is there a row already in this table for which the
+  new code reads the old data wrongly?" Schema-compatible ≠ data-correct.
+- Check the *rendered* value for a pre-existing record, not just a newly created
+  one. A fresh sign-up would have looked perfect here.
+
+---
+
+## L5 — `NEXT_PUBLIC_SITE_URL` points at an SSO-walled domain
+
+**Found:** 1 Aug 2026, verifying admin item A4 (QR check-in).
+
+The QR code and check-in link generated for a sponsored event pointed at
+`liveensynergy-liveensynergy.vercel.app`, not the live host
+`liveensynergy-rho.vercel.app`. That domain has Vercel deployment protection on:
+
+```
+liveensynergy-liveensynergy.vercel.app/attend/<token> → 302 → vercel.com/sso-api  ← login wall
+liveensynergy-rho.vercel.app/attend/<token>           → 307 → /auth/sign-in       ← correct
+```
+
+An audience member scanning the QR at a venue gets a Vercel SSO page. The
+feature is fully built and completely unusable in production.
+
+**Blast radius is wider than the QR.** The same env var builds the links inside
+transactional auth emails:
+
+| Site | Uses `NEXT_PUBLIC_SITE_URL` for |
+|---|---|
+| `src/lib/attendance.ts:3` | QR code + check-in link |
+| `src/app/auth/actions.ts:42` | sign-up email confirmation link |
+| `src/app/auth/actions.ts:139` | password reset link |
+
+So new sign-ups confirming their email, and anyone resetting a password, are
+also being sent to the login wall. This went unnoticed because the seeded QA
+accounts are inserted pre-confirmed and never exercise either email.
+
+**Fix:** it's a Vercel config change, not a code change — set
+`NEXT_PUBLIC_SITE_URL` to the real public origin and redeploy.
+
+**Status:** fixed 1 Aug 2026 — `NEXT_PUBLIC_SITE_URL` repointed at
+`https://liveensynergy-rho.vercel.app` and redeployed. Verified: the admin
+page's check-in link and the QR image (both from `attendUrl()`) now use the
+live host, and a logged-out hit on that URL 307s to sign-in with `redirectTo`
+preserved instead of bouncing to `vercel.com/sso-api`. Sign-up confirmation and
+password-reset emails are fixed by the same change but were **not** re-tested —
+worth one manual pass.
+
+**Rules.**
+
+- Any env var that ends up in a **user-facing URL** must equal the origin real
+  users browse. Verify by loading a generated link in a logged-out context, not
+  by reading the setting.
+- Preview/protected deployment URLs must never leak into QR codes, emails, or
+  anything that outlives the session that produced it.
+- Seeded QA accounts skip email flows entirely, so email-borne links have *no*
+  test coverage here. Exercise them manually after any change to site URL,
+  auth, or email templates.
+
+---
+
+## L6 — A server action that redirects to its own route must revalidate first
+
+**Found:** 1 Aug 2026, running the QR check-in end to end on the live site.
+
+Tapping **Confirm my attendance** wrote the correct data — status
+`ticket_uploaded → attendance_verified`, `attendance_verified_at` stamped — but
+the screen did not change. It re-rendered the same "Confirm you're here" prompt
+with the button still there. Only a manual reload revealed "Attendance
+confirmed".
+
+At a venue that reads as a failed scan: the attendee taps again, or gives up and
+queues for manual verification — defeating the point of the feature. The bug is
+invisible to any check that only looks at the database.
+
+**Cause.** `confirmAttendance` did `update(...)` then `redirect('/attend/'+token)`
+with no `revalidatePath`, so Next's client router cache re-served the stale RSC
+payload for a route whose data had just changed. `CLAUDE.md` already documents
+the convention — *"On success: `revalidatePath(...)` then `redirect(...)`"* — and
+this action was the one place that skipped it.
+
+**Fixed** 1 Aug 2026 (`src/app/attend/[token]/actions.ts`): revalidates
+`/attend/[token]` and `/dashboard/participations` before redirecting.
+
+**Rules.**
+
+- Any server action that redirects **back to a route it just mutated** needs
+  `revalidatePath` on that route. Redirecting to a *different* page usually
+  masks the problem, which is why this pattern is the one that bites.
+- Verify a write by looking at **the screen the user is left on**, not just the
+  row in the database. Both were needed here to see the whole bug.
+- End-to-end means driving the real UI as the real role. Reading the action's
+  source would not have surfaced this.
+
+---
+
+## Pre-push checklist
+
+Run through this before `git push liveensynergy HEAD:main`. Most of it is a
+couple of minutes.
+
+### 1. Know exactly what you're shipping
+
+```bash
+git log liveensynergy/main..HEAD --oneline          # commits going live
+git diff liveensynergy/main..HEAD --stat            # files touched
+```
+
+- [ ] Every commit listed is one you intend to release. A single push to `main`
+      ships *everything* that's ahead — issue #1's push carried the QR check-in
+      flow, ticket upload, and no-show suspension alongside the five cards.
+- [ ] `git fetch liveensynergy` first, so you're diffing against the real tip.
+
+### 2. Database
+
+```bash
+git diff liveensynergy/main..HEAD --stat -- supabase/migrations/
+```
+
+- [ ] If that's empty, skip to step 3.
+- [ ] Otherwise: migration applied to production **before** pushing code.
+- [ ] Columns verified present, not assumed — query
+      `information_schema.columns` for the specific new columns (via the
+      Supabase MCP `execute_sql`, or the SQL editor).
+- [ ] Migration documented in `docs/database-migrations.md`.
+- [ ] Migration is additive. If it renames, drops, or retypes anything, stop and
+      plan the rollout properly — existing rows and the running old build both
+      depend on the current shape.
+- [ ] **Backfill considered.** Does the new code read any *existing* column
+      differently than the old code did? If yes, the migration needs an `update`
+      to match, and additive-DDL safety does not cover it (L4).
+- [ ] Opened one **pre-existing** record in the UI, not just a freshly created
+      one, and checked the affected field renders correctly.
+
+### 2b. User-facing URLs
+
+- [ ] If the change generates a link that leaves the app — QR code, email,
+      share link, webhook callback — confirm the origin it's built from is the
+      public one users actually browse (L5).
+- [ ] Load one generated link in a logged-out/incognito window. A protected
+      preview origin will redirect to an SSO wall rather than your page.
+
+### 3. Build health
+
+```bash
+npm run typecheck
+npm run build
+```
+
+- [ ] Both clean. `typecheck` alone is not enough — `next build` catches
+      route-level and server/client boundary errors that `tsc` doesn't.
+- [ ] Note: `npm run lint` is **not usable** — the repo has no ESLint config, so
+      `next lint` drops into an interactive setup prompt and lints nothing.
+      Treat the script as absent until someone configures it.
+
+### 3b. Exercise the change as the affected role
+
+- [ ] Drove the real UI, signed in as the role the change affects — not just
+      read the diff, and not just checked the database row (L3, L6).
+- [ ] For a write action: looked at **the screen the user is left on**
+      afterwards. A correct DB row with a stale screen is still a broken
+      feature (L6).
+
+### 4. New env vars or dependencies
+
+- [ ] Any new `process.env.*` reference added? It must exist in the Vercel
+      project settings *before* the deploy, or the build ships broken.
+- [ ] New packages are in both `package.json` and `package-lock.json`, and
+      `package-lock.json` is committed.
+
+### 5. Sanity-check the actual change
+
+- [ ] Ran it locally (`npm run dev`) and looked at the screen that changed, in
+      the role that's affected.
+- [ ] Where the change is data-dependent (empty state, existing account, brand
+      new account), checked more than one case.
+
+---
+
+## Post-deploy verification
+
+A push is not a deploy. Confirm the new build is actually serving:
+
+- [ ] Pick something in the diff that's publicly observable — a new route, or a
+      page whose static copy changed — and check it against the live URL.
+      New route:
+
+      ```bash
+      curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" \
+        https://liveensynergy-rho.vercel.app/<new-route>
+      ```
+
+      A `404` where the source says otherwise means the old build is still live.
+- [ ] For an authenticated screen, log in as a seeded QA account
+      (`docs/qa-creds.md`) and look at it — don't rely on the client to be your
+      smoke test.
+- [ ] If a migration went out with it, exercise the feature that uses the new
+      columns once.
+- [ ] Reply on the GitHub issue with what shipped and how to verify, so the
+      client checks the right thing.
+
+---
+
+## Anti-patterns worth naming
+
+- **Trusting a green push.** `280a6e7..4044474 HEAD -> main` tells you git
+  accepted the objects. It says nothing about whether the build succeeded.
+- **Debugging the app before checking the build.** Cheapest check first: is the
+  deployed code even the code you're reading?
+- **Taking the reporter's framing at face value.** "Existing accounts don't see
+  it" and "the deploy is stale" produce identical symptoms for an existing
+  account. Find the observation that distinguishes them (static copy, a new
+  route) rather than starting from the stated hypothesis.
+- **Verifying against `.env.local` and calling it production.** They're the same
+  project until someone proves otherwise — and nobody has.

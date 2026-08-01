@@ -133,30 +133,37 @@ h4,
   color: var(--color-ink-soft);
   margin-top: 0.3rem;
 }
-.input,
-.textarea,
-.select {
-  width: 100%;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(44, 36, 34, 0.16);
-  background: #fff;
-  padding: 0.65rem 0.85rem;
-  font-size: 0.95rem;
-  color: var(--color-ink);
-  transition:
-    border-color 0.12s ease,
-    box-shadow 0.12s ease;
-}
-.input:focus,
-.textarea:focus,
-.select:focus {
-  outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgba(237, 154, 78, 0.18);
-}
-.textarea {
-  min-height: 6rem;
-  resize: vertical;
+/* Layered so Tailwind utilities can override these defaults. Unlayered CSS beats
+   anything in @layer regardless of specificity, so while these lived outside a
+   layer `width: 100%` silently defeated every `w-*`/`flex-1` utility written
+   alongside `.input`/`.select` — which collapsed the number field in
+   <PhoneInput> to a 29px stub. See L3 in lessons.md. */
+@layer components {
+  .input,
+  .textarea,
+  .select {
+    width: 100%;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(44, 36, 34, 0.16);
+    background: #fff;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    transition:
+      border-color 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  .input:focus,
+  .textarea:focus,
+  .select:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgba(237, 154, 78, 0.18);
+  }
+  .textarea {
+    min-height: 6rem;
+    resize: vertical;
+  }
 }
 
 .card {
