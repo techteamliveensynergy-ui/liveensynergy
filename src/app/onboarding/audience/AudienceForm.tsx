@@ -29,7 +29,17 @@ export function AudienceForm({
     saveAudience,
     {},
   );
-  const d = defaults ?? {};
+
+  // A rejected save echoes back what was submitted; show that rather than
+  // reverting to what's stored, so the field being complained about still
+  // holds the value the complaint is about.
+  const d = { ...(defaults ?? {}), ...(state.values ?? {}) } as Partial<
+    AudienceMember
+  >;
+
+  // Fields backed by component state only pick up new defaults on mount, so
+  // they're remounted whenever a submission comes back with values.
+  const attempt = state.values ? JSON.stringify(state.values) : "initial";
 
   return (
     <form action={formAction} className="space-y-6">
@@ -58,6 +68,7 @@ export function AudienceForm({
             hint="Helps us confirm it's really you when a reward is released."
           >
             <PhoneInput
+              key={`phone-${attempt}`}
               defaultCountryCode={d.phone_country_code}
               defaultPhone={d.phone}
               required
@@ -73,6 +84,7 @@ export function AudienceForm({
             />
           </Field>
           <GenderField
+            key={`gender-${attempt}`}
             defaultGender={d.gender}
             defaultSelfDescribe={d.gender_self_describe}
           />
@@ -81,7 +93,10 @@ export function AudienceForm({
             htmlFor="country_of_residence"
             hint="Start typing to search the list."
           >
-            <CountrySelect defaultValue={d.country_of_residence} />
+            <CountrySelect
+              key={`country-${attempt}`}
+              defaultValue={d.country_of_residence}
+            />
           </Field>
         </div>
         <Field label="Address" htmlFor="address">

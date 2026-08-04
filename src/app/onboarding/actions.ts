@@ -12,6 +12,16 @@ import { GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
 export interface OnboardingState {
   error?: string;
   success?: boolean;
+  /**
+   * What the user actually submitted, echoed back when a save is rejected.
+   *
+   * Without this the form re-renders from the *stored* values, so a rejected
+   * save silently discards the edit it's complaining about: you're told the
+   * phone number is taken while the field in front of you shows your old
+   * number, and any field backed by component state (gender, country) loses
+   * its selection. Merged over the defaults so the form shows what you typed.
+   */
+  values?: Record<string, string>;
 }
 
 /**
@@ -486,11 +496,32 @@ export async function saveAudience(
   const userId = await getUserId();
   if (!userId) redirect("/auth/sign-in");
 
+  // Echoed back on every rejection so the form can re-render what was typed
+  // rather than reverting to what's stored — see OnboardingState.values.
+  const submitted: Record<string, string> = {};
+  for (const field of [
+    "full_name",
+    "phone",
+    "phone_country_code",
+    "date_of_birth",
+    "gender",
+    "gender_self_describe",
+    "country_of_residence",
+    "address",
+    "postcode",
+  ]) {
+    submitted[field] = String(formData.get(field) ?? "");
+  }
+  const reject = (error: string): OnboardingState => ({
+    error,
+    values: submitted,
+  });
+
   const fullName = str(formData.get("full_name"));
-  if (!fullName) return { error: "Your name is required." };
+  if (!fullName) return reject("Your name is required.");
 
   const phoneError = requirePhone(formData.get("phone"), "A phone number");
-  if (phoneError) return { error: phoneError };
+  if (phoneError) return reject(phoneError);
 
   const countryCode = str(formData.get("phone_country_code")) ?? "+44";
   const phone = str(formData.get("phone"));
@@ -499,7 +530,7 @@ export async function saveAudience(
     userId,
     "audience_members",
   );
-  if (takenError) return { error: takenError };
+  if (takenError) return reject(takenError);
 
   // Only kept when they actually chose to self-describe — otherwise a stale
   // value would linger behind a since-changed answer.
@@ -526,7 +557,7 @@ export async function saveAudience(
     { onConflict: "profile_id" },
   );
 
-  if (error) return { error: error.message };
+  if (error) return reject(error.message);
 
   if (isProfileMode(formData)) {
     revalidatePath("/dashboard/profile");
