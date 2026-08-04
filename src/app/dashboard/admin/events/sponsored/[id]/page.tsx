@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
-import { computePlatformFee } from "@/lib/constants";
+import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
@@ -12,10 +12,21 @@ import { formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
+import { EventEditForm } from "./EventEditForm";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
+/**
+ * Statuses run one way only — a confirmed deal can't be dropped back to "in
+ * progress" (3 Aug standup), so the picker only offers the current status and
+ * anything after it. `setSponsoredStatus` enforces the same rule server-side.
+ */
 const SPONSORED_STATUSES = ["in_progress", "confirmed", "completed"];
+
+function statusesFrom(current: string) {
+  const i = SPONSORED_STATUSES.indexOf(current);
+  return i === -1 ? [] : SPONSORED_STATUSES.slice(i);
+}
 
 type Row = Participation & { profiles: { full_name: string | null; email: string | null } | null };
 
@@ -52,6 +63,8 @@ export default async function AdminSponsoredDetailPage({
       remaining_budget_gbp: number | null;
       reward_rules: string | null;
       terms: string | null;
+      branding_guidelines: string | null;
+      attendance_method: string | null;
       brand_agreed: boolean;
       artist_agreed: boolean;
       participation_deadline: string | null;
@@ -139,10 +152,21 @@ export default async function AdminSponsoredDetailPage({
       {/* Money */}
       <div className="grid gap-3 sm:grid-cols-4">
         {[
-          { label: "Budget", value: <Money value={event.budget_gbp} />, tint: "bg-[#faf5ee]" },
           {
-            label: "Remaining",
-            value: <Money value={event.remaining_budget_gbp} />,
+            label: "Budget (gross)",
+            value: <Money value={event.budget_gbp} />,
+            tint: "bg-[#faf5ee]",
+          },
+          {
+            label: "Available for rewards",
+            value: (
+              <Money
+                value={
+                  event.remaining_budget_gbp ??
+                  netSponsorshipBudget(event.budget_gbp)
+                }
+              />
+            ),
             tint: "bg-[var(--color-sage)]",
           },
           {
@@ -207,24 +231,37 @@ export default async function AdminSponsoredDetailPage({
           <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
             Deal
           </h2>
-          <form action={setSponsoredStatus} className="flex items-center gap-2">
-            <input type="hidden" name="id" value={event.id} />
-            <select
-              name="status"
-              className="select w-auto py-1.5 text-sm"
-              defaultValue={event.status}
-            >
-              {SPONSORED_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn btn-ghost text-sm">
-              Override status
-            </button>
-          </form>
+          {statusesFrom(event.status).length > 1 ? (
+            <form action={setSponsoredStatus} className="flex items-center gap-2">
+              <input type="hidden" name="id" value={event.id} />
+              <select
+                name="status"
+                className="select w-auto py-1.5 text-sm"
+                defaultValue={event.status}
+              >
+                {statusesFrom(event.status).map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="btn btn-ghost text-sm">
+                Move status on
+              </button>
+            </form>
+          ) : (
+            <p className="text-sm text-[var(--color-ink-soft)]">
+              {event.status === "withdrawn"
+                ? "Withdrawn — another event was chosen for this campaign."
+                : "Completed — the status can't move on any further."}
+            </p>
+          )}
         </div>
+
+        <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
+          Status only ever moves forward. To change the deal itself — deadline,
+          budget, terms — use Edit event details below.
+        </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div
@@ -270,6 +307,47 @@ export default async function AdminSponsoredDetailPage({
           <div className="mt-3 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
             <span className="font-semibold">Reward rules</span> — {event.reward_rules}
           </div>
+        )}
+      </div>
+
+      {/* Admin override of the deal's details. The parties themselves can't
+          touch a confirmed sponsorship, so this is the only route to moving a
+          deadline that has passed or fixing a budget (3 Aug standup). */}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+          Edit event details
+        </h2>
+        {event.status === "completed" ? (
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            This event is completed — its details are locked.
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Admin-only. Neither the brand nor the artist can change a
+              confirmed deal themselves, so edits made here are the record both
+              sides see.
+            </p>
+            <EventEditForm
+              parties={`${event.brands?.brand_name ?? "the brand"} and ${
+                artist?.full_name ?? "the artist"
+              }`}
+              event={{
+                id: event.id,
+                name: event.name,
+                event_date: event.event_date,
+                start_time: event.start_time,
+                venue_details: event.venue_details,
+                location: event.location,
+                budget_gbp: event.budget_gbp,
+                participation_deadline: event.participation_deadline,
+                terms: event.terms,
+                reward_rules: event.reward_rules,
+                branding_guidelines: event.branding_guidelines,
+                attendance_method: event.attendance_method,
+              }}
+            />
+          </>
         )}
       </div>
 

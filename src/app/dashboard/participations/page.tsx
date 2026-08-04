@@ -2,6 +2,12 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
+import {
+  ParticipationProgress,
+  isImagePath,
+  participationSteps,
+} from "@/components/dashboard/ParticipationProgress";
+import { signedUrlFor } from "@/lib/storage";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import type { Participation, SponsoredEvent } from "@/lib/types";
@@ -48,6 +54,23 @@ export default async function ParticipationsPage({
   const past = allRows.filter(isPast);
   const tab: "upcoming" | "past" = rawTab === "past" ? "past" : "upcoming";
   const rows = tab === "past" ? past : upcoming;
+
+  // Ticket proofs sit in the private bucket — each thumbnail needs its own
+  // short-lived signed URL, generated per render.
+  const ticketLinks = new Map(
+    await Promise.all(
+      rows.map(async (r): Promise<[string, string | null]> => [
+        r.id,
+        r.ticket_proof_url
+          ? ((await signedUrlFor(r.ticket_proof_url)) ??
+            // Older rows stored a pasted external link rather than a path.
+            (/^https?:\/\//.test(r.ticket_proof_url)
+              ? r.ticket_proof_url
+              : null))
+          : null,
+      ]),
+    ),
+  );
 
   return (
     <div>
@@ -153,6 +176,17 @@ export default async function ParticipationsPage({
                   </form>
                 </div>
 
+                {/* Book → selected → upload → attend → reward, with ticks
+                    (3 Aug standup). */}
+                <div className="mt-4 rounded-xl border border-black/10 p-4">
+                  <ParticipationProgress
+                    steps={participationSteps(p)}
+                    rejected={p.status === "rejected"}
+                    ticketHref={ticketLinks.get(p.id)}
+                    ticketIsImage={isImagePath(p.ticket_proof_url)}
+                  />
+                </div>
+
                 {ev?.reward_rules && (
                   <div className="mt-3 rounded-xl bg-[var(--color-mist)] px-3 py-2 text-sm">
                     <span className="font-semibold text-[var(--color-brand-dark)]">
@@ -230,12 +264,8 @@ export default async function ParticipationsPage({
                   </p>
                 )}
 
-                {p.status === "rejected" && (
-                  <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
-                    You weren&apos;t selected for the reward this time — thanks
-                    for registering.
-                  </p>
-                )}
+                {/* The "not selected" message is part of the step tracker
+                    above, so it isn't repeated here. */}
 
                 {/* Consent / payout details */}
                 {p.selected && (

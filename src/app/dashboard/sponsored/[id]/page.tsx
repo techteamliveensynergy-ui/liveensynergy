@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
+import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { Field } from "@/components/ui/Field";
+import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
 import type {
   EventListing,
   Participation,
@@ -22,6 +24,17 @@ import {
 } from "../actions";
 
 export const metadata = { title: "Sponsored event" };
+
+type ParticipantRow = Participation & {
+  profiles: { full_name: string | null } | null;
+};
+
+function money(value: number | null | undefined) {
+  if (value == null) return "—";
+  return `£${Number(value).toLocaleString("en-GB", {
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 /** `datetime-local` needs `YYYY-MM-DDTHH:mm`, not a full ISO string. */
 function toLocalInputValue(iso: string | null) {
@@ -66,25 +79,35 @@ export default async function SponsoredEventPage({
         .select("*")
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: true }),
+      // Names come through the "profiles: read my event participants" policy
+      // added in 0021 — before it, this list could only show an id fragment.
       supabase
         .from("participations")
-        .select("*")
+        .select("*, profiles(full_name)")
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: true }),
     ]);
 
   const listing = listingRow as EventListing | null;
   const assets = (assetRows ?? []) as SponsoredEventAsset[];
-  const participations = (parts ?? []) as Participation[];
+  const participations = (parts ?? []) as ParticipantRow[];
 
   const isBrand = !!brand && brand.id === event.brand_id;
   const isArtist = event.artist_profile_id === profile.id;
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
+  const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
+
+  // The platform fee comes off the gross budget before anything can be paid
+  // out, so every figure below works from the net amount. `remaining` falls
+  // back to the recomputed net for rows written before that fix.
+  const fee =
+    event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
+  const netBudget = netSponsorshipBudget(event.budget_gbp);
+  const remaining = event.remaining_budget_gbp ?? netBudget;
 
   // How far the remaining budget stretches, at the linked event's ticket price.
   const ticketPrice = listing?.ticket_price_gbp ?? null;
-  const remaining = event.remaining_budget_gbp;
   const sponsorableCount =
     ticketPrice != null && ticketPrice > 0 && remaining != null
       ? Math.floor(Number(remaining) / Number(ticketPrice))
@@ -124,21 +147,24 @@ export default async function SponsoredEventPage({
       {/* Sponsorship management */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Sponsorship management</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Stat
-            label="Budget"
-            value={
-              event.budget_gbp != null
-                ? `£${Number(event.budget_gbp).toLocaleString("en-GB")}`
-                : "—"
-            }
+            label="Budget (gross)"
+            value={money(event.budget_gbp)}
+            hint="what the brand commits"
           />
           <Stat
-            label="Remaining budget"
-            value={
-              remaining != null
-                ? `£${Number(remaining).toLocaleString("en-GB")}`
-                : "—"
+            label="Service fee"
+            value={fee ? money(fee.feeIncVat) : "—"}
+            hint="inc. VAT"
+          />
+          <Stat
+            label="Available for rewards"
+            value={money(remaining)}
+            hint={
+              netBudget != null && remaining != null && remaining < netBudget
+                ? `of ${money(netBudget)} after fees`
+                : "after fees"
             }
           />
           <Stat
@@ -274,8 +300,9 @@ export default async function SponsoredEventPage({
         {locked ? (
           <>
             <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-              These terms are locked — both parties have agreed them. To change
-              anything, contact the Live·En·Synergy team.
+              {event.status === "withdrawn"
+                ? "This proposal was withdrawn — the sponsor confirmed a different event for the same campaign."
+                : "These terms are locked — both parties have agreed them. To change anything, contact the Live·En·Synergy team."}
             </p>
             <dl className="mt-4 grid gap-4">
               <Detail label="Reward rules" value={event.reward_rules} block />
@@ -353,12 +380,47 @@ export default async function SponsoredEventPage({
             {!locked && (
               <form action={toggleAgreement}>
                 <input type="hidden" name="id" value={event.id} />
-                <button
-                  type="submit"
-                  className={`btn ${myAgreed ? "btn-ghost" : "btn-primary"}`}
-                >
-                  {myAgreed ? "Withdraw my agreement" : "I agree to these terms"}
-                </button>
+                {myAgreed ? (
+                  <button type="submit" className="btn btn-ghost">
+                    Withdraw my agreement
+                  </button>
+                ) : (
+                  // Agreeing when the other side already has confirms the
+                  // sponsorship outright, and there's no undo — so it asks
+                  // first (3 Aug standup).
+                  <ConfirmSubmit
+                    label="I agree to these terms"
+                    pendingLabel="Agreeing…"
+                    title={
+                      otherPartyAgreed
+                        ? "Confirm this sponsorship?"
+                        : "Agree to these terms?"
+                    }
+                    body={
+                      otherPartyAgreed ? (
+                        <>
+                          The other party has already agreed, so this confirms{" "}
+                          <strong>{event.name}</strong> immediately.{" "}
+                          <strong>This can&apos;t be undone</strong> — the terms
+                          lock, and any other events suggested for this campaign
+                          are withdrawn. Changing anything afterwards means
+                          contacting the Live·En·Synergy team.
+                        </>
+                      ) : (
+                        <>
+                          You&apos;re agreeing to the terms for{" "}
+                          <strong>{event.name}</strong> as they stand. The
+                          sponsorship confirms as soon as the other party agrees
+                          too, and confirmation can&apos;t be undone.
+                        </>
+                      )
+                    }
+                    confirmLabel={
+                      otherPartyAgreed ? "Yes, confirm it" : "Yes, I agree"
+                    }
+                    danger={otherPartyAgreed}
+                  />
+                )}
               </form>
             )}
             <form action={contactSupport}>
@@ -421,8 +483,9 @@ export default async function SponsoredEventPage({
             Participants ({participations.length})
           </h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Run selection, verify attendance and release rewards. Personal
-            details are shared only after a participant is selected and consents.
+            Run selection and verify attendance. Paying the reward out is
+            handled by the Live·En·Synergy team once attendance is verified —
+            get in touch if a payout needs chasing.
           </p>
 
           {participations.length === 0 ? (
@@ -438,13 +501,19 @@ export default async function SponsoredEventPage({
                 >
                   <div>
                     <p className="text-sm font-semibold">
-                      Participant #{p.id.slice(0, 8)}
+                      {p.profiles?.full_name ?? `Participant #${p.id.slice(0, 8)}`}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       <StatusBadge status={p.status} />
                       {p.selected && (
                         <span className="text-xs text-[var(--color-olive-deep)]">selected</span>
                       )}
+                      {p.status === "reward_released" &&
+                        p.reward_amount_gbp != null && (
+                          <span className="text-xs text-[var(--color-ink-soft)]">
+                            {money(p.reward_amount_gbp)} paid
+                          </span>
+                        )}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -469,7 +538,9 @@ export default async function SponsoredEventPage({
                         />
                       )}
                     {p.status === "attendance_verified" && (
-                      <ReleaseRewardForm eventId={event.id} id={p.id} />
+                      <span className="text-xs text-[var(--color-ink-soft)]">
+                        Awaiting reward payout by the team
+                      </span>
                     )}
                     {p.status !== "rejected" && !p.selected && (
                       <ParticipationBtn
@@ -544,39 +615,6 @@ function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {
       <span className="font-medium">{label}</span>
       <span>{agreed ? "✓ Agreed" : "Pending"}</span>
     </div>
-  );
-}
-
-/**
- * Releasing a reward needs an amount — without it the participant's reward
- * shows as "—" and the audience's running total stays at £0.
- */
-function ReleaseRewardForm({ eventId, id }: { eventId: string; id: string }) {
-  return (
-    <form action={updateParticipation} className="flex items-center gap-2">
-      <input type="hidden" name="event_id" value={eventId} />
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="op" value="release" />
-      <label className="sr-only" htmlFor={`reward-${id}`}>
-        Reward amount in GBP
-      </label>
-      <div className="flex items-center gap-1">
-        <span className="text-sm text-[var(--color-ink-soft)]">£</span>
-        <input
-          id={`reward-${id}`}
-          name="reward_amount_gbp"
-          type="number"
-          min={0}
-          step="0.01"
-          required
-          placeholder="0.00"
-          className="input w-24 px-2 py-1 text-sm"
-        />
-      </div>
-      <button type="submit" className="btn btn-ghost text-sm">
-        Release reward
-      </button>
-    </form>
   );
 }
 

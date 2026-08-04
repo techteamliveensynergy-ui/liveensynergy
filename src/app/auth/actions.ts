@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ROLES, ROLE_LABELS, type SignupRole } from "@/lib/constants";
+import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
 
 export interface AuthState {
@@ -28,10 +29,19 @@ export async function signUp(
     return { error: "Please fill in your name, email and password." };
   }
   if (!ROLES.includes(role)) {
-    return { error: "Please choose whether you're a brand, artist, organiser or audience member." };
+    return {
+      error:
+        "Please choose whether you're a brand, an artist / event organiser, or an audience member.",
+    };
   }
   if (password.length < 8) {
     return { error: "Your password must be at least 8 characters." };
+  }
+  if (String(formData.get("terms_accepted") ?? "") !== "on") {
+    return {
+      error:
+        "Please confirm you agree to the Terms & Conditions for your account type.",
+    };
   }
 
   const supabase = await createClient();
@@ -40,7 +50,15 @@ export async function signUp(
     password,
     options: {
       emailRedirectTo: `${siteUrl()}/auth/callback?next=/onboarding`,
-      data: { full_name: fullName, role },
+      // The profile row is created by the `handle_new_user` trigger, not here,
+      // so the terms acceptance travels with the sign-up metadata — there's no
+      // session to write with yet when email confirmation is on (0021).
+      data: {
+        full_name: fullName,
+        role,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: TERMS_VERSION,
+      },
     },
   });
 

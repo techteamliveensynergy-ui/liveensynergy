@@ -28,6 +28,26 @@ existing database with live data can always pick up the latest file safely.
 | 0018 | `0018_portal_fixes.sql` | Batch behind the 31 Jul Admin Portal / Audience Portal review (see below). Every change is additive — new nullable-or-defaulted columns plus one new unique index — so it does not alter or drop anything existing. |
 | 0019 | `0019_phone_backfill.sql` | Data-only follow-up to 0018. 0018 added `phone_country_code` and the UI began treating `phone` as the local part, but pre-existing rows still held the dialling code (`+44 7700 900123`) or a national trunk zero (`07775199436`) — so anything joining the two, notably the admin CSV export, emitted `+44 +44 7700 900123`. Strips a leading copy of the row's own country code, then a single trunk `0` **for `+44` only** (Italy's `+39` keeps its leading zero, so the rule is deliberately narrow). Idempotent — re-running is a no-op. A reminder that "additive DDL" is not the same as "existing data still means the same thing"; see L4 in `lessons.md`. |
 
+| 0020 | `0020_sponsorship_withdrawn.sql` | Adds `withdrawn` to the `sponsorship_status` enum. Its own file on purpose: Postgres refuses to *use* a newly added enum value inside the transaction that added it, so 0021 (which does) has to run separately. Run 0020 first. |
+| 0021 | `0021_standup_0803.sql` | The 3 Aug standup batch — see below. Mostly additive, but two steps deliberately rewrite existing rows: the reference renumbering (4) and the remaining-budget recompute (5). |
+
+## 0021 in detail
+
+Run **0020 before 0021** — 0021 sets `status = 'withdrawn'`, which only exists
+once 0020 has committed.
+
+| # | Change | Why |
+|---|--------|-----|
+| 1 | `audience_members.gender`, `gender_self_describe`, `country_of_residence` | Gender with a self-describe branch, and a country picked from a list instead of typed free-hand. Two gender columns rather than one so the standard options stay countable without pattern matching free text. |
+| 2 | `profiles.terms_accepted_at`, `terms_version`; `handle_new_user()` updated | Terms are agreed per party (audience / brand / artist) at sign-up. With email confirmation on there's no session immediately after sign-up, so the acceptance travels through `auth.users.raw_user_meta_data` and the trigger copies it across. |
+| 3 | `phone_digits()`, `phone_in_use()`, four partial unique indexes | One phone number, one account. `phone_digits()` reduces every storage format to the last 10 digits so "+44 7700 900123", "07700900123" and "7700900123" compare equal. `phone_in_use()` is `security definer` because a normal user can't read anyone else's row — it answers "is this taken?" without saying whose. Index creation is wrapped so an existing duplicate reports a notice instead of failing the whole migration. |
+| 4 | Sequences + `reference` defaults on `campaigns` / `event_listings` / `sponsored_events` / `feedback_reports`, existing rows renumbered | Random hex (`SPE-3F9A1C0B`) became `SPE-00001`, numbered in creation order. References are display-only — every link and foreign key uses the uuid — so renumbering breaks nothing, and doing it before launch is far cheaper than after. |
+| 5 | `sponsored_events.remaining_budget_gbp` recomputed | It was seeded with the **gross** budget, so every "remaining" figure overstated what was actually payable by the whole service fee. Recomputed as gross − fee inc VAT − rewards already released, so a part-spent event keeps its correct drawdown. |
+| 6 | `is_my_event_participant()` + a second SELECT policy on `profiles` | The organiser-side participant list could only show an id fragment. The brand and artist running an event now see the names of the people they're selecting and verifying. `security definer` so the policy doesn't recurse through the RLS on `participations` / `sponsored_events`, mirroring `is_sponsored_event_party()` from 0004. |
+| 7 | `close_campaign_on_acceptance()` | A campaign can carry several suggested events; agreeing one closes the campaign, records the winning listing, withdraws the siblings and frees their listings. `security definer` because the person clicking the final "I agree" is a party to *their* event only — under RLS the campaign row and the sibling proposals would silently match zero rows, the same trap 0004 fixed. Authorisation is checked explicitly on the way in. |
+| 8 | `feedback_reports.github_issue_url`, `github_issue_number` | The in-app feedback widget mirrors each report to a GitHub issue when `GITHUB_TOKEN` / `GITHUB_FEEDBACK_REPO` are set. Null when unconfigured — a report is never blocked on GitHub being reachable. |
+| 9 | `sponsorship.withdrawn` notification event + settings + templates | `notify()` no-ops on an unseeded key, so the catalogue row, the settings row and both templates land together (same three-step insert as 0006 and 0008). |
+
 ## 0018 in detail
 
 | Table | Column | Purpose |

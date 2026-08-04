@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { UrlInput } from "@/components/ui/UrlInput";
+import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
+import { UnsavedChangesGuard } from "@/components/ui/UnsavedChangesGuard";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import {
   SOCIAL_FIELD_KEYS,
@@ -12,15 +13,6 @@ import {
 } from "@/lib/admin-user-fields";
 import type { Role } from "@/lib/constants";
 import { updateUserRoleProfile, type AdminState } from "../../actions";
-
-function Submit() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="btn btn-primary" disabled={pending}>
-      {pending ? "Saving…" : "Save profile"}
-    </button>
-  );
-}
 
 type Record_ = Record<string, unknown>;
 
@@ -174,7 +166,15 @@ export function RoleProfileForm({
       )}
 
       <div className="flex justify-end">
-        <Submit />
+        {/* Saving here overwrites another person's profile, so it confirms
+            first and warns on navigating away mid-edit (3 Aug standup). */}
+        <UnsavedChangesGuard />
+        <ConfirmSubmit
+          label="Save profile"
+          title="Overwrite this user's profile?"
+          body="These changes replace what the user currently has saved, and they'll see them straight away. Save them?"
+          confirmLabel="Yes, save profile"
+        />
       </div>
     </form>
   );

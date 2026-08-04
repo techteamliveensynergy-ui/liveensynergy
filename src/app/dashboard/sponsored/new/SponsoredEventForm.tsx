@@ -8,6 +8,7 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { BANNER_HINT, IMAGE_HINT } from "@/lib/upload-limits";
 import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
+import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import { createSponsoredEvent, type SponsoredState } from "../actions";
 
 export interface ListingOption {
@@ -77,9 +78,14 @@ export function SponsoredEventForm({
 
   const effectiveTicket =
     ticketPrice === "" ? (listing?.ticketPrice ?? null) : Number(ticketPrice);
+
+  // The service fee comes off the top, so the reward pot — and everything
+  // derived from it — works off the net figure, never the gross budget.
+  const fee = budget !== "" && budget > 0 ? computePlatformFee(Number(budget)) : null;
+  const netBudget = budget === "" ? null : netSponsorshipBudget(Number(budget));
   const sponsorableCount =
-    budget !== "" && effectiveTicket != null && effectiveTicket > 0
-      ? Math.floor(Number(budget) / effectiveTicket)
+    netBudget != null && effectiveTicket != null && effectiveTicket > 0
+      ? Math.floor(netBudget / effectiveTicket)
       : null;
 
   return (
@@ -305,7 +311,11 @@ export function SponsoredEventForm({
       </FormSection>
 
       <FormSection title="Sponsorship">
-        <Field label="Budget (GBP)" htmlFor="budget_gbp">
+        <Field
+          label="Budget (GBP)"
+          htmlFor="budget_gbp"
+          hint="The gross amount committed. The Live·En·Synergy service fee comes out of this — the breakdown below shows what's left for audience rewards."
+        >
           <input
             id="budget_gbp"
             name="budget_gbp"
@@ -320,14 +330,26 @@ export function SponsoredEventForm({
           />
         </Field>
 
-        {sponsorableCount != null && (
+        {fee && netBudget != null && (
           <div className="rounded-xl bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-            At £{effectiveTicket!.toLocaleString("en-GB")} a ticket, this budget
-            covers roughly{" "}
-            <span className="font-semibold">
-              {sponsorableCount.toLocaleString("en-GB")}
-            </span>{" "}
-            {sponsorableCount === 1 ? "person" : "people"}.
+            <p>
+              Service fee{" "}
+              <span className="font-semibold">£{fee.feeIncVat.toLocaleString("en-GB", { maximumFractionDigits: 0 })}</span>{" "}
+              inc. VAT · available for rewards{" "}
+              <span className="font-semibold">
+                £{netBudget.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
+              </span>
+            </p>
+            {sponsorableCount != null && (
+              <p className="mt-1">
+                At £{effectiveTicket!.toLocaleString("en-GB")} a ticket, that
+                covers roughly{" "}
+                <span className="font-semibold">
+                  {sponsorableCount.toLocaleString("en-GB")}
+                </span>{" "}
+                {sponsorableCount === 1 ? "person" : "people"}.
+              </p>
+            )}
           </div>
         )}
 

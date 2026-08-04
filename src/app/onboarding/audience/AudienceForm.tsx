@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { PhoneInput } from "@/components/ui/PhoneInput";
+import { CountrySelect } from "@/components/ui/CountrySelect";
+import { GenderField } from "@/components/ui/GenderField";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -70,6 +72,17 @@ export function AudienceForm({
               defaultValue={d.date_of_birth ?? ""}
             />
           </Field>
+          <GenderField
+            defaultGender={d.gender}
+            defaultSelfDescribe={d.gender_self_describe}
+          />
+          <Field
+            label="Country of residence"
+            htmlFor="country_of_residence"
+            hint="Start typing to search the list."
+          >
+            <CountrySelect defaultValue={d.country_of_residence} />
+          </Field>
         </div>
         <Field label="Address" htmlFor="address">
           <textarea
@@ -111,6 +124,7 @@ export function AudienceForm({
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & explore events"}
+        confirmSave={mode === "profile"}
       />
     </form>
   );

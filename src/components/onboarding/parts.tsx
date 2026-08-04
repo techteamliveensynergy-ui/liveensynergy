@@ -3,9 +3,40 @@
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { UrlInput } from "@/components/ui/UrlInput";
+import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
+import { UnsavedChangesGuard } from "@/components/ui/UnsavedChangesGuard";
 
-export function OnboardingSubmit({ label }: { label: string }) {
+/**
+ * Submit row shared by every role's onboarding / profile form.
+ *
+ * `confirmSave` is set when the form is editing a profile that already exists:
+ * saving then overwrites live data, so it goes through a confirmation and the
+ * page warns if you try to leave mid-edit (3 Aug standup). First-time
+ * onboarding has nothing to overwrite, so it saves straight away.
+ */
+export function OnboardingSubmit({
+  label,
+  confirmSave = false,
+}: {
+  label: string;
+  confirmSave?: boolean;
+}) {
   const { pending } = useFormStatus();
+
+  if (confirmSave) {
+    return (
+      <div className="flex justify-end">
+        <UnsavedChangesGuard />
+        <ConfirmSubmit
+          label={label}
+          title="Save these changes?"
+          body="This overwrites the details currently on your profile. Anything you've edited on this page will replace what's saved now."
+          confirmLabel="Yes, save changes"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex justify-end">
       <button type="submit" className="btn btn-primary" disabled={pending}>

@@ -7,7 +7,7 @@ import { notify } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
-import { ROLE_LABELS, type Role } from "@/lib/constants";
+import { GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
 
 export interface OnboardingState {
   error?: string;
@@ -31,6 +31,77 @@ function requirePhone(
   const digits = phone.replace(/\D/g, "");
   if (digits.length < 7) return `${label} doesn't look like a valid number.`;
   return null;
+}
+
+/** Mirrors the database's `phone_digits()` — the last 10 digits, so that
+ *  "+44 7700 900123", "07700900123" and "7700900123" all compare equal. */
+function phoneKey(value: string | null | undefined) {
+  return (value ?? "").replace(/\D/g, "").slice(-10);
+}
+
+/** The number this account already has stored, in whichever shape its table keeps it. */
+async function storedPhone(
+  table: "audience_members" | "artists" | "event_organisers" | "brands",
+  userId: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  if (table === "audience_members") {
+    const { data } = await supabase
+      .from(table)
+      .select("phone, phone_country_code")
+      .eq("profile_id", userId)
+      .maybeSingle<{ phone: string | null; phone_country_code: string | null }>();
+    if (!data?.phone) return null;
+    return `${data.phone_country_code ?? ""}${data.phone}`;
+  }
+
+  const column = table === "brands" ? "manager_phone" : "contact_phone";
+  const { data } = await supabase
+    .from(table)
+    .select(column)
+    .eq("profile_id", userId)
+    .maybeSingle<Record<string, string | null>>();
+  return data?.[column] ?? null;
+}
+
+/**
+ * Rejects a number already registered against a different account.
+ *
+ * A phone number is the platform's main defence against duplicate and
+ * throwaway accounts, so uniqueness spans all four role tables, not just the
+ * one being saved (3 Aug standup). The check runs through the `phone_in_use`
+ * security-definer function because a normal user can't read anyone else's
+ * profile row — it answers "is this taken?" without revealing whose it is.
+ * Unique indexes in 0021 are the backstop against two concurrent saves.
+ *
+ * Only an actual *change* of number is checked. Enforcing this on every save
+ * would permanently trap anyone who already shared a number with another
+ * account before the rule existed: they couldn't edit their address, their
+ * name, anything — every save would fail on a number they hadn't touched.
+ * Uniqueness is enforced going forward; it doesn't retroactively brick
+ * existing accounts.
+ */
+async function phoneTaken(
+  value: string | null,
+  userId: string,
+  table: "audience_members" | "artists" | "event_organisers" | "brands",
+): Promise<string | null> {
+  if (!value) return null;
+
+  const current = await storedPhone(table, userId);
+  if (current && phoneKey(current) === phoneKey(value)) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("phone_in_use", {
+    p_phone: value,
+    p_profile_id: userId,
+  });
+  // A failing check must not block a legitimate save — the database index
+  // still catches a genuine duplicate.
+  if (error) return null;
+  return data === true
+    ? "That phone number is already registered to another account. Each account needs its own number."
+    : null;
 }
 
 /** Guards the long free-text fields against runaway pastes. */
@@ -190,6 +261,13 @@ export async function saveBrand(
   );
   if (phoneError) return { error: phoneError };
 
+  const takenError = await phoneTaken(
+    str(formData.get("manager_phone")),
+    userId,
+    "brands",
+  );
+  if (takenError) return { error: takenError };
+
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
 
@@ -260,6 +338,13 @@ export async function saveArtist(
     "A contact phone number",
   );
   if (phoneError) return { error: phoneError };
+
+  const takenError = await phoneTaken(
+    str(formData.get("contact_phone")),
+    userId,
+    "artists",
+  );
+  if (takenError) return { error: takenError };
 
   const bioError = tooLong(formData.get("bio"), "Your bio");
   if (bioError) return { error: bioError };
@@ -333,6 +418,13 @@ export async function saveEvent(
   );
   if (phoneError) return { error: phoneError };
 
+  const takenError = await phoneTaken(
+    str(formData.get("contact_phone")),
+    userId,
+    "event_organisers",
+  );
+  if (takenError) return { error: takenError };
+
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
 
@@ -400,14 +492,34 @@ export async function saveAudience(
   const phoneError = requirePhone(formData.get("phone"), "A phone number");
   if (phoneError) return { error: phoneError };
 
+  const countryCode = str(formData.get("phone_country_code")) ?? "+44";
+  const phone = str(formData.get("phone"));
+  const takenError = await phoneTaken(
+    `${countryCode}${phone ?? ""}`,
+    userId,
+    "audience_members",
+  );
+  if (takenError) return { error: takenError };
+
+  // Only kept when they actually chose to self-describe — otherwise a stale
+  // value would linger behind a since-changed answer.
+  const gender = str(formData.get("gender"));
+  const selfDescribe =
+    gender === GENDER_SELF_DESCRIBE
+      ? str(formData.get("gender_self_describe"))
+      : null;
+
   const supabase = await createClient();
   const { error } = await supabase.from("audience_members").upsert(
     {
       profile_id: userId,
       full_name: fullName,
-      phone: str(formData.get("phone")),
-      phone_country_code: str(formData.get("phone_country_code")) ?? "+44",
+      phone,
+      phone_country_code: countryCode,
       date_of_birth: str(formData.get("date_of_birth")),
+      gender,
+      gender_self_describe: selfDescribe,
+      country_of_residence: str(formData.get("country_of_residence")),
       address: str(formData.get("address")),
       postcode: str(formData.get("postcode")),
     },

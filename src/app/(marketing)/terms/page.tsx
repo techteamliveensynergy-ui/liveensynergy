@@ -1,4 +1,5 @@
 import { LegalTabs } from "@/components/LegalTabs";
+import { ALL_PARTY_TERMS } from "@/lib/terms";
 
 export const metadata = { title: "Terms & Conditions" };
 
@@ -55,6 +56,23 @@ export default function TermsPage() {
               rules of each event and successful attendance verification.
             </p>
           </section>
+
+          {/* Per-party terms. Each is agreed to individually at sign-up, and
+              the sign-up checkbox links straight to the matching anchor —
+              both read the same source (src/lib/terms.ts). */}
+          {ALL_PARTY_TERMS.map((t, i) => (
+            <section key={t.key} id={t.key} className="scroll-mt-24">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
+                {5 + i}. Terms for {t.party}
+              </h2>
+              <ul className="mt-2 list-disc space-y-1.5 pl-5">
+                {t.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </section>
+          ))}
+
           <p className="text-[var(--color-ink-soft)]">
             …full copy to be finalised before launch.
           </p>

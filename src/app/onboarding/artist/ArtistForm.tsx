@@ -39,9 +39,16 @@ export function ArtistForm({
       <ErrorBanner error={state.error} />
       <SuccessBanner show={state.success} />
 
-      <FormSection title="Artist account info & profile">
+      <FormSection
+        title="Account info & profile"
+        description="This form covers both artists and event organisers — the two are one account type on Live·En·Synergy. Give your act's, company's or festival's name wherever it asks for an artist name."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Artist name" htmlFor="artist_name" required>
+          <Field
+            label="Artist / organisation name"
+            htmlFor="artist_name"
+            required
+          >
             <input
               id="artist_name"
               name="artist_name"
@@ -61,7 +68,7 @@ export function ArtistForm({
         </div>
 
         <Field
-          label="Artist bio"
+          label="Bio"
           htmlFor="bio"
           hint={`Up to 500 words (${MAX_BIO_CHARS.toLocaleString("en-GB")} characters).`}
         >
@@ -103,7 +110,7 @@ export function ArtistForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Artist category" htmlFor="category">
+          <Field label="Category" htmlFor="category">
             <select
               id="category"
               name="category"
@@ -203,7 +210,7 @@ export function ArtistForm({
           />
         </Field>
         <Field
-          label="Keywords that describe your art"
+          label="Keywords that describe your work"
           htmlFor="art_keywords"
           hint="Comma separated — e.g. rock, pop, melodious, raw energy"
         >
@@ -240,6 +247,7 @@ export function ArtistForm({
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}
+        confirmSave={mode === "profile"}
       />
     </form>
   );

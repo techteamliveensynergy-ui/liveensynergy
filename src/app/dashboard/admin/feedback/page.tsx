@@ -103,16 +103,28 @@ export default async function AdminFeedbackPage({
                 </p>
               )}
 
-              {signed[i] && (
-                <a
-                  href={signed[i]!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]"
-                >
-                  View screenshot →
-                </a>
-              )}
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                {signed[i] && (
+                  <a
+                    href={signed[i]!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[var(--color-brand-dark)]"
+                  >
+                    View screenshot →
+                  </a>
+                )}
+                {r.github_issue_url && (
+                  <a
+                    href={r.github_issue_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[var(--color-brand-dark)]"
+                  >
+                    GitHub issue #{r.github_issue_number} ↗
+                  </a>
+                )}
+              </div>
 
               <form
                 action={updateFeedback}

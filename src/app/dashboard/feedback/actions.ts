@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadPrivateFile } from "@/lib/storage";
+import { createFeedbackIssue } from "@/lib/github";
 import type { FeedbackKind } from "@/lib/types";
 
 export interface FeedbackState {
@@ -61,6 +62,24 @@ export async function submitFeedback(
     .select("full_name")
     .eq("id", user.id)
     .maybeSingle<{ full_name: string | null }>();
+
+  // Mirror to GitHub so beta reports land in the backlog with everything else
+  // (3 Aug standup). Best-effort — a missing token or a failing API call must
+  // not lose a report that's already saved.
+  const issue = await createFeedbackIssue({
+    reference: created.reference,
+    kind,
+    subject,
+    body,
+    pageUrl: str(formData.get("page_url")),
+    reporterName: profile?.full_name ?? null,
+  });
+  if (issue) {
+    await supabase
+      .from("feedback_reports")
+      .update({ github_issue_url: issue.url, github_issue_number: issue.number })
+      .eq("id", created.id);
+  }
 
   const variables = {
     user_name: profile?.full_name ?? "A user",

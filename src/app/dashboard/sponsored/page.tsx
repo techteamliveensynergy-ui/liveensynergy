@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
+import { netSponsorshipBudget } from "@/lib/constants";
 import type { SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -158,8 +159,10 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
         <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
           Sponsorship ref {e.reference}
           {e.artist_display_name ? ` · with ${e.artist_display_name}` : ""}
-          {e.budget_gbp != null
-            ? ` · Budget £${Number(e.budget_gbp).toLocaleString("en-GB")}`
+          {/* The net figure, not the gross budget — the service fee comes off
+              before anything can be paid out. */}
+          {netSponsorshipBudget(e.budget_gbp) != null
+            ? ` · £${netSponsorshipBudget(e.budget_gbp)!.toLocaleString("en-GB")} for rewards`
             : ""}
         </p>
       </div>

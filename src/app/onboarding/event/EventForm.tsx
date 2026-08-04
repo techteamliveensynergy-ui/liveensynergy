@@ -224,6 +224,7 @@ export function EventForm({
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}
+        confirmSave={mode === "profile"}
       />
     </form>
   );

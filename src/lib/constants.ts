@@ -13,13 +13,22 @@ export type Role = SignupRole | "admin";
 
 export const ROLE_LABELS: Record<Role, string> = {
   brand: "Brand / Sponsor",
-  artist: "Artist",
+  // Artists and event organisers were merged into one category (3 Aug
+  // standup) — the two used the platform in exactly the same way. `event`
+  // stays in the enum for accounts created before the merge.
+  artist: "Artist / Event Organiser",
   event: "Event Organiser",
   audience: "Audience",
   admin: "Admin",
 };
 
-/** How a user answers the sign-up question "Are you an Artist/Event or Sponsor?" */
+/**
+ * How a user answers the sign-up question "Are you an Artist/Event or Sponsor?"
+ *
+ * There is deliberately no separate "Event Organiser" card: organisers sign up
+ * under `artist`, which carries identical nav, onboarding and permissions.
+ * Existing `event` accounts are untouched and keep working as they are.
+ */
 export const SIGNUP_ROLE_OPTIONS: {
   value: Role;
   title: string;
@@ -33,15 +42,9 @@ export const SIGNUP_ROLE_OPTIONS: {
   },
   {
     value: "artist",
-    title: "Artist",
+    title: "Artist / Event Organiser",
     description:
-      "You perform or create, and you're looking for sponsorship for your events.",
-  },
-  {
-    value: "event",
-    title: "Event Organiser",
-    description:
-      "You run events and want to secure sponsorship and confirmed attendance.",
+      "You perform, create or run events, and you're looking for sponsorship.",
   },
   {
     value: "audience",
@@ -50,6 +53,23 @@ export const SIGNUP_ROLE_OPTIONS: {
       "You want to attend events and unlock sponsor-funded rewards and reimbursements.",
   },
 ];
+
+/**
+ * Gender options for the audience profile (3 Aug standup). "Prefer to
+ * self-describe" hands over to a free-text box, stored separately in
+ * `audience_members.gender_self_describe` so the standard options stay
+ * countable without pattern matching free text.
+ */
+export const GENDER_OPTIONS = [
+  "Woman",
+  "Man",
+  "Non-binary",
+  "Prefer to self-describe",
+  "Prefer not to say",
+] as const;
+
+/** The option that reveals the free-text box. */
+export const GENDER_SELF_DESCRIBE = "Prefer to self-describe";
 
 /** Brand product categories */
 export const BRAND_CATEGORIES = [
@@ -124,6 +144,9 @@ export const SPONSORSHIP_STATUSES = [
   "in_progress",
   "confirmed",
   "completed",
+  // Set automatically when a campaign's other suggestion is accepted — never
+  // chosen by hand, so it isn't offered in the admin status picker.
+  "withdrawn",
 ] as const;
 
 /** Live-En-Synergy platform fee model (from the concept doc) */
@@ -161,4 +184,28 @@ export function computePlatformFee(grossBudgetGbp: number) {
     feeIncVat,
     availableForSponsorship: grossBudgetGbp - feeIncVat,
   };
+}
+
+/** Rounds to whole pence, so repeated arithmetic can't drift into 0.1 + 0.2. */
+export function roundMoney(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * What a gross budget actually leaves to spend on audience rewards, once the
+ * platform fee and its VAT are taken off. This — not the gross figure — is
+ * what a sponsorship's `remaining_budget_gbp` starts at, and what every
+ * "remaining budget" / "people this can sponsor" number is derived from.
+ *
+ * Returns null for a missing budget so callers can render "—" rather than £0.
+ */
+export function netSponsorshipBudget(
+  grossBudgetGbp: number | null | undefined,
+): number | null {
+  if (grossBudgetGbp == null) return null;
+  const gross = Number(grossBudgetGbp);
+  if (!Number.isFinite(gross)) return null;
+  return roundMoney(
+    Math.max(0, computePlatformFee(gross).availableForSponsorship),
+  );
 }

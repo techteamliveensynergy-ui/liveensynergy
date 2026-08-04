@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { ROLES, SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
+import { termsForRole } from "@/lib/terms";
 import { signUp, type AuthState } from "../actions";
 
 function isRole(value: string | undefined): value is Role {
@@ -25,6 +27,7 @@ export function SignUpForm({ initialRole }: { initialRole?: string }) {
   const preset = isRole(initialRole) ? initialRole : "";
   const [role, setRole] = useState<Role | "">(preset);
   const [step, setStep] = useState<1 | 2>(preset ? 2 : 1);
+  const terms = termsForRole(role);
 
   if (state.message) {
     return (
@@ -145,6 +148,48 @@ export function SignUpForm({ initialRole }: { initialRole?: string }) {
           required
         />
       </Field>
+
+      {/* Each party agrees to different things, so the summary is specific to
+          the role they picked in step 1 (3 Aug standup). */}
+      {terms && (
+        <div className="rounded-xl border border-black/10 bg-[var(--color-mist)] p-4">
+          <p className="text-sm font-semibold text-[var(--color-ink)]">
+            Terms for {terms.party}
+          </p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-xs text-[var(--color-ink-soft)]">
+            {terms.points.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+          <label className="mt-4 flex items-start gap-2.5 text-sm text-[var(--color-ink)]">
+            <input
+              type="checkbox"
+              name="terms_accepted"
+              required
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <span>
+              I&apos;ve read and agree to the{" "}
+              <Link
+                href={`/terms#${terms.key}`}
+                target="_blank"
+                className="font-semibold text-[var(--color-brand-dark)] underline"
+              >
+                Terms &amp; Conditions for {terms.party}
+              </Link>{" "}
+              and the{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="font-semibold text-[var(--color-brand-dark)] underline"
+              >
+                Privacy Policy
+              </Link>
+              .<span className="text-[var(--color-accent)]"> *</span>
+            </span>
+          </label>
+        </div>
+      )}
 
       <SubmitButton />
     </form>

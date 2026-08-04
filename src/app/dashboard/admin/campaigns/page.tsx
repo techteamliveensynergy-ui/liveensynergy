@@ -27,6 +27,17 @@ interface Row {
   brands: { brand_name: string; profile_id: string } | null;
 }
 
+/** A sponsored event standing against a campaign — one of possibly several. */
+interface Suggestion {
+  id: string;
+  name: string;
+  status: string;
+  campaign_id: string;
+  brand_agreed: boolean;
+  artist_agreed: boolean;
+  event_date: string | null;
+}
+
 export default async function AdminCampaignsPage({
   searchParams,
 }: {
@@ -36,17 +47,27 @@ export default async function AdminCampaignsPage({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: campaignRows }, { data: listingRows }] = await Promise.all([
-    supabase
-      .from("campaigns")
-      .select("*, brands(brand_name, profile_id)")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("event_listings")
-      .select("id, name, city, event_date, start_time, timezone, budget_range")
-      .eq("status", "available")
-      .order("event_date", { ascending: true }),
-  ]);
+  const [{ data: campaignRows }, { data: listingRows }, { data: suggestedRows }] =
+    await Promise.all([
+      supabase
+        .from("campaigns")
+        .select("*, brands(brand_name, profile_id)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("event_listings")
+        .select("id, name, city, event_date, start_time, timezone, budget_range")
+        .eq("status", "available")
+        .order("event_date", { ascending: true }),
+      // Every event standing against a campaign — a campaign can carry several
+      // suggestions at once, and admin needs to see which one was accepted.
+      supabase
+        .from("sponsored_events")
+        .select(
+          "id, name, status, campaign_id, brand_agreed, artist_agreed, event_date",
+        )
+        .not("campaign_id", "is", null)
+        .order("created_at", { ascending: true }),
+    ]);
 
   let campaigns = (campaignRows ?? []) as Row[];
   const listings = ((listingRows ?? []) as {
@@ -63,6 +84,10 @@ export default async function AdminCampaignsPage({
       .filter(Boolean)
       .join(" · "),
   }));
+
+  const suggestions = (suggestedRows ?? []) as Suggestion[];
+  const suggestionsFor = (campaignId: string) =>
+    suggestions.filter((s) => s.campaign_id === campaignId);
 
   if (sp.status) campaigns = campaigns.filter((c) => c.status === sp.status);
   if (sp.matched === "no")
@@ -193,7 +218,64 @@ export default async function AdminCampaignsPage({
                   </form>
                 </div>
 
-                {!c.matched_listing_id && (
+                {/* Which events were put forward, and which one won. Editing
+                    an accepted event goes through the admin event page, where
+                    the change is confirmed before it saves. */}
+                {suggestionsFor(c.id).length > 0 && (
+                  <div className="mt-4 border-t border-black/10 pt-4">
+                    <p className="field-label">
+                      Suggested events ({suggestionsFor(c.id).length})
+                    </p>
+                    <div className="mt-2 space-y-1.5">
+                      {suggestionsFor(c.id).map((s) => {
+                        const accepted =
+                          s.status === "confirmed" || s.status === "completed";
+                        return (
+                          <Link
+                            key={s.id}
+                            href={`/dashboard/admin/events/sponsored/${s.id}`}
+                            className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm transition hover:bg-[var(--color-mist)] ${
+                              accepted
+                                ? "border-[var(--color-olive-deep)]/30 bg-[var(--color-sage)]/50"
+                                : "border-black/10"
+                            }`}
+                          >
+                            <span className="flex flex-wrap items-center gap-2">
+                              {accepted && (
+                                <span aria-hidden className="text-[var(--color-olive-deep)]">
+                                  ✓
+                                </span>
+                              )}
+                              <span
+                                className={
+                                  accepted
+                                    ? "font-semibold text-[var(--color-ink)]"
+                                    : "text-[var(--color-ink)]"
+                                }
+                              >
+                                {s.name}
+                              </span>
+                              <StatusBadge status={s.status} />
+                              {accepted && (
+                                <span className="text-xs font-semibold text-[var(--color-olive-deep)]">
+                                  selected by the sponsor
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-xs text-[var(--color-ink-soft)]">
+                              {s.event_date ? formatDate(s.event_date) : "No date"}
+                              {" · "}Brand {s.brand_agreed ? "✓" : "…"} · Artist{" "}
+                              {s.artist_agreed ? "✓" : "…"} · Edit →
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Still open for more suggestions until one is accepted. */}
+                {c.status === "in_progress" && (
                   <div className="mt-4 border-t border-black/10 pt-4">
                     <MatchForm campaignId={c.id} listings={listings} />
                   </div>

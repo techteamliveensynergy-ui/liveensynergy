@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { netSponsorshipBudget, roundMoney } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
 
 export interface MarketplaceState {
@@ -58,8 +59,13 @@ export async function toggleContactHandled(formData: FormData) {
 // --- Campaign matching -----------------------------------------------------
 
 /**
- * The core admin workflow: link a campaign to an available listing and stand
- * up the sponsored event that both sides then agree to.
+ * The core admin workflow: suggest one or more available listings against a
+ * campaign and stand up a sponsored event for each, which the brand and that
+ * listing's owner then agree to.
+ *
+ * Several suggestions per campaign is deliberate (3 Aug standup) — the team
+ * puts two or three options in front of a sponsor. The first one both sides
+ * agree to wins: `toggleAgreement` closes the campaign and withdraws the rest.
  */
 export async function matchCampaign(
   _prev: MarketplaceState,
@@ -67,12 +73,16 @@ export async function matchCampaign(
 ): Promise<MarketplaceState> {
   const { supabase } = await requireAdmin();
   const campaignId = str(formData.get("campaign_id"));
-  const listingId = str(formData.get("listing_id"));
-  if (!campaignId || !listingId) {
-    return { error: "Pick a listing to match this campaign to." };
+  const listingIds = formData
+    .getAll("listing_id")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+
+  if (!campaignId || listingIds.length === 0) {
+    return { error: "Pick at least one listing to suggest for this campaign." };
   }
 
-  const [{ data: campaign }, { data: listing }] = await Promise.all([
+  const [{ data: campaign }, { data: listingRows }] = await Promise.all([
     supabase
       .from("campaigns")
       .select("id, reference, brand_id, budget_gbp, reward_rules, brands(profile_id)")
@@ -88,70 +98,108 @@ export async function matchCampaign(
     supabase
       .from("event_listings")
       .select("id, name, event_date, venue_name, city, country, owner_profile_id")
-      .eq("id", listingId)
-      .maybeSingle(),
+      .in("id", listingIds),
   ]);
 
   if (!campaign) return { error: "Campaign not found." };
-  if (!listing) return { error: "Listing not found." };
+
+  const listings = (listingRows ?? []) as {
+    id: string;
+    name: string;
+    event_date: string | null;
+    venue_name: string | null;
+    city: string | null;
+    country: string | null;
+    owner_profile_id: string;
+  }[];
+  if (listings.length === 0) return { error: "Those listings no longer exist." };
 
   const budget = campaign.budget_gbp;
   const { data: created, error } = await supabase
     .from("sponsored_events")
-    .insert({
-      brand_id: campaign.brand_id,
-      campaign_id: campaign.id,
-      listing_id: listing.id,
-      artist_profile_id: listing.owner_profile_id,
-      name: listing.name,
-      event_date: listing.event_date,
-      venue_details: listing.venue_name,
-      location: [listing.city, listing.country].filter(Boolean).join(", ") || null,
-      budget_gbp: budget,
-      remaining_budget_gbp: budget,
-      reward_rules: campaign.reward_rules,
-      // Matched by the team — neither side has agreed yet.
-      brand_agreed: false,
-      artist_agreed: false,
-    })
-    .select("id")
-    .single();
+    .insert(
+      listings.map((listing) => ({
+        brand_id: campaign.brand_id,
+        campaign_id: campaign.id,
+        listing_id: listing.id,
+        artist_profile_id: listing.owner_profile_id,
+        name: listing.name,
+        event_date: listing.event_date,
+        venue_details: listing.venue_name,
+        location:
+          [listing.city, listing.country].filter(Boolean).join(", ") || null,
+        budget_gbp: budget,
+        // Net of the platform fee inc VAT — see netSponsorshipBudget().
+        remaining_budget_gbp: netSponsorshipBudget(budget),
+        reward_rules: campaign.reward_rules,
+        // Matched by the team — neither side has agreed yet.
+        brand_agreed: false,
+        artist_agreed: false,
+      })),
+    )
+    .select("id, listing_id");
 
   if (error) return { error: error.message };
 
+  // Clears "needs matching" on the first round of suggestions; the column
+  // narrows to the single accepted listing once a sponsorship is confirmed, so
+  // a later round mustn't overwrite it.
   await supabase
     .from("campaigns")
-    .update({ matched_listing_id: listing.id })
-    .eq("id", campaign.id);
+    .update({ matched_listing_id: listings[0].id })
+    .eq("id", campaign.id)
+    .is("matched_listing_id", null);
 
   await supabase
     .from("event_listings")
     .update({ status: "matched" })
-    .eq("id", listing.id);
+    .in(
+      "id",
+      listings.map((l) => l.id),
+    );
 
   const budgetLabel =
     budget != null ? `£${Number(budget).toLocaleString("en-GB")}` : undefined;
+  const eventIdByListing = new Map(
+    ((created ?? []) as { id: string; listing_id: string }[]).map((e) => [
+      e.listing_id,
+      e.id,
+    ]),
+  );
 
   if (campaign.brands?.profile_id) {
     await notify({
       eventKey: "campaign.matched",
       recipientProfileId: campaign.brands.profile_id,
-      link: `/dashboard/sponsored/${created.id}`,
+      link: "/dashboard/sponsored",
       variables: {
         campaign_reference: campaign.reference,
-        event_name: listing.name,
+        event_name:
+          listings.length === 1
+            ? listings[0].name
+            : `${listings.length} suggested events`,
       },
     });
   }
-  await notify({
-    eventKey: "offer.proposal_received",
-    recipientProfileId: listing.owner_profile_id,
-    link: `/dashboard/sponsored/${created.id}`,
-    variables: { event_name: listing.name, budget: budgetLabel },
-  });
+
+  for (const listing of listings) {
+    const eventId = eventIdByListing.get(listing.id);
+    await notify({
+      eventKey: "offer.proposal_received",
+      recipientProfileId: listing.owner_profile_id,
+      link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
+      variables: { event_name: listing.name, budget: budgetLabel },
+    });
+  }
 
   revalidatePath("/dashboard/admin/campaigns");
-  redirect(`/dashboard/admin/events/sponsored/${created.id}`);
+
+  const firstId = eventIdByListing.get(listings[0].id);
+  redirect(
+    listings.length === 1 && firstId
+      ? `/dashboard/admin/events/sponsored/${firstId}`
+      : "/dashboard/admin/campaigns",
+  );
 }
 
 // --- Status overrides ------------------------------------------------------
@@ -184,7 +232,11 @@ export async function setCampaignStatus(formData: FormData) {
 
 // --- Admin-side participant management -------------------------------------
 
-/** Mirrors the organiser controls so admin can unblock a stuck event. */
+/**
+ * Selection, verification and reward release. Releasing money is admin-only
+ * (3 Aug standup) — the brand/artist copy of this action deliberately has no
+ * `release` branch at all.
+ */
 export async function adminUpdateParticipation(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
@@ -210,7 +262,7 @@ export async function adminUpdateParticipation(formData: FormData) {
       patch.status = "reward_released";
       patch.reward_released_at = new Date().toISOString();
       const amount = num(formData.get("reward_amount_gbp"));
-      if (amount != null) patch.reward_amount_gbp = amount;
+      if (amount != null) patch.reward_amount_gbp = roundMoney(amount);
       break;
     }
     default:
@@ -219,21 +271,35 @@ export async function adminUpdateParticipation(formData: FormData) {
 
   await supabase.from("participations").update(patch).eq("id", id);
 
+  // A released reward is money actually spent — draw it down from the
+  // sponsored event's remaining budget, which already excludes the platform
+  // fee, so what's left is genuinely available to pay out.
   if (op === "release" && eventId) {
     const amount = num(formData.get("reward_amount_gbp"));
     if (amount != null && amount > 0) {
       const { data: ev } = await supabase
         .from("sponsored_events")
-        .select("remaining_budget_gbp")
+        .select("budget_gbp, remaining_budget_gbp")
         .eq("id", eventId)
-        .maybeSingle();
-      if (ev?.remaining_budget_gbp != null) {
+        .maybeSingle<{
+          budget_gbp: number | null;
+          remaining_budget_gbp: number | null;
+        }>();
+
+      // Rows created before the net-budget fix still hold the gross figure as
+      // "remaining"; fall back to recomputing it so the drawdown starts from
+      // the right number either way.
+      const current =
+        ev?.remaining_budget_gbp != null
+          ? Number(ev.remaining_budget_gbp)
+          : netSponsorshipBudget(ev?.budget_gbp ?? null);
+
+      if (current != null) {
         await supabase
           .from("sponsored_events")
           .update({
-            remaining_budget_gbp: Math.max(
-              0,
-              Number(ev.remaining_budget_gbp) - amount,
+            remaining_budget_gbp: roundMoney(
+              Math.max(0, current - roundMoney(amount)),
             ),
           })
           .eq("id", eventId);

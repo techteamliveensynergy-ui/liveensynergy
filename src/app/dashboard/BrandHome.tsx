@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { profileCompleteness } from "@/lib/profile";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
-import { computePlatformFee } from "@/lib/constants";
+import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -61,8 +61,12 @@ export async function BrandHome({ profile }: { profile: Profile }) {
   const activeCampaigns = campaigns.filter((c) => c.status === "in_progress").length;
   const confirmedEvents = sponsored.filter((s) => s.status === "confirmed");
   const confirmed = confirmedEvents.length;
+  // Net of the platform fee — `remaining_budget_gbp` already excludes it, and
+  // the fallback recomputes it for rows written before that fix.
   const budgetRemaining = sponsored.reduce(
-    (sum, s) => sum + Number(s.remaining_budget_gbp ?? 0),
+    (sum, s) =>
+      sum +
+      Number(s.remaining_budget_gbp ?? netSponsorshipBudget(s.budget_gbp) ?? 0),
     0,
   );
 
@@ -103,8 +107,8 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           tint="bg-[var(--color-sage)]"
         />
         <MetricTile
-          label="Budget remaining"
-          value={`£${budgetRemaining.toLocaleString("en-GB")}`}
+          label="Available for rewards"
+          value={`£${budgetRemaining.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
           tint="bg-[#fbeadd]"
         />
       </div>
@@ -251,10 +255,14 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                 </div>
                 <span className="text-xs text-[var(--color-ink-soft)]">
                   £
-                  {Number(s.remaining_budget_gbp ?? 0).toLocaleString("en-GB", {
+                  {Number(
+                    s.remaining_budget_gbp ??
+                      netSponsorshipBudget(s.budget_gbp) ??
+                      0,
+                  ).toLocaleString("en-GB", {
                     maximumFractionDigits: 0,
                   })}{" "}
-                  remaining
+                  for rewards
                 </span>
                 <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
                   Open →

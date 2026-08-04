@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { requireProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { navForRole } from "@/lib/dashboard-nav";
@@ -93,6 +94,10 @@ export default async function DashboardLayout({
       <div className="flex-1">
         <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
       </div>
+      {/* Feedback tab on every dashboard page (3 Aug standup) — mounted in the
+          layout rather than the root one so the public marketing pages, which
+          are static and don't need it, stay that way. */}
+      <FeedbackWidget />
     </div>
   );
 }

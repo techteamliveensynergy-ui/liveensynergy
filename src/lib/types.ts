@@ -7,7 +7,16 @@ import type { Role } from "./constants";
  */
 
 export type CampaignStatus = "in_progress" | "closed" | "completed";
-export type SponsorshipStatus = "in_progress" | "confirmed" | "completed";
+/**
+ * `withdrawn` (0020) is where a suggested sponsorship lands when the sponsor
+ * confirms a different event for the same campaign. Terminal — it never moves
+ * back into the in_progress → confirmed → completed ladder.
+ */
+export type SponsorshipStatus =
+  | "in_progress"
+  | "confirmed"
+  | "completed"
+  | "withdrawn";
 
 export interface Profile {
   id: string; // == auth.users.id
@@ -24,6 +33,10 @@ export interface Profile {
   last_seen_at: string | null;
   plan_id: string | null;
   onboarding_completed: boolean;
+  /** When they ticked the role-specific terms box at sign-up (0021). */
+  terms_accepted_at: string | null;
+  /** Which revision of the terms that was — see TERMS_VERSION. */
+  terms_version: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +147,12 @@ export interface AudienceMember {
   /** e.g. "+44". Defaults to UK; entered alongside `phone` on the form. */
   phone_country_code: string;
   date_of_birth: string | null;
+  /** One of GENDER_OPTIONS (0021). Null when they'd rather not answer. */
+  gender: string | null;
+  /** Free text, only set when `gender` is "Prefer to self-describe". */
+  gender_self_describe: string | null;
+  /** Plain English country name, picked from COUNTRIES (0021). */
+  country_of_residence: string | null;
   address: string | null;
   postcode: string | null;
   verified: boolean;
@@ -344,6 +363,9 @@ export interface FeedbackReport {
   screenshot_url: string | null;
   status: FeedbackStatus;
   admin_notes: string | null;
+  /** Set when the report was mirrored to GitHub (0021); null if not wired. */
+  github_issue_url: string | null;
+  github_issue_number: number | null;
   resolved_at: string | null;
   resolved_by: string | null;
   created_at: string;

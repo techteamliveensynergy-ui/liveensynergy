@@ -9,6 +9,31 @@ function csvCell(value: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/**
+ * Dates in the export were raw ISO timestamps ("2026-08-03T21:39:12.482+00:00")
+ * — unreadable in a spreadsheet and not something Excel parses as a date
+ * (3 Aug standup). `DD/MM/YYYY HH:mm` is unambiguous for a UK team and is
+ * recognised as a date on import.
+ */
+function csvDateTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
+/** Date-only columns (an event date carries no time of day). */
+function csvDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
 interface Row {
   status: string;
   selected: boolean;
@@ -51,7 +76,9 @@ export async function GET(request: NextRequest) {
   const { data: memberRows } = audienceIds.length
     ? await supabase
         .from("audience_members")
-        .select("profile_id, phone, phone_country_code, date_of_birth")
+        .select(
+          "profile_id, phone, phone_country_code, date_of_birth, gender, gender_self_describe, country_of_residence",
+        )
         .in("profile_id", audienceIds)
     : {
         data: [] as {
@@ -59,6 +86,9 @@ export async function GET(request: NextRequest) {
           phone: string | null;
           phone_country_code: string;
           date_of_birth: string | null;
+          gender: string | null;
+          gender_self_describe: string | null;
+          country_of_residence: string | null;
         }[],
       };
   const memberByProfile = new Map((memberRows ?? []).map((m) => [m.profile_id, m]));
@@ -68,6 +98,8 @@ export async function GET(request: NextRequest) {
     "Email",
     "Phone",
     "Age",
+    "Gender",
+    "Country of residence",
     "Event",
     "Event date",
     "Status",
@@ -89,16 +121,19 @@ export async function GET(request: NextRequest) {
         r.profiles?.email ?? "",
         member?.phone ? `${member.phone_country_code} ${member.phone}` : "",
         calculateAge(member?.date_of_birth) ?? "",
+        // The self-described answer is the meaningful one when it's set.
+        member?.gender_self_describe || member?.gender || "",
+        member?.country_of_residence ?? "",
         r.sponsored_events?.name ?? "",
-        r.sponsored_events?.event_date ?? "",
+        csvDate(r.sponsored_events?.event_date),
         r.status,
         r.selected ? "yes" : "no",
         r.reward_amount_gbp ?? "",
         r.bank_details_provided ? "yes" : "no",
         r.newsletter_opt_in ? "yes" : "no",
         r.ticket_proof_url ? "yes" : "no",
-        r.attendance_verified_at ?? "",
-        r.created_at,
+        csvDateTime(r.attendance_verified_at),
+        csvDateTime(r.created_at),
       ]
         .map(csvCell)
         .join(","),

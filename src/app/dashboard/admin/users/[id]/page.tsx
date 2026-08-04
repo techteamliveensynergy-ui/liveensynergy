@@ -107,6 +107,16 @@ export default async function AdminUserDetailPage({
             label: "Onboarding",
             value: user.onboarding_completed ? "Complete" : "Pending",
           },
+          // Which revision of the role-specific terms they accepted, and when
+          // (0021). Blank for accounts created before the checkbox existed.
+          {
+            label: "Terms accepted",
+            value: user.terms_accepted_at
+              ? `${new Date(user.terms_accepted_at).toLocaleDateString("en-GB")}${
+                  user.terms_version ? ` · v${user.terms_version}` : ""
+                }`
+              : "Not recorded",
+          },
           ...(age != null ? [{ label: "Age", value: `${age}` }] : []),
         ].map((s) => (
           <div

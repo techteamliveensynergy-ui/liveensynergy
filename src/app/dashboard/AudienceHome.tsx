@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
+import {
+  ParticipationProgress,
+  isImagePath,
+  participationSteps,
+} from "@/components/dashboard/ParticipationProgress";
+import { signedUrlFor } from "@/lib/storage";
 import type { AudienceMember, Participation, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -24,6 +30,20 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
 
   const member = memberData as AudienceMember | null;
   const rows = (rowData ?? []) as Row[];
+
+  // Ticket proofs live in the private bucket, so each thumbnail needs its own
+  // short-lived signed URL. Only the handful shown in the tracker are signed.
+  const tracked = rows.slice(0, 4);
+  const ticketLinks = await Promise.all(
+    tracked.map(async (r) => {
+      if (!r.ticket_proof_url) return null;
+      return (
+        (await signedUrlFor(r.ticket_proof_url)) ??
+        // Rows from before the upload flow stored a pasted external link.
+        (/^https?:\/\//.test(r.ticket_proof_url) ? r.ticket_proof_url : null)
+      );
+    }),
+  );
 
   const verifiedCount = rows.filter((r) =>
     ["attendance_verified", "reward_released"].includes(r.status),
@@ -103,28 +123,40 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
               </Link>
             </div>
           ) : (
-            <div className="space-y-2">
-              {rows.slice(0, 4).map((r) => (
+            <div className="space-y-3">
+              {tracked.map((r, i) => (
                 <div
                   key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4"
+                  className="rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4"
                 >
-                  <div>
-                    <p className="font-semibold text-[var(--color-ink)]">
-                      {r.sponsored_events?.name ?? "Event"}
-                    </p>
-                    <p className="text-xs text-[var(--color-ink-soft)]">
-                      {r.sponsored_events?.event_date
-                        ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
-                        : "Date TBC"}
-                    </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[var(--color-ink)]">
+                        {r.sponsored_events?.name ?? "Event"}
+                      </p>
+                      <p className="text-xs text-[var(--color-ink-soft)]">
+                        {r.sponsored_events?.event_date
+                          ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
+                          : "Date TBC"}
+                      </p>
+                    </div>
+                    <StatusBadge status={r.status} />
+                    <span className="text-sm text-[var(--color-ink-soft)]">
+                      {r.reward_amount_gbp != null
+                        ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
+                        : "—"}
+                    </span>
                   </div>
-                  <StatusBadge status={r.status} />
-                  <span className="text-sm text-[var(--color-ink-soft)]">
-                    {r.reward_amount_gbp != null
-                      ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
-                      : "—"}
-                  </span>
+
+                  {/* Where they are in the flow, at a glance (3 Aug standup). */}
+                  <div className="mt-4">
+                    <ParticipationProgress
+                      steps={participationSteps(r)}
+                      rejected={r.status === "rejected"}
+                      ticketHref={ticketLinks[i]}
+                      ticketIsImage={isImagePath(r.ticket_proof_url)}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

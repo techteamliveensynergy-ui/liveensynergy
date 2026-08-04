@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo } from "./ui/Logo";
+import { FeedbackWidget } from "./FeedbackWidget";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
 
 interface OnboardingShellProps {
@@ -35,6 +36,9 @@ export function OnboardingShell({
         </div>
         {children}
       </main>
+      {/* Onboarding sits outside the dashboard layout, so the feedback tab is
+          mounted here too — it's where new testers hit problems first. */}
+      <FeedbackWidget />
     </div>
   );
 }

@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES, ROLE_LABELS, type Role } from "@/lib/constants";
+import {
+  ROLES,
+  ROLE_LABELS,
+  netSponsorshipBudget,
+  roundMoney,
+  type Role,
+} from "@/lib/constants";
 import {
   ROLE_PROFILE_SPECS,
   SOCIAL_FIELD_KEYS,
@@ -23,6 +29,13 @@ function str(v: FormDataEntryValue | null): string | null {
 function num(v: FormDataEntryValue | null): number {
   const n = Number(String(v ?? "").trim());
   return Number.isFinite(n) ? n : 0;
+}
+/** Like `num`, but an empty field stays empty rather than becoming 0. */
+function numOrNull(v: FormDataEntryValue | null): number | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 /** Splits a comma / newline separated string into a trimmed array. */
 function toArray(v: FormDataEntryValue | null): string[] | null {
@@ -273,11 +286,123 @@ export async function setListingStatus(formData: FormData) {
   revalidatePath("/dashboard/admin/events");
 }
 
+/**
+ * How far along a sponsorship is. A status may move up this ladder but never
+ * back down (3 Aug standup): once both parties have confirmed a deal, dropping
+ * it back to "in progress" would silently reopen terms they've already signed
+ * off, and there's no audit trail to say who changed what.
+ *
+ * `withdrawn` sits outside the ladder — it's where the losing proposals go
+ * when a campaign's other suggestion is accepted, and it's terminal.
+ */
+const SPONSORED_STATUS_RANK: Record<string, number> = {
+  in_progress: 0,
+  confirmed: 1,
+  completed: 2,
+};
+
 export async function setSponsoredStatus(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
   const status = str(formData.get("status"));
   if (!id || !status) return;
+
+  const { data: current } = await supabase
+    .from("sponsored_events")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle<{ status: string }>();
+  if (!current) return;
+
+  const from = SPONSORED_STATUS_RANK[current.status];
+  const to = SPONSORED_STATUS_RANK[status];
+
+  // Anything involving `withdrawn`, or an unrecognised status, isn't a manual
+  // move — those are driven by the campaign acceptance flow.
+  if (from == null || to == null) return;
+  if (to < from) return;
+
   await supabase.from("sponsored_events").update({ status }).eq("id", id);
   revalidatePath("/dashboard/admin/events");
+  revalidatePath(`/dashboard/admin/events/sponsored/${id}`);
+}
+
+/**
+ * Admin edit of a sponsored event's details.
+ *
+ * Sakshi couldn't move a participation deadline once it had passed, and the
+ * parties themselves can't touch a confirmed deal (by design — neither side
+ * should be able to change terms the other agreed to). So the admin console
+ * gets the escape hatch: everything except the status is editable right up to
+ * completion. A completed event is closed for edits.
+ */
+export async function adminUpdateSponsoredEvent(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return { error: "Missing event id." };
+
+  const { data: current } = await supabase
+    .from("sponsored_events")
+    .select("status, budget_gbp, remaining_budget_gbp")
+    .eq("id", id)
+    .maybeSingle<{
+      status: string;
+      budget_gbp: number | null;
+      remaining_budget_gbp: number | null;
+    }>();
+  if (!current) return { error: "That sponsorship no longer exists." };
+  if (current.status === "completed") {
+    return { error: "This event is completed — its details are locked." };
+  }
+
+  const name = str(formData.get("name"));
+  if (!name) return { error: "Event name is required." };
+
+  const budget = numOrNull(formData.get("budget_gbp"));
+
+  const patch: Record<string, unknown> = {
+    name,
+    event_date: str(formData.get("event_date")),
+    start_time: str(formData.get("start_time")),
+    venue_details: str(formData.get("venue_details")),
+    location: str(formData.get("location")),
+    participation_deadline: str(formData.get("participation_deadline")),
+    terms: str(formData.get("terms")),
+    reward_rules: str(formData.get("reward_rules")),
+    branding_guidelines: str(formData.get("branding_guidelines")),
+    attendance_method: str(formData.get("attendance_method")),
+    budget_gbp: budget,
+  };
+
+  // Changing the budget has to re-derive what's left to pay out: net of the
+  // platform fee, less whatever has already been released.
+  if (budget !== current.budget_gbp) {
+    const { data: released } = await supabase
+      .from("participations")
+      .select("reward_amount_gbp")
+      .eq("sponsored_event_id", id)
+      .not("reward_amount_gbp", "is", null);
+
+    const spent = (released ?? []).reduce(
+      (sum, r) => sum + Number((r as { reward_amount_gbp: number }).reward_amount_gbp ?? 0),
+      0,
+    );
+    const net = netSponsorshipBudget(budget);
+    patch.remaining_budget_gbp =
+      net == null ? null : roundMoney(Math.max(0, net - spent));
+  }
+
+  const { error } = await supabase
+    .from("sponsored_events")
+    .update(patch)
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${id}`);
+  revalidatePath(`/dashboard/sponsored/${id}`);
+  revalidatePath("/dashboard/admin/events");
+  return { success: true };
 }

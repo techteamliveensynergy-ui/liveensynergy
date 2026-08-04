@@ -1,22 +1,32 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { matchCampaign, type MarketplaceState } from "../marketplace-actions";
 
-function Submit() {
+function Submit({ count }: { count: number }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="btn btn-primary text-sm" disabled={pending}>
-      {pending ? "Matching…" : "Match & create sponsorship"}
+    <button
+      type="submit"
+      className="btn btn-primary text-sm"
+      disabled={pending || count === 0}
+    >
+      {pending
+        ? "Matching…"
+        : count > 1
+          ? `Suggest ${count} events`
+          : "Suggest event"}
     </button>
   );
 }
 
 /**
- * Links a campaign to an available listing and stands up the sponsored event.
- * This is the manual step the whole marketplace model hinges on.
+ * Suggests one or more available listings against a campaign, standing up a
+ * sponsored event for each. Several at a time is the point (3 Aug standup):
+ * the team puts two or three options in front of the sponsor, and whichever
+ * they agree to first closes the campaign and withdraws the others.
  */
 export function MatchForm({
   campaignId,
@@ -29,6 +39,7 @@ export function MatchForm({
     matchCampaign,
     {},
   );
+  const [selected, setSelected] = useState<string[]>([]);
 
   if (listings.length === 0) {
     return (
@@ -38,30 +49,45 @@ export function MatchForm({
     );
   }
 
+  const toggle = (id: string) =>
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+    );
+
   return (
-    <form action={formAction} className="space-y-2">
+    <form action={formAction} className="space-y-3">
       <input type="hidden" name="campaign_id" value={campaignId} />
       <ErrorBanner error={state.error} />
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[16rem] flex-1">
-          <label className="field-label" htmlFor={`listing-${campaignId}`}>
-            Match to an available listing
-          </label>
-          <select
-            id={`listing-${campaignId}`}
-            name="listing_id"
-            className="select"
-            defaultValue=""
-          >
-            <option value="">Select a listing…</option>
-            {listings.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
-              </option>
-            ))}
-          </select>
+
+      <div>
+        <p className="field-label">Suggest available listings to this sponsor</p>
+        <p className="field-hint">
+          Tick as many as you want to put forward. The sponsor picks one — the
+          rest are withdrawn automatically and their listings go back on the
+          market.
+        </p>
+        <div className="mt-2 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-black/10 p-2">
+          {listings.map((l) => (
+            <label
+              key={l.id}
+              className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-[var(--color-mist)]"
+            >
+              <input
+                type="checkbox"
+                name="listing_id"
+                value={l.id}
+                checked={selected.includes(l.id)}
+                onChange={() => toggle(l.id)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>{l.label}</span>
+            </label>
+          ))}
         </div>
-        <Submit />
+      </div>
+
+      <div className="flex justify-end">
+        <Submit count={selected.length} />
       </div>
     </form>
   );

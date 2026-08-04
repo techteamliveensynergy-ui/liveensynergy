@@ -2,8 +2,10 @@ import {
   ARTIST_CATEGORIES,
   BRAND_CATEGORIES,
   EVENT_CATEGORIES,
+  GENDER_OPTIONS,
   type Role,
 } from "./constants";
+import { COUNTRIES } from "./countries";
 
 /**
  * Declarative description of each role's profile table, so the admin user
@@ -295,6 +297,24 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
           { name: "phone_country_code", label: "Phone country code", type: "text" },
           { name: "phone", label: "Phone", type: "tel" },
           { name: "date_of_birth", label: "Date of birth", type: "date" },
+          {
+            name: "gender",
+            label: "Gender",
+            type: "select",
+            options: GENDER_OPTIONS,
+          },
+          {
+            name: "gender_self_describe",
+            label: "Gender (self-described)",
+            type: "text",
+            hint: "Only set when they chose to self-describe.",
+          },
+          {
+            name: "country_of_residence",
+            label: "Country of residence",
+            type: "select",
+            options: COUNTRIES,
+          },
           { name: "postcode", label: "Postcode", type: "text" },
           { name: "address", label: "Address", type: "textarea", wide: true },
           {

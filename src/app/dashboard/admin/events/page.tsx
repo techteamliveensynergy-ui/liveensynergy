@@ -178,7 +178,9 @@ export default async function AdminEventsPage({
                 </div>
 
                 <div className="w-24 text-right">
-                  <p className="text-xs text-[var(--color-ink-soft)]">Budget</p>
+                  <p className="text-xs text-[var(--color-ink-soft)]">
+                    Budget (gross)
+                  </p>
                   <p className="text-sm font-medium text-[var(--color-ink)]">
                     {e.budget_gbp != null
                       ? `£${Number(e.budget_gbp).toLocaleString("en-GB")}`

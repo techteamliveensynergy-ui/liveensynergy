@@ -1,23 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
+import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
+import { UnsavedChangesGuard } from "@/components/ui/UnsavedChangesGuard";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import { ROLE_LABELS } from "@/lib/constants";
 import type { Plan, Profile } from "@/lib/types";
 import { updateUserAccount, type AdminState } from "../../actions";
 
 const ALL_ROLES = ["brand", "artist", "event", "audience", "admin"] as const;
-
-function Submit() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="btn btn-primary" disabled={pending}>
-      {pending ? "Saving…" : "Save account"}
-    </button>
-  );
-}
 
 export function AccountForm({
   user,
@@ -101,7 +93,13 @@ export function AccountForm({
       </label>
 
       <div className="flex justify-end">
-        <Submit />
+        <UnsavedChangesGuard message="You have unsaved changes to this account. Leave without saving them?" />
+        <ConfirmSubmit
+          label="Save account"
+          title="Change this account?"
+          body="Role and plan changes take effect immediately, and the user is notified. Save these changes?"
+          confirmLabel="Yes, save account"
+        />
       </div>
     </form>
   );

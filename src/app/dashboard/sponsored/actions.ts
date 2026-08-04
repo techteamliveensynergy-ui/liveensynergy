@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { netSponsorshipBudget } from "@/lib/constants";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { DEFAULT_TIMEZONE } from "@/lib/event-time";
@@ -163,7 +164,9 @@ export async function createSponsoredEvent(
       venue_details: str(formData.get("venue_details")),
       location: str(formData.get("location")),
       budget_gbp: budget,
-      remaining_budget_gbp: budget,
+      // Net of the platform fee inc VAT — the gross budget is never what's
+      // available to pay out in rewards (3 Aug standup).
+      remaining_budget_gbp: netSponsorshipBudget(budget),
       reward_rules: str(formData.get("reward_rules")),
       terms: str(formData.get("terms")),
       banner_url: banner.url ?? null,
@@ -203,7 +206,54 @@ export async function createSponsoredEvent(
   redirect(`/dashboard/sponsored/${created.id}`);
 }
 
-/** Records the current party's agreement; confirms once both sides agree. */
+/**
+ * A campaign can carry several suggested events at once. Once one is agreed,
+ * the campaign is settled: it closes, it records which listing won, the other
+ * proposals are withdrawn, and their listings go back on the market so they
+ * aren't left stranded as "matched" against a campaign that's gone.
+ *
+ * All of that happens inside `close_campaign_on_acceptance` (0021) rather than
+ * here, because the person clicking the final "I agree" is a party to their
+ * own event only — under RLS they can't touch the brand's campaign row or
+ * another artist's proposal, so doing it from here would silently no-op.
+ */
+async function closeCampaignAround(campaignId: string, winningEventId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("close_campaign_on_acceptance", {
+    p_campaign_id: campaignId,
+    p_winning_event_id: winningEventId,
+  });
+  if (error) {
+    console.error("[sponsored] closing campaign failed", error);
+    return;
+  }
+
+  const withdrawn = (data ?? []) as {
+    event_id: string;
+    event_name: string;
+    artist_profile_id: string | null;
+  }[];
+
+  for (const loser of withdrawn) {
+    if (!loser.artist_profile_id) continue;
+    await notify({
+      eventKey: "sponsorship.withdrawn",
+      recipientProfileId: loser.artist_profile_id,
+      link: `/dashboard/sponsored/${loser.event_id}`,
+      variables: { event_name: loser.event_name },
+    });
+  }
+}
+
+/**
+ * Records the current party's agreement; confirms once both sides agree.
+ *
+ * Confirmation is final (3 Aug standup): there's no undo, so the button is
+ * hidden once the deal locks and this refuses to act on anything that isn't
+ * still in progress. Accepting also closes the campaign behind the deal and
+ * withdraws the other events that were suggested alongside it.
+ */
 export async function toggleAgreement(formData: FormData) {
   const { supabase, userId } = await requireUser();
   const id = str(formData.get("id"));
@@ -211,10 +261,22 @@ export async function toggleAgreement(formData: FormData) {
 
   const { data: ev } = await supabase
     .from("sponsored_events")
-    .select("id, artist_profile_id, brand_agreed, artist_agreed, brand_id")
+    .select(
+      "id, artist_profile_id, brand_agreed, artist_agreed, brand_id, campaign_id, listing_id, status",
+    )
     .eq("id", id)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      artist_profile_id: string | null;
+      brand_agreed: boolean;
+      artist_agreed: boolean;
+      brand_id: string | null;
+      campaign_id: string | null;
+      listing_id: string | null;
+      status: string;
+    }>();
   if (!ev) return;
+  if (ev.status !== "in_progress") return;
 
   // Is the current user the brand or the artist on this event?
   const { data: brand } = await supabase
@@ -236,6 +298,10 @@ export async function toggleAgreement(formData: FormData) {
   else patch.status = "in_progress";
 
   await supabase.from("sponsored_events").update(patch).eq("id", id);
+
+  if (patch.status === "confirmed" && ev.campaign_id) {
+    await closeCampaignAround(ev.campaign_id, ev.id);
+  }
 
   // Let the *other* side know, and both sides once it's fully confirmed.
   const { data: full } = await supabase
@@ -357,7 +423,14 @@ export async function markCompleted(formData: FormData) {
 
 // --- Organiser-side participant management --------------------------------
 
-/** Advances a participant through the selection / verification / reward flow. */
+/**
+ * Advances a participant through the selection / verification flow.
+ *
+ * Releasing the reward is deliberately absent: paying out is an admin-only
+ * action (3 Aug standup), handled by `adminUpdateParticipation`. A posted
+ * `op=release` is ignored here rather than trusted, since the control being
+ * hidden in the UI isn't authorisation.
+ */
 export async function updateParticipation(formData: FormData) {
   const { supabase } = await requireUser();
   const id = str(formData.get("id"));
@@ -379,55 +452,26 @@ export async function updateParticipation(formData: FormData) {
       patch.status = "attendance_verified";
       patch.attendance_verified_at = new Date().toISOString();
       break;
-    case "release": {
-      patch.status = "reward_released";
-      patch.reward_released_at = new Date().toISOString();
-      const amount = num(formData.get("reward_amount_gbp"));
-      if (amount != null) patch.reward_amount_gbp = amount;
-      break;
-    }
     default:
       return;
   }
 
   await supabase.from("participations").update(patch).eq("id", id);
 
-  // A released reward is money actually spent — draw it down from the
-  // sponsored event's remaining budget so the brand's dashboard stays honest.
-  if (op === "release" && eventId) {
-    const amount = num(formData.get("reward_amount_gbp"));
-    if (amount != null && amount > 0) {
-      const { data: ev } = await supabase
-        .from("sponsored_events")
-        .select("remaining_budget_gbp")
-        .eq("id", eventId)
-        .maybeSingle();
-      if (ev?.remaining_budget_gbp != null) {
-        const next = Math.max(0, Number(ev.remaining_budget_gbp) - amount);
-        await supabase
-          .from("sponsored_events")
-          .update({ remaining_budget_gbp: next })
-          .eq("id", eventId);
-      }
-    }
-  }
-
   // Tell the participant what just happened to them.
   const NOTIFY_BY_OP: Record<string, string> = {
     select: "participation.selected",
     reject: "participation.rejected",
     verify: "participation.verified",
-    release: "reward.released",
   };
   const eventKey = NOTIFY_BY_OP[op];
   if (eventKey) {
     const { data: participation } = await supabase
       .from("participations")
-      .select("audience_profile_id, reward_amount_gbp, sponsored_events(name)")
+      .select("audience_profile_id, sponsored_events(name)")
       .eq("id", id)
       .maybeSingle<{
         audience_profile_id: string;
-        reward_amount_gbp: number | null;
         sponsored_events: { name: string } | null;
       }>();
 
@@ -435,13 +479,9 @@ export async function updateParticipation(formData: FormData) {
       await notify({
         eventKey,
         recipientProfileId: participation.audience_profile_id,
-        link: op === "release" ? "/dashboard/rewards" : "/dashboard/participations",
+        link: "/dashboard/participations",
         variables: {
           event_name: participation.sponsored_events?.name ?? "your event",
-          amount:
-            participation.reward_amount_gbp != null
-              ? `£${Number(participation.reward_amount_gbp).toLocaleString("en-GB")}`
-              : undefined,
         },
       });
     }

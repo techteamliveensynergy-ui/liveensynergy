@@ -249,6 +249,7 @@ export function BrandForm({
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}
+        confirmSave={mode === "profile"}
       />
     </form>
   );
