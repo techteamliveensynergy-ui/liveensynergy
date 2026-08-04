@@ -99,70 +99,9 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         />
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="card p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              Reward tracker
-            </h2>
-            <Link
-              href="/dashboard/participations"
-              className="text-sm font-semibold text-[var(--color-brand-dark)]"
-            >
-              See all →
-            </Link>
-          </div>
-          {rows.length === 0 ? (
-            <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
-              No events yet.{" "}
-              <Link
-                href="/dashboard/discover"
-                className="font-semibold text-[var(--color-brand-dark)]"
-              >
-                Discover events →
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {tracked.map((r, i) => (
-                <div
-                  key={r.id}
-                  className="rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-[var(--color-ink)]">
-                        {r.sponsored_events?.name ?? "Event"}
-                      </p>
-                      <p className="text-xs text-[var(--color-ink-soft)]">
-                        {r.sponsored_events?.event_date
-                          ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
-                          : "Date TBC"}
-                      </p>
-                    </div>
-                    <StatusBadge status={r.status} />
-                    <span className="text-sm text-[var(--color-ink-soft)]">
-                      {r.reward_amount_gbp != null
-                        ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
-                        : "—"}
-                    </span>
-                  </div>
-
-                  {/* Where they are in the flow, at a glance (3 Aug standup). */}
-                  <div className="mt-4">
-                    <ParticipationProgress
-                      steps={participationSteps(r)}
-                      rejected={r.status === "rejected"}
-                      ticketHref={ticketLinks[i]}
-                      ticketIsImage={isImagePath(r.ticket_proof_url)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+      {/* Account card alongside the shortcuts; the reward tracker gets the
+          full width of the page to itself, at the foot. */}
+      <div className="mt-6 grid items-start gap-5 lg:grid-cols-[1fr_2fr]">
         <div className="card bg-[var(--color-mist)] p-6">
           <div className="flex items-center gap-3.5">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--color-olive)] font-serif text-2xl italic text-white">
@@ -200,9 +139,8 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
             Edit account details
           </Link>
         </div>
-      </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
         <Link href="/dashboard/discover" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">Find events</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
@@ -230,6 +168,72 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
             Open →
           </span>
         </Link>
+        </div>
+      </div>
+
+      {/* Reward tracker last, across the full width — the step trackers need
+          the room, and it's the thing people scroll down to check. */}
+      <div className="card mt-5 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+            Reward tracker
+          </h2>
+          <Link
+            href="/dashboard/participations"
+            className="text-sm font-semibold text-[var(--color-brand-dark)]"
+          >
+            See all →
+          </Link>
+        </div>
+        {rows.length === 0 ? (
+          <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
+            No events yet.{" "}
+            <Link
+              href="/dashboard/discover"
+              className="font-semibold text-[var(--color-brand-dark)]"
+            >
+              Discover events →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tracked.map((r, i) => (
+              <div
+                key={r.id}
+                className="rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-[var(--color-ink)]">
+                      {r.sponsored_events?.name ?? "Event"}
+                    </p>
+                    <p className="text-xs text-[var(--color-ink-soft)]">
+                      {r.sponsored_events?.event_date
+                        ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
+                        : "Date TBC"}
+                    </p>
+                  </div>
+                  <StatusBadge status={r.status} />
+                  <span className="text-sm text-[var(--color-ink-soft)]">
+                    {r.reward_amount_gbp != null
+                      ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
+                      : "—"}
+                  </span>
+                </div>
+
+                {/* Where they are in the flow, at a glance (3 Aug standup). */}
+                <div className="mt-4">
+                  <ParticipationProgress
+                    steps={participationSteps(r)}
+                    rejected={r.status === "rejected"}
+                    ticketHref={ticketLinks[i]}
+                    ticketIsImage={isImagePath(r.ticket_proof_url)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

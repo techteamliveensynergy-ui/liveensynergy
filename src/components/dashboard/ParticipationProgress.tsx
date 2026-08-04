@@ -79,55 +79,71 @@ export function ParticipationProgress({
     );
   }
 
+  // The current step, for the single hint line under the tracker.
+  const current = steps.find((s) => s.state === "current");
+
   return (
     <div>
-      <ol className="flex flex-wrap items-start gap-x-1 gap-y-3">
+      {/*
+        A fixed column per step rather than a wrapping flex row. Wrapping left
+        the last connector on a row dangling into empty space and orphaned the
+        final step underneath, which read as broken layout.
+
+        Each connector is absolutely positioned from the previous circle's
+        centre to this one's (`-left-1/2 w-full`), so it can only ever exist
+        *between* two steps — there's nothing to leave hanging.
+      */}
+      <ol
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+      >
         {steps.map((step, i) => (
           <li
             key={step.label}
-            className="flex min-w-0 flex-1 basis-24 items-start gap-2"
+            className="relative flex flex-col items-center px-0.5 text-center"
           >
-            <div className="flex min-w-0 flex-col items-center text-center">
+            {i > 0 && (
               <span
                 aria-hidden
-                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                className={`absolute -left-1/2 top-3.5 h-0.5 w-full ${
                   step.state === "done"
-                    ? "bg-[var(--color-olive)] text-white"
-                    : step.state === "current"
-                      ? "bg-[var(--color-gold)] text-[var(--color-ink)] ring-2 ring-[var(--color-brand)]/40"
-                      : "bg-black/5 text-[var(--color-ink-soft)]"
-                }`}
-              >
-                {step.state === "done" ? "✓" : i + 1}
-              </span>
-              <span
-                className={`mt-1.5 text-[11px] leading-tight ${
-                  step.state === "todo"
-                    ? "text-[var(--color-ink-soft)]"
-                    : "font-semibold text-[var(--color-ink)]"
-                }`}
-              >
-                {step.label}
-              </span>
-              {!compact && step.hint && step.state === "current" && (
-                <span className="mt-0.5 text-[11px] leading-tight text-[var(--color-ink-soft)]">
-                  {step.hint}
-                </span>
-              )}
-            </div>
-            {i < steps.length - 1 && (
-              <span
-                aria-hidden
-                className={`mt-3.5 h-0.5 min-w-4 flex-1 rounded-full ${
-                  steps[i + 1].state === "done"
                     ? "bg-[var(--color-olive)]"
                     : "bg-black/10"
                 }`}
               />
             )}
+            <span
+              aria-hidden
+              className={`relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                step.state === "done"
+                  ? "bg-[var(--color-olive)] text-white"
+                  : step.state === "current"
+                    ? "bg-[var(--color-gold)] text-[var(--color-ink)] ring-2 ring-[var(--color-brand)]/40"
+                    : "bg-black/5 text-[var(--color-ink-soft)]"
+              }`}
+            >
+              {step.state === "done" ? "✓" : i + 1}
+            </span>
+            <span
+              className={`mt-1.5 text-[11px] leading-tight ${
+                step.state === "todo"
+                  ? "text-[var(--color-ink-soft)]"
+                  : "font-semibold text-[var(--color-ink)]"
+              }`}
+            >
+              {step.label}
+            </span>
           </li>
         ))}
       </ol>
+
+      {/* One hint for the step they're actually on, rather than squeezing it
+          into a column narrow enough to hold "Reward released". */}
+      {!compact && current?.hint && (
+        <p className="mt-2.5 text-center text-xs text-[var(--color-ink-soft)]">
+          Next: {current.hint}
+        </p>
+      )}
 
       {ticketHref && (
         <a
