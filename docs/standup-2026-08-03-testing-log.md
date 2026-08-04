@@ -97,6 +97,152 @@ Only the production alias `liveensynergy-rho.vercel.app` serves publicly. This
 matches lesson L5's warning about protected preview origins. Not a bug; noted
 so the next person doesn't chase it.
 
+### D4 — Step tracker connectors dangled into empty space ✅ Resolved
+
+**Severity:** cosmetic, but it read as broken layout on the first screen an
+audience member sees.
+
+**Found by:** looking at the rendered audience overview.
+
+The tracker was a wrapping flex row with each connector line rendered *after*
+its step. With five steps in a half-width card, four fitted on the first row
+and the fifth wrapped — leaving the fourth step's connector running off to the
+right into nothing, and "Reward released" orphaned underneath with no line
+into it.
+
+**Resolution.** A fixed column per step (`grid-template-columns: repeat(n,
+1fr)`) so it can't wrap, with each connector absolutely positioned from the
+previous circle's centre to this one's (`-left-1/2 w-full`). A connector can
+now only exist *between* two steps, so there is nothing left to dangle. The
+per-step hint moved to a single line under the tracker, since a column narrow
+enough to hold "Reward released" can't hold a sentence.
+
+Shipped in `4a7448e`. Verified on the live site — five steps, one row, clean
+connectors.
+
+### D5 — Country field used a native datalist ✅ Resolved
+
+**Reported by Ketan during testing:** *"country of residence ui is not correct
+or rather convenient — it is showing options to the right of the page. It
+should rather show as a proper dropdown."*
+
+I'd chosen `<input list>` + `<datalist>` because it needs no JavaScript. That
+reasoning was wrong in practice: browsers position that suggestion popup
+however they like, and it rendered beside the field rather than beneath it,
+looking nothing like the rest of the form.
+
+**Resolution.** A real combobox — type to filter, arrow keys or click to
+choose, panel anchored under the input and styled with the form's own tokens.
+Enter selects without submitting the surrounding form, options commit on
+`mousedown` so the input's blur can't close the list first, the highlighted
+option scrolls into view, and there's a "no country matches" state. An
+unlisted country typed by hand still saves, deliberately — rejecting off-list
+input would lock out anyone whose country we've spelled differently.
+
+Shipped in `4a7448e`. Verified: typing "uni" filters to United Kingdom,
+Tunisia, United Arab Emirates, United States, in a panel under the field.
+
+### D6 — Unsaved-changes guard fired on forms nobody had edited ✅ Resolved
+
+**Severity:** high nuisance — a false "you have unsaved changes" prompt on
+every navigation away from a profile page, whether or not anything was typed.
+
+**Found by:** the browser refusing to navigate away from `/dashboard/profile`
+in a session where I had only *read* the page.
+
+The guard marked the form dirty on any `input` or `change` event. Chrome's
+autofill and React's hydration both fire those on load, so a form the user
+had never touched was dirty from the moment it rendered.
+
+**Resolution.** It now fingerprints the form's values on the first frame and
+compares against that, so only a genuine difference counts. A side benefit:
+typing something and then undoing it now correctly reads as clean, which the
+event-based version got wrong too.
+
+Shipped in `0d54759`.
+
+### D7 — Confirmation dialog claimed `aria-modal` but abandoned focus ✅ Resolved
+
+`ConfirmSubmit` rendered `role="dialog" aria-modal="true"` while leaving focus
+on the page behind it. A screen-reader user was told a modal had opened and
+was then tabbing through the form underneath it; there was no Escape to close,
+and the page behind still scrolled.
+
+**Resolution.** Focus moves to the confirm button on open and returns to the
+trigger on close, Escape closes, and body scroll is locked while it's open.
+
+Shipped in `0d54759`. Verified: the confirm button takes focus on open.
+
+### D8 — Feedback widget had the same focus gap ✅ Resolved
+
+Opening the panel left focus on the page behind it. Focus now moves to the
+first field and returns to the tab on close.
+
+Shipped in `0d54759`.
+
+### D9 — A rejected save discarded the edit it was complaining about ✅ Resolved
+
+**Severity:** high — the user is told what's wrong and simultaneously loses
+the input they'd need to correct.
+
+**Found by:** pushing past the D1 re-test into the *other* half of the phone
+rule — changing to a number another account already holds.
+
+The rejection message was right ("That phone number is already registered to
+another account"), but the form had re-rendered from the **stored** values, so
+the phone field showed the *old* number. The user cannot see what they just
+typed. Worse, gender and country are backed by component state whose
+initialiser only runs on mount, so the select blanked while its dependent
+free-text box stayed on screen — confirmed in the DOM:
+
+```js
+{ selectValue: "", selfDescribeRendered: true, selfDescribeValue: "Genderfluid" }
+```
+
+A gender select reading "Prefer not to answer" with a visible "how would you
+describe it?" box holding a value is a state the form should never be able to
+reach.
+
+**Resolution.** `saveAudience` echoes the submitted fields back on every
+rejection (`OnboardingState.values`), and the form merges them over the stored
+defaults, remounting the two state-backed fields so they pick them up. What
+you submitted is what you see.
+
+Shipped in `2a82e95`. **Re-tested on the live site:** the rejected form now
+keeps the typed number (`7775199436`), the country and the self-describe text.
+The gender select was still wrong, which turned out to be a separate bug — D10.
+
+### D10 — The gender select desynchronised from its own state ✅ Resolved
+
+**Found by:** re-testing D9. Phone, country and self-describe all came back
+correctly; gender still read blank. Rather than assume D9's fix hadn't taken,
+I read the DOM:
+
+```json
+{ "selectCount": 1, "selfDescribeCount": 1,
+  "selectValue": "", "selectedIndex": 0 }
+```
+
+One select, sitting on the blank option — with the dependent "how would you
+describe it?" box rendered next to it holding "Genderfluid". That box only
+renders when React's state is `"Prefer to self-describe"`. So state and DOM
+disagreed: the page displayed "Prefer not to answer", and the blank is what
+the *next* submit would have sent — silently wiping the answer.
+
+**What was wrong.** The select was controlled (`value={gender}`) and the DOM
+wasn't taking the prop across the remount that follows an action result.
+
+**Resolution.** The select is now uncontrolled (`defaultValue`), with state
+kept purely to decide whether the self-describe box shows. The DOM owns the
+value, so the two cannot disagree. The parent already remounts the component
+per submission, so the default is re-applied from whatever came back.
+
+Shipped in `69ceb20`.
+
+**Worth keeping:** "the fix didn't work" and "a second bug is masking the fix"
+look identical from the outside. Reading the DOM separated them in one call —
+the retained phone number proved D9's fix *had* landed.
+
 ---
 
 ## 2. What was verified, and how
@@ -175,6 +321,23 @@ null (so both `is_admin()` and `is_sponsored_event_party()` are false):
 
 The guard holds and the function is inert for an unauthorised caller.
 
+### 2e-bis. Driven through the UI (production, signed in as `audience.tester@example.com`)
+
+| Case | Result |
+|---|---|
+| **D1 re-test** — save the profile with the phone **unchanged** | ✅ **Pass.** Priya Shah, one of the four accounts previously locked out, saved cleanly. Verified in the database: `gender`, `gender_self_describe` and `country_of_residence` all persisted, `updated_at` fresh, phone untouched. Before the fix this exact save failed. |
+| T19.2 / T19.6 — change the phone **to** a number another account holds | ✅ **Pass.** Rejected with "That phone number is already registered to another account. Each account needs its own number." Nothing was written. |
+| T9.1–T9.4 — audience step tracker | ✅ **Pass.** Five steps, all ticked for a completed participation, connectors between each, ticket thumbnail below. |
+| T10.1 — gender options | ✅ **Pass.** Woman / Man / Non-binary / Prefer to self-describe / Prefer not to say, plus a blank "Prefer not to answer". |
+| T10.2 — self-describe reveals a free-text box | ✅ **Pass.** Appears on selection with its hint. |
+| T10.3 — both persist | ✅ **Pass.** `gender = "Prefer to self-describe"`, `gender_self_describe = "Genderfluid"` in the database. |
+| T11.1 — country search | ✅ **Pass.** "uni" → United Kingdom, Tunisia, United Arab Emirates, United States. (Tunisia matches because the search is substring, not prefix — deliberate, so "arab" finds United Arab Emirates.) |
+| T11.2 — country persists | ✅ **Pass.** `country_of_residence = "United Kingdom"`. |
+| T3.1 — save confirmation | ✅ **Pass.** "Save these changes?" with the overwrite explanation, Go back / Yes, save changes. |
+| T3.3 — confirming saves | ✅ **Pass.** |
+| T4.1 — feedback tab present on dashboard pages | ✅ **Pass.** |
+| Reward tracker placement | ✅ Moved to the foot of the overview at full width, as requested during testing. |
+
 ### 2f. Public routes (production)
 
 All 200: `/`, `/terms`, `/privacy`, `/about`, `/events`, `/faqs`, `/contact`,
@@ -192,34 +355,29 @@ All 200: `/`, `/terms`, `/privacy`, `/about`, `/events`, `/faqs`, `/contact`,
 
 ## 3. Not yet tested
 
-Everything below needs a signed-in browser session. The Claude-in-Chrome
-extension declined permission for both `localhost:3000` and the production
-domain, so none of it has been driven through the UI yet.
+The audience journey has been driven through the UI (section 2e-bis). These
+remain, and need brand / artist / admin sessions.
 
 | Tracker cases | Area |
 |---|---|
 | T1.1–T1.7 | Multi-event campaign matching, admin view of the selected event |
-| T2.1–T2.8 | Agreement dialogs, confirmation, sibling withdrawal end-to-end |
-| T3.1–T3.8 | Save confirmation + unsaved-changes warning |
-| T4.1–T4.11 | Feedback widget (and the GitHub mirror — env vars not set yet) |
-| T6.1–T6.3 | Ticket proof visibility, PDF placeholder |
+| T2.1–T2.8 | Agreement dialogs, sibling withdrawal end-to-end |
+| T3.4–T3.8 | Enter-key behaviour, unsaved-changes warning, admin forms |
+| T4.3–T4.11 | Feedback widget submission (and the GitHub mirror — env vars not set yet) |
+| T6.1–T6.3 | Ticket proof on the admin side, PDF placeholder |
 | T7.1–T7.8 | Admin event editing, one-way status |
-| T9.1–T9.7 | Audience step tracker |
-| T10.x, T11.x | Gender / country fields |
+| T9.5–T9.7 | Rejected-state tracker, narrow widths |
 | T13.1–T13.7 | Admin-only reward release, participant names |
 | T14.4, T14.5 | New records take the next reference |
 | T16.1–T16.5 | CSV export formatting |
 | T17.1–T17.7, T17.9–T17.11 | Budget figures as rendered on screen |
 | T18.2–T18.8 | Password reset flow |
-| T19.1–T19.7 | Phone uniqueness through the forms — **including a re-test of D1**: save a profile without touching the number and confirm it now goes through |
 | T20.1–T20.3 | Creation-form instructions |
 | R1–R9 | Regression sweep |
 
-**D1 specifically needs a UI re-test.** The fix is verified by inspection and
-typecheck, and the data-layer behaviour it relies on is confirmed, but the
-"save your profile without changing your number" path has not been exercised
-against the running app. Priya Shah (`audience.tester@example.com`) is the
-natural case — she was one of the four locked out.
+**D9's fix needs a re-test** — shipped in `2a82e95` but not yet exercised
+against the running app. Repeat T19.2 and confirm the rejected form now shows
+the number you typed, with gender and country intact.
 
 ---
 
