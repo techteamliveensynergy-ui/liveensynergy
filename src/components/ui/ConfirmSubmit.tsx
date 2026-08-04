@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 /**
@@ -38,11 +38,43 @@ export function ConfirmSubmit({
 }) {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const confirmRef = useRef<HTMLButtonElement | null>(null);
   const { pending } = useFormStatus();
+
+  /**
+   * Escape closes, focus moves into the dialog on open and back to the trigger
+   * on close, and the page behind is locked from scrolling.
+   *
+   * Without this the dialog claimed `aria-modal` while leaving focus on the
+   * page behind it — a keyboard or screen-reader user would be told a modal
+   * had opened and then be tabbing through the form underneath it.
+   */
+  useEffect(() => {
+    if (!open) return;
+
+    const trigger = triggerRef.current;
+    confirmRef.current?.focus();
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      trigger?.focus();
+    };
+  }, [open]);
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         className={className}
         disabled={pending}
@@ -80,12 +112,9 @@ export function ConfirmSubmit({
                 {cancelLabel}
               </button>
               <button
+                ref={confirmRef}
                 type="button"
-                className={
-                  danger
-                    ? "btn btn-dark"
-                    : "btn btn-primary"
-                }
+                className={danger ? "btn btn-dark" : "btn btn-primary"}
                 onClick={() => {
                   setOpen(false);
                   formRef.current?.requestSubmit();

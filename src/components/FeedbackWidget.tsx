@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Field } from "@/components/ui/Field";
@@ -45,25 +45,36 @@ export function FeedbackWidget() {
   );
   const pathname = usePathname();
   const [pageUrl, setPageUrl] = useState("");
+  const tabRef = useRef<HTMLButtonElement>(null);
+  const firstFieldRef = useRef<HTMLSelectElement>(null);
 
   // Captures where the reporter was, so the team doesn't have to ask.
   useEffect(() => {
     setPageUrl(window.location.href);
   }, [pathname]);
 
-  // Close on Escape, the way any other dismissible overlay behaves.
+  // Close on Escape, the way any other dismissible overlay behaves, and move
+  // focus into the panel on open / back to the tab on close — otherwise a
+  // keyboard user opens the form and is still tabbing through the page behind.
   useEffect(() => {
     if (!open) return;
+    const tab = tabRef.current;
+    firstFieldRef.current?.focus();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      tab?.focus();
+    };
   }, [open]);
 
   if (!open) {
     return (
       <button
+        ref={tabRef}
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-4 right-4 z-40 rounded-full bg-[var(--color-ink)] px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 print:hidden"
@@ -121,6 +132,7 @@ export function FeedbackWidget() {
 
             <Field label="Type" htmlFor="widget-kind" required>
               <select
+                ref={firstFieldRef}
                 id="widget-kind"
                 name="kind"
                 className="select"
