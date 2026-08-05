@@ -89,6 +89,12 @@ export default async function AdminCampaignsPage({
   const suggestionsFor = (campaignId: string) =>
     suggestions.filter((s) => s.campaign_id === campaignId);
 
+  /** Already has a sponsorship the parties agreed to — nothing more to offer. */
+  const isSettled = (campaignId: string) =>
+    suggestionsFor(campaignId).some(
+      (s) => s.status === "confirmed" || s.status === "completed",
+    );
+
   if (sp.status) campaigns = campaigns.filter((c) => c.status === sp.status);
   if (sp.matched === "no")
     campaigns = campaigns.filter((c) => !c.matched_listing_id);
@@ -274,11 +280,22 @@ export default async function AdminCampaignsPage({
                   </div>
                 )}
 
-                {/* Still open for more suggestions until one is accepted. */}
-                {c.status === "in_progress" && (
+                {/* Open for more suggestions only while nothing has settled.
+                    Gating on the campaign's own status wasn't enough — a
+                    campaign could sit at "in progress" while already carrying
+                    a confirmed or completed sponsorship, and suggesting more
+                    against it creates a conflict nobody can accept (0022). */}
+                {c.status === "in_progress" && !isSettled(c.id) ? (
                   <div className="mt-4 border-t border-black/10 pt-4">
                     <MatchForm campaignId={c.id} listings={listings} />
                   </div>
+                ) : (
+                  isSettled(c.id) && (
+                    <p className="mt-4 border-t border-black/10 pt-4 text-sm text-[var(--color-ink-soft)]">
+                      This campaign is settled — no further events can be
+                      suggested against it.
+                    </p>
+                  )
                 )}
               </div>
             );

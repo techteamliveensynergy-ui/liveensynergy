@@ -31,6 +31,8 @@ existing database with live data can always pick up the latest file safely.
 | 0020 | `0020_sponsorship_withdrawn.sql` | Adds `withdrawn` to the `sponsorship_status` enum. Its own file on purpose: Postgres refuses to *use* a newly added enum value inside the transaction that added it, so 0021 (which does) has to run separately. Run 0020 first. |
 | 0021 | `0021_standup_0803.sql` | The 3 Aug standup batch — see below. Mostly additive, but two steps deliberately rewrite existing rows: the reference renumbering (4) and the remaining-budget recompute (5). |
 
+| 0022 | `0022_sponsorship_conflicts.sql` | Makes accepting a sponsorship atomic and exclusive. 0021's flow decided the confirmation in application code with an unlocked read-then-write, so two people agreeing to sibling proposals at the same moment could both confirm — one campaign, one budget, two live sponsorships — and nothing stopped one listing being committed to two campaigns. `agree_to_sponsorship()` now takes a row lock, re-checks both conflicts inside the transaction, and either settles the campaign or refuses with a reason the UI shows. Two partial unique indexes (one settled sponsorship per campaign, one per listing) make the bad state unrepresentable regardless of how it's reached. Supersedes `close_campaign_on_acceptance()` from 0021. |
+
 ## 0021 in detail
 
 Run **0020 before 0021** — 0021 sets `status = 'withdrawn'`, which only exists

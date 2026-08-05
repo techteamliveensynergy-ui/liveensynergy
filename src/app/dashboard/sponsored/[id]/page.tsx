@@ -49,10 +49,13 @@ function toLocalInputValue(iso: string | null) {
 
 export default async function SponsoredEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string; reason?: string }>;
 }) {
   const { id } = await params;
+  const { notice, reason } = await searchParams;
   const { profile } = await requireRole(["brand", "artist", "event"]);
   const supabase = await createClient();
 
@@ -134,6 +137,25 @@ export default async function SponsoredEventPage({
         }
         action={<StatusBadge status={event.status} />}
       />
+
+      {/* An agreement that couldn't be honoured — the campaign was settled on
+          another event, or this listing is already committed elsewhere. Says
+          so plainly rather than appearing to do nothing (0022). */}
+      {(notice === "conflict" || notice === "locked") && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          <p className="font-semibold">This couldn&apos;t be confirmed</p>
+          <p className="mt-1">
+            {reason ||
+              "Another event has already been confirmed for this campaign."}
+          </p>
+        </div>
+      )}
+      {notice === "agree-failed" && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Something went wrong recording your agreement. Please try again, or
+          contact the Live·En·Synergy team.
+        </div>
+      )}
 
       {event.banner_url && (
         // eslint-disable-next-line @next/next/no-img-element

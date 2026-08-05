@@ -207,46 +207,6 @@ export async function createSponsoredEvent(
 }
 
 /**
- * A campaign can carry several suggested events at once. Once one is agreed,
- * the campaign is settled: it closes, it records which listing won, the other
- * proposals are withdrawn, and their listings go back on the market so they
- * aren't left stranded as "matched" against a campaign that's gone.
- *
- * All of that happens inside `close_campaign_on_acceptance` (0021) rather than
- * here, because the person clicking the final "I agree" is a party to their
- * own event only — under RLS they can't touch the brand's campaign row or
- * another artist's proposal, so doing it from here would silently no-op.
- */
-async function closeCampaignAround(campaignId: string, winningEventId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("close_campaign_on_acceptance", {
-    p_campaign_id: campaignId,
-    p_winning_event_id: winningEventId,
-  });
-  if (error) {
-    console.error("[sponsored] closing campaign failed", error);
-    return;
-  }
-
-  const withdrawn = (data ?? []) as {
-    event_id: string;
-    event_name: string;
-    artist_profile_id: string | null;
-  }[];
-
-  for (const loser of withdrawn) {
-    if (!loser.artist_profile_id) continue;
-    await notify({
-      eventKey: "sponsorship.withdrawn",
-      recipientProfileId: loser.artist_profile_id,
-      link: `/dashboard/sponsored/${loser.event_id}`,
-      variables: { event_name: loser.event_name },
-    });
-  }
-}
-
-/**
  * Records the current party's agreement; confirms once both sides agree.
  *
  * Confirmation is final (3 Aug standup): there's no undo, so the button is
@@ -259,51 +219,37 @@ export async function toggleAgreement(formData: FormData) {
   const id = str(formData.get("id"));
   if (!id) return;
 
-  const { data: ev } = await supabase
-    .from("sponsored_events")
-    .select(
-      "id, artist_profile_id, brand_agreed, artist_agreed, brand_id, campaign_id, listing_id, status",
-    )
-    .eq("id", id)
-    .maybeSingle<{
-      id: string;
-      artist_profile_id: string | null;
-      brand_agreed: boolean;
-      artist_agreed: boolean;
-      brand_id: string | null;
-      campaign_id: string | null;
-      listing_id: string | null;
-      status: string;
-    }>();
-  if (!ev) return;
-  if (ev.status !== "in_progress") return;
+  // The whole decision — authorise, record the agreement, and settle the
+  // campaign if that was the second one — happens inside one locked
+  // transaction (0022). Doing it here meant two people agreeing to sibling
+  // proposals at the same moment could both read "in progress" and both
+  // confirm, leaving one campaign with two live sponsorships.
+  const { data, error } = await supabase.rpc("agree_to_sponsorship", {
+    p_event_id: id,
+  });
 
-  // Is the current user the brand or the artist on this event?
-  const { data: brand } = await supabase
-    .from("brands")
-    .select("id")
-    .eq("profile_id", userId)
-    .maybeSingle();
-  const isBrand = brand && brand.id === ev.brand_id;
-  const isArtist = ev.artist_profile_id === userId;
-
-  const patch: Record<string, unknown> = {};
-  if (isBrand) patch.brand_agreed = !ev.brand_agreed;
-  else if (isArtist) patch.artist_agreed = !ev.artist_agreed;
-  else return;
-
-  const brandAgreed = isBrand ? !ev.brand_agreed : ev.brand_agreed;
-  const artistAgreed = isArtist ? !ev.artist_agreed : ev.artist_agreed;
-  if (brandAgreed && artistAgreed) patch.status = "confirmed";
-  else patch.status = "in_progress";
-
-  await supabase.from("sponsored_events").update(patch).eq("id", id);
-
-  if (patch.status === "confirmed" && ev.campaign_id) {
-    await closeCampaignAround(ev.campaign_id, ev.id);
+  if (error) {
+    console.error("[sponsored] agreement failed", error);
+    redirect(`/dashboard/sponsored/${id}?notice=agree-failed`);
   }
 
-  // Let the *other* side know, and both sides once it's fully confirmed.
+  const result = (data ?? {}) as {
+    outcome?: string;
+    reason?: string | null;
+    withdrawn?: { id: string; name: string; artist_profile_id: string | null }[];
+  };
+
+  // Refused — tell them why rather than silently doing nothing.
+  if (result.outcome === "conflict" || result.outcome === "locked") {
+    revalidatePath(`/dashboard/sponsored/${id}`);
+    redirect(
+      `/dashboard/sponsored/${id}?notice=${
+        result.outcome
+      }&reason=${encodeURIComponent(result.reason ?? "")}`,
+    );
+  }
+  if (result.outcome === "not_party") return;
+
   const { data: full } = await supabase
     .from("sponsored_events")
     .select("name, budget_gbp, artist_profile_id, brands(profile_id, brand_name)")
@@ -322,7 +268,7 @@ export async function toggleAgreement(formData: FormData) {
         ? `£${Number(full.budget_gbp).toLocaleString("en-GB")}`
         : undefined;
 
-    if (patch.status === "confirmed") {
+    if (result.outcome === "confirmed") {
       for (const pid of [brandProfileId, full.artist_profile_id]) {
         if (pid) {
           await notify({
@@ -333,7 +279,22 @@ export async function toggleAgreement(formData: FormData) {
           });
         }
       }
-    } else if (isArtist && artistAgreed && brandProfileId) {
+
+      // Whoever else was in the running for this campaign.
+      for (const loser of result.withdrawn ?? []) {
+        if (!loser.artist_profile_id) continue;
+        await notify({
+          eventKey: "sponsorship.withdrawn",
+          recipientProfileId: loser.artist_profile_id,
+          link: `/dashboard/sponsored/${loser.id}`,
+          variables: { event_name: loser.name },
+        });
+      }
+    } else if (
+      result.outcome === "agreed" &&
+      full.artist_profile_id === userId &&
+      brandProfileId
+    ) {
       await notify({
         eventKey: "sponsorship.artist_agreed",
         recipientProfileId: brandProfileId,
