@@ -243,6 +243,50 @@ Shipped in `69ceb20`.
 look identical from the outside. Reading the DOM separated them in one call —
 the retained phone number proved D9's fix *had* landed.
 
+### D11 — Sibling proposals could both be accepted ✅ Resolved
+
+**Raised by Ketan during testing:** *"admin sends more than one event as we did
+just now, and someone else accepts an event in the meanwhile, but the artist is
+already shared with these events as proposals — we should not come to this as a
+conflicting situation somehow."*
+
+Correct, and not hypothetical: **I created an instance of it during this
+session.** After suggesting two events against CMP-00001, that campaign carried
+two settled sponsorships — SPE-00001 (completed) and SPE-00008 (confirmed).
+
+Three distinct holes in 0021's flow:
+
+| # | Hole | Consequence |
+|---|---|---|
+| 1 | `toggleAgreement` did an **unlocked read-then-write**. Two people agreeing to sibling proposals at the same moment both read `status = 'in_progress'`, both passed, both wrote `confirmed`. `close_campaign_on_acceptance` only withdrew siblings *still in progress*, so neither withdrew the other. | One campaign, one budget, two live sponsorships. |
+| 2 | Nothing checked whether a **listing** was already committed. | The same event confirmed against two campaigns — the artist committed to two sponsors, each believing it exclusive. |
+| 3 | The "suggest more" gate read the **campaign's own status**, not whether anything had settled. A campaign could sit at `in_progress` while already carrying a completed sponsorship. | Proposals sent to artists that could never be accepted. This is what produced the real instance above. |
+
+**Resolution (0022).** The decision moved out of application code entirely.
+`agree_to_sponsorship()` takes a row lock on the event, then the campaign, and
+re-checks both conflicts *inside the same transaction* before confirming. A
+refusal returns a reason, which the sponsorship page now displays rather than
+appearing to do nothing. Two partial unique indexes — one settled sponsorship
+per campaign, one per listing — make the bad state unrepresentable even if
+something bypasses the function. The admin gate now tests for a settled
+sponsorship rather than the campaign's status.
+
+**Verified against the live database:**
+
+| Check | Result |
+|---|---|
+| Artist agrees to a proposal whose campaign was already settled elsewhere | ✅ Refused: *"This campaign has already been settled on Late-Shift Sessions · Vol. 12…"* — and **mutated nothing** (flags and status unchanged). Under the old code this would have confirmed. |
+| Brand gives the confirming agreement on a clean campaign with 3 live siblings | ✅ Confirmed, campaign closed, all three siblings withdrawn, the loser's listing returned to `available`, and the withdrawn set returned for notification. |
+| Raw `update … set status='confirmed'` on a second proposal for the same campaign | ✅ Rejected by `sponsored_events_one_settled_per_campaign`. |
+| Raw update committing an already-booked listing on another campaign | ✅ Rejected by `sponsored_events_one_settled_per_listing`. |
+
+The pre-existing conflict on CMP-00001 was cleaned up so the indexes could be
+built; both created successfully, so no other conflicting data exists.
+
+**Worth keeping.** The sequential case is the one you naturally test, and it
+passed cleanly end-to-end. The concurrent case needs someone to ask "what if
+two people do this at once?" — the code reads fine until you do.
+
 ---
 
 ## 2. What was verified, and how
@@ -338,6 +382,42 @@ The guard holds and the function is inert for an unauthorised caller.
 | T4.1 — feedback tab present on dashboard pages | ✅ **Pass.** |
 | Reward tracker placement | ✅ Moved to the foot of the overview at full width, as requested during testing. |
 
+### 2e-ter. Brand / artist / admin journeys (production)
+
+| Case | Result |
+|---|---|
+| T1.1 — tick two listings, submit | ✅ Button reads "Suggest 2 events"; two sponsored events created, one per listing |
+| T1.2 — suggested events listed on the campaign card | ✅ With status, agreement ticks and an edit link |
+| T1.4 — nothing ticked | ✅ Submit disabled |
+| T1.5 — accepted event marked | ✅ ✓ + green tint + "selected by the sponsor" |
+| T1.7 — losing listing freed | ✅ Back to `available` |
+| T2.1 — artist agrees, brand hasn't | ✅ Non-danger dialog: "confirms as soon as the other party agrees too" |
+| T2.3 — withdraw before both agree | ✅ Button becomes "Withdraw my agreement" |
+| T2.4 — brand's confirming click | ✅ Danger dialog, dark button: "**This can't be undone** — the terms lock, and any other events suggested for this campaign are withdrawn" |
+| T2.5 — confirmation | ✅ Status `confirmed`, both flags true |
+| T2.6 — sibling withdrawn | ✅ Status `withdrawn` |
+| T2.7 — notification to the losing artist | ✅ "Sponsorship proposal withdrawn", linked to the event |
+| T2.8 — campaign closed | ✅ `closed`, `matched_listing_id` = the winning listing |
+| **The RLS point** | ✅ The **brand** triggered all of the above, yet the campaign row and the *other artist's* proposal — neither readable or writable by them under RLS — both updated. The security-definer function is doing its job. |
+| T7.2 — move a deadline that has already passed | ✅ 31-07-2026 editable and saved; confirmation names both parties |
+| T7.4 — budget change re-derives the net | ✅ £3,000→£8,000: live hint "£864 inc. VAT · £7,136 for rewards"; saved as £7,036 (net less the £100 already released) |
+| T7.5 — status picker after moving to confirmed | ✅ Offers only `confirmed`/`completed`; `in_progress` gone |
+| T7.7 — **server-side** backward status | ✅ Injected `in_progress` into the select and submitted; server refused, status stayed `confirmed` |
+| T13.1 — brand/artist reward controls | ✅ No amount box, no Release button; "Awaiting reward payout by the team" |
+| T13.2 — participants copy | ✅ Says payout is handled by the team |
+| T13.3 — **server-side** release attempt | ✅ Rewrote a live form to post `op=release` + £999 as the brand: status unchanged, no reward written, budget untouched |
+| T13.5 — participant names | ✅ "Priya Shah", "Jordan Avery" — not id fragments |
+| T13.7 — paid amount shown | ✅ "£12 paid" |
+| T14.4 — new records take the next reference | ✅ `SPE-00008`, `SPE-00009`, `FB-00001` |
+| T16.1 — CSV timestamps | ✅ `01/08/2026 10:42`, not raw ISO |
+| T16.2 — CSV event date | ✅ `04/10/2026`, date only |
+| T16.4 — empty cells | ✅ Blank, no "Invalid Date" |
+| T11.4 — CSV gender/country | ✅ `Genderfluid` (self-described text winning) and `United Kingdom` |
+| T4.3/T4.5 — feedback widget | ✅ Panel opens focused on the first field; submission logged as `FB-00001` with the page URL captured |
+| T4.9 — no GitHub token configured | ✅ Report saves, no link stored, no error shown to the user |
+| T17.2 / T17.9 / T17.11 | ✅ Gross / fee / net correct on the artist page, admin page and newly created events. Both fee branches exercised: £4,000 → £432 (9%) and £3,000 → £378 (the £315 floor) |
+| QR check-in link origin | ✅ Built from the public origin (lesson L5 holding) |
+
 ### 2f. Public routes (production)
 
 All 200: `/`, `/terms`, `/privacy`, `/about`, `/events`, `/faqs`, `/contact`,
@@ -355,29 +435,23 @@ All 200: `/`, `/terms`, `/privacy`, `/about`, `/events`, `/faqs`, `/contact`,
 
 ## 3. Not yet tested
 
-The audience journey has been driven through the UI (section 2e-bis). These
-remain, and need brand / artist / admin sessions.
+Audience, brand, artist and admin journeys have all been driven through the UI.
+What's left:
 
-| Tracker cases | Area |
-|---|---|
-| T1.1–T1.7 | Multi-event campaign matching, admin view of the selected event |
-| T2.1–T2.8 | Agreement dialogs, sibling withdrawal end-to-end |
-| T3.4–T3.8 | Enter-key behaviour, unsaved-changes warning, admin forms |
-| T4.3–T4.11 | Feedback widget submission (and the GitHub mirror — env vars not set yet) |
-| T6.1–T6.3 | Ticket proof on the admin side, PDF placeholder |
-| T7.1–T7.8 | Admin event editing, one-way status |
-| T9.5–T9.7 | Rejected-state tracker, narrow widths |
-| T13.1–T13.7 | Admin-only reward release, participant names |
-| T14.4, T14.5 | New records take the next reference |
-| T16.1–T16.5 | CSV export formatting |
-| T17.1–T17.7, T17.9–T17.11 | Budget figures as rendered on screen |
-| T18.2–T18.8 | Password reset flow |
-| T20.1–T20.3 | Creation-form instructions |
-| R1–R9 | Regression sweep |
+| Tracker cases | Area | Why not yet |
+|---|---|---|
+| T3.4–T3.8 | Enter-key behaviour, unsaved-changes warning on the admin forms | Partly covered — the guard was seen firing correctly on a genuinely dirty form |
+| T4.8 | GitHub issue mirroring | `GITHUB_TOKEN` / `GITHUB_FEEDBACK_REPO` not set. The unconfigured path (T4.9) is verified |
+| T6.3 | PDF ticket placeholder | No PDF ticket in the test data |
+| T9.5–T9.7 | Rejected-state tracker, narrow widths | No rejected participation in the test data |
+| T18.2–T18.8 | Password reset flow | Needs a real inbox for the reset email |
+| T20.1–T20.3 | Creation-form instructions | Copy-only; verified in source, not on screen |
+| R1–R9 | Formal regression sweep | Covered incidentally — every role's dashboard, discover, messages and the public pages were exercised without error |
 
-**D9's fix needs a re-test** — shipped in `2a82e95` but not yet exercised
-against the running app. Repeat T19.2 and confirm the rejected form now shows
-the number you typed, with gender and country intact.
+**D11's fix is verified at the data layer** (conflict refused, happy path
+confirms, both indexes reject raw double-bookings) but the *refusal banner* on
+the sponsorship page hasn't been seen on screen — it needs two proposals and a
+settled campaign to reproduce through the UI.
 
 ---
 
