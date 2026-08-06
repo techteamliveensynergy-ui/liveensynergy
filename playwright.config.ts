@@ -37,6 +37,31 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/artist.json" },
     },
     {
+      // Walkthrough recording of everything the 3 Aug standup changed, across
+      // all four roles. One context start to finish so it comes out as a
+      // single continuous video — signing in and out happens on camera.
+      //
+      // Read-only by design: it opens dialogs and cancels them, types into the
+      // budget field to show the live recalculation and doesn't save. Re-runs
+      // don't change any data.
+      name: "standup-video",
+      testMatch: /standup-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        // Records against the deployed site by default rather than a local dev
+        // server: no per-route compilation to stall a recording, and it's the
+        // build the client actually looks at. Override with WALKTHROUGH_URL to
+        // point it at localhost.
+        baseURL:
+          process.env.WALKTHROUGH_URL ?? "https://liveensynergy-rho.vercel.app",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 250 },
+      },
+    },
+    {
       // Walkthrough recording of the audience journey. Deliberately signed out
       // — the whole point is to start from account creation — so no
       // storageState, and no dependency on the setup project.
