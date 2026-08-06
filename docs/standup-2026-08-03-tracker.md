@@ -38,35 +38,76 @@ worked; verified, and in some cases extended).
 
 ## 1. Status summary
 
-| # | Issue (as raised in the standup) | Status | Remarks |
-|---|---|---|---|
-| 1 | Multiple events per campaign; admin sees which was selected, can edit it, confirmation if the user already chose | **Done** | Admin now ticks several listings at once. `matched_listing_id` narrows to the winner on acceptance. |
-| 2 | Sponsorship acceptance closes the campaign; no undo; confirm popup before accepting | **Done** | Losing proposals move to a new `withdrawn` status and their listings return to `available`. |
-| 3 | Popup confirmation when editing/saving a user profile | **Done** | Confirmation on save **and** a warning when navigating away with unsaved edits. Covers the user's own profile page and the admin user editor. |
-| 4 | Beta tester feedback form → raises a GitHub issue (Raising Club pattern) | **Done** | Minimised tab on every dashboard/onboarding page. GitHub mirror is optional and degrades safely. |
-| 5 | All communication stays platform-based (no third-party white-label email) | **No change needed** | A decision to *not* build something. Existing platform email/outbox is unchanged. |
-| 6 | Ticket proof viewable on the admin dashboard | **Pre-existing** | Already worked. Extended: the audience member now sees their own uploaded ticket too. |
-| 7 | Admin can edit event details before completion; status must not move backward | **Done** | Full edit form on the admin event page. `completed` locks the record. |
-| 8 | Location access (GPS / Google Maps) required when scanning event QR codes | **Deferred** | Needs your input — Maps API key, the 5 km radius rule, and where event coordinates get captured. Not started. |
-| 9 | Step-based progress indicator on the audience overview | **Done** | Registered → Selected → Ticket uploaded → Attended → Reward released, with ticks and a ticket thumbnail. |
-| 10 | Gender field with a "prefer to self-describe" open text option | **Done** | Two columns so the standard options stay countable. |
-| 11 | Country of residence as a searchable dropdown | **Done** | Type-to-filter list of ~195 countries, UK pinned first. |
-| 12 | Merge Artist and Event Organiser registration | **Done** | Copy-only. One sign-up card mapping to the `artist` role; existing `event` accounts untouched. |
-| 13 | Reward release restricted to admins; participant names visible | **Done** | Control removed from brand/artist **and** the server action's `release` branch deleted. New RLS policy exposes participant names to the event's parties. |
-| 14 | Sponsorship reference numbers shortened and made sequential | **Done** | `SPE-3F9A1C0B` → `SPE-00001`. Existing rows renumbered in creation order. |
-| 15 | Terms & conditions agreement customised per party | **Done** | Role-specific summary + required checkbox at sign-up; acceptance date and version stored on the profile. |
-| 16 | Readable "registered at" dates in the admin CSV export | **Done** | `DD/MM/YYYY HH:mm`. Gender and country columns added while there. |
-| 17 | Budget logic — deduct VAT/fees rather than showing the gross everywhere | **Done** | The headline bug. Remaining budget now starts net of the fee inc VAT; existing rows recomputed. |
-| 18 | Forgot / reset password page | **Pre-existing** | `/auth/forgot-password` and `/auth/reset-password` already existed and work. Verify only — see T18. |
-| 19 | Phone number uniqueness enforced at account creation | **Done** | Across all four role tables, with DB indexes as a backstop. |
-| 20 | Clear instructions that either party can create a sponsored event | **Done** | Explanatory card on the creation form. |
-| 21 | Branded email templates (logo, fonts) | **Deferred** | You asked to keep this pending and plan it separately. Not started. |
-| 22 | Contact form submissions stored in the backend rather than emailed | **No change needed** | Confirmed acceptable in the meeting. Existing admin Enquiries inbox unchanged. |
+**Status as of 6 Aug 2026 — everything below is live on
+`liveensynergy-rho.vercel.app`.**
 
-Sakshi's action items (Google Workspace addresses, payment, drafting the terms
-copy) are not development work and are out of scope for this pass. Note that
-item 15 ships **summary** wording per party — the full legal copy is still
-placeholder text on `/terms` pending that draft.
+### The count
+
+The standup raises the same work more than once: the *Decisions* list has 15
+bullets, *Next steps* has 15 for Ketan, and the *Details* section adds a few
+more. Nine of those are restatements — "Send Feedback Form" and "Build Feedback
+Form" are one job, "Disable Award Release" restates "Reward release restricted
+to admins", and so on. De-duplicated, there are **24 distinct items**:
+
+| Outcome | Count | Which |
+|---|---|---|
+| ✅ **Built, shipped and verified on the live site** | **16** | 1, 2, 3, 4, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20 |
+| ✅ Already worked — verified, not rebuilt | 2 | 6, 18 |
+| ➖ A decision, not a build | 3 | 5, 22, 23 |
+| ⏸️ Deferred — needs your input | 2 | 8, 21 |
+| ✅ Carried over from 31 Jul, already resolved | 1 | 24 |
+
+So **19 of the 24 are done** (16 new + 2 pre-existing + 1 carried over), 3 never
+needed code, and **2 remain** — both waiting on you.
+
+Sakshi's three action items (Google Workspace addresses, the payment, drafting
+the terms copy) aren't development work and are excluded from the count.
+
+### Item by item
+
+| # | Item | Status | What it means / what was done |
+|---|---|---|---|
+| 1 | Multiple events per campaign; admin sees which was selected, can edit it, with a confirmation | ✅ **Done** | Admin ticks several available listings at once and one proposal is created per listing. The campaign card lists them all, ticks the accepted one, and links each to its edit page. Editing an accepted deal goes through a confirmation naming both parties. |
+| 2 | Acceptance closes the campaign; no undo; popup before accepting | ✅ **Done** | The first proposal both parties agree to confirms; the campaign closes, the siblings move to a new `withdrawn` status and their listings return to the market. Agreeing shows "this can't be undone" when it's the confirming click. Later hardened against two people accepting at once — see **D11** below. |
+| 3 | Popup confirmation when saving a profile | ✅ **Done** | Confirmation on save, plus a warning if you navigate away with unsaved edits. Covers the user's own profile and the admin user editor. |
+| 4 | Beta tester feedback form raising a GitHub issue | ✅ **Done** | A "🐞 Feedback" tab on every dashboard and onboarding page, expanding into the report form. Each report is logged and given a reference (`FB-00001`), and mirrored to a GitHub issue **once a token is configured** — see the caveat under "Still open". |
+| 5 | All communication stays platform-based | ➖ **No code** | A decision *not* to build third-party white-label email. Nothing changed. |
+| 6 | Ticket proof viewable on the dashboard | ✅ **Already worked** | Confirmed in the meeting as "already there". Extended so the audience member also sees a thumbnail of their own uploaded ticket. |
+| 7 | Admin edits event details before completion; status must not move backward | ✅ **Done** | Full edit form on the admin event page — deadline, budget, terms, venue, reward rules. A deadline that has already passed can be moved (the case Sakshi was blocked on). Status only ever moves forward, enforced on the server as well as in the picker. |
+| 8 | Location / GPS verification on QR scan | ⏸️ **Deferred** | **Not started** — needs your input. See "Still open". |
+| 9 | Step-based progress indicator on the overview | ✅ **Done** | Registered → Selected → Ticket uploaded → Attended → Reward released, with tick marks and a thumbnail of the uploaded ticket. Now sits full width at the foot of the audience overview. |
+| 10 | Gender field with a self-describe option | ✅ **Done** | Standard options plus "Prefer to self-describe", which reveals a free-text box. Stored in two columns so the standard answers stay countable. |
+| 11 | Country of residence as a dropdown | ✅ **Done** | Searchable dropdown of ~195 countries, UK first. Started as a native datalist; replaced with a proper anchored dropdown after your feedback. |
+| 12 | Merge Artist and Event Organiser | ✅ **Done** | Copy-only, as agreed. One "Artist / Event Organiser" card at sign-up mapping to the `artist` role. Existing organiser accounts are untouched and keep working. |
+| 13 | Reward release restricted to admins; names visible | ✅ **Done** | The control is gone from the brand/artist page **and** the release branch is deleted from their server action, so a hand-crafted request does nothing either. A new RLS policy lets an event's parties see participant names instead of id fragments. |
+| 14 | Shorter sequential reference numbers | ✅ **Done** | `SPE-3F9A1C0B` → `SPE-00001`, numbered in creation order, across sponsorships, campaigns, listings and feedback. Existing rows renumbered. |
+| 15 | Terms agreement customised per party | ✅ **Done** | A role-specific summary and a required checkbox at sign-up, with the acceptance date and version recorded. ⚠️ The **full legal copy on `/terms` is still placeholder** pending Sakshi's draft. |
+| 16 | Readable dates in the admin CSV | ✅ **Done** | `DD/MM/YYYY HH:mm` instead of raw ISO timestamps, and event dates as date-only. Gender and country columns added while there. |
+| 17 | Budget logic — deduct VAT/fees | ✅ **Done** | **The headline bug.** Every "remaining budget" across the platform was quoting the gross figure, overstating what could actually be paid out by the whole service fee. Now net of the fee inc VAT everywhere, with existing rows recomputed. |
+| 18 | Forgot / reset password page | ✅ **Already worked** | Reported as missing, but both pages existed and function. Verified, not rebuilt. |
+| 19 | Phone number uniqueness | ✅ **Done** | Enforced across all four role tables at save time, with database indexes as a backstop. Only an actual *change* of number is checked — see **D1** below for why that matters. |
+| 20 | Instructions that either party can create an event | ✅ **Done** | Explanatory card at the top of the creation form, worded differently for a brand and an artist. |
+| 21 | Branded email templates (logo, fonts) | ⏸️ **Deferred** | **Not started** — you asked to plan this separately. |
+| 22 | Contact form stored in the backend, not emailed | ➖ **No code** | Confirmed acceptable in the meeting. The admin Enquiries inbox is unchanged. |
+| 23 | Email notifications editable in the admin portal | ➖ **No code** | Confirmed in the meeting as already possible under Notification setup. Unchanged. |
+| 24 | Remaining admin / audience portal configuration | ✅ **Done previously** | Carried over from the 31 Jul review and resolved in the earlier pass (commits `4044474`, `0533afa`). |
+
+### Defects found while testing this
+
+Twelve defects surfaced while verifying the above — all found, fixed and
+shipped. They're written up with evidence in
+`docs/standup-2026-08-03-testing-log.md`. The three worth knowing about:
+
+- **D1** — phone uniqueness ran on *every* save, so all four existing audience
+  accounts were locked out of editing their own profile over a number they'd
+  never touched. Now only an actual change is checked.
+- **D9 / D10** — a rejected save discarded the edit it was complaining about,
+  and the gender select desynchronised from its own state, leaving a form in a
+  contradictory condition.
+- **D11** — the concurrency gap you raised: two people accepting sibling
+  proposals at once could both confirm, and one listing could be committed to
+  two campaigns. Now settled atomically in the database with row locks and two
+  unique indexes making the bad state impossible.
 
 ---
 
@@ -469,9 +510,13 @@ Worth running once, because 0021 touches existing rows and RLS.
 
 ## 4. Still open
 
+Two of the 24 items, plus three smaller things that need a decision or a value
+from you rather than more work.
+
 | Item | Blocked on |
 |---|---|
-| Location / GPS verification on QR scan (5 km radius, event coordinates) | Your input: Google Maps API key, whether the radius is fixed or per-event, and where organisers capture event coordinates. Also needs a UX decision for attendees who deny location permission. |
-| Branded email templates (logo, fonts) | You asked to plan this separately. |
-| Full legal copy on `/terms` | Sakshi's drafting task. Item 15 ships the per-party summaries and the agreement mechanism; the long-form sections are still placeholder. |
-| Narrowing phone uniqueness to audience accounts only | Your call — see the remark under item 19. |
+| **8 — Location / GPS verification on QR scan** | Your input: the Google Maps API key, whether the 5 km radius is fixed or set per event, and where organisers capture event coordinates in the first place (no listing field holds them today). Also needs a decision on what happens when an attendee denies location permission — refuse the check-in, or fall back to manual verification. |
+| **21 — Branded email templates** | You asked to plan this separately. |
+| GitHub mirroring for the feedback widget | `GITHUB_TOKEN` and `GITHUB_FEEDBACK_REPO` in the Vercel environment. Without them the widget still works and reports land in the admin Feedback inbox — they just don't become issues. This is the only part of item 4 not yet live. |
+| Full legal copy on `/terms` | Sakshi's drafting task. Item 15 ships the per-party summaries and the agreement mechanism; the long-form sections are still placeholder text. |
+| Narrowing phone uniqueness to audience accounts only | Your call. It currently covers brand manager phones too, which would block an agency running two brand accounts from one number — see the remark under item 19. |
