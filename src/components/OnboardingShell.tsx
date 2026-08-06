@@ -24,7 +24,8 @@ export function OnboardingShell({
           <span className="chip">{ROLE_LABELS[role]} setup</span>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-5 py-10">
+      {/* pb-28 so the form's submit row clears the fixed feedback tab. */}
+      <main className="mx-auto max-w-3xl px-5 pb-28 pt-10">
         <div className="mb-8">
           <p className="font-serif text-sm text-[var(--color-ink-soft)]">
             Phase 2 · onboarding

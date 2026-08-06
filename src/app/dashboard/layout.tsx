@@ -92,7 +92,11 @@ export default async function DashboardLayout({
         unreadCount={unreadCount ?? 0}
       />
       <div className="flex-1">
-        <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
+        {/* pb-28 keeps the last row of any page clear of the fixed feedback
+            tab in the bottom-right. Without it, a form whose Save button sits
+            bottom-right — the profile editor at a narrower viewport, say —
+            ends up underneath the tab, and the click lands on the wrong one. */}
+        <main className="mx-auto max-w-5xl px-5 pb-28 pt-8">{children}</main>
       </div>
       {/* Feedback tab on every dashboard page (3 Aug standup) — mounted in the
           layout rather than the root one so the public marketing pages, which
