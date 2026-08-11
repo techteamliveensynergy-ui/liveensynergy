@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "PowerShell",
+      "mcp__claude-in-chrome__*",
+      "mcp__claude_ai_Clinical_Trials__*",
+      "mcp__claude_ai_Figma__*",
+      "mcp__claude_ai_Gmail__*",
+      "mcp__claude_ai_Google_Calendar__*",
+      "mcp__claude_ai_Google_Drive__*",
+      "mcp__claude_ai_ICD-10_Codes__*",
+      "mcp__claude_ai_Netlify__*",
+      "mcp__claude_ai_PubMed__*",
+      "mcp__claude_ai_Scholar_Gateway__*",
+      "mcp__claude_ai_Supabase__*",
+      "mcp__claude_ai_Vercel__*",
+      "mcp__claude_ai_Vibe_Prospecting__*",
+      "mcp__claude_ai_bioRxiv__*",
+      "mcp__claude_ai_tldraw__*",
+      "mcp__plugin_vercel_vercel__*"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git branch -D*)",
+      "PowerShell(Remove-Item -Recurse -Force *)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f *)",
+      "PowerShell(git reset --hard*)",
+      "PowerShell(git clean -f*)",
+      "PowerShell(git branch -D*)"
+    ],
+    "ask": [
+      "mcp__claude_ai_Supabase__confirm_cost",
+      "mcp__claude_ai_Supabase__pause_project",
+      "mcp__claude_ai_Supabase__restore_project",
+      "mcp__claude_ai_Supabase__delete_branch",
+      "mcp__claude_ai_Supabase__create_project",
+      "mcp__claude_ai_Vercel__buy_addon",
+      "mcp__claude_ai_Vercel__buy_credits",
+      "mcp__claude_ai_Vercel__buy_domain",
+      "mcp__claude_ai_Vercel__buy_pro",
+      "mcp__claude_ai_Vibe_Prospecting__enrich-business",
+      "mcp__claude_ai_Vibe_Prospecting__enrich-prospects",
+      "mcp__claude_ai_Vibe_Prospecting__export-to-csv",
+      "mcp__claude_ai_Vibe_Prospecting__match-business",
+      "mcp__claude_ai_Vibe_Prospecting__match-prospects"
+    ]
+  }
+}
