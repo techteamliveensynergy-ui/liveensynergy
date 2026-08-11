@@ -1,0 +1,52 @@
+[
+  {
+    "id": "A1a-deal-panel",
+    "title": "Ticket price and capacity on the Deal panel",
+    "file": "A1a-deal-panel.png"
+  },
+  {
+    "id": "A1b-edit-form",
+    "title": "Ticket price and capacity in the edit form",
+    "file": "A1b-edit-form.png"
+  },
+  {
+    "id": "A1c-saved",
+    "title": "Saved through to the listing",
+    "file": "A1c-saved.png"
+  },
+  {
+    "id": "A2-thread",
+    "title": "Sender names and sides in an admin view",
+    "file": "A2-thread.png"
+  },
+  {
+    "id": "A3a-button",
+    "title": "New chat control on the admin Messages page",
+    "file": "A3a-button.png"
+  },
+  {
+    "id": "A3b-picker",
+    "title": "Person picker, grouped by role",
+    "file": "A3b-picker.png"
+  },
+  {
+    "id": "A4a-no-one-waiting",
+    "title": "Draw hidden when nobody is waiting",
+    "file": "A4a-no-one-waiting.png"
+  },
+  {
+    "id": "A5a-inbox",
+    "title": "Admin enquiries inbox",
+    "file": "A5a-inbox.png"
+  },
+  {
+    "id": "A6a-bell",
+    "title": "Admin notifications",
+    "file": "A6a-bell.png"
+  },
+  {
+    "id": "A7a-link",
+    "title": "Raise an enquiry, carrying the reference",
+    "file": "A7a-link.png"
+  }
+]

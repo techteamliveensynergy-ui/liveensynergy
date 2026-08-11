@@ -36,6 +36,34 @@ export default defineConfig({
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/artist.json" },
     },
+    // The 10 Aug batch is split by the seat each item has to be checked from —
+    // a random draw only exists for an admin, a withdrawal rule only for an
+    // audience member. Ordered admin → brand → artist → audience because the
+    // draw and the campaign relay set up state the later ones read.
+    {
+      name: "s0810-admin",
+      testMatch: /standup-0810-admin\.spec\.ts/,
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/admin.json" },
+    },
+    {
+      name: "s0810-brand",
+      testMatch: /standup-0810-brand\.spec\.ts/,
+      dependencies: ["s0810-admin"],
+      use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/brand.json" },
+    },
+    {
+      name: "s0810-artist",
+      testMatch: /standup-0810-artist\.spec\.ts/,
+      dependencies: ["s0810-brand"],
+      use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/artist.json" },
+    },
+    {
+      name: "s0810-audience",
+      testMatch: /standup-0810-audience\.spec\.ts/,
+      dependencies: ["s0810-artist"],
+      use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/audience.json" },
+    },
     {
       // Walkthrough recording of everything the 3 Aug standup changed, across
       // all four roles. One context start to finish so it comes out as a

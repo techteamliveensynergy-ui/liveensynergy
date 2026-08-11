@@ -63,9 +63,23 @@ export const ACCOUNTS = {
     password: "TestPass123!",
     workspace: "The Midnight Collective",
   },
+  // Added for the 10 Aug batch: the random draw, the admin chat and the
+  // audience withdrawal rule can only be checked from these two seats.
+  admin: {
+    email: "admin.tester@example.com",
+    password: "TestPass123!",
+    workspace: "Sakshi Admin",
+  },
+  audience: {
+    email: "audience.tester@example.com",
+    password: "TestPass123!",
+    workspace: "Priya Shah",
+  },
 } as const;
 
 export const SHOTS_DIR = path.join("docs", "client-review", "screenshots");
+/** Evidence for the 10 Aug standup batch, kept apart from the 24–25 Jul review. */
+export const SHOTS_0810 = path.join("docs", "standup-2026-08-10", "screenshots");
 export const FIXTURES = path.join("tests", "fixtures");
 
 export const fixture = (name: string) => path.join(FIXTURES, name);
@@ -81,28 +95,33 @@ export interface Capture {
   file: string;
 }
 
-const MANIFEST = path.join(SHOTS_DIR, "manifest.json");
-
-function record(entry: Capture) {
-  fs.mkdirSync(SHOTS_DIR, { recursive: true });
-  const existing: Capture[] = fs.existsSync(MANIFEST)
-    ? JSON.parse(fs.readFileSync(MANIFEST, "utf8"))
+function record(dir: string, entry: Capture) {
+  const manifest = path.join(dir, "manifest.json");
+  fs.mkdirSync(dir, { recursive: true });
+  const existing: Capture[] = fs.existsSync(manifest)
+    ? JSON.parse(fs.readFileSync(manifest, "utf8"))
     : [];
   const next = existing.filter((e) => e.id !== entry.id).concat(entry);
   next.sort((a, b) => a.id.localeCompare(b.id));
-  fs.writeFileSync(MANIFEST, JSON.stringify(next, null, 2));
+  fs.writeFileSync(manifest, JSON.stringify(next, null, 2));
 }
 
-/** Screenshots the whole page (or a locator) and records it in the manifest. */
+/**
+ * Screenshots the whole page (or a locator) and records it in the manifest.
+ *
+ * `dir` defaults to the Jul review's folder so the existing specs are
+ * unchanged; the 10 Aug suite passes `SHOTS_0810`.
+ */
 export async function capture(
   page: Page,
   id: string,
   title: string,
-  opts: { selector?: string; fullPage?: boolean } = {},
+  opts: { selector?: string; fullPage?: boolean; dir?: string } = {},
 ) {
-  fs.mkdirSync(SHOTS_DIR, { recursive: true });
+  const dir = opts.dir ?? SHOTS_DIR;
+  fs.mkdirSync(dir, { recursive: true });
   const file = `${id}.png`;
-  const target = path.join(SHOTS_DIR, file);
+  const target = path.join(dir, file);
 
   // Let fonts settle so text doesn't render mid-swap in the capture.
   await page.waitForLoadState("networkidle").catch(() => {});
@@ -113,5 +132,15 @@ export async function capture(
   } else {
     await page.screenshot({ path: target, fullPage: opts.fullPage ?? false });
   }
-  record({ id, title, file });
+  record(dir, { id, title, file });
+}
+
+/** `capture` bound to the 10 Aug evidence folder. */
+export async function shot(
+  page: Page,
+  id: string,
+  title: string,
+  opts: { selector?: string; fullPage?: boolean } = {},
+) {
+  await capture(page, id, title, { ...opts, dir: SHOTS_0810 });
 }
