@@ -88,24 +88,6 @@ export default async function MessagesPage({
     );
   }
 
-  /**
-   * Best available label for a party: yourself, the team, their name, or their
-   * role as a fallback.
-   *
-   * Admins are always "Live·En·Synergy team" to everyone but themselves — a
-   * support thread is with the team, not with a named member of staff, and
-   * that's how the rest of the product already words it.
-   */
-  function partyLabel(id: string | null | undefined) {
-    if (!id) return "Someone";
-    if (id === profile!.id) return "You";
-    const party = parties.get(id);
-    if (party?.role === "admin") return "Live·En·Synergy team";
-    if (party?.full_name) return party.full_name;
-    if (party?.role) return ROLE_LABELS[party.role];
-    return "Someone";
-  }
-
   // Everyone an admin can start a conversation with. Admins are excluded —
   // the thread shape is "a user and the team", so an admin-to-admin one would
   // land in the wrong inbox at both ends.
@@ -118,12 +100,71 @@ export default async function MessagesPage({
         .eq("is_active", true)
         .order("full_name", { ascending: true })
     : { data: [] };
-  const contacts = ((contactRows ?? []) as (Party & { email: string | null })[])
-    .map((p) => ({
+  const contactProfiles = (contactRows ?? []) as (Party & {
+    email: string | null;
+  })[];
+
+  // Label them by the act or brand, not just the account holder's name.
+  // Listing `profiles.full_name` alone put three entries reading "Sakshi
+  // Gulati" in the picker — a brand, an artist and an admin — with nothing to
+  // tell them apart, and no sign of "Northwave Coffee" anywhere. The team
+  // thinks in acts and brands; that's what has to be on the option.
+  const [{ data: brandNames }, { data: artistNames }, { data: organiserNames }] =
+    isAdmin
+      ? await Promise.all([
+          supabase.from("brands").select("profile_id, brand_name"),
+          supabase.from("artists").select("profile_id, artist_name"),
+          supabase.from("event_organisers").select("profile_id, event_name"),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const workspaceName = new Map<string, string>([
+    ...((brandNames ?? []) as { profile_id: string; brand_name: string }[]).map(
+      (b) => [b.profile_id, b.brand_name] as const,
+    ),
+    ...((artistNames ?? []) as { profile_id: string; artist_name: string }[]).map(
+      (a) => [a.profile_id, a.artist_name] as const,
+    ),
+    ...(
+      (organiserNames ?? []) as { profile_id: string; event_name: string }[]
+    ).map((e) => [e.profile_id, e.event_name] as const),
+  ]);
+
+  const contacts = contactProfiles.map((p) => {
+    const person = p.full_name || p.email || "Unnamed account";
+    const workspace = workspaceName.get(p.id);
+    return {
       id: p.id,
-      name: p.full_name || p.email || "Unnamed account",
+      name: workspace && workspace !== person ? `${workspace} — ${person}` : person,
       roleLabel: ROLE_LABELS[p.role] ?? p.role,
-    }));
+    };
+  });
+
+  /**
+   * Best available label for a party: yourself, the team, the act or brand,
+   * their own name, or their role as a fallback.
+   *
+   * Admins are always "Live·En·Synergy team" to everyone but themselves — a
+   * support thread is with the team, not with a named member of staff, and
+   * that's how the rest of the product already words it.
+   *
+   * The act/brand name comes first because that's how the thread is actually
+   * identified in conversation: "Northwave Coffee" means something to the team
+   * in a way "Brand Tester" does not. `workspaceName` is only populated for an
+   * admin (RLS gives nobody else those rows), which is exactly who needs it —
+   * a brand and an artist already know who they're talking to.
+   */
+  function partyLabel(id: string | null | undefined) {
+    if (!id) return "Someone";
+    if (id === profile!.id) return "You";
+    const party = parties.get(id);
+    if (party?.role === "admin") return "Live·En·Synergy team";
+    const workspace = workspaceName.get(id);
+    if (workspace) return workspace;
+    if (party?.full_name) return party.full_name;
+    if (party?.role) return ROLE_LABELS[party.role];
+    return "Someone";
+  }
 
   const viewerIsParty =
     !!active &&
