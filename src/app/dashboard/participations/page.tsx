@@ -165,15 +165,25 @@ export default async function ParticipationsPage({
                         .join(" · ")}
                     </p>
                   </div>
-                  <form action={withdrawParticipation}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <button
-                      type="submit"
-                      className="btn btn-ghost text-sm text-[var(--color-accent)]"
-                    >
-                      Withdraw
-                    </button>
-                  </form>
+                  {/* Withdrawing is off the table once you're selected — the
+                      reward is already earmarked and the organiser is counting
+                      on the headcount (10 Aug standup). */}
+                  {p.selected ? (
+                    <p className="text-xs text-[var(--color-ink-soft)]">
+                      You&apos;re selected — contact the team if you can no
+                      longer attend.
+                    </p>
+                  ) : (
+                    <form action={withdrawParticipation}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <button
+                        type="submit"
+                        className="btn btn-ghost text-sm text-[var(--color-accent)]"
+                      >
+                        Withdraw
+                      </button>
+                    </form>
+                  )}
                 </div>
 
                 {/* Book → selected → upload → attend → reward, with ticks

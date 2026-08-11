@@ -64,15 +64,20 @@ export function SuccessBanner({ show }: { show?: boolean }) {
   );
 }
 
+/**
+ * Placeholders deliberately carry no `https://`: the fields don't need it, say
+ * so in their hint, and showing it anyway is what made the whole set look like
+ * it wanted a full URL (10 Aug standup).
+ */
 const SOCIAL_FIELDS: { key: string; label: string; placeholder: string }[] = [
-  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/…" },
-  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/…" },
-  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/…" },
-  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@…" },
-  { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/…" },
-  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/…" },
-  { key: "x", label: "X (Twitter)", placeholder: "https://x.com/…" },
-  { key: "pinterest", label: "Pinterest", placeholder: "https://pinterest.com/…" },
+  { key: "instagram", label: "Instagram", placeholder: "instagram.com/…" },
+  { key: "facebook", label: "Facebook", placeholder: "facebook.com/…" },
+  { key: "youtube", label: "YouTube", placeholder: "youtube.com/…" },
+  { key: "tiktok", label: "TikTok", placeholder: "tiktok.com/@…" },
+  { key: "spotify", label: "Spotify", placeholder: "open.spotify.com/…" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "linkedin.com/…" },
+  { key: "x", label: "X (Twitter)", placeholder: "x.com/…" },
+  { key: "pinterest", label: "Pinterest", placeholder: "pinterest.com/…" },
 ];
 
 /** Renders the standard grid of social-media link inputs. */

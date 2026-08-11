@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { normaliseUrl } from "@/lib/urls";
+import { displayUrl, normaliseUrl } from "@/lib/urls";
 
 /**
  * Standard hint for link fields. The whole point of dropping `type="url"` was
@@ -25,10 +25,12 @@ interface UrlInputProps {
  * focus, instead of leaving the user to discover the problem from a banner at
  * the top of the form after submitting.
  *
- * A valid entry is rewritten to its canonical form on blur, so what will be
- * saved is what's on screen — typing `northwavecoffee.com` visibly becomes
- * `https://northwavecoffee.com/`. The same `normaliseUrl` runs again on the
- * server, so this is a courtesy, not the enforcement.
+ * It shows the address the way you'd write it — `northwavecoffee.com`, no
+ * scheme — and tidies it on blur. It used to rewrite the field to the stored
+ * canonical form instead, so a field whose own hint says "no need to type
+ * https://" filled itself with `https://` as soon as you clicked away
+ * (10 Aug standup). `normaliseUrl` still runs on the server and still stores
+ * the full URL; only what's on screen changed.
  */
 export function UrlInput({
   id,
@@ -39,7 +41,7 @@ export function UrlInput({
   className = "input",
 }: UrlInputProps) {
   const [error, setError] = useState<string | null>(null);
-  const [value, setValue] = useState(defaultValue ?? "");
+  const [value, setValue] = useState(displayUrl(defaultValue));
 
   function check(raw: string) {
     if (!raw.trim()) {
@@ -53,7 +55,10 @@ export function UrlInput({
       return;
     }
     setError(null);
-    if (result.url && result.url !== raw) setValue(result.url);
+    // Tidy what they typed without re-introducing the scheme: "HTTPS://Foo.com"
+    // becomes "foo.com", "foo.com/path?x=1" keeps its path.
+    const tidied = displayUrl(result.url);
+    if (tidied && tidied !== raw) setValue(tidied);
   }
 
   return (

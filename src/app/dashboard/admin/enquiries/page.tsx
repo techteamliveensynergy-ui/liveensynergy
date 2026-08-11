@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
 import { toggleContactHandled } from "../marketplace-actions";
+import { startAdminThread } from "../../messages/actions";
 
 export const metadata = { title: "Enquiries · Admin" };
 
@@ -15,6 +16,10 @@ interface Row {
   body: string;
   created_at: string;
   handled_at: string | null;
+  /** The SPE-/CMP-/EVT- number the form was opened from (0023). */
+  reference: string | null;
+  /** Set when the enquiry came from a signed-in account (0023). */
+  profile_id: string | null;
 }
 
 export default async function AdminEnquiriesPage({
@@ -88,12 +93,21 @@ export default async function AdminEnquiriesPage({
                 >
                   {m.handled_at ? "Handled" : "Open"}
                 </span>
+                {/* Which sponsorship / campaign / listing this is about.
+                    Without it the inbox was a wall of untraceable subjects
+                    (10 Aug standup). */}
+                {m.reference && (
+                  <span className="rounded-full bg-[var(--color-mist)] px-2.5 py-1 font-mono text-xs font-semibold text-[var(--color-ink)]">
+                    {m.reference}
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-[var(--color-ink)]">
                     {m.subject || "(no subject)"}
                   </span>
                   <span className="block truncate text-sm text-[var(--color-ink-soft)]">
                     {m.name} · {m.email}
+                    {m.profile_id ? " · has an account" : ""}
                   </span>
                 </span>
                 <span className="text-xs text-[var(--color-ink-soft)]">
@@ -106,6 +120,30 @@ export default async function AdminEnquiriesPage({
                   {m.body}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {/* Replying in-app keeps the conversation on the platform,
+                      which is where every other exchange lives. Only possible
+                      when we can tie the enquiry to an account. */}
+                  {m.profile_id && (
+                    <form action={startAdminThread}>
+                      <input
+                        type="hidden"
+                        name="profile_id"
+                        value={m.profile_id}
+                      />
+                      <input
+                        type="hidden"
+                        name="subject"
+                        value={
+                          m.reference
+                            ? `Enquiry ${m.reference}`
+                            : m.subject || "Your enquiry"
+                        }
+                      />
+                      <button type="submit" className="btn btn-ghost text-sm">
+                        Message {m.name.split(" ")[0]}
+                      </button>
+                    </form>
+                  )}
                   <a
                     href={`mailto:${m.email}?subject=${encodeURIComponent(
                       `Re: ${m.subject ?? "Your enquiry"}`,

@@ -67,6 +67,27 @@ export default async function CampaignsPage() {
                   Ref {c.reference} · Budget £
                   {Number(c.budget_gbp).toLocaleString("en-GB")}
                 </p>
+                {(c.suggested_event_note || c.suggested_event_url) && (
+                  <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+                    <span className="font-semibold text-[var(--color-ink)]">
+                      Your suggested event:
+                    </span>{" "}
+                    {c.suggested_event_note}
+                    {c.suggested_event_url && (
+                      <>
+                        {" "}
+                        <a
+                          href={c.suggested_event_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-[var(--color-brand-dark)] underline"
+                        >
+                          Open link ↗
+                        </a>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Link

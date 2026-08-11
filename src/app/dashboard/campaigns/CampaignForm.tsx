@@ -6,6 +6,7 @@ import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
+import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
 import { IMAGE_HINT } from "@/lib/upload-limits";
 import {
   ARTIST_CATEGORIES,
@@ -231,6 +232,37 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
             name="additional_info"
             className="textarea"
             defaultValue={d?.additional_info ?? ""}
+          />
+        </Field>
+      </FormSection>
+
+      {/* The brief captured what kind of event you're after but never "this
+          one, here" — so a sponsor who already had an event in mind had
+          nowhere to say so (10 Aug standup). We pass it to the artist in the
+          chat when the campaign is matched. */}
+      <FormSection
+        title="Know an event already?"
+        description="Optional. If there's a specific event — one of ours or one you've seen elsewhere — describe it here and we'll put it to the artist or organiser in your chat."
+      >
+        <Field
+          label="Event you'd like to sponsor"
+          htmlFor="suggested_event_note"
+        >
+          <textarea
+            id="suggested_event_note"
+            name="suggested_event_note"
+            className="textarea"
+            placeholder="For example: “Late-Shift Sessions at Peckham Audio on 14 March — we'd like the merch stand and a story mention.”"
+            defaultValue={d?.suggested_event_note ?? ""}
+          />
+        </Field>
+        <Field label="Link to it" htmlFor="suggested_event_url" hint={URL_HINT}>
+          <UrlInput
+            id="suggested_event_url"
+            name="suggested_event_url"
+            label="The suggested event link"
+            placeholder="e.g. eventbrite.co.uk/e/late-shift-sessions"
+            defaultValue={d?.suggested_event_url ?? ""}
           />
         </Field>
       </FormSection>

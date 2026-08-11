@@ -3,9 +3,11 @@ import { requireProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/dashboard/ui";
 import { signedUrlFor } from "@/lib/storage";
+import { ROLE_LABELS, type Role } from "@/lib/constants";
 import type { Conversation, Message } from "@/lib/types";
 import { startSupportThread } from "./actions";
 import { Composer } from "./Composer";
+import { NewAdminThread } from "./NewAdminThread";
 
 export const metadata = { title: "Messages" };
 
@@ -15,6 +17,12 @@ type ConversationRow = Conversation & {
 };
 
 type Tab = "partner" | "support";
+
+interface Party {
+  id: string;
+  full_name: string | null;
+  role: Role;
+}
 
 export default async function MessagesPage({
   searchParams,
@@ -46,6 +54,26 @@ export default async function MessagesPage({
   const conversations = tab === "support" ? supportThreads : partnerThreads;
   const active = linked ?? conversations[0] ?? null;
 
+  // Who's who. Every message rendered identically because the only signal was
+  // "did I send this?" — which tells an admin reading someone else's thread
+  // nothing at all (10 Aug standup). Names are read in one go for every thread
+  // on the page; a viewer who isn't a party sees them through the
+  // "read my conversation peer" policy added in 0023.
+  const partyIds = [
+    ...new Set(
+      all.flatMap((c) => [c.brand_profile_id, c.partner_profile_id]),
+    ),
+  ];
+  const { data: partyRows } = partyIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, role")
+        .in("id", partyIds)
+    : { data: [] };
+  const parties = new Map(
+    ((partyRows ?? []) as Party[]).map((p) => [p.id, p]),
+  );
+
   let messages: Message[] = [];
   let attachmentUrls: (string | null)[] = [];
   if (active) {
@@ -59,6 +87,48 @@ export default async function MessagesPage({
       messages.map((m) => signedUrlFor(m.attachment_url)),
     );
   }
+
+  /**
+   * Best available label for a party: yourself, the team, their name, or their
+   * role as a fallback.
+   *
+   * Admins are always "Live·En·Synergy team" to everyone but themselves — a
+   * support thread is with the team, not with a named member of staff, and
+   * that's how the rest of the product already words it.
+   */
+  function partyLabel(id: string | null | undefined) {
+    if (!id) return "Someone";
+    if (id === profile!.id) return "You";
+    const party = parties.get(id);
+    if (party?.role === "admin") return "Live·En·Synergy team";
+    if (party?.full_name) return party.full_name;
+    if (party?.role) return ROLE_LABELS[party.role];
+    return "Someone";
+  }
+
+  // Everyone an admin can start a conversation with. Admins are excluded —
+  // the thread shape is "a user and the team", so an admin-to-admin one would
+  // land in the wrong inbox at both ends.
+  const isAdmin = profile!.role === "admin";
+  const { data: contactRows } = isAdmin
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, email, role")
+        .neq("role", "admin")
+        .eq("is_active", true)
+        .order("full_name", { ascending: true })
+    : { data: [] };
+  const contacts = ((contactRows ?? []) as (Party & { email: string | null })[])
+    .map((p) => ({
+      id: p.id,
+      name: p.full_name || p.email || "Unnamed account",
+      roleLabel: ROLE_LABELS[p.role] ?? p.role,
+    }));
+
+  const viewerIsParty =
+    !!active &&
+    (active.brand_profile_id === profile!.id ||
+      active.partner_profile_id === profile!.id);
 
   return (
     <div>
@@ -79,6 +149,14 @@ export default async function MessagesPage({
           within 48 hours.
         </p>
       )}
+      {notice === "admin-thread" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          Thread open. Send the first message below — it reaches them under
+          &ldquo;With Live·En·Synergy team&rdquo;.
+        </p>
+      )}
+
+      {isAdmin && <NewAdminThread people={contacts} />}
 
       <div className="mb-5 flex flex-wrap gap-2">
         <TabLink
@@ -141,11 +219,19 @@ export default async function MessagesPage({
                   >
                     <p className="truncate">{threadTitle(conv)}</p>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">
-                      {conv.kind === "support"
-                        ? "Live·En·Synergy team"
-                        : conv.brand_profile_id === profile!.id
-                          ? "You reached out"
-                          : "Incoming enquiry"}
+                      {/* Someone watching a thread they aren't in — an admin —
+                          needs to know whose it is, not whether it was
+                          incoming. */}
+                      {conv.brand_profile_id === profile!.id ||
+                      conv.partner_profile_id === profile!.id
+                        ? conv.kind === "support"
+                          ? "Live·En·Synergy team"
+                          : conv.brand_profile_id === profile!.id
+                            ? "You reached out"
+                            : "Incoming enquiry"
+                        : `${partyLabel(conv.brand_profile_id)} ↔ ${partyLabel(
+                            conv.partner_profile_id,
+                          )}`}
                     </p>
                   </Link>
                 );
@@ -165,7 +251,13 @@ export default async function MessagesPage({
             {active ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 px-5 py-3">
-                  <p className="font-semibold">{threadTitle(active)}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold">{threadTitle(active)}</p>
+                    <p className="truncate text-xs text-[var(--color-ink-soft)]">
+                      {partyLabel(active.brand_profile_id)} ↔{" "}
+                      {partyLabel(active.partner_profile_id)}
+                    </p>
+                  </div>
                   {/* Opens in a new tab so the thread isn't lost. */}
                   {active.event_listings && (
                     <a
@@ -197,14 +289,24 @@ export default async function MessagesPage({
                   ) : (
                     messages.map((m, i) => {
                       const mine = m.sender_profile_id === profile!.id;
+                      // Watching someone else's thread, "mine" is never true,
+                      // so the two speakers have to be told apart some other
+                      // way: the brand side goes right, the partner left, and
+                      // every message is captioned with who said it.
+                      const right = viewerIsParty
+                        ? mine
+                        : m.sender_profile_id === active.brand_profile_id;
                       return (
                         <div
                           key={m.id}
-                          className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                          className={`flex flex-col ${right ? "items-end" : "items-start"}`}
                         >
+                          <p className="mb-0.5 px-1 text-xs font-medium text-[var(--color-ink-soft)]">
+                            {partyLabel(m.sender_profile_id)}
+                          </p>
                           <div
                             className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                              mine
+                              right
                                 ? "bg-[var(--color-brand)] text-white"
                                 : "bg-[var(--color-mist)] text-[var(--color-ink)]"
                             }`}
@@ -216,7 +318,7 @@ export default async function MessagesPage({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold underline ${
-                                  mine ? "bg-white/15" : "bg-white"
+                                  right ? "bg-white/15" : "bg-white"
                                 }`}
                               >
                                 📎 {m.attachment_name ?? "Attachment"}

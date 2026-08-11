@@ -346,12 +346,13 @@ export async function adminUpdateSponsoredEvent(
 
   const { data: current } = await supabase
     .from("sponsored_events")
-    .select("status, budget_gbp, remaining_budget_gbp")
+    .select("status, budget_gbp, remaining_budget_gbp, listing_id")
     .eq("id", id)
     .maybeSingle<{
       status: string;
       budget_gbp: number | null;
       remaining_budget_gbp: number | null;
+      listing_id: string | null;
     }>();
   if (!current) return { error: "That sponsorship no longer exists." };
   if (current.status === "completed") {
@@ -400,6 +401,26 @@ export async function adminUpdateSponsoredEvent(
     .update(patch)
     .eq("id", id);
   if (error) return { error: error.message };
+
+  // Ticket price and capacity belong to the event listing, not the
+  // sponsorship — which is why they weren't editable here at all, even though
+  // the sponsorship page quotes both and derives "people this can sponsor"
+  // from the ticket price (10 Aug standup). Written through to the listing so
+  // the two views can't disagree. An event with no linked listing has nowhere
+  // to put them, and the form hides the fields in that case.
+  if (current.listing_id) {
+    const ticketPrice = numOrNull(formData.get("ticket_price_gbp"));
+    const capacity = numOrNull(formData.get("capacity"));
+    const { error: listingError } = await supabase
+      .from("event_listings")
+      .update({
+        ticket_price_gbp: ticketPrice,
+        capacity: capacity == null ? null : Math.round(capacity),
+      })
+      .eq("id", current.listing_id);
+    if (listingError) return { error: listingError.message };
+    revalidatePath(`/dashboard/events/${current.listing_id}`);
+  }
 
   revalidatePath(`/dashboard/admin/events/sponsored/${id}`);
   revalidatePath(`/dashboard/sponsored/${id}`);

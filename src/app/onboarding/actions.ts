@@ -49,40 +49,37 @@ function phoneKey(value: string | null | undefined) {
   return (value ?? "").replace(/\D/g, "").slice(-10);
 }
 
-/** The number this account already has stored, in whichever shape its table keeps it. */
-async function storedPhone(
-  table: "audience_members" | "artists" | "event_organisers" | "brands",
-  userId: string,
-): Promise<string | null> {
+/**
+ * The number this audience account already has stored. Audience members keep
+ * the dialling code in its own column, so it's reassembled here before being
+ * compared.
+ */
+async function storedPhone(userId: string): Promise<string | null> {
   const supabase = await createClient();
-  if (table === "audience_members") {
-    const { data } = await supabase
-      .from(table)
-      .select("phone, phone_country_code")
-      .eq("profile_id", userId)
-      .maybeSingle<{ phone: string | null; phone_country_code: string | null }>();
-    if (!data?.phone) return null;
-    return `${data.phone_country_code ?? ""}${data.phone}`;
-  }
-
-  const column = table === "brands" ? "manager_phone" : "contact_phone";
   const { data } = await supabase
-    .from(table)
-    .select(column)
+    .from("audience_members")
+    .select("phone, phone_country_code")
     .eq("profile_id", userId)
-    .maybeSingle<Record<string, string | null>>();
-  return data?.[column] ?? null;
+    .maybeSingle<{ phone: string | null; phone_country_code: string | null }>();
+  if (!data?.phone) return null;
+  return `${data.phone_country_code ?? ""}${data.phone}`;
 }
 
 /**
- * Rejects a number already registered against a different account.
+ * Rejects a number already registered against another *audience* account.
  *
- * A phone number is the platform's main defence against duplicate and
- * throwaway accounts, so uniqueness spans all four role tables, not just the
- * one being saved (3 Aug standup). The check runs through the `phone_in_use`
- * security-definer function because a normal user can't read anyone else's
- * profile row — it answers "is this taken?" without revealing whose it is.
- * Unique indexes in 0021 are the backstop against two concurrent saves.
+ * The rule exists to stop one person opening several audience accounts and
+ * entering the same reward draw twice. 0021 enforced it across all four role
+ * tables, which caught far more than that: an artist who also wanted to attend
+ * events as an audience member couldn't register, and an agency running two
+ * brand accounts from one desk phone was blocked outright. Narrowed to
+ * audience accounts only, so one person can hold several roles (10 Aug
+ * standup) — matched by 0023 in the database.
+ *
+ * The check runs through the `phone_in_use` security-definer function because
+ * a normal user can't read anyone else's profile row — it answers "is this
+ * taken?" without revealing whose it is. The unique index on
+ * `audience_members` is the backstop against two concurrent saves.
  *
  * Only an actual *change* of number is checked. Enforcing this on every save
  * would permanently trap anyone who already shared a number with another
@@ -94,11 +91,10 @@ async function storedPhone(
 async function phoneTaken(
   value: string | null,
   userId: string,
-  table: "audience_members" | "artists" | "event_organisers" | "brands",
 ): Promise<string | null> {
   if (!value) return null;
 
-  const current = await storedPhone(table, userId);
+  const current = await storedPhone(userId);
   if (current && phoneKey(current) === phoneKey(value)) return null;
 
   const supabase = await createClient();
@@ -110,7 +106,7 @@ async function phoneTaken(
   // still catches a genuine duplicate.
   if (error) return null;
   return data === true
-    ? "That phone number is already registered to another account. Each account needs its own number."
+    ? "That phone number is already registered to another audience account. Each audience member needs their own number."
     : null;
 }
 
@@ -271,12 +267,9 @@ export async function saveBrand(
   );
   if (phoneError) return { error: phoneError };
 
-  const takenError = await phoneTaken(
-    str(formData.get("manager_phone")),
-    userId,
-    "brands",
-  );
-  if (takenError) return { error: takenError };
+  // No uniqueness check here on purpose — an agency legitimately runs several
+  // brand accounts from one number, and the same person may hold more than one
+  // role (10 Aug standup). Only audience accounts are kept unique.
 
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
@@ -349,12 +342,8 @@ export async function saveArtist(
   );
   if (phoneError) return { error: phoneError };
 
-  const takenError = await phoneTaken(
-    str(formData.get("contact_phone")),
-    userId,
-    "artists",
-  );
-  if (takenError) return { error: takenError };
+  // See saveBrand: uniqueness applies to audience accounts only, so that one
+  // person can be both an artist and an audience member.
 
   const bioError = tooLong(formData.get("bio"), "Your bio");
   if (bioError) return { error: bioError };
@@ -428,12 +417,7 @@ export async function saveEvent(
   );
   if (phoneError) return { error: phoneError };
 
-  const takenError = await phoneTaken(
-    str(formData.get("contact_phone")),
-    userId,
-    "event_organisers",
-  );
-  if (takenError) return { error: takenError };
+  // See saveBrand: uniqueness applies to audience accounts only.
 
   const descError = tooLong(formData.get("description"), "Your description");
   if (descError) return { error: descError };
@@ -525,11 +509,7 @@ export async function saveAudience(
 
   const countryCode = str(formData.get("phone_country_code")) ?? "+44";
   const phone = str(formData.get("phone"));
-  const takenError = await phoneTaken(
-    `${countryCode}${phone ?? ""}`,
-    userId,
-    "audience_members",
-  );
+  const takenError = await phoneTaken(`${countryCode}${phone ?? ""}`, userId);
   if (takenError) return reject(takenError);
 
   // Only kept when they actually chose to self-describe — otherwise a stale

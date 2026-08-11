@@ -452,6 +452,21 @@ export default async function SponsoredEventPage({
                 Contact Live·En·Synergy
               </button>
             </form>
+            {/* New tab, with the reference already filled in — following the
+                enquiry form used to lose which sponsorship you were on, and
+                you'd have to remember the number (10 Aug standup). */}
+            <a
+              href={`/contact?ref=${encodeURIComponent(
+                event.reference,
+              )}&subject=${encodeURIComponent(
+                `Sponsorship ${event.reference} — ${event.name}`,
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost"
+            >
+              Raise an enquiry ↗
+            </a>
             {event.status === "confirmed" && (
               <form action={markCompleted}>
                 <input type="hidden" name="id" value={event.id} />
@@ -505,9 +520,11 @@ export default async function SponsoredEventPage({
             Participants ({participations.length})
           </h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Run selection and verify attendance. Paying the reward out is
-            handled by the Live·En·Synergy team once attendance is verified —
-            get in touch if a payout needs chasing.
+            Verify attendance here. Who gets a reward is drawn at random by the
+            Live·En·Synergy team once the participation deadline passes — it
+            isn&apos;t picked by hand on either side — and the team pays the
+            reward out after attendance is verified. Get in touch if a draw or a
+            payout needs chasing.
           </p>
 
           {participations.length === 0 ? (
@@ -538,15 +555,10 @@ export default async function SponsoredEventPage({
                         )}
                     </div>
                   </div>
+                  {/* No Select / Reject: the draw is random and run by the
+                      team (10 Aug standup). Verification stays with whoever is
+                      actually at the venue. */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {!p.selected && p.status !== "rejected" && (
-                      <ParticipationBtn
-                        eventId={event.id}
-                        id={p.id}
-                        op="select"
-                        label="Select"
-                      />
-                    )}
                     {/* Only before verification — otherwise a released reward
                         could be regressed back to "attendance verified". */}
                     {p.selected &&
@@ -564,14 +576,10 @@ export default async function SponsoredEventPage({
                         Awaiting reward payout by the team
                       </span>
                     )}
-                    {p.status !== "rejected" && !p.selected && (
-                      <ParticipationBtn
-                        eventId={event.id}
-                        id={p.id}
-                        op="reject"
-                        label="Reject"
-                        danger
-                      />
+                    {!p.selected && p.status !== "rejected" && (
+                      <span className="text-xs text-[var(--color-ink-soft)]">
+                        Awaiting the random draw
+                      </span>
                     )}
                   </div>
                 </div>
@@ -645,23 +653,18 @@ function ParticipationBtn({
   id,
   op,
   label,
-  danger,
 }: {
   eventId: string;
   id: string;
   op: string;
   label: string;
-  danger?: boolean;
 }) {
   return (
     <form action={updateParticipation}>
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="op" value={op} />
-      <button
-        type="submit"
-        className={`btn btn-ghost text-sm ${danger ? "text-[var(--color-accent)]" : ""}`}
-      >
+      <button type="submit" className="btn btn-ghost text-sm">
         {label}
       </button>
     </form>

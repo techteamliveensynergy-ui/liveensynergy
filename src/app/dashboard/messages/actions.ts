@@ -112,6 +112,44 @@ export async function sendMessage(
   return {};
 }
 
+/**
+ * Admin-initiated chat with an artist, organiser or sponsor.
+ *
+ * The admin console could only ever reply to a thread somebody else had
+ * started, so there was no way to open a conversation with a user who hadn't
+ * written in first (10 Aug standup). This reuses the support-thread shape, so
+ * the user finds it under "With Live·En·Synergy team" exactly where they'd
+ * expect a message from us — no new inbox, no new notification plumbing.
+ */
+export async function startAdminThread(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/sign-in");
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string }>();
+  if (me?.role !== "admin") redirect("/dashboard/messages");
+
+  const recipientId = String(formData.get("profile_id") ?? "").trim();
+  const subject = String(formData.get("subject") ?? "").trim() || null;
+  if (!recipientId) redirect("/dashboard/messages?tab=support");
+
+  const conversationId = await getOrCreateSupportConversation({
+    userProfileId: recipientId,
+    subject,
+    adminProfileId: user.id,
+  });
+  if (!conversationId) redirect("/dashboard/messages?tab=support");
+
+  revalidatePath("/dashboard/messages");
+  redirect(`/dashboard/messages?c=${conversationId}&notice=admin-thread`);
+}
+
 /** Opens (or reuses) the user's thread with the Live·En·Synergy team. */
 export async function startSupportThread() {
   const supabase = await createClient();

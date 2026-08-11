@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
+import { normaliseUrl } from "@/lib/urls";
 import {
   computePlatformFee,
   MIN_SPONSORSHIP_BUDGET_GBP,
@@ -56,6 +57,15 @@ function payload(formData: FormData) {
     reward_rules: str(formData.get("reward_rules")),
     expected_outcomes: str(formData.get("expected_outcomes")),
     additional_info: str(formData.get("additional_info")),
+    // The sponsor's own suggestion for what to sponsor (10 Aug standup). The
+    // link is normalised here rather than trusted — the same rule the profile
+    // link fields use, so "eventbrite.co.uk/e/123" is accepted and stored as a
+    // full https:// URL.
+    suggested_event_note: str(formData.get("suggested_event_note")),
+    suggested_event_url: normaliseUrl(
+      formData.get("suggested_event_url"),
+      "The suggested event link",
+    ).url,
     manager_name: str(formData.get("manager_name")),
     manager_email: str(formData.get("manager_email")),
     manager_phone: str(formData.get("manager_phone")),
@@ -66,8 +76,18 @@ function payload(formData: FormData) {
  * Campaign manager details are mandatory — the team has 48 hours to reach the
  * sponsor after a match, and can't do that without a way to contact them.
  */
-function validate(p: ReturnType<typeof payload>): string | null {
+function validate(
+  p: ReturnType<typeof payload>,
+  formData: FormData,
+): string | null {
   if (!p.description) return "Campaign description is required.";
+  // A link that couldn't be parsed comes back null, which would otherwise be
+  // indistinguishable from an empty field and silently drop what they typed.
+  const link = normaliseUrl(
+    formData.get("suggested_event_url"),
+    "The suggested event link",
+  );
+  if (link.error) return link.error;
   if (p.budget_gbp == null) return "Sponsorship budget is required.";
   // Derived from the fee itself rather than a hard-coded floor, so this guard
   // follows automatically if the pricing model ever changes.
@@ -86,7 +106,7 @@ export async function createCampaign(
 ): Promise<CampaignState> {
   const { supabase, brandId, brand } = await requireBrand();
   const p = payload(formData);
-  const invalid = validate(p);
+  const invalid = validate(p, formData);
   if (invalid) return { error: invalid };
 
   // Mirrors the gate on /dashboard/campaigns/new — the team can't action a
@@ -142,7 +162,7 @@ export async function updateCampaign(
   const id = str(formData.get("id"));
   if (!id) return { error: "Missing campaign id." };
   const p = payload(formData);
-  const invalid = validate(p);
+  const invalid = validate(p, formData);
   if (invalid) return { error: invalid };
 
   const image = await uploadImage(formData.get("image"), "campaign");

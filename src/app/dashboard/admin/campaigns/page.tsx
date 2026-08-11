@@ -21,6 +21,8 @@ interface Row {
   preferred_location: string | null;
   preferred_timeline: string | null;
   reward_rules: string | null;
+  suggested_event_note: string | null;
+  suggested_event_url: string | null;
   status: string;
   created_at: string;
   matched_listing_id: string | null;
@@ -198,6 +200,29 @@ export default async function AdminCampaignsPage({
                       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                         <span className="font-semibold">Reward:</span>{" "}
                         {c.reward_rules}
+                      </p>
+                    )}
+                    {/* The sponsor already has something in mind — worth
+                        seeing before picking listings to suggest back. */}
+                    {(c.suggested_event_note || c.suggested_event_url) && (
+                      <p className="mt-2 rounded-lg bg-[var(--color-gold)]/40 px-3 py-2 text-xs text-[var(--color-ink)]">
+                        <span className="font-semibold">
+                          Sponsor suggests:
+                        </span>{" "}
+                        {c.suggested_event_note}
+                        {c.suggested_event_url && (
+                          <>
+                            {" "}
+                            <a
+                              href={c.suggested_event_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-semibold text-[var(--color-brand-dark)] underline"
+                            >
+                              Open link ↗
+                            </a>
+                          </>
+                        )}
                       </p>
                     )}
                   </div>

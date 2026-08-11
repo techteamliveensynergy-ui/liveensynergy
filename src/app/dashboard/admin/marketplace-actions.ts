@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { netSponsorshipBudget, roundMoney } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
+import { getOrCreateConversation } from "@/lib/data/messaging";
 
 export interface MarketplaceState {
   error?: string;
@@ -71,7 +72,7 @@ export async function matchCampaign(
   _prev: MarketplaceState,
   formData: FormData,
 ): Promise<MarketplaceState> {
-  const { supabase } = await requireAdmin();
+  const { supabase, userId } = await requireAdmin();
   const campaignId = str(formData.get("campaign_id"));
   const listingIds = formData
     .getAll("listing_id")
@@ -85,7 +86,9 @@ export async function matchCampaign(
   const [{ data: campaign }, { data: listingRows }] = await Promise.all([
     supabase
       .from("campaigns")
-      .select("id, reference, brand_id, budget_gbp, reward_rules, brands(profile_id)")
+      .select(
+        "id, reference, brand_id, budget_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
+      )
       .eq("id", campaignId)
       .maybeSingle<{
         id: string;
@@ -93,7 +96,9 @@ export async function matchCampaign(
         brand_id: string;
         budget_gbp: number | null;
         reward_rules: string | null;
-        brands: { profile_id: string } | null;
+        suggested_event_note: string | null;
+        suggested_event_url: string | null;
+        brands: { profile_id: string; brand_name: string } | null;
       }>(),
     supabase
       .from("event_listings")
@@ -137,7 +142,7 @@ export async function matchCampaign(
         artist_agreed: false,
       })),
     )
-    .select("id, listing_id");
+    .select("id, listing_id, reference");
 
   if (error) return { error: error.message };
 
@@ -160,11 +165,14 @@ export async function matchCampaign(
 
   const budgetLabel =
     budget != null ? `£${Number(budget).toLocaleString("en-GB")}` : undefined;
-  const eventIdByListing = new Map(
-    ((created ?? []) as { id: string; listing_id: string }[]).map((e) => [
-      e.listing_id,
-      e.id,
-    ]),
+  const createdByListing = new Map(
+    (
+      (created ?? []) as {
+        id: string;
+        listing_id: string;
+        reference: string;
+      }[]
+    ).map((e) => [e.listing_id, e]),
   );
 
   if (campaign.brands?.profile_id) {
@@ -183,18 +191,65 @@ export async function matchCampaign(
   }
 
   for (const listing of listings) {
-    const eventId = eventIdByListing.get(listing.id);
+    const proposal = createdByListing.get(listing.id);
     await notify({
       eventKey: "offer.proposal_received",
       recipientProfileId: listing.owner_profile_id,
-      link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
-      variables: { event_name: listing.name, budget: budgetLabel },
+      link: proposal
+        ? `/dashboard/sponsored/${proposal.id}`
+        : "/dashboard/sponsored",
+      variables: {
+        event_name: listing.name,
+        // The proposal's own reference, not the campaign's — that's the number
+        // the artist will quote back at us.
+        reference: proposal?.reference ?? campaign.reference,
+        budget: budgetLabel ?? "to be agreed",
+      },
     });
+  }
+
+  // Relay the sponsor's suggested event into the brand↔artist chat, if they
+  // gave one (10 Aug standup). Posted as the admin, under their own name, not
+  // faked as the brand — the team is genuinely the one passing it on, and the
+  // "messages: admin send" policy in 0023 keeps it that way.
+  if (campaign.brands?.profile_id && campaign.suggested_event_note) {
+    const suggestion = [
+      `${campaign.brands.brand_name} has an event in mind for campaign ${campaign.reference}:`,
+      "",
+      campaign.suggested_event_note,
+      campaign.suggested_event_url ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    for (const listing of listings) {
+      const conversationId = await getOrCreateConversation({
+        brandProfileId: campaign.brands.profile_id,
+        partnerProfileId: listing.owner_profile_id,
+        listingId: listing.id,
+      });
+      if (!conversationId) continue;
+
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        sender_profile_id: userId,
+        body: suggestion,
+      });
+      await notify({
+        eventKey: "message.received",
+        recipientProfileId: listing.owner_profile_id,
+        link: `/dashboard/messages?c=${conversationId}`,
+        variables: {
+          sender_name: "The Live·En·Synergy team",
+          event_name: listing.name,
+        },
+      });
+    }
   }
 
   revalidatePath("/dashboard/admin/campaigns");
 
-  const firstId = eventIdByListing.get(listings[0].id);
+  const firstId = createdByListing.get(listings[0].id)?.id;
   redirect(
     listings.length === 1 && firstId
       ? `/dashboard/admin/events/sponsored/${firstId}`
@@ -341,6 +396,102 @@ export async function adminUpdateParticipation(formData: FormData) {
   }
 
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+// --- Random selection draw --------------------------------------------------
+
+export interface DrawState {
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Fisher–Yates. Every ordering equally likely, which is the whole point — a
+ * `sort(() => Math.random() - 0.5)` is neither uniform nor stable and would
+ * quietly bias the draw towards whoever registered first.
+ */
+function shuffle<T>(items: T[]): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * Draws the reward places at random from everyone still waiting.
+ *
+ * Selection used to be a Select button next to each name on the brand's and
+ * artist's own page. It isn't any more (10 Aug standup): who gets a
+ * sponsor-funded reward is decided by a random draw the team runs, so neither
+ * party can favour their own people, and the audience-facing promise that
+ * "selection is carried out within a week of the deadline" means something.
+ *
+ * Anyone not drawn is left alone rather than rejected — places free up when
+ * someone doesn't upload a ticket in time, and the draw can simply be run again
+ * for the remainder.
+ */
+export async function runSelectionDraw(
+  _prev: DrawState,
+  formData: FormData,
+): Promise<DrawState> {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const requested = num(formData.get("places"));
+  if (!eventId) return { error: "Missing event." };
+  if (requested == null || requested < 1) {
+    return { error: "Enter how many places the draw is for." };
+  }
+
+  const { data: pool } = await supabase
+    .from("participations")
+    .select("id, audience_profile_id")
+    .eq("sponsored_event_id", eventId)
+    .eq("selected", false)
+    .eq("status", "registered");
+
+  const waiting = (pool ?? []) as {
+    id: string;
+    audience_profile_id: string;
+  }[];
+  if (waiting.length === 0) {
+    return { error: "Nobody is waiting in the draw for this event." };
+  }
+
+  const drawn = shuffle(waiting).slice(0, Math.floor(requested));
+
+  const { error } = await supabase
+    .from("participations")
+    .update({ selected: true, selected_at: new Date().toISOString() })
+    .in(
+      "id",
+      drawn.map((p) => p.id),
+    );
+  if (error) return { error: error.message };
+
+  const { data: event } = await supabase
+    .from("sponsored_events")
+    .select("name")
+    .eq("id", eventId)
+    .maybeSingle<{ name: string }>();
+
+  for (const p of drawn) {
+    await notify({
+      eventKey: "participation.selected",
+      recipientProfileId: p.audience_profile_id,
+      link: "/dashboard/participations",
+      variables: { event_name: event?.name ?? "your event" },
+    });
+  }
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  const left = waiting.length - drawn.length;
+  return {
+    message: `Drew ${drawn.length} of ${waiting.length} waiting${
+      left > 0 ? ` — ${left} still in the pool for a later round` : ""
+    }.`,
+  };
 }
 
 /** A year in milliseconds — kept as a constant so the suspension length reads clearly at the call site. */

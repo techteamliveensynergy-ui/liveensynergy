@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PublicProfile } from "@/lib/public-profiles";
 import { toEmbed, videoList } from "@/lib/video-embeds";
+import { displayUrl } from "@/lib/urls";
 
 const SOCIAL_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -157,7 +158,9 @@ export function PublicProfileView({
                       ▶️
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-brand-dark)]">
-                      {raw}
+                      {/* The scheme is noise on a public profile — the link
+                          works either way (10 Aug standup). */}
+                      {displayUrl(raw)}
                     </span>
                   </a>
                 );

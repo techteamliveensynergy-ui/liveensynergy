@@ -172,6 +172,32 @@ export default async function DiscoverCampaignsPage({
                   </div>
                 )}
 
+                {/* The sponsor already has an event in mind. Worth knowing
+                    before pitching your own (10 Aug standup). */}
+                {(c.suggested_event_note || c.suggested_event_url) && (
+                  <div className="mt-3 rounded-xl bg-[var(--color-gold)]/40 px-3 py-2 text-sm">
+                    <span className="font-semibold text-[var(--color-ink)]">
+                      They&apos;ve suggested:
+                    </span>{" "}
+                    <span className="text-[var(--color-ink-soft)]">
+                      {c.suggested_event_note}
+                    </span>
+                    {c.suggested_event_url && (
+                      <>
+                        {" "}
+                        <a
+                          href={c.suggested_event_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-[var(--color-brand-dark)] underline"
+                        >
+                          Open link ↗
+                        </a>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                   <dt className="text-[var(--color-ink-soft)]">Location</dt>
                   <dd className="text-right">{c.preferred_location ?? "Flexible"}</dd>

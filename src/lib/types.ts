@@ -182,6 +182,9 @@ export interface Campaign {
   reward_rules: string | null;
   expected_outcomes: string | null;
   additional_info: string | null;
+  /** An external event the sponsor would like to sponsor (0023). */
+  suggested_event_note: string | null;
+  suggested_event_url: string | null;
   image_url: string | null;
   manager_name: string | null;
   manager_email: string | null;
@@ -207,6 +210,8 @@ export interface OpenCampaign {
   preferred_location: string | null;
   preferred_timeline: string | null;
   reward_rules: string | null;
+  suggested_event_note: string | null;
+  suggested_event_url: string | null;
   image_url: string | null;
   created_at: string;
   brand_name: string;

@@ -63,6 +63,15 @@ export async function provideConsent(formData: FormData) {
   revalidatePath("/dashboard/participations");
 }
 
+/**
+ * Withdraws from an event — but only up to the point of being selected.
+ *
+ * Once someone is in the draw the sponsor has committed part of the budget to
+ * them and the organiser is counting on the headcount, so walking away is a
+ * conversation with the team rather than a button (10 Aug standup). The
+ * `.is("selected", false)` on the delete is the actual rule; hiding the button
+ * is only the courtesy.
+ */
 export async function withdrawParticipation(formData: FormData) {
   const { supabase, userId } = await requireUser();
   const id = str(formData.get("id"));
@@ -71,6 +80,7 @@ export async function withdrawParticipation(formData: FormData) {
     .from("participations")
     .delete()
     .eq("id", id)
-    .eq("audience_profile_id", userId);
+    .eq("audience_profile_id", userId)
+    .is("selected", false);
   revalidatePath("/dashboard/participations");
 }

@@ -13,6 +13,7 @@ import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
 import { EventEditForm } from "./EventEditForm";
+import { SelectionDrawForm } from "./SelectionDrawForm";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
@@ -46,7 +47,7 @@ export default async function AdminSponsoredDetailPage({
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp)",
+      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp, capacity)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -72,7 +73,11 @@ export default async function AdminSponsoredDetailPage({
       attendance_qr_token: string;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: { reference: string; description: string } | null;
-      event_listings: { name: string; ticket_price_gbp: number | null } | null;
+      event_listings: {
+        name: string;
+        ticket_price_gbp: number | null;
+        capacity: number | null;
+      } | null;
     }>();
   if (!event) notFound();
 
@@ -122,6 +127,20 @@ export default async function AdminSponsoredDetailPage({
   const fee = event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
   const pct = (n: number) => (registered ? Math.round((n / registered) * 100) : 0);
 
+  // The random draw (10 Aug standup). "Waiting" is everyone still registered
+  // and unselected; the suggested number of places is what the money actually
+  // stretches to at the linked listing's ticket price.
+  const waiting = participants.filter(
+    (p) => !p.selected && p.status === "registered",
+  ).length;
+  const ticketPrice = event.event_listings?.ticket_price_gbp ?? null;
+  const availableForRewards =
+    event.remaining_budget_gbp ?? netSponsorshipBudget(event.budget_gbp);
+  const suggestedPlaces =
+    ticketPrice != null && Number(ticketPrice) > 0 && availableForRewards != null
+      ? Math.max(0, Math.floor(Number(availableForRewards) / Number(ticketPrice)))
+      : null;
+
   return (
     <div className="space-y-6">
       <Link
@@ -145,6 +164,20 @@ export default async function AdminSponsoredDetailPage({
             {event.event_date ? ` · ${formatEventDateTime({ date: event.event_date, time: event.start_time, timeZone: event.timezone })}` : ""}
             {event.location ? ` · ${event.location}` : ""}
           </p>
+          {/* Opens in a new tab with the reference filled in, so raising an
+              enquiry doesn't cost you the page you were reading. */}
+          <a
+            href={`/contact?ref=${encodeURIComponent(
+              event.reference,
+            )}&subject=${encodeURIComponent(
+              `Sponsorship ${event.reference} — ${event.name}`,
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"
+          >
+            Raise an enquiry about this ↗
+          </a>
         </div>
         <StatusBadge status={event.status} />
       </div>
@@ -295,6 +328,21 @@ export default async function AdminSponsoredDetailPage({
                 ? formatDate(event.participation_deadline)
                 : "—",
             ],
+            // Both come off the listing. They were missing here entirely, so
+            // there was no way to see — let alone fix — a wrong ticket price
+            // (10 Aug standup).
+            [
+              "Ticket price",
+              event.event_listings?.ticket_price_gbp != null
+                ? `£${Number(event.event_listings.ticket_price_gbp).toLocaleString("en-GB")}`
+                : "—",
+            ],
+            [
+              "Capacity",
+              event.event_listings?.capacity != null
+                ? Number(event.event_listings.capacity).toLocaleString("en-GB")
+                : "—",
+            ],
           ].map(([k, v]) => (
             <div key={k as string} className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
               <dt className="text-xs text-[var(--color-ink-soft)]">{k}</dt>
@@ -345,6 +393,9 @@ export default async function AdminSponsoredDetailPage({
                 reward_rules: event.reward_rules,
                 branding_guidelines: event.branding_guidelines,
                 attendance_method: event.attendance_method,
+                ticket_price_gbp: event.event_listings?.ticket_price_gbp ?? null,
+                capacity: event.event_listings?.capacity ?? null,
+                listing_name: event.event_listings?.name ?? null,
               }}
             />
           </>
@@ -390,9 +441,26 @@ export default async function AdminSponsoredDetailPage({
           Participants ({participants.length})
         </h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Admin can run the same selection, verification and reward steps as the
-          organiser — use this to unblock a stalled event.
+          Selection is a random draw run here — the brand and the artist can no
+          longer pick participants themselves (10 Aug standup). Verification,
+          no-shows and reward release stay available per person below.
         </p>
+
+        {/* The draw itself. Hidden once there's nobody left to draw, so a
+            finished event doesn't show a dead control. */}
+        {waiting > 0 && (
+          <div className="mt-4 rounded-xl border border-black/10 bg-[var(--color-mist)] p-4">
+            <h3 className="font-semibold text-[var(--color-ink)]">
+              Random selection draw
+            </h3>
+            <SelectionDrawForm
+              eventId={event.id}
+              waiting={waiting}
+              suggestedPlaces={suggestedPlaces}
+              ticketPriceKnown={ticketPrice != null && Number(ticketPrice) > 0}
+            />
+          </div>
+        )}
 
         {participants.length === 0 ? (
           <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
@@ -450,8 +518,15 @@ export default async function AdminSponsoredDetailPage({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Manual selection survives as an admin override — for
+                      fixing a draw, not for running one. */}
                   {!p.selected && p.status !== "rejected" && (
-                    <AdminBtn eventId={event.id} id={p.id} op="select" label="Select" />
+                    <AdminBtn
+                      eventId={event.id}
+                      id={p.id}
+                      op="select"
+                      label="Select by hand"
+                    />
                   )}
                   {p.selected &&
                     (p.status === "registered" || p.status === "ticket_uploaded") && (

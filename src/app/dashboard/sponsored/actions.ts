@@ -178,7 +178,7 @@ export async function createSponsoredEvent(
       brand_agreed: initiatedByBrand,
       artist_agreed: !initiatedByBrand,
     })
-    .select("id")
+    .select("id, reference")
     .single();
 
   if (error) return { error: error.message };
@@ -196,8 +196,14 @@ export async function createSponsoredEvent(
       link: `/dashboard/sponsored/${created.id}`,
       variables: {
         event_name: name,
+        // Templates quote the reference (0023). Tokens that don't resolve are
+        // left visible as "{{budget}}", so every one gets a real fallback
+        // rather than being left undefined.
+        reference: created.reference,
         budget:
-          budget != null ? `£${budget.toLocaleString("en-GB")}` : undefined,
+          budget != null
+            ? `£${budget.toLocaleString("en-GB")}`
+            : "to be agreed",
       },
     });
   }
@@ -236,7 +242,13 @@ export async function toggleAgreement(formData: FormData) {
   const result = (data ?? {}) as {
     outcome?: string;
     reason?: string | null;
-    withdrawn?: { id: string; name: string; artist_profile_id: string | null }[];
+    withdrawn?: {
+      id: string;
+      name: string;
+      /** Added by 0023; absent until that migration is applied. */
+      reference?: string | null;
+      artist_profile_id: string | null;
+    }[];
   };
 
   // Refused — tell them why rather than silently doing nothing.
@@ -252,10 +264,13 @@ export async function toggleAgreement(formData: FormData) {
 
   const { data: full } = await supabase
     .from("sponsored_events")
-    .select("name, budget_gbp, artist_profile_id, brands(profile_id, brand_name)")
+    .select(
+      "name, reference, budget_gbp, artist_profile_id, brands(profile_id, brand_name)",
+    )
     .eq("id", id)
     .maybeSingle<{
       name: string;
+      reference: string;
       budget_gbp: number | null;
       artist_profile_id: string | null;
       brands: { profile_id: string; brand_name: string } | null;
@@ -263,10 +278,11 @@ export async function toggleAgreement(formData: FormData) {
 
   if (full) {
     const brandProfileId = full.brands?.profile_id ?? null;
+    // Fallbacks matter: an unresolved token renders as literal "{{budget}}".
     const budget =
       full.budget_gbp != null
         ? `£${Number(full.budget_gbp).toLocaleString("en-GB")}`
-        : undefined;
+        : "to be agreed";
 
     if (result.outcome === "confirmed") {
       for (const pid of [brandProfileId, full.artist_profile_id]) {
@@ -275,19 +291,29 @@ export async function toggleAgreement(formData: FormData) {
             eventKey: "sponsorship.confirmed",
             recipientProfileId: pid,
             link: `/dashboard/sponsored/${id}`,
-            variables: { event_name: full.name, budget },
+            variables: {
+              event_name: full.name,
+              reference: full.reference,
+              budget,
+            },
           });
         }
       }
 
-      // Whoever else was in the running for this campaign.
+      // Whoever else was in the running for this campaign. Their references
+      // come back from the RPC (0023) rather than being looked up here — the
+      // withdrawn proposals belong to *other* artists, so under RLS this
+      // caller reads nothing for them.
       for (const loser of result.withdrawn ?? []) {
         if (!loser.artist_profile_id) continue;
         await notify({
           eventKey: "sponsorship.withdrawn",
           recipientProfileId: loser.artist_profile_id,
           link: `/dashboard/sponsored/${loser.id}`,
-          variables: { event_name: loser.name },
+          variables: {
+            event_name: loser.name,
+            reference: loser.reference ?? "—",
+          },
         });
       }
     } else if (
@@ -299,7 +325,7 @@ export async function toggleAgreement(formData: FormData) {
         eventKey: "sponsorship.artist_agreed",
         recipientProfileId: brandProfileId,
         link: `/dashboard/sponsored/${id}`,
-        variables: { event_name: full.name },
+        variables: { event_name: full.name, reference: full.reference },
       });
     }
   }
@@ -385,12 +411,14 @@ export async function markCompleted(formData: FormData) {
 // --- Organiser-side participant management --------------------------------
 
 /**
- * Advances a participant through the selection / verification flow.
+ * Verifies a participant's attendance.
  *
- * Releasing the reward is deliberately absent: paying out is an admin-only
- * action (3 Aug standup), handled by `adminUpdateParticipation`. A posted
- * `op=release` is ignored here rather than trusted, since the control being
- * hidden in the UI isn't authorisation.
+ * Two things are deliberately absent. Releasing the reward is admin-only
+ * (3 Aug standup). And so, now, is *selection*: who gets a reward is settled by
+ * a random draw the team runs, not by a brand or an artist picking names
+ * (10 Aug standup) — so `select` and `reject` have no branch here at all.
+ * Posting either does nothing, because the control being hidden in the UI isn't
+ * authorisation.
  */
 export async function updateParticipation(formData: FormData) {
   const { supabase } = await requireUser();
@@ -401,14 +429,6 @@ export async function updateParticipation(formData: FormData) {
 
   const patch: Record<string, unknown> = {};
   switch (op) {
-    case "select":
-      patch.selected = true;
-      patch.selected_at = new Date().toISOString();
-      break;
-    case "reject":
-      patch.selected = false;
-      patch.status = "rejected";
-      break;
     case "verify":
       patch.status = "attendance_verified";
       patch.attendance_verified_at = new Date().toISOString();
@@ -421,8 +441,6 @@ export async function updateParticipation(formData: FormData) {
 
   // Tell the participant what just happened to them.
   const NOTIFY_BY_OP: Record<string, string> = {
-    select: "participation.selected",
-    reject: "participation.rejected",
     verify: "participation.verified",
   };
   const eventKey = NOTIFY_BY_OP[op];

@@ -58,6 +58,25 @@ export function normaliseUrl(
 }
 
 /**
+ * The address as a person would write it: no scheme, no trailing slash on a
+ * bare domain, no "www." stripped (that part is theirs to keep).
+ *
+ * Stored links are canonical — `https://www.example.com/` — which is right for
+ * a database and wrong for a form: the field told you not to type `https://`
+ * and then filled itself with `https://` the moment you looked away
+ * (10 Aug standup). Display drops the scheme; `normaliseUrl` puts it back on
+ * the way in, so nothing about what gets saved changes.
+ */
+export function displayUrl(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const withoutScheme = raw.replace(/^https?:\/\//i, "");
+  // Only a bare host — "example.com/" — loses its trailing slash; a real path
+  // keeps whatever it had.
+  return withoutScheme.replace(/^([^/?#]+)\/$/, "$1");
+}
+
+/**
  * Normalises several fields at once, returning the first error so the form can
  * report it. Keys map to the patch applied to the row.
  */

@@ -24,6 +24,11 @@ export interface EventEditDefaults {
   reward_rules: string | null;
   branding_guidelines: string | null;
   attendance_method: string | null;
+  /** Both live on the linked event listing, not the sponsorship itself. */
+  ticket_price_gbp: number | null;
+  capacity: number | null;
+  /** Null when the sponsorship has no listing behind it. */
+  listing_name: string | null;
 }
 
 /** `datetime-local` needs `YYYY-MM-DDTHH:mm`, not a full ISO string. */
@@ -150,6 +155,45 @@ export function EventEditForm({
             }
           />
         </Field>
+
+        {/* Ticket price and capacity are the listing's, and this is the only
+            place they can be corrected once a deal is confirmed — the parties
+            can't edit a confirmed sponsorship, and the ticket price is what
+            "people this can sponsor" divides by. */}
+        {event.listing_name !== null && (
+          <>
+            <Field
+              label="Ticket price (GBP)"
+              htmlFor="edit-ticket-price"
+              hint={`Saved on the listing “${event.listing_name}”. Sets how many people the budget can sponsor.`}
+            >
+              <input
+                id="edit-ticket-price"
+                name="ticket_price_gbp"
+                type="number"
+                min={0}
+                step="0.01"
+                className="input"
+                defaultValue={event.ticket_price_gbp ?? ""}
+              />
+            </Field>
+            <Field
+              label="Capacity"
+              htmlFor="edit-capacity"
+              hint="Total seats at the venue, as listed by the artist / organiser."
+            >
+              <input
+                id="edit-capacity"
+                name="capacity"
+                type="number"
+                min={0}
+                step={1}
+                className="input"
+                defaultValue={event.capacity ?? ""}
+              />
+            </Field>
+          </>
+        )}
       </div>
 
       <Field label="Reward rules" htmlFor="edit-reward-rules">
