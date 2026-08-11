@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="80" width="1040" height="60" rx="20" fill="#fff" stroke="#50464422"/>
+    <rect x="120" y="100" width="120" height="20" rx="6" fill="#ed9a4e"/>
+    <rect x="80" y="180" width="1040" height="540" rx="24" fill="#fff" stroke="#50464422"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Brand · Full-screen onboarding</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .step-page { min-height:820px; padding:40px 64px 56px; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; border-bottom:1px dashed #50464422; }
+  .step-eyebrow { display:inline-flex; align-items:center; gap:8px; background:#fcf7f0; border:1px solid #50464414; padding:6px 14px; border-radius:999px; font-size:11.5px; color:#6f6360; font-weight:600; letter-spacing:0.08em; }
+  h1.step-h { font-family:'DM Sans'; font-weight:600; font-size:56px; line-height:1.02; letter-spacing:-0.02em; color:#2c2422; margin:14px 0 12px; }
+  .step-lede { color:#6f6360; font-size:16px; line-height:1.55; max-width:480px; margin:0 0 20px; }
+  .field label { font-size:12px; color:#6f6360; font-weight:600; display:block; margin-bottom:6px; }
+  .field input, .field textarea, .field .select { width:100%; padding:14px 16px; border:1px solid #50464426; border-radius:14px; background:#fff; font-size:15px; font-family:inherit; }
+  .field textarea { resize:none; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; padding:28px; }
+  .cta { border:none; background:#ed9a4e; color:#fff; padding:14px 26px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .ghost { border:1px solid #50464426; background:#fff; color:#504644; padding:14px 22px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .actions { display:flex; gap:12px; align-items:center; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;">
+
+  <!-- Sticky top rail -->
+  <header style="position:sticky; top:0; z-index:20; background:#fcf7f0f2; backdrop-filter:blur(8px); border-bottom:1px solid #50464414;">
+    <div style="max-width:1440px; margin:0 auto; padding:14px 32px; display:flex; align-items:center; gap:20px;">
+      <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+      <div style="height:20px; width:1px; background:#50464422;"></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:#6f6360;">
+        <span style="width:22px; height:22px; border-radius:6px; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-size:11px; font-weight:700;">B</span>
+        Brand onboarding · Northwave Coffee
+      </div>
+
+      <!-- Progress rail -->
+      <div style="flex:1; display:flex; align-items:center; gap:10px; padding:0 40px;">
+        <div style="flex:1; height:6px; background:#50464422; border-radius:999px; position:relative;">
+          <div style="width:25%; height:100%; background:#ed9a4e; border-radius:999px;"></div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <a href="#s1" style="width:26px; height:26px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700;">1</a>
+          <a href="#s2" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">2</a>
+          <a href="#s3" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">3</a>
+          <a href="#s4" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">4</a>
+        </div>
+      </div>
+
+      <a href="./02 - Onboarding.dc.html" style="font-size:13px; color:#6f6360;">Save &amp; exit ✕</a>
+    </div>
+  </header>
+
+  <!-- STEP 1 — Public profile -->
+  <section id="s1" class="step-page" style="background:linear-gradient(180deg, #fcf7f0 0%, #f4ede2 100%);">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#ed9a4e;"></span>STEP 01 · PUBLIC PROFILE</div>
+      <h1 class="step-h">Tell artists who <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#ed9a4e;">Northwave</em> is.</h1>
+      <p class="step-lede">The essentials artists see when your name pops up in their offer inbox. Takes a minute.</p>
+      <ul style="list-style:none; padding:0; margin:0 0 24px; display:flex; flex-direction:column; gap:10px; font-size:14px; color:#504644;">
+        <li>✳ Public name, description &amp; category</li>
+        <li>✳ Logo &amp; banner (both auto-cropped)</li>
+        <li>✳ One website + your key social handles</li>
+      </ul>
+      <div class="actions">
+        <button class="ghost">← Change role</button>
+        <button class="cta">Continue → Internal info</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+        <div style="width:56px; height:56px; border-radius:18px; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:26px;">N</div>
+        <div style="flex:1;">
+          <div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">Public profile · 60% complete</div>
+          <div style="margin-top:6px; height:5px; background:#50464422; border-radius:999px;"><div style="width:60%; height:100%; background:#ed9a4e; border-radius:999px;"></div></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="field"><label>Brand name*</label><input value="Northwave Coffee"></div>
+        <div class="row2">
+          <div class="field"><label>Product category*</label><div class="select">Food &amp; Beverage <span style="color:#6f6360;">▾</span></div></div>
+          <div class="field"><label>Primary market*</label><div class="select">United Kingdom <span style="color:#6f6360;">▾</span></div></div>
+        </div>
+        <div class="field"><label>Public description*</label><textarea rows="3">Independent London roaster fuelling the late shift since 2014.</textarea></div>
+        <div class="row2">
+          <div style="padding:18px; border:1px dashed #50464433; border-radius:14px; background:#fcf7f0; text-align:center; font-size:12.5px; color:#6f6360;"><div style="font-weight:600; color:#2c2422;">logo-square.png</div>512 × 512 · 84 KB · <a href="#" style="font-weight:600;">Replace</a></div>
+          <div style="padding:18px; border:1px dashed #50464433; border-radius:14px; background:#fcf7f0; text-align:center; font-size:12.5px; color:#6f6360;"><div style="font-weight:600; color:#2c2422;">Upload banner</div>1600 × 600 recommended</div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Website</label><input value="northwave.co"></div>
+          <div class="field"><label>Instagram</label><input value="@northwave.coffee"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 — Internal / matching -->
+  <section id="s2" class="step-page" style="background:#f6e09240;">
+    <div>
+      <div class="step-eyebrow" style="background:#fff;"><span style="width:6px;height:6px;border-radius:50%;background:#f6e092;"></span>STEP 02 · INTERNAL DETAILS</div>
+      <h1 class="step-h">Help our team find <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">the right room</em>.</h1>
+      <p class="step-lede">Private to you and the Live·En·Synergy team — feeds the matching engine so we can send you sharper events, not just more of them.</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px;">
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; font-size:13.5px; color:#2c2422;">Mission &amp; vision</div><div style="font-size:12px; color:#6f6360;">A sentence brands quote back to you.</div></div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; font-size:13.5px; color:#2c2422;">Audience keywords</div><div style="font-size:12px; color:#6f6360;">Who you want in the room.</div></div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; font-size:13.5px; color:#2c2422;">Brand keywords</div><div style="font-size:12px; color:#6f6360;">Words that define the feeling.</div></div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; font-size:13.5px; color:#2c2422;">Preferred locations</div><div style="font-size:12px; color:#6f6360;">City &amp; radius.</div></div>
+      </div>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Billing</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em; margin-bottom:14px;">
+        <span style="background:#edebf2; color:#8b76c2; padding:3px 10px; border-radius:999px;">🔒 PRIVATE</span>
+        <span>Shared with Live·En·Synergy team only</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="field"><label>Mission &amp; vision*</label><textarea rows="2">We fuel late-night creativity in East London — coffee that keeps the room warm and the ideas louder.</textarea></div>
+        <div class="row2">
+          <div class="field"><label>Target audience keywords*</label><input value="Urban 18–34, music, foodies, late-night"></div>
+          <div class="field"><label>Brand keywords*</label><input value="Warm, independent, unpretentious, community"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Preferred artist genres*</label><div class="select">Music · Comedy · +2 <span style="color:#6f6360;">▾</span></div></div>
+          <div class="field"><label>Preferred location*</label><input value="London, UK · 25 mi radius"></div>
+        </div>
+        <div class="field"><label>Sponsorship manager*</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <input value="Jamie Morris" placeholder="Name">
+            <input value="jamie@northwave.co" placeholder="Email">
+            <input value="+44 20 7700 9231" placeholder="Phone">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 — Billing -->
+  <section id="s3" class="step-page" style="background:#f4ede2;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#c0cf72;"></span>STEP 03 · BILLING</div>
+      <h1 class="step-h">Only pay when we <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">match</em> you.</h1>
+      <p class="step-lede">Add a card so campaigns can go live the moment we confirm an artist. £315 + VAT min, or 9% + VAT — whichever is higher.</p>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:22px;">
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; align-items:center; gap:10px; font-size:13.5px; color:#504644;">
+          <span style="color:#4f6b15;">✓</span> No charge until your first campaign is matched.
+        </div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; align-items:center; gap:10px; font-size:13.5px; color:#504644;">
+          <span style="color:#4f6b15;">✓</span> Cancel or pause any campaign before it's confirmed.
+        </div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; align-items:center; gap:10px; font-size:13.5px; color:#504644;">
+          <span style="color:#4f6b15;">✓</span> VAT-compliant invoices, exportable to your accounting system.
+        </div>
+      </div>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → You're set</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin-bottom:14px;">Payment method</div>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <span style="padding:10px 16px; border-radius:14px; background:#2c2422; color:#fff; font-size:13px; font-weight:600;">💳 Card</span>
+        <span style="padding:10px 16px; border-radius:14px; background:#fff; border:1px solid #50464426; color:#504644; font-size:13px; font-weight:600;">🏦 Direct debit</span>
+        <span style="padding:10px 16px; border-radius:14px; background:#fff; border:1px solid #50464426; color:#504644; font-size:13px; font-weight:600;">Invoice</span>
+      </div>
+      <div class="field" style="margin-bottom:14px;"><label>Card number</label><input value="•••• •••• •••• 4242"></div>
+      <div class="row2" style="margin-bottom:18px;">
+        <div class="field"><label>Expiry</label><input value="12 / 28"></div>
+        <div class="field"><label>CVC</label><input value="•••"></div>
+      </div>
+      <div style="padding:16px 18px; background:#f6e09240; border:1px solid #f6e092; border-radius:14px; font-size:13.5px; color:#504644;">
+        <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>Sample campaign budget</span><strong>£4,000.00</strong></div>
+        <div style="display:flex; justify-content:space-between; padding:4px 0; color:#6f6360;"><span>Platform fee (9%) + VAT</span><span>−£432.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0 4px; border-top:1px dashed #50464433; margin-top:6px;"><span style="font-weight:600;">Net to artist &amp; rewards</span><strong style="color:#4f6b15;">£3,568.00</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 — Done -->
+  <section id="s4" class="step-page" style="background:linear-gradient(135deg, #dee2c680, #f6e092); grid-template-columns:1fr;">
+    <div style="text-align:center; max-width:720px; margin:0 auto;">
+      <div style="display:inline-flex; align-items:center; gap:8px; background:#fff; padding:8px 18px; border-radius:999px; font-size:12px; color:#4f6b15; font-weight:600;">🎉 Northwave is live on Live·En·Synergy</div>
+      <h1 class="step-h" style="font-size:68px;">Welcome in, <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#ed9a4e;">Jamie</em>.</h1>
+      <p class="step-lede" style="margin:0 auto 28px; text-align:center;">Your brand is ready. Post your first sponsorship campaign now, or browse events looking for a sponsor tonight.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:28px;">
+        <a href="./03c - Brand · Create Campaign.dc.html" class="cta" style="text-decoration:none;">+ Create first campaign</a>
+        <a href="./03e - Brand · Available Events.dc.html" class="ghost" style="text-decoration:none;">Browse open events →</a>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; text-align:left;">
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">1 · Post a campaign</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Set budget &amp; reward rule.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">2 · We match you</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Within 5 working days.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">3 · Ship the show</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Chat, confirm, verify, report.</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+</body>
+</html>

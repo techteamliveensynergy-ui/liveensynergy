@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="80" width="1040" height="60" rx="20" fill="#fff" stroke="#50464422"/>
+    <rect x="120" y="100" width="120" height="20" rx="6" fill="#8b76c2"/>
+    <rect x="80" y="180" width="1040" height="540" rx="24" fill="#edebf2"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Artist · Full-screen onboarding</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .step-page { min-height:820px; padding:40px 64px 56px; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; border-bottom:1px dashed #50464422; }
+  .step-eyebrow { display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid #50464414; padding:6px 14px; border-radius:999px; font-size:11.5px; color:#6f6360; font-weight:600; letter-spacing:0.08em; }
+  h1.step-h { font-family:'DM Sans'; font-weight:600; font-size:56px; line-height:1.02; letter-spacing:-0.02em; color:#2c2422; margin:14px 0 12px; }
+  .step-lede { color:#6f6360; font-size:16px; line-height:1.55; max-width:480px; margin:0 0 20px; }
+  .field label { font-size:12px; color:#6f6360; font-weight:600; display:block; margin-bottom:6px; }
+  .field input, .field textarea, .field .select { width:100%; padding:14px 16px; border:1px solid #50464426; border-radius:14px; background:#fff; font-size:15px; font-family:inherit; }
+  .field textarea { resize:none; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; padding:28px; }
+  .cta { border:none; background:#8b76c2; color:#fff; padding:14px 26px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .ghost { border:1px solid #50464426; background:#fff; color:#504644; padding:14px 22px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .actions { display:flex; gap:12px; align-items:center; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;">
+
+  <header style="position:sticky; top:0; z-index:20; background:#edebf2f2; backdrop-filter:blur(8px); border-bottom:1px solid #50464414;">
+    <div style="max-width:1440px; margin:0 auto; padding:14px 32px; display:flex; align-items:center; gap:20px;">
+      <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+      <div style="height:20px; width:1px; background:#50464422;"></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:#6f6360;">
+        <span style="width:22px; height:22px; border-radius:6px; background:#8b76c2; color:#fff; display:grid; place-items:center; font-size:11px; font-weight:700;">A</span>
+        Artist onboarding · The Late Set
+      </div>
+      <div style="flex:1; display:flex; align-items:center; gap:10px; padding:0 40px;">
+        <div style="flex:1; height:6px; background:#50464422; border-radius:999px; position:relative;"><div style="width:20%; height:100%; background:#8b76c2; border-radius:999px;"></div></div>
+        <div style="display:flex; gap:6px;">
+          <a href="#a1" style="width:26px; height:26px; border-radius:50%; background:#8b76c2; color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700;">1</a>
+          <a href="#a2" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">2</a>
+          <a href="#a3" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">3</a>
+          <a href="#a4" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">4</a>
+          <a href="#a5" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">5</a>
+        </div>
+      </div>
+      <a href="./02 - Onboarding.dc.html" style="font-size:13px; color:#6f6360;">Save &amp; exit ✕</a>
+    </div>
+  </header>
+
+  <!-- STEP 1 — Artist or Event type -->
+  <section id="a1" class="step-page" style="background:#edebf2;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#8b76c2;"></span>STEP 01 · TYPE</div>
+      <h1 class="step-h">Are you an <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#8b76c2;">artist</em>, or do you run <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">events</em>?</h1>
+      <p class="step-lede">Every question after this adapts to your choice. You can add the other later — one login covers both.</p>
+      <div class="actions">
+        <button class="ghost">← Change role</button>
+        <button class="cta">Continue as Artist →</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="background:#fff; border:3px solid #8b76c2; border-radius:22px; padding:26px; box-shadow:0 12px 30px -14px #8b76c266; position:relative;">
+        <div style="position:absolute; top:16px; right:16px; width:28px; height:28px; border-radius:50%; background:#8b76c2; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700;">✓</div>
+        <div style="width:56px; height:56px; border-radius:18px; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:26px; font-weight:600;">A</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422; margin-top:14px;">I'm an artist</div>
+        <div style="font-size:13.5px; color:#6f6360; margin-top:6px; line-height:1.55;">Musician, comedian, sportsperson, visual, digital or multimedia creator.</div>
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:#504644;">
+          <div>• Stage name, bio, category</div>
+          <div>• Social links across 8 platforms</div>
+          <div>• Sponsor-value statement</div>
+        </div>
+      </div>
+      <div style="background:#fff; border:1px solid #50464426; border-radius:22px; padding:26px;">
+        <div style="width:56px; height:56px; border-radius:18px; background:#c0cf72; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:26px; font-weight:600;">E</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422; margin-top:14px;">I run an event</div>
+        <div style="font-size:13.5px; color:#6f6360; margin-top:6px; line-height:1.55;">Festival, exhibition, sports tournament, conference, theatre, gaming or expo.</div>
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:#504644;">
+          <div>• Event name, description, category</div>
+          <div>• Company &amp; contact details</div>
+          <div>• Existing partners &amp; sponsors</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 — Profile basics -->
+  <section id="a2" class="step-page" style="background:#f4ede2;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#8b76c2;"></span>STEP 02 · PROFILE</div>
+      <h1 class="step-h">Your stage — <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#8b76c2;">public</em>.</h1>
+      <p class="step-lede">The version brands and audiences see. Warm, specific, honest — no need for corporate copy.</p>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Internal info</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="height:120px; background:linear-gradient(135deg, #baaae1, #edebf2); border-radius:16px; margin:-8px -8px 20px; position:relative;">
+        <div style="position:absolute; left:20px; bottom:-30px; width:76px; height:76px; border-radius:50%; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:30px; border:4px solid #fff;">LS</div>
+        <div style="position:absolute; top:12px; right:14px; font-size:11px; color:#fff; opacity:0.85;">banner · 1600×600</div>
+      </div>
+      <div style="height:24px;"></div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="row2">
+          <div class="field"><label>Real name*</label><input value="Marcus Cole"></div>
+          <div class="field"><label>Stage name*</label><input value="The Late Set"></div>
+        </div>
+        <div class="field"><label>Bio* — up to 500 words</label><textarea rows="4">A monthly comedy night that mixes household names with next-week's headliners. Building small rooms into stadium confidence, one Thursday at a time.</textarea></div>
+        <div class="row2">
+          <div class="field"><label>Category*</label><div class="select">Comedy <span style="color:#6f6360;">▾</span></div></div>
+          <div class="field"><label>Website</label><input value="latesetldn.com"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 — Internal / verification -->
+  <section id="a3" class="step-page" style="background:#edebf2;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#8b76c2;"></span>STEP 03 · VERIFICATION</div>
+      <h1 class="step-h">A few details we <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#8b76c2;">keep to ourselves</em>.</h1>
+      <p class="step-lede">Used to verify you and pay you out. Never shared with brands or audiences.</p>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Sponsor-value</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em; margin-bottom:14px;">
+        <span style="background:#edebf2; color:#8b76c2; padding:3px 10px; border-radius:999px;">🔒 PRIVATE</span>
+        <span>Only Live·En·Synergy sees this</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="row2">
+          <div class="field"><label>Date of birth*</label><input value="12 · 06 · 1988"></div>
+          <div class="field"><label>Location*</label><input value="Hackney, London, UK"></div>
+        </div>
+        <div class="field"><label>Address*</label><input value="Unit 7, Ashwin St, London E8 3DL"></div>
+        <div class="row2">
+          <div class="field"><label>Contact email*</label><input value="hello@latesetldn.com"></div>
+          <div class="field"><label>Contact phone*</label><input value="+44 7700 900456"></div>
+        </div>
+        <div class="field"><label>Keywords that describe your art*</label><input value="warm, dry humour, story-first, community, small-room, London"></div>
+        <div class="field"><label>Mission &amp; vision*</label><textarea rows="2">Give tomorrow's comedians the room, the crowd and the confidence to become themselves.</textarea></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 — Sponsor-value -->
+  <section id="a4" class="step-page" style="background:#f6e09240;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#f6e092;"></span>STEP 04 · SPONSOR-VALUE</div>
+      <h1 class="step-h">How you'll <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">show up</em> for a brand.</h1>
+      <p class="step-lede">This travels with every event you list. Concrete beats poetic — reach numbers, banner options, sampling, content.</p>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:22px;">
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; gap:10px; align-items:center;"><span style="width:26px; height:26px; border-radius:8px; background:#f6e092; display:grid; place-items:center;">📱</span><span style="font-size:13.5px;"><strong style="color:#2c2422;">Social &amp; comms</strong> — reach, tags, planned posts.</span></div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; gap:10px; align-items:center;"><span style="width:26px; height:26px; border-radius:8px; background:#dee2c6; display:grid; place-items:center;">🎪</span><span style="font-size:13.5px;"><strong style="color:#2c2422;">Onsite branding</strong> — banners, sampling, mentions.</span></div>
+        <div style="padding:14px 16px; background:#fff; border-radius:14px; border:1px solid #50464414; display:flex; gap:10px; align-items:center;"><span style="width:26px; height:26px; border-radius:8px; background:#edebf2; display:grid; place-items:center;">📊</span><span style="font-size:13.5px;"><strong style="color:#2c2422;">Data &amp; reporting</strong> — verified attendance, redemption.</span></div>
+      </div>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Finish</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:6px;">Your statement</div>
+      <div style="font-size:12.5px; color:#6f6360; margin-bottom:14px;">Up to 500 words · shown next to every open event.</div>
+      <textarea rows="14" style="width:100%; padding:16px 18px; border:1px solid #50464426; border-radius:16px; background:#fcf7f0; font-size:14px; font-family:inherit; line-height:1.65; resize:none;">Every Late Set event delivers a curated sponsor moment — not a logo lock-up.
+
+• 3 IG stories · 76k avg reach
+• 1 Reel on show day · 43k avg views
+• Roll-up banner on stage &amp; foyer
+• Sampling table with power &amp; water
+• Sponsor thank-you from stage
+• Post-event data within 5 working days
+• 1 short-form video clip for sponsor use</textarea>
+      <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#6f6360;"><span>124 / 500 words</span><span>Auto-saved</span></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 — Done -->
+  <section id="a5" class="step-page" style="background:linear-gradient(135deg, #edebf2, #baaae166); grid-template-columns:1fr;">
+    <div style="text-align:center; max-width:720px; margin:0 auto;">
+      <div style="display:inline-flex; align-items:center; gap:8px; background:#fff; padding:8px 18px; border-radius:999px; font-size:12px; color:#8b76c2; font-weight:600;">🎙️ The Late Set is on the stage</div>
+      <h1 class="step-h" style="font-size:68px;">You're live, <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#8b76c2;">Marcus</em>.</h1>
+      <p class="step-lede" style="margin:0 auto 28px; text-align:center;">List an open event now to start receiving sponsor offers — or explore the artist dashboard first.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:28px;">
+        <a href="./04d - Artist · My Open Events.dc.html" class="cta" style="text-decoration:none;">+ Create first open event</a>
+        <a href="./04a - Artist · Dashboard.dc.html" class="ghost" style="text-decoration:none;">Go to dashboard →</a>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; text-align:left;">
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">1 · List open events</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Seeking sponsorship.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">2 · Review offers</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Accept · counter · decline.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">3 · Deliver &amp; verify</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Chat, QR check-in, done.</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+</body>
+</html>

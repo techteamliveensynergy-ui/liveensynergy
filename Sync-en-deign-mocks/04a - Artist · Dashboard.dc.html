@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="120" width="220" height="580" rx="20" fill="#edebf2"/>
+    <rect x="120" y="180" width="140" height="34" rx="10" fill="#8b76c2"/>
+    <rect x="340" y="120" width="780" height="580" rx="20" fill="#fff" stroke="#50464422"/>
+    <rect x="380" y="180" width="230" height="90" rx="16" fill="#edebf2"/>
+    <rect x="630" y="180" width="230" height="90" rx="16" fill="#f6e09266"/>
+    <rect x="880" y="180" width="200" height="90" rx="16" fill="#dee2c680"/>
+    <rect x="380" y="300" width="700" height="380" rx="16" fill="#fcf7f0"/>
+    <text x="600" y="750" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Artist · Dashboard</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .sb-item { padding:10px 12px; border-radius:12px; color:#504644; font-size:14px; display:flex; align-items:center; gap:10px; }
+  .sb-item.active { background:#8b76c2; color:#fff; font-weight:600; }
+  .sb-item:hover:not(.active) { background:#50464408; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <div style="max-width:1440px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:13.5px; color:#6f6360;">
+      <a href="./Mockups Index.dc.html" style="padding:6px 12px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644;">← Index</a>
+      <a href="./04b - Artist · Profile.dc.html" style="padding:6px 12px; border-radius:999px;">Profile</a>
+      <a href="./04c - Artist · Sponsor Value.dc.html" style="padding:6px 12px; border-radius:999px;">Sponsor-value</a>
+      <a href="./04d - Artist · My Open Events.dc.html" style="padding:6px 12px; border-radius:999px;">Open events</a>
+      <a href="./04e - Artist · Offers Inbox.dc.html" style="padding:6px 12px; border-radius:999px;">Offers</a>
+      <a href="./04f - Artist · Confirmed Signups.dc.html" style="padding:6px 12px; border-radius:999px;">Signups</a>
+      <a href="./04g - Artist · Chat.dc.html" style="padding:6px 12px; border-radius:999px;">Chat</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13px; color:#6f6360;"><span>Artist portal · The Late Set</span><div style="width:32px; height:32px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-weight:700; font-size:12px;">MC</div></div>
+  </div>
+
+  <div style="max-width:1440px; margin:0 auto; padding:0 32px;">
+    <div class="card" style="overflow:hidden;">
+      <div style="display:grid; grid-template-columns:260px 1fr;">
+        <aside style="background:#edebf2; border-right:1px solid #50464410; padding:24px 18px; min-height:1000px;">
+          <div style="padding:6px 8px 20px;">
+            <div style="font-size:11px; color:#8b76c2; font-weight:600; letter-spacing:0.08em;">ARTIST WORKSPACE</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px; background:#fff; border-radius:14px; border:1px solid #50464414;">
+              <div style="width:34px; height:34px; border-radius:10px; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:18px;">LS</div>
+              <div style="min-width:0;"><div style="font-weight:600; color:#2c2422; font-size:13.5px;">The Late Set</div><div style="font-size:11.5px; color:#6f6360;">Comedy · Marcus Cole</div></div>
+            </div>
+          </div>
+          <nav style="display:flex; flex-direction:column; gap:2px;">
+            <div class="sb-item active"><span>◉</span> Dashboard</div>
+            <div class="sb-item"><span>◐</span> My profile</div>
+            <div class="sb-item"><span>★</span> Sponsor-value</div>
+            <div class="sb-item"><span>+</span> My open events</div>
+            <div class="sb-item" style="justify-content:space-between;"><span style="display:flex; align-items:center; gap:10px;"><span>✉</span> Sponsorship offers</span><span style="background:#8b76c2; color:#fff; font-size:10px; padding:2px 7px; border-radius:999px;">2</span></div>
+            <div class="sb-item"><span>✓</span> Confirmed &amp; signups</div>
+            <div class="sb-item"><span>💬</span> Chat with brands</div>
+          </nav>
+          <div style="margin-top:20px; background:#f6e092; border-radius:14px; padding:14px; font-size:12.5px; color:#504644; line-height:1.5;">
+            <div style="font-weight:600; margin-bottom:4px;">Tip · profile</div>
+            Artists with a completed sponsor-value statement get <strong>4× more offers</strong>.
+          </div>
+        </aside>
+
+        <main style="padding:32px 40px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
+            <div>
+              <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Backstage view · Wed 22 Jul</div>
+              <h1 style="font-family:'DM Sans'; font-weight:600; font-size:38px; margin:4px 0 0; color:#2c2422; letter-spacing:-0.01em;">Hey Marcus 🎙️</h1>
+              <p style="color:#6f6360; margin:8px 0 0; font-size:14px;"><strong style="color:#2c2422;">2 sponsorship offers</strong> waiting, and Vol. 11 is 90% sold.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <a href="./04e - Artist · Offers Inbox.dc.html" style="border:1px solid #50464426; background:#fff; padding:11px 18px; border-radius:999px; font-size:13.5px; font-weight:600; color:#504644;">See offers (2)</a>
+              <a href="./04d - Artist · My Open Events.dc.html" style="border:none; background:#8b76c2; color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600;">+ Create open event</a>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;">
+            <div style="border:1px solid #50464410; border-radius:20px; padding:22px; background:#edebf2;"><div style="font-size:12px; color:#6f6360;">Open events</div><div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px;">4</div><div style="font-size:12px; color:#8b76c2; font-weight:600;">seeking sponsorship</div></div>
+            <div style="border:1px solid #50464410; border-radius:20px; padding:22px; background:#f6e09266;"><div style="font-size:12px; color:#6f6360;">Pending offers</div><div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px;">2</div><div style="font-size:12px; color:#504644; font-weight:600;">£1,200 + £800</div></div>
+            <div style="border:1px solid #50464410; border-radius:20px; padding:22px; background:#dee2c680;"><div style="font-size:12px; color:#6f6360;">Sponsored (confirmed)</div><div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px;">3</div><div style="font-size:12px; color:#4f6b15; font-weight:600;">£5,300 total</div></div>
+            <div style="border:1px solid #50464410; border-radius:20px; padding:22px; background:#fbeadd;"><div style="font-size:12px; color:#6f6360;">Audience signups (30d)</div><div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px;">312</div><div style="font-size:12px; color:#ed9a4e; font-weight:600;">+22% MoM</div></div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px; margin-bottom:20px;">
+            <div class="card" style="padding:22px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:17px; color:#2c2422;">Incoming sponsorship offers</div>
+                <a href="./04e - Artist · Offers Inbox.dc.html" style="font-size:13px; font-weight:600;">Open inbox →</a>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="padding:16px; background:#fcf7f0; border-radius:14px; border:1px solid #50464410;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                      <div style="width:38px; height:38px; border-radius:12px; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">N</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Northwave Coffee</div><div style="font-size:12px; color:#6f6360;">Late-Shift Sessions · First 20 sign-ups</div></div>
+                    </div>
+                    <div style="text-align:right;"><div style="font-family:'DM Sans'; font-weight:600; font-size:18px; color:#2c2422;">£1,200</div><span class="badge" style="background:#f6e092; color:#504644;">Review</span></div>
+                  </div>
+                  <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button style="border:none; background:#4f6b15; color:#fff; padding:7px 14px; border-radius:999px; font-size:12px; font-weight:600;">Accept</button>
+                    <button style="border:1px solid #50464426; background:#fff; color:#504644; padding:7px 14px; border-radius:999px; font-size:12px; font-weight:600;">Counter</button>
+                    <button style="border:none; background:transparent; color:#a02c4a; padding:7px 8px; font-size:12px; font-weight:600;">Decline</button>
+                    <span style="margin-left:auto; font-size:12px; color:#6f6360;">Received 2 h ago</span>
+                  </div>
+                </div>
+                <div style="padding:16px; background:#fcf7f0; border-radius:14px; border:1px solid #50464410; display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:38px; height:38px; border-radius:12px; background:#f6e092; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">W</div>
+                    <div><div style="font-weight:600; color:#2c2422;">Waverly Records</div><div style="font-size:12px; color:#6f6360;">Late Set · Vol. 12 · postcode E1/E2</div></div>
+                  </div>
+                  <div style="text-align:right;"><div style="font-family:'DM Sans'; font-weight:600; font-size:18px; color:#2c2422;">£800</div><span class="badge" style="background:#edebf2; color:#8b76c2;">Countered</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="padding:22px; background:#dee2c680;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:17px; color:#2c2422; margin-bottom:12px;">Next up · confirmed events</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="padding:14px; background:#fff; border-radius:14px; border:1px solid #50464414;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:600; color:#2c2422;">Late Set · Vol. 11</div><span class="badge" style="background:#dee2c6; color:#4f6b15;">Sold out</span></div>
+                  <div style="font-size:12px; color:#6f6360; margin-top:2px;">Thu 21 Aug · The Bill Murray · 108/120 signups</div>
+                  <div style="margin-top:10px; height:6px; background:#50464414; border-radius:999px; overflow:hidden;"><div style="width:90%; height:100%; background:#4f6b15;"></div></div>
+                </div>
+                <div style="padding:14px; background:#fff; border-radius:14px; border:1px solid #50464414;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:600; color:#2c2422;">Late Set · Vol. 12</div><span class="badge" style="background:#f6e092; color:#504644;">On sale</span></div>
+                  <div style="font-size:12px; color:#6f6360; margin-top:2px;">Thu 04 Sep · Union Chapel · 34/220 signups</div>
+                  <div style="margin-top:10px; height:6px; background:#50464414; border-radius:999px; overflow:hidden;"><div style="width:15%; height:100%; background:#ed9a4e;"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity + upcoming ticks -->
+          <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px;">
+            <div class="card" style="padding:22px;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:17px; color:#2c2422; margin-bottom:14px;">Activity feed</div>
+              <div style="display:flex; flex-direction:column;">
+                <div style="display:grid; grid-template-columns:80px 1fr auto; gap:16px; padding:12px 0; border-bottom:1px solid #50464410;">
+                  <div style="font-size:12px; color:#6f6360;">Today · 10:14</div>
+                  <div>You accepted <strong style="color:#2c2422;">Northwave</strong>'s Late-Shift sponsorship offer.</div>
+                  <span class="badge" style="background:#dee2c6; color:#4f6b15;">Accepted</span>
+                </div>
+                <div style="display:grid; grid-template-columns:80px 1fr auto; gap:16px; padding:12px 0; border-bottom:1px solid #50464410;">
+                  <div style="font-size:12px; color:#6f6360;">Today · 08:22</div>
+                  <div>28 new signups on <strong style="color:#2c2422;">Vol. 11</strong>. Reward pool 90% full.</div>
+                  <span class="badge" style="background:#f6e092; color:#504644;">Signups</span>
+                </div>
+                <div style="display:grid; grid-template-columns:80px 1fr auto; gap:16px; padding:12px 0; border-bottom:1px solid #50464410;">
+                  <div style="font-size:12px; color:#6f6360;">Yesterday</div>
+                  <div>Sakshi shared a compatibility summary for Waverly Records.</div>
+                  <span class="badge" style="background:#edebf2; color:#8b76c2;">Info</span>
+                </div>
+                <div style="display:grid; grid-template-columns:80px 1fr auto; gap:16px; padding:12px 0;">
+                  <div style="font-size:12px; color:#6f6360;">Fri · 18 Jul</div>
+                  <div>Vol. 10 report finalised — 100% verified attendance.</div>
+                  <span class="badge" style="background:#edebf2; color:#8b76c2;">Completed</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="padding:22px;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:17px; color:#2c2422; margin-bottom:14px;">To-do this week</div>
+              <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px;">
+                <label style="display:flex; align-items:flex-start; gap:10px; padding:10px; background:#fcf7f0; border-radius:12px; border:1px solid #50464410;"><input type="checkbox" checked style="margin-top:3px;"> <span style="text-decoration:line-through; color:#6f6360;">Sign Northwave contract</span></label>
+                <label style="display:flex; align-items:flex-start; gap:10px; padding:10px; background:#fcf7f0; border-radius:12px; border:1px solid #50464410;"><input type="checkbox" style="margin-top:3px;"> Send Vol. 11 sign-up sheet to Jamie</label>
+                <label style="display:flex; align-items:flex-start; gap:10px; padding:10px; background:#fcf7f0; border-radius:12px; border:1px solid #50464410;"><input type="checkbox" style="margin-top:3px;"> Book Union Chapel tech rehearsal</label>
+                <label style="display:flex; align-items:flex-start; gap:10px; padding:10px; background:#fcf7f0; border-radius:12px; border:1px solid #50464410;"><input type="checkbox" style="margin-top:3px;"> Reply to Waverly counter-offer by Fri</label>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <footer style="max-width:1440px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 04a Artist · Dashboard</div>
+    <div><a href="./04b - Artist · Profile.dc.html">Next: My profile →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

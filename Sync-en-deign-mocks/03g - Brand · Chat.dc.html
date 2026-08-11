@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="140" width="300" height="580" rx="24" fill="#fcf7f0"/>
+    <rect x="400" y="140" width="500" height="580" rx="24" fill="#fff" stroke="#50464422"/>
+    <rect x="920" y="140" width="200" height="580" rx="24" fill="#edebf2"/>
+    <rect x="440" y="220" width="280" height="60" rx="20" fill="#f4ede2"/>
+    <rect x="620" y="300" width="240" height="60" rx="20" fill="#ed9a4e"/>
+    <rect x="440" y="380" width="300" height="60" rx="20" fill="#f4ede2"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Chat with Artist</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .sb-item { padding:10px 12px; border-radius:12px; color:#504644; font-size:14px; display:flex; align-items:center; gap:10px; }
+  .sb-item.active { background:#ed9a4e; color:#fff; font-weight:600; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+  .thread { padding:14px; border-radius:14px; cursor:pointer; }
+  .thread:hover { background:#fcf7f0; }
+  .thread.active { background:#2c2422; color:#fff; }
+  .thread.active .muted { color:#fcf7f099; }
+  .muted { color:#6f6360; }
+  .msg-in { align-self:flex-start; max-width:74%; }
+  .msg-out { align-self:flex-end; max-width:74%; }
+  .msg-in .bubble { background:#fff; border:1px solid #50464414; padding:11px 15px; border-radius:18px 18px 18px 4px; font-size:13.5px; line-height:1.55; color:#504644; }
+  .msg-out .bubble { background:#ed9a4e; color:#fff; padding:11px 15px; border-radius:18px 18px 4px 18px; font-size:13.5px; line-height:1.55; }
+  .stamp { font-size:11px; color:#6f6360; margin-top:4px; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <div style="max-width:1440px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:13.5px; color:#6f6360;">
+      <a href="./Mockups Index.dc.html" style="padding:6px 12px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644;">← Index</a>
+      <a href="./03a - Brand · Dashboard.dc.html" style="padding:6px 12px; border-radius:999px;">Dashboard</a>
+      <a href="./03d - Brand · My Campaigns.dc.html" style="padding:6px 12px; border-radius:999px;">Campaigns</a>
+      <a href="./03e - Brand · Available Events.dc.html" style="padding:6px 12px; border-radius:999px;">Available events</a>
+      <a href="./03f - Brand · Sponsorship Report.dc.html" style="padding:6px 12px; border-radius:999px;">Reports</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13px; color:#6f6360;"><span>Brand · Northwave Coffee</span><div style="width:32px; height:32px; border-radius:50%; background:#baaae1; color:#fff; display:grid; place-items:center; font-weight:700; font-size:12px;">JM</div></div>
+  </div>
+
+  <div style="max-width:1440px; margin:0 auto; padding:0 32px;">
+    <div class="card" style="overflow:hidden;">
+      <div style="display:grid; grid-template-columns:260px 1fr;">
+        <aside style="background:#fcf7f0; border-right:1px solid #50464410; padding:24px 18px; min-height:900px;">
+          <div style="padding:6px 8px 20px;">
+            <div style="font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em;">BRAND WORKSPACE</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px; background:#fff; border-radius:14px; border:1px solid #50464414;">
+              <div style="width:34px; height:34px; border-radius:10px; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:18px;">N</div>
+              <div><div style="font-weight:600; color:#2c2422; font-size:13.5px;">Northwave Coffee</div><div style="font-size:11.5px; color:#6f6360;">Food &amp; Beverage</div></div>
+            </div>
+          </div>
+          <nav style="display:flex; flex-direction:column; gap:2px;">
+            <div class="sb-item"><span>◉</span> Dashboard</div>
+            <div class="sb-item"><span>◐</span> Brand profile</div>
+            <div class="sb-item"><span>+</span> Sponsorship campaigns</div>
+            <div class="sb-item"><span>◔</span> Available events</div>
+            <div class="sb-item"><span>✓</span> Confirmed &amp; reports</div>
+            <div class="sb-item active" style="justify-content:space-between;"><span style="display:flex; align-items:center; gap:10px;"><span>💬</span> Chat with artists</span><span style="background:#fff; color:#ed9a4e; font-size:10px; padding:2px 7px; border-radius:999px;">3</span></div>
+          </nav>
+        </aside>
+
+        <!-- three-pane chat -->
+        <main style="display:grid; grid-template-columns:290px 1fr 300px; min-height:820px;">
+          <!-- threads -->
+          <div style="border-right:1px solid #50464410; padding:20px 12px;">
+            <div style="padding:0 8px; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">Conversations</div>
+              <button style="background:#ed9a4e; color:#fff; border:none; width:28px; height:28px; border-radius:50%; font-size:16px;">+</button>
+            </div>
+            <div style="margin:12px 8px 14px; padding:8px 12px; border:1px solid #50464426; border-radius:999px; background:#fff; font-size:12.5px; color:#6f6360;">🔍 Search…</div>
+            <div style="display:flex; gap:4px; padding:0 6px; margin-bottom:10px;">
+              <span class="badge" style="background:#2c2422; color:#fff;">All</span>
+              <span class="badge" style="background:#fff; border:1px solid #50464422; color:#504644;">Unread · 3</span>
+              <span class="badge" style="background:#fff; border:1px solid #50464422; color:#504644;">Confirmed</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div class="thread active" style="display:grid; grid-template-columns:38px 1fr auto; gap:10px; align-items:center;">
+                <div style="width:38px; height:38px; border-radius:50%; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">LS</div>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:13.5px;">The Late Set · Marcus</div><div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" class="muted">I'll send the sign-up sheet later today…</div></div>
+                <div style="text-align:right;"><div style="font-size:10.5px;" class="muted">10:07</div><div style="width:8px; height:8px; border-radius:50%; background:#ed9a4e; margin-left:auto; margin-top:4px;"></div></div>
+              </div>
+              <div class="thread" style="display:grid; grid-template-columns:38px 1fr auto; gap:10px; align-items:center;">
+                <div style="width:38px; height:38px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">RS</div>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:13.5px; color:#2c2422;">Rooftop Sessions · Ada</div><div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" class="muted">Sending banner artwork tomorrow morning.</div></div>
+                <div style="text-align:right;"><div style="font-size:10.5px;" class="muted">Mon</div></div>
+              </div>
+              <div class="thread" style="display:grid; grid-template-columns:38px 1fr auto; gap:10px; align-items:center;">
+                <div style="width:38px; height:38px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">SG</div>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:13.5px; color:#2c2422;">Sakshi · Live·En·Synergy</div><div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" class="muted">Shared 3 new matches for Late-Shift.</div></div>
+                <div style="text-align:right;"><div style="font-size:10.5px;" class="muted">21 Jul</div><div style="width:8px; height:8px; border-radius:50%; background:#ed9a4e; margin-left:auto; margin-top:4px;"></div></div>
+              </div>
+              <div class="thread" style="display:grid; grid-template-columns:38px 1fr auto; gap:10px; align-items:center;">
+                <div style="width:38px; height:38px; border-radius:50%; background:#f6e092; color:#504644; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">CG</div>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:13.5px; color:#2c2422;">Coffee Guild · Nina</div><div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" class="muted">Barista Battle report ready — 92% redemption!</div></div>
+                <div style="text-align:right;"><div style="font-size:10.5px;" class="muted">12 Jul</div></div>
+              </div>
+              <div class="thread" style="display:grid; grid-template-columns:38px 1fr auto; gap:10px; align-items:center;">
+                <div style="width:38px; height:38px; border-radius:50%; background:#dee2c6; color:#4f6b15; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">CS</div>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:13.5px; color:#2c2422;">Copeland Studios</div><div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" class="muted">Thank you for sponsoring Open Studio Nights.</div></div>
+                <div style="text-align:right;"><div style="font-size:10.5px;" class="muted">28 Jun</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- chat pane -->
+          <div style="display:flex; flex-direction:column;">
+            <div style="padding:18px 24px; border-bottom:1px solid #50464410; display:flex; align-items:center; gap:14px; background:#fff;">
+              <div style="width:42px; height:42px; border-radius:50%; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:20px;">LS</div>
+              <div style="flex:1;">
+                <div style="font-weight:600; color:#2c2422; font-size:15px;">The Late Set · Marcus Cole</div>
+                <div style="font-size:12px; color:#4f6b15;">● Online · <span style="color:#6f6360;">Comedy · London</span></div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button style="border:1px solid #50464426; background:#fff; padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:600; color:#504644;">View profile</button>
+                <button style="border:1px solid #50464426; background:#fff; padding:7px; border-radius:50%; width:32px; height:32px;">⋯</button>
+              </div>
+            </div>
+
+            <div style="flex:1; padding:24px 28px; display:flex; flex-direction:column; gap:14px; background:#fcf7f0; overflow-y:auto;">
+              <div style="text-align:center; font-size:11px; color:#6f6360;">— Today —</div>
+
+              <div class="msg-in"><div class="bubble">Hey Jamie — thanks for the sponsor confirmation on Late-Shift Sessions! 🎉</div><div class="stamp">Marcus · 10:04</div></div>
+              <div class="msg-in"><div class="bubble">Do you want a specific banner spec, or are we good to use the one from Barista Battle last time?</div><div class="stamp">Marcus · 10:04</div></div>
+
+              <div class="msg-out"><div class="bubble">Same one works. I'll ship a fresh bag of beans (2 kg) for the merch table too — that okay?</div><div class="stamp">You · 10:06 · Seen</div></div>
+
+              <div class="msg-in"><div class="bubble">Perfect. I'll send the sign-up sheet later today — the reward rules look good on our end.</div><div class="stamp">Marcus · 10:07</div></div>
+
+              <!-- shared attachment -->
+              <div class="msg-in"><div class="bubble" style="padding:10px;"><div style="background:#fcf7f0; border:1px solid #50464414; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center;"><div style="width:36px; height:36px; border-radius:10px; background:#fff; display:grid; place-items:center;">🧾</div><div style="flex:1;"><div style="font-weight:600; color:#2c2422; font-size:13px;">late-shift-signup-template.xlsx</div><div style="font-size:11px; color:#6f6360;">42 KB · click to download</div></div></div></div><div class="stamp">Marcus · 10:12</div></div>
+
+              <!-- system card -->
+              <div style="align-self:center; background:#edebf2; border:1px solid #baaae166; padding:10px 16px; border-radius:14px; font-size:12.5px; color:#504644; display:flex; gap:10px; align-items:center;">
+                <span style="font-size:16px;">🔗</span>
+                <span>Sponsorship terms auto-linked · <strong>#LES-2601</strong> · <a href="#" style="font-weight:600;">Review contract →</a></span>
+              </div>
+
+              <div class="msg-out"><div class="bubble">Amazing, thanks Marcus. I'll fill it out today and send back before Fri.</div><div class="stamp">You · 10:14 · Delivered</div></div>
+            </div>
+
+            <div style="padding:14px 20px; border-top:1px solid #50464410; background:#fff;">
+              <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464422; color:#504644;">📎 Attach</span>
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464422; color:#504644;">📄 Send contract</span>
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464422; color:#504644;">🎫 Share event ref</span>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input placeholder="Write a message to Marcus…" style="flex:1; padding:12px 16px; border:1px solid #50464426; border-radius:999px; background:#fcf7f0; font-size:14px; font-family:inherit;">
+                <button style="border:none; background:#ed9a4e; color:#fff; width:44px; height:44px; border-radius:50%; font-size:18px;">→</button>
+              </div>
+              <div style="margin-top:6px; font-size:11px; color:#6f6360;">Chats are visible to Sakshi @ Live·En·Synergy for support. Payments never happen in chat.</div>
+            </div>
+          </div>
+
+          <!-- right context rail -->
+          <aside style="background:#edebf2; padding:24px 22px; border-left:1px solid #50464410;">
+            <div style="font-size:11px; color:#8b76c2; font-weight:600; letter-spacing:0.08em;">EVENT CONTEXT</div>
+            <div style="margin-top:10px; background:#fff; border-radius:16px; border:1px solid #50464414; overflow:hidden;">
+              <div style="height:70px; background:#ffecf1; display:grid; place-items:center; color:#a02c4a; font-family:'Playfair Display'; font-style:italic;">event image</div>
+              <div style="padding:14px;">
+                <div style="font-weight:600; color:#2c2422; font-size:14px;">Late Set · Vol. 11</div>
+                <div style="font-size:11.5px; color:#6f6360; margin-top:2px;">Thu 21 Aug · The Bill Murray · 120 seats</div>
+                <div style="margin-top:10px; display:flex; gap:6px;"><span class="badge" style="background:#8bb957; color:#fff;">Comedy</span><span class="badge" style="background:#f6e092; color:#504644;">First 20</span></div>
+              </div>
+            </div>
+
+            <div style="margin-top:22px; font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em;">SPONSORSHIP</div>
+            <div style="margin-top:10px; font-size:13px; color:#504644; line-height:1.7;">
+              <div style="display:flex; justify-content:space-between;"><span class="muted">Campaign</span><strong>Late-Shift Sessions</strong></div>
+              <div style="display:flex; justify-content:space-between;"><span class="muted">Reference</span><span>#LES-2601</span></div>
+              <div style="display:flex; justify-content:space-between;"><span class="muted">Budget</span><span>£1,200 · net £1,092</span></div>
+              <div style="display:flex; justify-content:space-between;"><span class="muted">Reward rule</span><span>First 20 sign-ups</span></div>
+              <div style="display:flex; justify-content:space-between;"><span class="muted">Status</span><span style="background:#dee2c6; color:#4f6b15; font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px;">Confirmed</span></div>
+            </div>
+
+            <div style="margin-top:22px; font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em;">DELIVERABLES</div>
+            <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+              <div style="display:flex; gap:8px; align-items:center;"><span style="color:#4f6b15;">✓</span> Contract signed</div>
+              <div style="display:flex; gap:8px; align-items:center;"><span style="color:#4f6b15;">✓</span> Banner artwork received</div>
+              <div style="display:flex; gap:8px; align-items:center;"><span style="color:#ed9a4e;">○</span> Sign-up sheet · due Fri</div>
+              <div style="display:flex; gap:8px; align-items:center;"><span style="color:#50464422;">○</span> IG stories</div>
+              <div style="display:flex; gap:8px; align-items:center;"><span style="color:#50464422;">○</span> Post-event report</div>
+            </div>
+
+            <div style="margin-top:22px; padding:14px; background:#fff; border-radius:14px; border:1px solid #50464414; font-size:12px; color:#504644; line-height:1.5;">
+              <strong style="color:#2c2422;">Sakshi is looped in</strong> — mention her with <span style="color:#ed9a4e; font-weight:600;">@sakshi</span> to bring her into the thread.
+            </div>
+          </aside>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <footer style="max-width:1440px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 03g Brand · Chat</div>
+    <div><a href="./03f - Brand · Sponsorship Report.dc.html">← Sponsorship report</a> · <a href="./Mockups Index.dc.html">Back to index →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

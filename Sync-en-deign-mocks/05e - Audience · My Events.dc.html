@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="120" width="1040" height="180" rx="24" fill="#dee2c680"/>
+    <rect x="80" y="320" width="700" height="400" rx="24" fill="#fff" stroke="#50464422"/>
+    <rect x="800" y="320" width="320" height="400" rx="24" fill="#fcf7f0"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">My Events &amp; Reward Tracker</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+  .chip { padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:600; border:1px solid #50464422; background:#fff; color:#504644; }
+  .chip.active { background:#2c2422; color:#fff; border-color:#2c2422; }
+  .step { display:flex; flex:1; align-items:center; gap:8px; font-size:11px; font-weight:600; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <header style="max-width:1440px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:22px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:22px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:14px;">
+      <a href="./Mockups Index.dc.html" style="padding:8px 14px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644; font-size:13px;">← Index</a>
+      <a href="./05a - Audience · Browse.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Browse events</a>
+      <a href="#" style="padding:8px 14px; border-radius:999px; background:#4f6b15; color:#fff; font-weight:600;">My events</a>
+      <a href="./05f - Audience · Profile.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Profile</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:14px; font-size:13px; color:#6f6360;">
+      <div style="display:flex; align-items:center; gap:8px;"><div style="width:34px; height:34px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px;">PS</div><span>Priya Shah</span></div>
+    </div>
+  </header>
+
+  <div style="max-width:1440px; margin:0 auto; padding:0 32px;">
+    <!-- Reward summary strip -->
+    <div class="card" style="padding:24px 32px; background:linear-gradient(135deg, #dee2c680, #fcf7f0); border-color:#dee2c6; display:grid; grid-template-columns:repeat(4,1fr); gap:22px; margin-bottom:22px;">
+      <div>
+        <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Since Jan 2025</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px; letter-spacing:-0.01em;">£146 <span style="font-size:16px; color:#6f6360; font-weight:400;">rewarded</span></div>
+      </div>
+      <div>
+        <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Attended</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#2c2422; margin-top:4px; letter-spacing:-0.01em;">12 <span style="font-size:16px; color:#6f6360; font-weight:400;">events</span></div>
+      </div>
+      <div>
+        <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Pending</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#ed9a4e; margin-top:4px; letter-spacing:-0.01em;">£38 <span style="font-size:16px; color:#6f6360; font-weight:400;">across 3</span></div>
+      </div>
+      <div>
+        <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Reliability</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:34px; color:#4f6b15; margin-top:4px; letter-spacing:-0.01em;">4.9 <span style="font-size:16px; color:#6f6360; font-weight:400;">/ 5</span></div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.7fr 1fr; gap:20px;">
+      <div class="card" style="padding:22px 26px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422;">My participated events</div>
+          <div style="display:flex; gap:6px;">
+            <span class="chip active">All (5)</span>
+            <span class="chip">Upcoming</span>
+            <span class="chip">Verified</span>
+            <span class="chip">Paid</span>
+          </div>
+        </div>
+
+        <!-- Event cards with reward progress -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="padding:18px 20px; border:1px solid #50464414; border-radius:18px; background:#fcf7f0;">
+            <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="width:52px; height:52px; border-radius:14px; background:#ffecf1; color:#a02c4a; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">img</div>
+                <div>
+                  <div style="font-weight:600; color:#2c2422; font-size:16px;">The Late Set · Vol. 11</div>
+                  <div style="font-size:12.5px; color:#6f6360;">Thu 21 Aug · The Bill Murray · Northwave · £12</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge" style="background:#f6e092; color:#504644;">Upcoming · tonight</span>
+                <a href="./05d - Audience · Verify.dc.html" style="border:none; background:#ed9a4e; color:#fff; padding:9px 16px; border-radius:999px; font-size:12.5px; font-weight:600;">Verify →</a>
+              </div>
+            </div>
+            <div style="margin-top:14px; display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Selected</div>
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Ticket up</div>
+              <div class="step" style="color:#ed9a4e;"><span style="width:22px; height:22px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-size:10px;">3</span> Check-in</div>
+              <div class="step" style="color:#6f6360;"><span style="width:22px; height:22px; border-radius:50%; background:#50464422; color:#504644; display:grid; place-items:center; font-size:10px;">4</span> Reward</div>
+            </div>
+          </div>
+
+          <div style="padding:18px 20px; border:1px solid #50464414; border-radius:18px; background:#fcf7f0;">
+            <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="width:52px; height:52px; border-radius:14px; background:#edebf2; color:#8b76c2; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">img</div>
+                <div>
+                  <div style="font-weight:600; color:#2c2422; font-size:16px;">Rooftop Sessions · Vol. 3</div>
+                  <div style="font-size:12.5px; color:#6f6360;">Sat 12 Jul · Peckham Levels · Northwave · £14</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge" style="background:#edebf2; color:#8b76c2;">Paid · 18 Jul</span>
+                <a href="#" style="font-size:12.5px; font-weight:600; padding:9px 16px;">Details →</a>
+              </div>
+            </div>
+            <div style="margin-top:14px; display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Selected</div>
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Ticket up</div>
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Check-in</div>
+              <div class="step" style="color:#8b76c2;"><span style="width:22px; height:22px; border-radius:50%; background:#8b76c2; color:#fff; display:grid; place-items:center; font-size:10px;">£</span> £14 paid</div>
+            </div>
+          </div>
+
+          <div style="padding:18px 20px; border:1px solid #50464414; border-radius:18px; background:#fcf7f0;">
+            <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="width:52px; height:52px; border-radius:14px; background:#f6e092; color:#504644; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">img</div>
+                <div>
+                  <div style="font-weight:600; color:#2c2422; font-size:16px;">Barista Battle 2025</div>
+                  <div style="font-size:12.5px; color:#6f6360;">Sat 03 May · Old Spitalfields · Coffee Guild · £12</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge" style="background:#f6e092; color:#504644;">Approved · payout Fri</span>
+                <a href="#" style="font-size:12.5px; font-weight:600; padding:9px 16px;">Details →</a>
+              </div>
+            </div>
+            <div style="margin-top:14px; display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Selected</div>
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Ticket up</div>
+              <div class="step" style="color:#4f6b15;"><span style="width:22px; height:22px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:10px;">✓</span> Check-in</div>
+              <div class="step" style="color:#ed9a4e;"><span style="width:22px; height:22px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-size:10px;">£</span> Queued</div>
+            </div>
+          </div>
+
+          <div style="padding:18px 20px; border:1px solid #50464414; border-radius:18px; background:#fcf7f0;">
+            <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="width:52px; height:52px; border-radius:14px; background:#dee2c6; color:#4f6b15; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">img</div>
+                <div>
+                  <div style="font-weight:600; color:#2c2422; font-size:16px;">Open Studio Nights</div>
+                  <div style="font-size:12.5px; color:#6f6360;">Sat 28 Jun · Copeland Gallery · Coffee Guild · £8</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge" style="background:#edebf2; color:#8b76c2;">Paid · 05 Jul</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:18px 20px; border:1px solid #50464414; border-radius:18px; background:#fcf7f0;">
+            <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="width:52px; height:52px; border-radius:14px; background:#ffecf1; color:#a02c4a; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic;">img</div>
+                <div>
+                  <div style="font-weight:600; color:#2c2422; font-size:16px;">Late Set · Vol. 10</div>
+                  <div style="font-size:12.5px; color:#6f6360;">Thu 19 Jun · Rich Mix · Northwave · £12</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge" style="background:#edebf2; color:#8b76c2;">Paid · 24 Jun</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right rail: payout log + tips -->
+      <aside style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card" style="padding:22px 24px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422;">Payout log</div>
+          <div style="font-size:12.5px; color:#6f6360; margin-bottom:12px;">Bank transfers into <strong>Monzo · **5678</strong>.</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#fcf7f0; border-radius:12px; font-size:13px;"><div><div style="font-weight:600; color:#2c2422;">£14</div><div style="font-size:11px; color:#6f6360;">Rooftop Sessions Vol. 3</div></div><div style="text-align:right;"><div style="color:#4f6b15; font-weight:600; font-size:12px;">Paid</div><div style="font-size:11px; color:#6f6360;">18 Jul</div></div></div>
+            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#fcf7f0; border-radius:12px; font-size:13px;"><div><div style="font-weight:600; color:#2c2422;">£8</div><div style="font-size:11px; color:#6f6360;">Open Studio Nights</div></div><div style="text-align:right;"><div style="color:#4f6b15; font-weight:600; font-size:12px;">Paid</div><div style="font-size:11px; color:#6f6360;">05 Jul</div></div></div>
+            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#fcf7f0; border-radius:12px; font-size:13px;"><div><div style="font-weight:600; color:#2c2422;">£12</div><div style="font-size:11px; color:#6f6360;">Late Set Vol. 10</div></div><div style="text-align:right;"><div style="color:#4f6b15; font-weight:600; font-size:12px;">Paid</div><div style="font-size:11px; color:#6f6360;">24 Jun</div></div></div>
+            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#f6e09240; border:1px solid #f6e092; border-radius:12px; font-size:13px;"><div><div style="font-weight:600; color:#2c2422;">£12</div><div style="font-size:11px; color:#6f6360;">Barista Battle 2025</div></div><div style="text-align:right;"><div style="color:#ed9a4e; font-weight:600; font-size:12px;">Queued Fri</div></div></div>
+          </div>
+          <a href="#" style="display:block; text-align:center; margin-top:12px; font-size:12.5px; font-weight:600;">Download statement · CSV</a>
+        </div>
+
+        <div class="card" style="padding:22px 24px; background:#dee2c680;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422;">Reliability score · 4.9</div>
+          <div style="font-size:12.5px; color:#6f6360; margin-bottom:10px;">You verify almost every event you sign up for.</div>
+          <div style="height:8px; background:#fff; border-radius:999px; overflow:hidden;"><div style="width:98%; height:100%; background:#4f6b15;"></div></div>
+          <div style="margin-top:12px; font-size:12px; color:#504644; line-height:1.55;">A high score gives you first-pick access to future reward pools.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <footer style="max-width:1440px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 05e Audience · My events</div>
+    <div><a href="./05d - Audience · Verify.dc.html">← Verify</a> · <a href="./05f - Audience · Profile.dc.html">Next: Profile →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

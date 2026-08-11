@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="120" width="400" height="580" rx="24" fill="#dee2c680"/>
+    <circle cx="200" cy="240" r="60" fill="#c0cf72"/>
+    <rect x="520" y="120" width="600" height="580" rx="24" fill="#fff" stroke="#50464422"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">My Profile · Settings</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+  .field label { font-size:11px; color:#6f6360; font-weight:600; }
+  .field input, .field textarea, .field .select { width:100%; margin-top:4px; padding:11px 14px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .tab { padding:9px 16px; border-radius:12px; font-size:13px; font-weight:600; color:#504644; cursor:pointer; }
+  .tab.active { background:#2c2422; color:#fff; }
+  .switch { width:38px; height:22px; background:#4f6b15; border-radius:999px; position:relative; }
+  .switch::after { content:''; position:absolute; top:3px; right:3px; width:16px; height:16px; border-radius:50%; background:#fff; }
+  .switch.off { background:#50464433; }
+  .switch.off::after { left:3px; right:auto; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <header style="max-width:1240px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:22px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:22px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:14px;">
+      <a href="./Mockups Index.dc.html" style="padding:8px 14px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644; font-size:13px;">← Index</a>
+      <a href="./05a - Audience · Browse.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Browse events</a>
+      <a href="./05e - Audience · My Events.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">My events</a>
+      <a href="#" style="padding:8px 14px; border-radius:999px; background:#4f6b15; color:#fff; font-weight:600;">Profile</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:14px; font-size:13px; color:#6f6360;">
+      <div style="display:flex; align-items:center; gap:8px;"><div style="width:34px; height:34px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px;">PS</div><span>Priya Shah</span></div>
+    </div>
+  </header>
+
+  <div style="max-width:1240px; margin:0 auto; padding:0 32px;">
+    <div style="display:grid; grid-template-columns:340px 1fr; gap:20px;">
+      <!-- Profile card + counters -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card" style="padding:26px 24px; background:linear-gradient(135deg, #dee2c680, #fcf7f0); text-align:center; border-color:#dee2c6;">
+          <div style="width:96px; height:96px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:40px; margin:0 auto; border:4px solid #fff;">P</div>
+          <h1 style="font-family:'DM Sans'; font-weight:600; font-size:26px; margin:14px 0 4px; color:#2c2422;">Priya Shah</h1>
+          <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">London · Member since Jan 2025</div>
+          <div style="margin-top:10px; display:inline-flex; align-items:center; gap:6px; background:#fff; color:#4f6b15; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:600;">● Verified account</div>
+        </div>
+
+        <div class="card" style="padding:20px 22px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:12px;">Your stats</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:#fcf7f0; padding:14px; border-radius:12px; border:1px solid #50464410; text-align:center;"><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">12</div><div style="font-size:11.5px; color:#6f6360;">Events attended</div></div>
+            <div style="background:#fbeadd; padding:14px; border-radius:12px; border:1px solid #50464410; text-align:center;"><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#ed9a4e;">£146</div><div style="font-size:11.5px; color:#6f6360;">Rewarded</div></div>
+            <div style="background:#edebf2; padding:14px; border-radius:12px; border:1px solid #50464410; text-align:center;"><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#8b76c2;">4.9</div><div style="font-size:11.5px; color:#6f6360;">Reliability</div></div>
+            <div style="background:#dee2c680; padding:14px; border-radius:12px; border:1px solid #50464410; text-align:center;"><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#4f6b15;">92%</div><div style="font-size:11.5px; color:#6f6360;">Show-up rate</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:20px 22px; background:#f6e09240; border-color:#f6e092;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422;">Interests</div>
+          <div style="font-size:12.5px; color:#6f6360; margin-bottom:10px;">Tune your event recommendations.</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="badge" style="background:#8bb957; color:#fff;">Comedy ✓</span>
+            <span class="badge" style="background:#9cc766; color:#fff;">Live music ✓</span>
+            <span class="badge" style="background:#6f9a3f; color:#fff;">Exhibitions ✓</span>
+            <span class="badge" style="background:#fff; border:1px solid #50464426; color:#504644;">+ Theatre</span>
+            <span class="badge" style="background:#fff; border:1px solid #50464426; color:#504644;">+ Sports</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings pane with tabs -->
+      <div class="card" style="padding:8px;">
+        <div style="display:flex; gap:4px; padding:14px; border-bottom:1px solid #50464414;">
+          <div class="tab active">Account</div>
+          <div class="tab">Payout</div>
+          <div class="tab">Notifications</div>
+          <div class="tab">Privacy</div>
+          <div class="tab">Security</div>
+        </div>
+
+        <div style="padding:26px 30px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422;">Account details</div>
+          <p style="font-size:13px; color:#6f6360; margin:6px 0 20px;">Keep this current — brands use it to pay you back.</p>
+
+          <div class="row2" style="margin-bottom:12px;">
+            <div class="field"><label>Full name*</label><input value="Priya Anisha Shah"></div>
+            <div class="field"><label>Date of birth*</label><input value="14 · 03 · 1997"></div>
+            <div class="field"><label>Email*</label><input value="priya.s@gmail.com"></div>
+            <div class="field"><label>Mobile*</label><input value="+44 7700 900123"></div>
+            <div class="field" style="grid-column:1 / -1;"><label>Address*</label><input value="8 Bethnal Green Road, London, E1 6AN, UK"></div>
+          </div>
+
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin:24px 0 14px;">Payout method</div>
+          <div style="padding:16px 20px; background:#fcf7f0; border:1px solid #50464414; border-radius:16px; display:flex; align-items:center; gap:14px;">
+            <div style="width:44px; height:44px; border-radius:12px; background:#dee2c6; color:#4f6b15; display:grid; place-items:center; font-weight:700; font-size:14px;">M</div>
+            <div style="flex:1;">
+              <div style="font-weight:600; color:#2c2422;">Monzo Bank · Personal</div>
+              <div style="font-size:12.5px; color:#6f6360;">Sort · 04-00-04 · Account · ****5678</div>
+            </div>
+            <button style="border:1px solid #50464426; background:#fff; color:#504644; padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600;">Change</button>
+          </div>
+
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin:24px 0 14px;">Preferences</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#fcf7f0; border-radius:14px; border:1px solid #50464414;">
+              <div><div style="font-weight:600; color:#2c2422; font-size:14px;">Event alerts near me</div><div style="font-size:12px; color:#6f6360;">Push notifications when a new event opens within 10 mi.</div></div>
+              <div class="switch"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#fcf7f0; border-radius:14px; border:1px solid #50464414;">
+              <div><div style="font-weight:600; color:#2c2422; font-size:14px;">Sponsor newsletters</div><div style="font-size:12px; color:#6f6360;">Curated updates from brands you've opted into (currently 3).</div></div>
+              <div class="switch"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#fcf7f0; border-radius:14px; border:1px solid #50464414;">
+              <div><div style="font-weight:600; color:#2c2422; font-size:14px;">Reward digest</div><div style="font-size:12px; color:#6f6360;">A monthly summary of your reimbursements.</div></div>
+              <div class="switch"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#fcf7f0; border-radius:14px; border:1px solid #50464414;">
+              <div><div style="font-weight:600; color:#2c2422; font-size:14px;">Share attendance data with the artist</div><div style="font-size:12px; color:#6f6360;">Helps artists build community — always anonymised in analytics.</div></div>
+              <div class="switch off"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+            <a href="#" style="font-size:13px; color:#a02c4a; font-weight:600;">Delete my account</a>
+            <div style="display:flex; gap:10px;">
+              <button style="border:1px solid #50464426; background:#fff; color:#504644; padding:10px 20px; border-radius:999px; font-size:13.5px; font-weight:600;">Cancel</button>
+              <button style="border:none; background:#4f6b15; color:#fff; padding:10px 22px; border-radius:999px; font-size:13.5px; font-weight:600;">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="max-width:1240px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 05f Audience · Profile</div>
+    <div><a href="./05e - Audience · My Events.dc.html">← My events</a> · <a href="./Mockups Index.dc.html">Back to index →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

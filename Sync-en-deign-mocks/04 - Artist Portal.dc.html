@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="140" width="220" height="500" rx="20" fill="#edebf2"/><rect x="120" y="200" width="140" height="30" rx="8" fill="#8b76c2"/><rect x="120" y="250" width="140" height="20" rx="6" fill="#50464422"/><rect x="340" y="140" width="780" height="500" rx="20" fill="#fff" stroke="#50464422"/><rect x="380" y="200" width="220" height="80" rx="14" fill="#edebf2"/><rect x="620" y="200" width="220" height="80" rx="14" fill="#f6e092"/><rect x="860" y="200" width="220" height="80" rx="14" fill="#dee2c6"/><rect x="380" y="320" width="340" height="240" rx="14" fill="#fcf7f0"/><rect x="740" y="320" width="340" height="240" rx="14" fill="#dee2c680"/>
+    <text x="600" y="700" font-family="Georgia, serif" font-style="italic" font-size="34" fill="#504644" text-anchor="middle">Artist / Organiser portal</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:40px 0 96px;">
+  <header style="max-width:1240px; margin:0 auto 32px; padding:0 32px; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+    <div>
+      <div style="font-family:'Playfair Display'; font-style:italic; font-size:14px; color:#6f6360;">Phase 4 · The Late Set (demo)</div>
+      <h1 style="font-family:'DM Sans'; font-weight:600; font-size:48px; line-height:1.05; margin:4px 0 0; color:#2c2422; letter-spacing:-0.02em;">Artist / Organiser portal</h1>
+    </div>
+    <nav style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="./Mockups Index.dc.html" style="border:1px solid #50464426; background:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; color:#504644;">← Index</a>
+      <a href="./03 - Brand Portal.dc.html" style="border:1px solid #50464426; background:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; color:#504644;">← Brand portal</a>
+      <a href="./05 - Audience Portal.dc.html" style="border:none; background:#ed9a4e; color:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600;">Audience portal →</a>
+    </nav>
+  </header>
+  <section id="artist" style="max-width:1240px; margin:0 auto 80px; padding:0 32px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:20px;">
+      <div style="font-family:'DM Sans'; font-weight:600; color:#8b76c2; font-size:13px; letter-spacing:0.14em;">04 — ARTIST / ORGANISER PORTAL</div>
+      <div style="flex:1; height:1px; background:#50464422;"></div>
+      <div style="color:#6f6360; font-size:13px;">The Late Set (demo)</div>
+    </div>
+
+    <!-- Artist dashboard shell -->
+    <div style="background:#fff; border-radius:28px; border:1px solid #50464414; overflow:hidden; margin-bottom:24px;">
+      <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">4.1 · Artist dashboard</div>
+      <div style="display:grid; grid-template-columns:230px 1fr;">
+        <aside style="background:#edebf2; border-right:1px solid #50464410; padding:22px 16px;">
+          <div style="display:flex; align-items:baseline; gap:4px; padding:0 8px 20px;">
+            <span style="font-family:'Playfair Display'; font-style:italic; font-size:17px;">Live·En·</span>
+            <span style="font-family:'DM Sans'; font-weight:700; font-size:17px; color:#ed9a4e;">Synergy</span>
+          </div>
+          <div style="font-size:11px; color:#8b76c2; font-weight:600; letter-spacing:0.08em; padding:4px 8px;">ARTIST</div>
+          <nav style="display:flex; flex-direction:column; gap:2px; margin-top:6px; font-size:13.5px;">
+            <a style="padding:9px 10px; border-radius:10px; background:#8b76c2; color:#fff; font-weight:600;">Dashboard</a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644;">My profile</a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644;">Sponsor-value statement</a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644;">My open events</a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644; display:flex; justify-content:space-between; align-items:center;">Sponsorship offers <span style="background:#8b76c2; color:#fff; font-size:10px; padding:2px 7px; border-radius:999px;">2</span></a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644;">Confirmed &amp; signups</a>
+            <a style="padding:9px 10px; border-radius:10px; color:#504644;">Chat with brands</a>
+          </nav>
+          <div style="margin-top:20px; padding:10px 8px; display:flex; align-items:center; gap:10px; font-size:12.5px; color:#6f6360;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-weight:700;">MC</div>
+            <div><div style="color:#2c2422; font-weight:600;">Marcus Cole</div><div>The Late Set</div></div>
+          </div>
+        </aside>
+        <main style="padding:28px 32px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Backstage view</div>
+              <h2 style="font-family:'DM Sans'; font-weight:600; font-size:28px; margin:2px 0 0; color:#2c2422;">Hey Marcus 🎙️</h2>
+            </div>
+            <button style="border:none; background:#8b76c2; color:#fff; padding:11px 20px; border-radius:999px; font-size:13.5px; font-weight:600;">+ Create open event</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;">
+            <div style="background:#edebf2; border:1px solid #50464410; border-radius:18px; padding:18px;"><div style="font-size:12px; color:#6f6360;">Open events</div><div style="font-family:'DM Sans'; font-weight:600; font-size:28px; color:#2c2422; margin-top:6px;">4</div></div>
+            <div style="background:#f6e09266; border:1px solid #50464410; border-radius:18px; padding:18px;"><div style="font-size:12px; color:#6f6360;">Pending offers</div><div style="font-family:'DM Sans'; font-weight:600; font-size:28px; color:#2c2422; margin-top:6px;">2</div></div>
+            <div style="background:#dee2c6; border:1px solid #50464410; border-radius:18px; padding:18px;"><div style="font-size:12px; color:#6f6360;">Sponsored (confirmed)</div><div style="font-family:'DM Sans'; font-weight:600; font-size:28px; color:#2c2422; margin-top:6px;">3</div></div>
+            <div style="background:#fbeadd; border:1px solid #50464410; border-radius:18px; padding:18px;"><div style="font-size:12px; color:#6f6360;">Audience signups (30d)</div><div style="font-family:'DM Sans'; font-weight:600; font-size:28px; color:#2c2422; margin-top:6px;">312</div></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div style="border:1px solid #50464414; border-radius:18px; padding:20px;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin-bottom:12px;">Incoming sponsorship offers</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="padding:14px; background:#fcf7f0; border-radius:14px; border:1px solid #50464410;">
+                  <div style="display:flex; justify-content:space-between;"><div style="font-weight:600; color:#2c2422;">Northwave Coffee</div><span style="background:#f6e092; color:#504644; font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px;">Review</span></div>
+                  <div style="font-size:12.5px; color:#6f6360; margin-top:4px;">£1,200 · Late-Shift Sessions · Reward: first 20 sign-ups</div>
+                  <div style="display:flex; gap:8px; margin-top:10px;"><button style="border:none; background:#4f6b15; color:#fff; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600;">Accept</button><button style="border:1px solid #50464426; background:#fff; color:#504644; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600;">Counter</button><button style="border:none; background:transparent; color:#a02c4a; padding:6px 8px; font-size:12px; font-weight:600;">Decline</button></div>
+                </div>
+                <div style="padding:14px; background:#fcf7f0; border-radius:14px; border:1px solid #50464410;">
+                  <div style="display:flex; justify-content:space-between;"><div style="font-weight:600; color:#2c2422;">Waverly Records</div><span style="background:#edebf2; color:#8b76c2; font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px;">Countered</span></div>
+                  <div style="font-size:12.5px; color:#6f6360; margin-top:4px;">£800 · Late Set Vol. 12 · Reward: postcode E1/E2</div>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid #50464414; border-radius:18px; padding:20px; background:#dee2c680;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin-bottom:12px;">Confirmed events · next up</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="padding:12px 14px; background:#fff; border-radius:12px; border:1px solid #50464414;">
+                  <div style="font-weight:600; color:#2c2422;">Late Set · Vol. 11</div>
+                  <div style="font-size:12px; color:#6f6360; margin-top:2px;">Thu 21 Aug · The Bill Murray · 108/120 signups</div>
+                  <div style="margin-top:8px; height:6px; background:#50464414; border-radius:999px; overflow:hidden;"><div style="width:90%; height:100%; background:#4f6b15;"></div></div>
+                </div>
+                <div style="padding:12px 14px; background:#fff; border-radius:12px; border:1px solid #50464414;">
+                  <div style="font-weight:600; color:#2c2422;">Late Set · Vol. 12</div>
+                  <div style="font-size:12px; color:#6f6360; margin-top:2px;">Thu 04 Sep · Union Chapel · 34/220 signups</div>
+                  <div style="margin-top:8px; height:6px; background:#50464414; border-radius:999px; overflow:hidden;"><div style="width:15%; height:100%; background:#ed9a4e;"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Profile + Sponsor-value + Create open event -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
+      <!-- Artist profile -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">4.2 · Artist profile</div>
+        <div style="background:#baaae1; height:130px; position:relative;">
+          <div style="position:absolute; left:24px; bottom:-32px; width:76px; height:76px; border-radius:50%; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:30px; border:4px solid #fff;">LS</div>
+        </div>
+        <div style="padding:44px 24px 24px;">
+          <h3 style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422; margin:0;">The Late Set</h3>
+          <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:14px;">Marcus Cole · comedy &amp; open mic</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">
+            <span style="background:#edebf2; color:#8b76c2; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Comedy</span>
+            <span style="background:#fcf7f0; border:1px solid #50464414; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Open mic</span>
+            <span style="background:#fcf7f0; border:1px solid #50464414; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">London-based</span>
+          </div>
+          <p style="font-size:13.5px; color:#6f6360; line-height:1.6; margin:14px 0;">A monthly comedy night that mixes household names with next-week's headliners. Building small rooms into stadium confidence, one Thursday at a time.</p>
+          <div style="display:flex; gap:8px; font-size:12px; color:#504644;">
+            <span style="background:#fcf7f0; border:1px solid #50464414; padding:6px 12px; border-radius:999px;">🌐 latesetldn.com</span>
+            <span style="background:#fcf7f0; border:1px solid #50464414; padding:6px 12px; border-radius:999px;">📷 @latesetldn</span>
+            <span style="background:#fcf7f0; border:1px solid #50464414; padding:6px 12px; border-radius:999px;">▶ YouTube</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sponsor-value statement -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">4.3 · Sponsor-value statement</div>
+        <div style="padding:26px 26px 28px; background:#f6e09240;">
+          <div style="display:inline-block; background:#fff; border:1px solid #50464414; padding:4px 10px; border-radius:999px; font-size:11px; color:#6f6360; margin-bottom:12px;">Internal · shown to matched brands</div>
+          <h3 style="font-family:'DM Sans'; font-weight:600; font-size:22px; margin:0 0 6px; color:#2c2422;">How we deliver sponsor value</h3>
+          <p style="font-size:13px; color:#6f6360; margin:0 0 14px;">Up to 500 words. This travels with every event you list.</p>
+          <textarea rows="8" style="width:100%; padding:14px 16px; border:1px solid #50464426; border-radius:14px; background:#fff; font-size:13.5px; font-family:inherit; line-height:1.6; resize:none;">Sponsor mentions on the door, roll-up banner on stage, three IG stories in the run-up (76k reach), one Reel on show day (43k avg), sampling table in the foyer, and the sponsor logo on the sign-up sheet and event QR code. Ticket-buyers who opt in receive a follow-up email co-branded with the sponsor.</textarea>
+          <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#6f6360;">
+            <span>142 / 500 words</span>
+            <button style="border:none; background:#ed9a4e; color:#fff; padding:9px 18px; border-radius:999px; font-size:13px; font-weight:600;">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create open event + Offers inbox -->
+    <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:24px;">
+      <!-- Create open event -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">4.4 · Create open event (seeking sponsorship)</div>
+        <div style="padding:26px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="grid-column:1 / -1;"><label style="font-size:11px; color:#6f6360; font-weight:600;">Event name*</label><input value="Late Set · Vol. 13 — Autumn Edition" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Date*</label><input value="Thu 09 Oct 2026" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Capacity*</label><input value="220" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit;"></div>
+            <div style="grid-column:1 / -1;"><label style="font-size:11px; color:#6f6360; font-weight:600;">Venue*</label><input value="Union Chapel · Islington · London" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Ticket price (incl. taxes)*</label><input value="£14.00" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Sponsorship budget range*</label><div style="margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; display:flex; justify-content:space-between;">£800 – £1,500 <span style="color:#6f6360;">▾</span></div></div>
+            <div style="grid-column:1 / -1;"><label style="font-size:11px; color:#6f6360; font-weight:600;">Benefits to sponsors*</label><textarea rows="2" style="width:100%; margin-top:4px; padding:11px 12px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit; resize:none;">Roll-up banner, name-in-lights on the poster, 3 IG stories, foyer sampling table, and QR-code co-branding.</textarea></div>
+          </div>
+          <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#6f6360;">Event ref · <strong>LTS-2610-013</strong> · auto-generated on submit</span>
+            <button style="border:none; background:#8b76c2; color:#fff; padding:11px 22px; border-radius:999px; font-size:13.5px; font-weight:600;">Publish open event →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Offers inbox detail -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">4.5 · Sponsorship offer detail</div>
+        <div style="padding:26px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; gap:12px; align-items:center;">
+              <div style="width:44px; height:44px; border-radius:14px; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:20px;">N</div>
+              <div>
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:18px; color:#2c2422;">Northwave Coffee</div>
+                <div style="font-size:12px; color:#6f6360;">Late-Shift Sessions · #LES-2601</div>
+              </div>
+            </div>
+            <span style="background:#f6e092; color:#504644; font-size:11px; font-weight:600; padding:4px 10px; border-radius:999px;">Awaiting review</span>
+          </div>
+          <div style="margin-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px;">
+            <div style="background:#fcf7f0; padding:12px; border-radius:12px; border:1px solid #50464410;"><div style="color:#6f6360;">Offered budget</div><div style="font-family:'DM Sans'; font-weight:600; font-size:18px; color:#2c2422;">£1,200</div></div>
+            <div style="background:#fcf7f0; padding:12px; border-radius:12px; border:1px solid #50464410;"><div style="color:#6f6360;">Reward rule</div><div style="font-weight:600; color:#2c2422; margin-top:2px;">First 20 sign-ups</div></div>
+            <div style="background:#fcf7f0; padding:12px; border-radius:12px; border:1px solid #50464410;"><div style="color:#6f6360;">Deliverables</div><div style="color:#504644; margin-top:2px;">Banner · IG story · sampling</div></div>
+            <div style="background:#fcf7f0; padding:12px; border-radius:12px; border:1px solid #50464410;"><div style="color:#6f6360;">Compatibility</div><div style="font-weight:600; color:#4f6b15; margin-top:2px;">86 / 100 · strong</div></div>
+          </div>
+          <div style="margin-top:16px; padding:14px; background:#dee2c680; border-radius:14px; font-size:13px; color:#504644; line-height:1.55;">
+            "We're a small-room, late-night crowd — this is a great fit. Happy to send additional artwork whenever you're ready." <span style="color:#6f6360; font-family:'Playfair Display'; font-style:italic;">— note from Live·En·Synergy</span>
+          </div>
+          <div style="margin-top:18px; display:flex; gap:10px;">
+            <button style="flex:1; border:none; background:#4f6b15; color:#fff; padding:11px 22px; border-radius:999px; font-size:13.5px; font-weight:600;">Accept sponsorship</button>
+            <button style="border:1px solid #50464426; background:#fff; color:#504644; padding:11px 22px; border-radius:999px; font-size:13.5px; font-weight:600;">Counter terms</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer style="max-width:1240px; margin:32px auto 0; padding:24px 32px; color:#6f6360; font-size:12.5px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · Artist / Organiser portal · v0.1</div>
+    <div><a href="./Mockups Index.dc.html">Back to index</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

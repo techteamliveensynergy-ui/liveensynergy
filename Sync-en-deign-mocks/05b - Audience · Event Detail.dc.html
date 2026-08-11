@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="120" width="720" height="580" rx="24" fill="#fff" stroke="#50464422"/>
+    <rect x="120" y="180" width="640" height="220" rx="16" fill="#ffecf1"/>
+    <rect x="820" y="120" width="300" height="580" rx="24" fill="#dee2c680"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Event detail · Reserve slot</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+  .field label { font-size:11.5px; color:#6f6360; font-weight:600; }
+  .field input, .field textarea, .field .select { width:100%; margin-top:4px; padding:11px 14px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:13.5px; font-family:inherit; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <header style="max-width:1440px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:22px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:22px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:14px;">
+      <a href="./Mockups Index.dc.html" style="padding:8px 14px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644; font-size:13px;">← Index</a>
+      <a href="./05a - Audience · Browse.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Browse events</a>
+      <a href="./05e - Audience · My Events.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">My events</a>
+      <a href="./05f - Audience · Profile.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Profile</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:14px; font-size:13px; color:#6f6360;">
+      <div style="display:flex; align-items:center; gap:8px;"><div style="width:34px; height:34px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px;">PS</div><span>Priya Shah</span></div>
+    </div>
+  </header>
+
+  <div style="max-width:1440px; margin:0 auto; padding:0 32px;">
+    <div style="font-size:13px; color:#6f6360; margin-bottom:12px;"><a href="./05a - Audience · Browse.dc.html" style="color:#6f6360;">← Browse events</a> · <span style="color:#504644;">The Late Set · Vol. 11</span></div>
+
+    <div style="display:grid; grid-template-columns:1.6fr 1fr; gap:24px;">
+      <!-- Main event detail -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card" style="overflow:hidden;">
+          <div style="height:280px; background:#ffecf1; position:relative; display:grid; place-items:center; color:#a02c4a; font-family:'Playfair Display'; font-style:italic; font-size:22px;">event banner
+            <span style="position:absolute; top:16px; left:16px; background:#fff; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600;">Sponsored by <em style="color:#ed9a4e;">Northwave Coffee</em></span>
+            <span style="position:absolute; top:16px; right:16px; background:#fff; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600;">Share ↗</span>
+          </div>
+          <div style="padding:28px 32px;">
+            <div style="display:flex; gap:6px; margin-bottom:10px;">
+              <span class="badge" style="background:#8bb957; color:#fff;">Comedy</span>
+              <span class="badge" style="background:#fcf7f0; border:1px solid #50464414; color:#504644;">120 seats</span>
+              <span class="badge" style="background:#fdf2e2; color:#a05014;">£12 back on entry</span>
+            </div>
+            <h1 style="font-family:'DM Sans'; font-weight:600; font-size:36px; color:#2c2422; margin:0; letter-spacing:-0.01em;">The Late Set · Vol. 11</h1>
+            <div style="font-family:'Playfair Display'; font-style:italic; color:#6f6360; font-size:16px; margin-top:6px;">A monthly comedy night — 8 acts, one late-night surprise headliner.</div>
+
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:22px;">
+              <div style="background:#fcf7f0; padding:14px; border-radius:14px; border:1px solid #50464410;"><div style="font-size:11.5px; color:#6f6360;">Date</div><div style="font-weight:600; color:#2c2422; margin-top:2px;">Thu 21 Aug · 8pm</div></div>
+              <div style="background:#fcf7f0; padding:14px; border-radius:14px; border:1px solid #50464410;"><div style="font-size:11.5px; color:#6f6360;">Venue</div><div style="font-weight:600; color:#2c2422; margin-top:2px;">The Bill Murray</div></div>
+              <div style="background:#fcf7f0; padding:14px; border-radius:14px; border:1px solid #50464410;"><div style="font-size:11.5px; color:#6f6360;">Ticket price</div><div style="font-weight:600; color:#2c2422; margin-top:2px;">£12.00</div></div>
+              <div style="background:#dee2c680; padding:14px; border-radius:14px; border:1px solid #dee2c6;"><div style="font-size:11.5px; color:#6f6360;">Reward slots left</div><div style="font-weight:600; color:#4f6b15; margin-top:2px;">3 / 20</div></div>
+            </div>
+
+            <div style="margin-top:22px; padding:20px; background:#f6e09240; border:1px solid #f6e092; border-radius:16px;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:6px;">How the reward works</div>
+              <div style="font-size:13.5px; color:#504644; line-height:1.6;"><strong>Northwave Coffee</strong> will reimburse the <strong>£12 entry fee</strong> to the <strong>first 20 verified attendees</strong>. Two-step verification: upload your ticket after buying, then scan the venue QR (or ask the door) on the night.</div>
+            </div>
+
+            <div style="margin-top:22px;">
+              <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin-bottom:10px;">About the event</div>
+              <p style="font-size:14.5px; line-height:1.65; color:#504644; margin:0;">The Late Set brings a mix of household names and next-week's headliners to a small East London room. Doors 7pm, first set 8pm sharp. Standing capacity 120 — arrive early to grab a seat at the back.</p>
+              <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464414; color:#504644;">🎤 Marcus Cole (host)</span>
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464414; color:#504644;">Rachel B</span>
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464414; color:#504644;">Mo Okafor</span>
+                <span class="badge" style="background:#fcf7f0; border:1px solid #50464414; color:#504644;">+ 5 more</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event FAQs -->
+        <div class="card" style="padding:26px 30px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:17px; color:#2c2422; margin-bottom:12px;">Event FAQ</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:14px 18px; border:1px solid #50464414; border-radius:14px; background:#fcf7f0; display:flex; justify-content:space-between;"><span style="font-weight:600; color:#2c2422;">How do I get the £12 reimbursement?</span><span style="color:#ed9a4e; font-size:18px;">−</span></div>
+            <div style="padding:14px 18px; border:1px solid #50464414; border-radius:14px; background:#fcf7f0; color:#6f6360; font-size:13.5px; line-height:1.55;">Buy your ticket via the artist's link. Reserve your slot on Live·En·Synergy — the first 20 sign-ups make the reward pool. Upload your ticket, then verify at the door (QR scan or organiser check-in). Payout by bank transfer within 5 working days.</div>
+            <div style="padding:14px 18px; border:1px solid #50464414; border-radius:14px; background:#fcf7f0; display:flex; justify-content:space-between;"><span style="font-weight:600; color:#2c2422;">What if I sign up but can't attend?</span><span style="color:#6f6360; font-size:18px;">+</span></div>
+            <div style="padding:14px 18px; border:1px solid #50464414; border-radius:14px; background:#fcf7f0; display:flex; justify-content:space-between;"><span style="font-weight:600; color:#2c2422;">Is the venue accessible?</span><span style="color:#6f6360; font-size:18px;">+</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reserve slot side rail -->
+      <aside style="display:flex; flex-direction:column; gap:16px; position:sticky; top:16px; align-self:start;">
+        <div class="card" style="padding:24px 26px; background:#dee2c680; border-color:#dee2c6;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:18px; color:#2c2422;">Reserve your slot</div>
+          <div style="font-size:12.5px; color:#6f6360; margin-bottom:14px;">Step 1 · Raw participant data (reviewed before selection).</div>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="row2">
+              <div class="field"><label>Age</label><input value="29"></div>
+              <div class="field"><label>Gender</label><div class="select">Female <span style="color:#6f6360;">▾</span></div></div>
+            </div>
+            <div class="field"><label>Postcode</label><input value="E1 6AN"></div>
+            <div class="field"><label>Location</label><input value="London, UK"></div>
+            <div class="field"><label>How did you hear about us?</label><div class="select">Instagram <span style="color:#6f6360;">▾</span></div></div>
+            <div class="field"><label>Would you like Northwave newsletters?</label><div style="display:flex; gap:6px; margin-top:4px;"><label style="flex:1; padding:9px 12px; border:2px solid #4f6b15; background:#fff; border-radius:12px; font-size:13px; font-weight:600; color:#4f6b15; text-align:center; cursor:pointer;">Yes</label><label style="flex:1; padding:9px 12px; border:1px solid #50464426; background:#fff; border-radius:12px; font-size:13px; font-weight:600; color:#504644; text-align:center; cursor:pointer;">No thanks</label></div></div>
+          </div>
+
+          <div style="margin-top:14px; padding:12px 14px; background:#fff; border-radius:12px; border:1px solid #50464414; font-size:12.5px; color:#504644; line-height:1.55;">
+            <strong style="color:#2c2422;">17 already signed up</strong> — 3 reward slots left. You're in the running for the £12 reimbursement.
+          </div>
+
+          <button style="margin-top:14px; width:100%; border:none; background:#4f6b15; color:#fff; padding:14px; border-radius:16px; font-size:14px; font-weight:600;">Reserve my slot →</button>
+          <div style="margin-top:8px; text-align:center; font-size:11.5px; color:#6f6360;">By reserving you agree to the sponsor's <a href="#">reward terms</a>.</div>
+        </div>
+
+        <div class="card" style="padding:20px 22px;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:10px;">Then what?</div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+            <div style="display:flex; gap:12px; align-items:flex-start;"><div style="width:26px; height:26px; border-radius:50%; background:#dee2c6; color:#4f6b15; display:grid; place-items:center; font-weight:700; font-size:12px;">1</div><div><strong style="color:#2c2422;">Buy a ticket</strong><div style="color:#6f6360; font-size:12px;">Use the artist's link from your confirmation email.</div></div></div>
+            <div style="display:flex; gap:12px; align-items:flex-start;"><div style="width:26px; height:26px; border-radius:50%; background:#f6e092; color:#504644; display:grid; place-items:center; font-weight:700; font-size:12px;">2</div><div><strong style="color:#2c2422;">Upload your ticket</strong><div style="color:#6f6360; font-size:12px;">PDF or photo — takes 30 seconds.</div></div></div>
+            <div style="display:flex; gap:12px; align-items:flex-start;"><div style="width:26px; height:26px; border-radius:50%; background:#edebf2; color:#8b76c2; display:grid; place-items:center; font-weight:700; font-size:12px;">3</div><div><strong style="color:#2c2422;">Show up &amp; check in</strong><div style="color:#6f6360; font-size:12px;">Scan the venue QR — or ask the organiser.</div></div></div>
+            <div style="display:flex; gap:12px; align-items:flex-start;"><div style="width:26px; height:26px; border-radius:50%; background:#fbeadd; color:#ed9a4e; display:grid; place-items:center; font-weight:700; font-size:12px;">4</div><div><strong style="color:#2c2422;">Get paid back</strong><div style="color:#6f6360; font-size:12px;">Reward lands within 5 working days.</div></div></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <footer style="max-width:1440px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 05b Audience · Event detail</div>
+    <div><a href="./05a - Audience · Browse.dc.html">← Browse</a> · <a href="./05c - Audience · Selected Details.dc.html">Next: Selected details →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

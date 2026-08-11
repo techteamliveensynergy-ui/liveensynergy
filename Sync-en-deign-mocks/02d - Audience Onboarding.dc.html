@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="80" width="1040" height="60" rx="20" fill="#fff" stroke="#50464422"/>
+    <rect x="120" y="100" width="120" height="20" rx="6" fill="#4f6b15"/>
+    <rect x="80" y="180" width="1040" height="540" rx="24" fill="#dee2c680"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Audience · Full-screen onboarding</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .step-page { min-height:820px; padding:40px 64px 56px; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; border-bottom:1px dashed #50464422; }
+  .step-eyebrow { display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid #50464414; padding:6px 14px; border-radius:999px; font-size:11.5px; color:#6f6360; font-weight:600; letter-spacing:0.08em; }
+  h1.step-h { font-family:'DM Sans'; font-weight:600; font-size:56px; line-height:1.02; letter-spacing:-0.02em; color:#2c2422; margin:14px 0 12px; }
+  .step-lede { color:#6f6360; font-size:16px; line-height:1.55; max-width:480px; margin:0 0 20px; }
+  .field label { font-size:12px; color:#6f6360; font-weight:600; display:block; margin-bottom:6px; }
+  .field input, .field textarea, .field .select { width:100%; padding:14px 16px; border:1px solid #50464426; border-radius:14px; background:#fff; font-size:15px; font-family:inherit; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; padding:28px; }
+  .cta { border:none; background:#4f6b15; color:#fff; padding:14px 26px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .ghost { border:1px solid #50464426; background:#fff; color:#504644; padding:14px 22px; border-radius:999px; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .actions { display:flex; gap:12px; align-items:center; }
+  .chip { padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; border:1px solid #50464426; background:#fff; color:#504644; cursor:pointer; }
+  .chip.active { background:#4f6b15; color:#fff; border-color:#4f6b15; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;">
+
+  <header style="position:sticky; top:0; z-index:20; background:#dee2c6f2; backdrop-filter:blur(8px); border-bottom:1px solid #50464414;">
+    <div style="max-width:1440px; margin:0 auto; padding:14px 32px; display:flex; align-items:center; gap:20px;">
+      <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+      <div style="height:20px; width:1px; background:#50464422;"></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:#504644;">
+        <span style="width:22px; height:22px; border-radius:6px; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:11px; font-weight:700;">L</span>
+        Audience onboarding · Priya Shah
+      </div>
+      <div style="flex:1; display:flex; align-items:center; gap:10px; padding:0 40px;">
+        <div style="flex:1; height:6px; background:#50464422; border-radius:999px; position:relative;"><div style="width:20%; height:100%; background:#4f6b15; border-radius:999px;"></div></div>
+        <div style="display:flex; gap:6px;">
+          <a href="#l1" style="width:26px; height:26px; border-radius:50%; background:#4f6b15; color:#fff; display:grid; place-items:center; font-size:12px; font-weight:700;">1</a>
+          <a href="#l2" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">2</a>
+          <a href="#l3" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">3</a>
+          <a href="#l4" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">4</a>
+          <a href="#l5" style="width:26px; height:26px; border-radius:50%; background:#fff; border:1px solid #50464426; color:#504644; display:grid; place-items:center; font-size:12px; font-weight:600;">5</a>
+        </div>
+      </div>
+      <a href="./02 - Onboarding.dc.html" style="font-size:13px; color:#6f6360;">Save &amp; exit ✕</a>
+    </div>
+  </header>
+
+  <!-- STEP 1 — Account -->
+  <section id="l1" class="step-page" style="background:linear-gradient(180deg, #dee2c680 0%, #f4ede2 100%);">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#4f6b15;"></span>STEP 01 · CREATE ACCOUNT</div>
+      <h1 class="step-h">Show up. Get <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">rewarded</em>.</h1>
+      <p class="step-lede">Attend events you'd love anyway — verify at the door, get your ticket paid back. Takes 60 seconds to set up.</p>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:22px; font-size:13.5px; color:#504644;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">✓</span> Free forever — brands cover the reward.</div>
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">✓</span> No credit card ever needed.</div>
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">✓</span> Skip anything optional.</div>
+      </div>
+      <div class="actions">
+        <button class="ghost">← Change role</button>
+        <button class="cta">Continue → Verify email</button>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:16px; color:#2c2422; margin-bottom:14px;">Your account</div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="row2">
+          <div class="field"><label>Full name*</label><input value="Priya Shah"></div>
+          <div class="field"><label>Date of birth*</label><input value="14 · 03 · 1997"></div>
+        </div>
+        <div class="field"><label>Email*</label><input value="priya.s@gmail.com"></div>
+        <div class="field"><label>Mobile*</label><input value="+44 7700 900123"></div>
+        <div class="field"><label>Address*</label><input value="8 Bethnal Green Road, London E1 6AN"></div>
+        <div class="field"><label>Password*</label><input type="password" value="••••••••••"></div>
+        <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#504644;"><input type="checkbox" checked style="margin-top:2px;"> I agree to the <a href="#" style="font-weight:600;">terms</a> and <a href="#" style="font-weight:600;">privacy policy</a>.</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 — Verify email -->
+  <section id="l2" class="step-page" style="background:#f4ede2; grid-template-columns:1fr 1fr;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#4f6b15;"></span>STEP 02 · VERIFY EMAIL</div>
+      <h1 class="step-h">Check your <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">inbox</em>.</h1>
+      <p class="step-lede">We sent a 6-digit code to <strong style="color:#2c2422;">priya.s@gmail.com</strong>. It expires in 10 minutes.</p>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Verify &amp; continue →</button>
+        <a href="#" style="font-size:13px; font-weight:600; margin-left:8px;">Resend code</a>
+      </div>
+    </div>
+    <div class="card" style="padding:36px 32px; text-align:center; background:linear-gradient(180deg, #fcf7f0, #fff);">
+      <div style="width:72px; height:72px; border-radius:22px; background:#dee2c6; color:#4f6b15; display:grid; place-items:center; font-size:32px; margin:0 auto 16px;">✉</div>
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422;">Enter verification code</div>
+      <div style="font-size:13px; color:#6f6360; margin-bottom:22px;">Sent to priya.s@gmail.com</div>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <input value="4" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:2px solid #4f6b15; border-radius:14px; background:#fff; outline:none; color:#2c2422;">
+        <input value="8" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:2px solid #4f6b15; border-radius:14px; background:#fff; outline:none; color:#2c2422;">
+        <input value="1" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:2px solid #4f6b15; border-radius:14px; background:#fff; outline:none; color:#2c2422;">
+        <input value="3" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:2px solid #4f6b15; border-radius:14px; background:#fff; outline:none; color:#2c2422;">
+        <input value="" placeholder="_" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:1px solid #50464426; border-radius:14px; background:#fff; outline:none; color:#6f6360;">
+        <input value="" placeholder="_" style="width:56px; height:64px; text-align:center; font-size:26px; font-family:'DM Sans'; font-weight:600; border:1px solid #50464426; border-radius:14px; background:#fff; outline:none; color:#6f6360;">
+      </div>
+      <div style="margin-top:20px; font-size:12px; color:#6f6360;">Code expires in <strong style="color:#2c2422;">08:42</strong></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 — Interests -->
+  <section id="l3" class="step-page" style="background:#dee2c680;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#4f6b15;"></span>STEP 03 · INTERESTS</div>
+      <h1 class="step-h">What do you <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">love</em> going to?</h1>
+      <p class="step-lede">We'll surface sponsored events that match — no spam, and you can change your mind anytime from the profile page.</p>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Payout</button>
+        <a href="#l4" style="font-size:13px; color:#6f6360; margin-left:8px;">Skip for now</a>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:6px;">Pick your favourites</div>
+      <div style="font-size:12.5px; color:#6f6360; margin-bottom:16px;">Choose 3+ — 5 selected</div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px;">
+        <span class="chip active">🎤 Live music</span>
+        <span class="chip active">🎭 Comedy</span>
+        <span class="chip active">🎨 Exhibitions</span>
+        <span class="chip">🎬 Film &amp; screenings</span>
+        <span class="chip">🥂 Food &amp; drink events</span>
+        <span class="chip active">📚 Talks &amp; readings</span>
+        <span class="chip">⚽ Sports</span>
+        <span class="chip">🎮 Gaming &amp; e-sports</span>
+        <span class="chip active">🌸 Festivals</span>
+        <span class="chip">🎪 Cabaret &amp; drag</span>
+        <span class="chip">👗 Fashion</span>
+        <span class="chip">🎓 Conferences</span>
+      </div>
+
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin:22px 0 6px;">Locations you'd travel to</div>
+      <div style="font-size:12.5px; color:#6f6360; margin-bottom:12px;">Home city + up to 3 more.</div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px;">
+        <span class="chip active">📍 London (home)</span>
+        <span class="chip active">📍 Brighton</span>
+        <span class="chip">📍 Manchester</span>
+        <span class="chip">📍 Bristol</span>
+        <span class="chip">📍 Edinburgh</span>
+        <span class="chip">+ Add city</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 — Payout method -->
+  <section id="l4" class="step-page" style="background:#f4ede2;">
+    <div>
+      <div class="step-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#4f6b15;"></span>STEP 04 · PAYOUT METHOD</div>
+      <h1 class="step-h">Where should we <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">send the money</em>?</h1>
+      <p class="step-lede">Rewards are paid by bank transfer within 5 working days of verification. Encrypted and only used for your payouts.</p>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:13.5px; color:#504644; margin-bottom:22px;">
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">🔒</span> Bank details encrypted at rest.</div>
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">🔒</span> Never shared with brands or artists.</div>
+        <div style="display:flex; gap:10px; align-items:center;"><span style="color:#4f6b15;">🔒</span> You can add this later — you'll be asked again if you're picked for a reward.</div>
+      </div>
+      <div class="actions">
+        <button class="ghost">← Back</button>
+        <button class="cta">Continue → Almost there</button>
+        <a href="#l5" style="font-size:13px; color:#6f6360; margin-left:8px;">Add later</a>
+      </div>
+    </div>
+    <div class="card" style="padding:30px 32px;">
+      <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422; margin-bottom:14px;">Bank account · UK</div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="field"><label>Account holder name*</label><input value="Priya A Shah"></div>
+        <div class="row2">
+          <div class="field"><label>Bank*</label><input value="Monzo"></div>
+          <div class="field"><label>Sort code*</label><input value="04-00-04"></div>
+        </div>
+        <div class="field"><label>Account number*</label><input value="12345678"></div>
+      </div>
+      <div style="margin-top:16px; padding:14px 16px; background:#dee2c680; border-radius:14px; border:1px solid #dee2c6; font-size:12.5px; color:#504644; line-height:1.55;">
+        You're paying £0 to join. Rewards go into this account within 5 working days of verifying attendance.
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5 — Done -->
+  <section id="l5" class="step-page" style="background:linear-gradient(135deg, #dee2c680, #f6e092); grid-template-columns:1fr;">
+    <div style="text-align:center; max-width:720px; margin:0 auto;">
+      <div style="display:inline-flex; align-items:center; gap:8px; background:#fff; padding:8px 18px; border-radius:999px; font-size:12px; color:#4f6b15; font-weight:600;">🎉 You're in the audience</div>
+      <h1 class="step-h" style="font-size:68px;">Welcome, <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#4f6b15;">Priya</em>.</h1>
+      <p class="step-lede" style="margin:0 auto 28px; text-align:center;">3 sponsored events near you tonight, and 11 more this month. Reserve a slot to start earning rewards.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:28px;">
+        <a href="./05a - Audience · Browse.dc.html" class="cta" style="text-decoration:none;">Browse events near me →</a>
+        <a href="./05f - Audience · Profile.dc.html" class="ghost" style="text-decoration:none;">Go to profile</a>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; text-align:left;">
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">1 · Reserve</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Pick a sponsored event.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">2 · Buy ticket</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Via the artist link.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">3 · Verify at door</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">QR or manual check-in.</div></div>
+        <div style="padding:20px; background:#fff; border-radius:20px; border:1px solid #50464414;"><div style="font-family:'DM Sans'; font-weight:600; color:#2c2422;">4 · Get paid back</div><div style="font-size:12.5px; color:#6f6360; margin-top:4px;">Within 5 working days.</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+</body>
+</html>

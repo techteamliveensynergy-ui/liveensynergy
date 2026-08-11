@@ -1,0 +1,753 @@
+
+
+
+
+Live-En-Synergy V1 MVP — Functional &amp; Specification Document
+
+
+
+Prepared For: Sakshi Gulati [cite: 1]
+
+
+Prepared By: Ketan Khamgaonkar (NeosigmaticAI) [cite: 1]
+
+
+Date: July 2026 [cite: 1]
+
+
+Scope Level: V1 Flat-Rate MVP Specification [cite: 1, 34]
+
+
+
+1. Executive Summary &amp; Architecture Overview
+
+
+Live-En-Synergy is a three-sided sponsorship marketplace connecting brands, artists/event organisers, and audience members for live events [cite: 3, 4]. Brands fund sponsorship campaigns; artists and organisers receive funding and guaranteed attendance; audience members receive rewards (e.g., ticket reimbursements) following physical attendance verification [cite: 3, 4].
+
+
+The system architecture comprises four isolated portals with distinct role-based permissions and data isolation [cite: 6], alongside a multi-page public website [cite: 19].
+
+
+Portal / Module
+
+
+Primary User Role
+
+
+Core Objective
+
+
+Key Integration / Workflows
+
+
+
+
+
+
+Public Website
+
+
+Unauthenticated Visitors
+
+
+Platform onboarding, brand explainer, and event browsing [cite: 19]
+
+
+CTA routing to registration portals [cite: 19]
+
+
+Brand Portal
+
+
+Brands / Sponsors
+
+
+Profile management, campaign funding, browsing open events, attendance reporting [cite: 6, 10, 11, 12]
+
+
+Stripe payment collection, campaign budget calculation [cite: 21, 22]
+
+
+Artist / Organiser Portal
+
+
+Artists &amp; Event Organisers
+
+
+Profile management, event listings, sponsorship acceptance, sponsor-value statements [cite: 7, 12, 13, 14, 15]
+
+
+Event reference auto-generation, QR code venue check-in [cite: 15, 30]
+
+
+Audience Portal
+
+
+Audience Members
+
+
+Event discovery, slot reservation, proof upload, reward status tracking [cite: 8, 15, 16]
+
+
+Two-step attendance verification, raw &amp; selected data capture [cite: 15, 16, 31]
+
+
+Admin Portal
+
+
+Platform Owner (Sakshi)
+
+
+Profile approval, manual brand-event matching, attendance override, CSV payout export [cite: 9, 17, 18, 24, 27]
+
+
+Global metrics, customer query ticketing, payout list generation [cite: 17, 18, 24]
+
+
+
+
+2. Public Website Structure
+
+
+The public-facing website provides high-level information and drives signups for all three user roles [cite: 19].
+
+
+
+Navigation Bar (Header)
+
+
+Logo &amp; Home Link: Directs to Homepage [cite: 19].
+
+
+About Us: Platform background and mission [cite: 19].
+
+
+Events: Browsable directory of upcoming sponsored events [cite: 19].
+
+
+Contact Us: General contact form and inquiry details [cite: 19].
+
+
+FAQ: Top-level frequently asked questions [cite: 19].
+
+
+Sign In / Register: Modal/Dropdown selector for Brand, Artist/Organiser, or Audience login [cite: 6, 10, 12, 15].
+
+
+
+Page &amp; Modal Breakdown
+
+
+Page / View
+
+
+Components &amp; UI Elements
+
+
+Fields / Actions
+
+
+
+
+
+
+Homepage
+
+
+Hero banner, 3-sided value proposition explainer [cite: 19], featured upcoming sponsored events cards [cite: 19], call-to-action buttons [cite: 19].
+
+
+CTAs: &quot;Join as Brand&quot; [cite: 19], &quot;Join as Artist/Organiser&quot; [cite: 19], &quot;Explore Sponsored Events&quot; [cite: 19].
+
+
+Events Listing Page
+
+
+Filterable grid of upcoming events [cite: 19]. Filter bar: Category, Location, Date range [cite: 19].
+
+
+Event Cards showing Name, Date, Venue, Reward Rule preview, and &quot;Sign Up / View Details&quot; button [cite: 15, 19].
+
+
+Contact Us Page
+
+
+Inquiry form and direct support contact details [cite: 19].
+
+
+Fields: Full Name*, Email*, Subject*, Message* [cite: 19].
+
+
+Legal Pages
+
+
+Terms &amp; Conditions, Privacy Policy pages [cite: 19].
+
+
+Static styled content provided by Sakshi [cite: 19, 20].
+
+
+
+
+3. Brand Portal (Sponsor)
+
+
+
+Sidebar Navigation
+
+
+Dashboard Overview: Quick metrics, active campaigns, and confirmed sponsorships [cite: 12].
+
+
+Brand Profile: Public and internal company information [cite: 10, 11].
+
+
+Sponsorship Campaigns: List of submitted campaigns, status indicators, and campaign creation button [cite: 11, 12].
+
+
+Available Events: Directory of open event listings for sponsorship consideration [cite: 12].
+
+
+Confirmed Sponsorships &amp; Reports: Linked events, agreed terms, and audience attendance reports [cite: 12].
+
+
+In-App Chat: Direct communication with matched artists/organisers [cite: 29].
+
+
+
+Detailed Views &amp; Field Specifications
+
+
+
+3.1 Brand Signup &amp; Profile Management Page
+
+
+Section
+
+
+Field Name
+
+
+Type / Component
+
+
+Required
+
+
+Visibility
+
+
+
+
+
+
+Public Profile
+
+
+Brand Name
+
+
+Text Input
+
+
+Yes
+
+
+Public / Dashboard [cite: 10]
+
+
+Public Profile
+
+
+Brand Profile Description
+
+
+Text Area
+
+
+Yes
+
+
+Public / Dashboard [cite: 10]
+
+
+Public Profile
+
+
+Profile Picture &amp; Banner
+
+
+Image Upload
+
+
+Yes
+
+
+Public / Dashboard [cite: 10]
+
+
+Public Profile
+
+
+Product Category
+
+
+Dropdown (Tech, Food, Automotive, Beverage, Consumer Products, Beauty, Other)
+
+
+Yes
+
+
+Public / Dashboard [cite: 10, 64]
+
+
+Public Profile
+
+
+Website &amp; Social Links
+
+
+URL Inputs (Website, Social Media)
+
+
+Yes
+
+
+Public / Dashboard [cite: 10, 11]
+
+
+Internal Info (Private)
+
+
+Mission &amp; Vision Statement
+
+
+Text Area
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 65]
+
+
+Internal Info (Private)
+
+
+Target Audience Keywords
+
+
+Text Input (e.g. Urban 18-34, Music Enthusiasts)
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 66]
+
+
+Internal Info (Private)
+
+
+Brand Defining Keywords
+
+
+Text Input (e.g. Street vibe, fast-paced)
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 67]
+
+
+Internal Info (Private)
+
+
+Partner Artist/Event Genres
+
+
+Multi-select Dropdown
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 68]
+
+
+Internal Info (Private)
+
+
+Preferred Event Location
+
+
+Text Input (City, Country)
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 68]
+
+
+Internal Info (Private)
+
+
+Sponsorship Manager Name
+
+
+Text Input
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 68]
+
+
+Internal Info (Private)
+
+
+Manager Email &amp; Phone
+
+
+Email / Tel Inputs
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 69]
+
+
+Internal Info (Private)
+
+
+Company Address
+
+
+Text Area
+
+
+Yes
+
+
+Brand &amp; Admin Only [cite: 11, 69]
+
+
+
+3.2 Create Sponsorship Campaign Modal / Form
+
+
+Campaign Description: Text area (up to 50 words) [cite: 11].
+
+
+Sponsorship Budget (GBP): Numeric input [cite: 11].
+
+
+Commission Breakdown Display: Calculates minimum platform fee (£315 + VAT or 9% + VAT, whichever is higher) [cite: 21]. Shows net budget available for sponsorship [cite: 22].
+
+
+Category of Artist/Event: Dropdown + &quot;Other&quot; single-line text field [cite: 11].
+
+
+Preferred Event Location: City, Country [cite: 11].
+
+
+Preferred Event Timeline: Month, Year dropdowns [cite: 11].
+
+
+Pre-selected Event/Artist Name: Text input (Optional) [cite: 11].
+
+
+Preferred Reward Rules: Text area (up to 200 words — e.g. First 20 signups, random 50 draw, postcode/institution specific) [cite: 11].
+
+
+Campaign Manager Details: Name &amp; Email [cite: 11, 12].
+
+
+Status Display: Ticket Status (In-Progress, Closed, Completed) [cite: 12].
+
+
+Actions: Submit Request (Triggers automatic confirmation email) [cite: 12].
+
+
+
+
+4. Artist &amp; Event Organiser Portal
+
+
+
+Sidebar Navigation
+
+
+Dashboard: Overview of upcoming events, pending sponsorship requests, and audience signups [cite: 12, 15].
+
+
+My Profile: Configurable profile (Artist or Event Organiser path) [cite: 12].
+
+
+Sponsor-Value Statement: Dedicated section describing fulfillment capabilities [cite: 14].
+
+
+My Open Events: List and creation tool for events seeking sponsorship [cite: 14, 15].
+
+
+Sponsorship Offers: View incoming brand match offers, review terms, and confirm [cite: 15].
+
+
+Confirmed Events &amp; Signups: Track sponsored events, view audience participant counts, and verify physical venue check-ins [cite: 15, 16, 31].
+
+
+In-App Chat: Chat interface with sponsoring brands [cite: 29].
+
+
+
+Detailed Views &amp; Field Specifications
+
+
+
+4.1 Profile Type Selection Modal
+
+
+Upon registration, user selects between Artist or Event Organiser, loading distinct form fields [cite: 12].
+
+
+Profile Path
+
+
+Public Fields
+
+
+Internal / Admin-Only Fields
+
+
+
+
+
+
+Artist Path
+
+
+Stage/Professional Name*, Artist Bio (up to 500 words)*, Profile Picture &amp; Banner*, Category (Music, Comedy, Sportsperson, Visual, Digital/Multimedia, Other)*, Website Link, Social Links (Facebook, YouTube, IG, TikTok, Spotify, LinkedIn, X, Pinterest, Custom) [cite: 12, 13].
+
+
+Date of Birth*, Location*, Contact Person Name/Email/Phone*, Full Address*, Keywords describing art*, Mission &amp; Vision Statement* [cite: 13, 14].
+
+
+Event Organiser Path
+
+
+Event/Company Name*, Event Description*, Event Profile &amp; Banner Image*, Category (Music, Comedy, Sports, Conference/Academic, Exhibition/Expo, Theatre, Gaming/E-sports, Fashion, Other)*, Website &amp; Social Links [cite: 13, 14].
+
+
+Existing Partners/Sponsors Details (or &quot;N/A&quot;)*, Contact Person Name/Email/Phone*, Company Address*, Event Keywords*, Company Mission &amp; Vision* [cite: 14].
+
+
+
+4.2 Sponsor-Value Statement Section
+
+
+Text area (up to 500 words) detailing how branding duties will be fulfilled (e.g. social media posts, collaborations, tags, on-site logo placement, roll-up banners, merchandise tables) [cite: 14].
+
+
+
+4.3 Create Open Event Modal
+
+
+Event Details: Event Name*, Date*, Venue Name, City, Country*, Category Dropdown*, Capacity* [cite: 14, 15].
+
+
+Financials &amp; Links: Ticket Price (GBP inc. taxes)*, Ticket Buying Link*, Sponsorship Budget Range Dropdown* [cite: 14, 15].
+
+
+Sponsor Package: Details of existing sponsors, Benefits offered to sponsors*, Autolinked Artist Profile selector, Contact Artist Option [cite: 14, 15].
+
+
+System Action: Auto-generates a unique event reference number upon submission [cite: 15].
+
+
+
+
+5. Audience Portal
+
+
+
+Navigation Header
+
+
+Browse Events: Directory of upcoming sponsored events with visible reward rules [cite: 15].
+
+
+My Participated Events: Historical log of signed-up events, proof statuses, and payout statuses [cite: 16].
+
+
+Profile / Account: User details and verification status [cite: 15, 16].
+
+
+
+Detailed Views &amp; Workflows
+
+
+Workflow Stage
+
+
+Form / View
+
+
+Fields &amp; Data Collected
+
+
+
+
+
+
+1. Registration
+
+
+Account Signup Form
+
+
+Full Name*, Email*, Phone*, Date of Birth*, Full Address* (with account verification) [cite: 15].
+
+
+2. Event Selection
+
+
+Event Detail &amp; Slot Reservation Modal
+
+
+Displays Reward Rules (e.g., First 20 signups get ticket reimbursement) [cite: 15]. Captures Raw Participant Data: Name, Age, Location, Gender, Postcode + customizable event questions [cite: 15, 16].
+
+
+3. Selected Participant
+
+
+Additional Details Modal
+
+
+Full Address*, Gender*, Age*, Bank Account Details (Account No / Sort Code for record/manual payout) [cite: 16, 24], Newsletter &amp; Promotions Consent Checkbox [cite: 16].
+
+
+4. Attendance Verification
+
+
+Proof Upload &amp; Check-in View
+
+
+Step 1 Verification: File Upload (Ticket proof image or PDF) [cite: 16, 30].
+
+
+Step 2 Verification: Physical check-in status (Venue QR code scan or Organiser/Admin check-in) [cite: 16, 17, 30].
+
+
+5. Reward Tracking
+
+
+Reward Status Dashboard
+
+
+Displays status pill: Pending → Approved → Paid [cite: 16].
+
+
+
+
+6. Admin Portal (Sakshi / Management)
+
+
+
+Sidebar Navigation
+
+
+Global Dashboard: Top-level platform activity, active signups, campaign stats [cite: 17, 18, 19].
+
+
+Profile Approvals: Pending brand and artist/event profiles queue [cite: 17].
+
+
+Sponsor Requests: Review, approve, reject, or forward brand proposals [cite: 17].
+
+
+Semi-Manual Matching Engine: Pair brand campaigns with listed artist events [cite: 17, 27].
+
+
+Global Events &amp; Attendance: Overview of all events, venue QR code generation, manual attendance override [cite: 17, 18, 30, 32].
+
+
+Reward &amp; Payout Management: Reward rule config, approval triggers, CSV export for manual disbursement [cite: 17, 18, 24].
+
+
+Customer Support / Ticketing: Track and respond to inbound brand, artist, and audience tickets [cite: 18].
+
+
+Event Analytics &amp; Intelligence: Performance metrics, conversion funnels, compatibility scores [cite: 19, 29, 30].
+
+
+
+Key Operational Views
+
+
+
+6.1 Matching Engine View
+
+
+Admin reviews active Brand Campaigns and open Artist Events side-by-side [cite: 27]. Admin assigns one campaign to one event, establishing a single active reward rule per campaign [cite: 27, 28].
+
+
+
+6.2 Verification &amp; QR Code Generator View
+
+
+Admin generates a venue-specific QR code per event for physical check-in fallback [cite: 18, 30]. Admin retains full manual override capability to mark audience attendance when box-office or organiser data is unavailable [cite: 18, 32].
+
+
+
+6.3 Reward Approval &amp; CSV Export View
+
+
+Admin reviews two-step verified audience members [cite: 17]. Upon approval, the system adds recipient details (Name, Bank Details, Reward GBP) to a payout queue, exportable as a CSV file for manual bank transfer disbursement [cite: 18, 24].
+
+
+
+6.4 Event Analytics Dashboard View
+
+
+Metric Category
+
+
+Key Metrics &amp; Visualizations
+
+
+
+
+
+
+Event Performance
+
+
+Participation Rate, Verified Attendance Count, Reward Redemption Rate, Cost-per-Verified-Attendance, Total Event Attendance [cite: 29, 30].
+
+
+Conversion Funnel
+
+
+Campaign Viewed → Registration → Ticket Purchased → Attendance Verified → Reward Claimed [cite: 30].
+
+
+Audience Insights
+
+
+Age Demographics Breakdown, Gender Split, Geographical Location Heatmap, Category Interests [cite: 30].
+
+
+Sponsorship Intelligence
+
+
+Brand ↔ Artist compatibility score matrix and match performance summary [cite: 30].
+
+
+
+
+
+

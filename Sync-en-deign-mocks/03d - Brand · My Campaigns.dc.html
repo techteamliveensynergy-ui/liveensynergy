@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="80" y="140" width="1040" height="580" rx="24" fill="#fff" stroke="#50464422"/>
+    <rect x="120" y="200" width="960" height="60" rx="12" fill="#fcf7f0"/>
+    <rect x="120" y="280" width="960" height="50" rx="10" fill="#fcf7f0"/>
+    <rect x="120" y="340" width="960" height="50" rx="10" fill="#fcf7f0"/>
+    <rect x="120" y="400" width="960" height="50" rx="10" fill="#fcf7f0"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">My Campaigns</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .sb-item { padding:10px 12px; border-radius:12px; color:#504644; font-size:14px; display:flex; align-items:center; gap:10px; }
+  .sb-item.active { background:#ed9a4e; color:#fff; font-weight:600; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; white-space:nowrap; }
+  .filter { padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:600; border:1px solid #50464422; background:#fff; color:#504644; cursor:pointer; }
+  .filter.active { background:#2c2422; color:#fff; border-color:#2c2422; }
+  th { text-align:left; font-size:11px; font-weight:600; color:#6f6360; letter-spacing:0.06em; padding:12px 8px; border-bottom:1px solid #50464414; }
+  td { padding:16px 8px; border-bottom:1px solid #50464410; font-size:13.5px; color:#504644; vertical-align:middle; }
+  tr:hover td { background:#fcf7f066; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <div style="max-width:1440px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:20px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:20px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:13.5px; color:#6f6360;">
+      <a href="./Mockups Index.dc.html" style="padding:6px 12px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644;">← Index</a>
+      <a href="./03a - Brand · Dashboard.dc.html" style="padding:6px 12px; border-radius:999px;">Dashboard</a>
+      <a href="./03b - Brand · Profile.dc.html" style="padding:6px 12px; border-radius:999px;">Profile</a>
+      <a href="./03c - Brand · Create Campaign.dc.html" style="padding:6px 12px; border-radius:999px;">Create campaign</a>
+      <a href="./03e - Brand · Available Events.dc.html" style="padding:6px 12px; border-radius:999px;">Available events</a>
+      <a href="./03f - Brand · Sponsorship Report.dc.html" style="padding:6px 12px; border-radius:999px;">Reports</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13px; color:#6f6360;"><span>Brand · Northwave Coffee</span><div style="width:32px; height:32px; border-radius:50%; background:#baaae1; color:#fff; display:grid; place-items:center; font-weight:700; font-size:12px;">JM</div></div>
+  </div>
+
+  <div style="max-width:1440px; margin:0 auto; padding:0 32px;">
+    <div class="card" style="overflow:hidden;">
+      <div style="display:grid; grid-template-columns:260px 1fr;">
+        <aside style="background:#fcf7f0; border-right:1px solid #50464410; padding:24px 18px; min-height:900px;">
+          <div style="padding:6px 8px 20px;">
+            <div style="font-size:11px; color:#6f6360; font-weight:600; letter-spacing:0.08em;">BRAND WORKSPACE</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px; background:#fff; border-radius:14px; border:1px solid #50464414;">
+              <div style="width:34px; height:34px; border-radius:10px; background:#2c2422; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:18px;">N</div>
+              <div><div style="font-weight:600; color:#2c2422; font-size:13.5px;">Northwave Coffee</div><div style="font-size:11.5px; color:#6f6360;">Food &amp; Beverage</div></div>
+            </div>
+          </div>
+          <nav style="display:flex; flex-direction:column; gap:2px;">
+            <div class="sb-item"><span>◉</span> Dashboard</div>
+            <div class="sb-item"><span>◐</span> Brand profile</div>
+            <div class="sb-item active"><span>+</span> Sponsorship campaigns</div>
+            <div class="sb-item"><span>◔</span> Available events</div>
+            <div class="sb-item"><span>✓</span> Confirmed &amp; reports</div>
+            <div class="sb-item" style="justify-content:space-between;"><span style="display:flex; align-items:center; gap:10px;"><span>💬</span> Chat with artists</span><span style="background:#ed9a4e; color:#fff; font-size:10px; padding:2px 7px; border-radius:999px;">3</span></div>
+          </nav>
+        </aside>
+
+        <main style="padding:32px 40px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+            <div>
+              <h1 style="font-family:'DM Sans'; font-weight:600; font-size:34px; margin:0; color:#2c2422; letter-spacing:-0.01em;">Sponsorship campaigns</h1>
+              <p style="color:#6f6360; margin:6px 0 0; font-size:14px;">Every campaign you've submitted, matched or completed.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button style="border:1px solid #50464426; background:#fff; padding:10px 18px; border-radius:999px; font-size:13.5px; font-weight:600; color:#504644;">Export CSV</button>
+              <a href="./03c - Brand · Create Campaign.dc.html" style="border:none; background:#ed9a4e; color:#fff; padding:10px 20px; border-radius:999px; font-size:13.5px; font-weight:600;">+ New campaign</a>
+            </div>
+          </div>
+
+          <!-- Summary tiles -->
+          <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:18px;">
+            <div class="card" style="padding:14px 16px; background:#faf5ee;"><div style="font-size:11px; color:#6f6360;">Total campaigns</div><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">8</div></div>
+            <div class="card" style="padding:14px 16px; background:#f6e09240;"><div style="font-size:11px; color:#6f6360;">In progress</div><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">1</div></div>
+            <div class="card" style="padding:14px 16px; background:#e6ecd6;"><div style="font-size:11px; color:#6f6360;">Confirmed</div><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">2</div></div>
+            <div class="card" style="padding:14px 16px; background:#edebf2;"><div style="font-size:11px; color:#6f6360;">Completed</div><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">3</div></div>
+            <div class="card" style="padding:14px 16px; background:#ecf3f2;"><div style="font-size:11px; color:#6f6360;">Draft / closed</div><div style="font-family:'DM Sans'; font-weight:600; font-size:22px; color:#2c2422;">2</div></div>
+          </div>
+
+          <!-- Filters row -->
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+            <span class="filter active">All (8)</span>
+            <span class="filter">In progress</span>
+            <span class="filter">Confirmed</span>
+            <span class="filter">Completed</span>
+            <span class="filter">Draft</span>
+            <span class="filter">Closed</span>
+            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+              <div style="border:1px solid #50464426; background:#fff; padding:7px 14px; border-radius:999px; font-size:12.5px;">🔍 Search campaigns</div>
+              <div class="filter">Sort · Newest ▾</div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="card" style="padding:6px 20px 12px;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead><tr>
+                <th style="width:36%;">CAMPAIGN</th><th>BUDGET</th><th>CATEGORY</th><th>LOCATION</th><th>STATUS</th><th>MATCHED WITH</th><th>UPDATED</th><th></th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#f6e092; display:grid; place-items:center; font-weight:700;">L</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Late-Shift Sessions</div><div style="font-size:11.5px; color:#6f6360;">#LES-2601 · first 20 sign-ups</div></div>
+                    </div>
+                  </td>
+                  <td>£1,200</td><td>Music</td><td>London</td>
+                  <td><span class="badge" style="background:#f6e092; color:#504644;">In progress</span></td>
+                  <td>Rooftop Sessions</td><td style="color:#6f6360;">Today · 09:14</td>
+                  <td><a href="#" style="font-weight:600; font-size:13px;">Manage →</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#dee2c6; display:grid; place-items:center; font-weight:700; color:#4f6b15;">R</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Roast &amp; Rhyme Tour</div><div style="font-size:11.5px; color:#6f6360;">#RRT-2543 · random 50 draw</div></div>
+                    </div>
+                  </td>
+                  <td>£2,800</td><td>Music</td><td>UK-wide</td>
+                  <td><span class="badge" style="background:#dee2c6; color:#4f6b15;">Confirmed</span></td>
+                  <td>The Late Set</td><td style="color:#6f6360;">21 Jul</td>
+                  <td><a href="./03f - Brand · Sponsorship Report.dc.html" style="font-weight:600; font-size:13px;">Report →</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#ecf3f2; display:grid; place-items:center; font-weight:700; color:#6f6360;">S</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Summer Rooftop Series</div><div style="font-size:11.5px; color:#6f6360;">Draft · postcode E1/E2</div></div>
+                    </div>
+                  </td>
+                  <td>£800</td><td>Music</td><td>London</td>
+                  <td><span class="badge" style="background:#ecf3f2; color:#6f6360;">Draft</span></td>
+                  <td>—</td><td style="color:#6f6360;">19 Jul</td>
+                  <td><a href="#" style="font-weight:600; font-size:13px;">Continue →</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#edebf2; display:grid; place-items:center; font-weight:700; color:#8b76c2;">B</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Barista Battle 2025</div><div style="font-size:11.5px; color:#6f6360;">#BB-2412 · random 100 draw</div></div>
+                    </div>
+                  </td>
+                  <td>£1,500</td><td>Sports/Skills</td><td>London</td>
+                  <td><span class="badge" style="background:#edebf2; color:#8b76c2;">Completed</span></td>
+                  <td>Coffee Guild</td><td style="color:#6f6360;">12 Jul</td>
+                  <td><a href="./03f - Brand · Sponsorship Report.dc.html" style="font-weight:600; font-size:13px;">Report →</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#edebf2; display:grid; place-items:center; font-weight:700; color:#8b76c2;">O</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Open Studio Nights</div><div style="font-size:11.5px; color:#6f6360;">#OSN-2318 · first 30 sign-ups</div></div>
+                    </div>
+                  </td>
+                  <td>£950</td><td>Exhibition</td><td>Bristol</td>
+                  <td><span class="badge" style="background:#edebf2; color:#8b76c2;">Completed</span></td>
+                  <td>Copeland Studios</td><td style="color:#6f6360;">28 Jun</td>
+                  <td><a href="./03f - Brand · Sponsorship Report.dc.html" style="font-weight:600; font-size:13px;">Report →</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div style="width:36px; height:36px; border-radius:12px; background:#50464414; display:grid; place-items:center; font-weight:700; color:#6f6360;">W</div>
+                      <div><div style="font-weight:600; color:#2c2422;">Winter Warm-Up Gigs</div><div style="font-size:11.5px; color:#6f6360;">#WWG-2380 · closed early</div></div>
+                    </div>
+                  </td>
+                  <td>£600</td><td>Music</td><td>London</td>
+                  <td><span class="badge" style="background:#50464414; color:#6f6360;">Closed</span></td>
+                  <td>Sofar Sounds LDN</td><td style="color:#6f6360;">15 Feb</td>
+                  <td><a href="#" style="font-weight:600; font-size:13px;">View</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:12.5px; color:#6f6360;">
+            <div>Showing 6 of 8 campaigns</div>
+            <div style="display:flex; gap:6px;">
+              <span style="width:28px; height:28px; display:grid; place-items:center; border:1px solid #50464426; border-radius:8px; background:#fff;">‹</span>
+              <span style="width:28px; height:28px; display:grid; place-items:center; border:1px solid #ed9a4e; border-radius:8px; background:#ed9a4e; color:#fff; font-weight:600;">1</span>
+              <span style="width:28px; height:28px; display:grid; place-items:center; border:1px solid #50464426; border-radius:8px; background:#fff;">2</span>
+              <span style="width:28px; height:28px; display:grid; place-items:center; border:1px solid #50464426; border-radius:8px; background:#fff;">›</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <footer style="max-width:1440px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 03d Brand · My Campaigns</div>
+    <div><a href="./03c - Brand · Create Campaign.dc.html">← Create campaign</a> · <a href="./03e - Brand · Available Events.dc.html">Next: Available events →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

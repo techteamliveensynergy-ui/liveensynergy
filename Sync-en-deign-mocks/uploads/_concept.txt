@@ -1,0 +1,711 @@
+
+
+
+Live-En-Synergy:
+
+
+Creating a Better Sponsorship Ecosystem:
+
+
+
+
+
+Our platform aligns the interests of all participants:
+
+
+Brands gain measurable engagement and verified outcomes
+
+
+Artists and organisers gain sponsorship funding and stronger attendance
+
+
+Audience receives tangible value and enhanced experiences
+
+By transforming sponsorship into a performance-based engagement model, we create a more transparent, accountable, and effective ecosystem for live events.
+
+
+
+Platform MVP:
+
+The website infrastructure will comprise of:
+
+
+
+Brand’s Dashboard
+
+Section 1: Brands Account Info &amp; Profile:
+
+
+Brand Name*
+
+
+Brand Profile description*
+
+
+Brand profile picture and banner*
+
+
+Brands Product Category* (E.g., Tech, Food, Automotive, Beverage, Consumer Products, Beauty, etc)
+
+
+Website and social media links*
+
+
+
+
+
+Please complete additional information about your brand (this section will be only visible to you and  Live-En-Synergy team):
+
+
+Brief statement about brand mission and vision*
+
+
+Target audience keywords* (e.g. Urban 18 to 34, music &amp; culture enthusiasts, foodie)
+
+
+Keywords that define your brand* (e.g. street vibe, fast paced, simplified solution)
+
+
+Genre of artists/ events do you usually partner with*
+
+
+Preferred Event Sponsorship location*
+
+
+Brand’s Sponsorship Manager Name*
+
+
+Brand’s Sponsorship Manager Email*
+
+
+Brand’s Sponsorship Manager Phone*
+
+
+Company Address*
+
+
+
+
+
+Section 2: Sponsorship Campaigns Request:
+
+An option for brands to create and submit a campaign/ proposal that they would potentially like to partner with. Based on the details provided, our team at Live-En-Synergy will find a suitably matched artists / event for the brand to partner with.
+
+
+
+Features:
+
+Option to create multiple campaign proposals, each campaign to include the option for:
+
+
+Campaign description (A brief objective for this campaign)* (text for up to 50 words)
+
+
+Sponsorship Budget* (numeric value in GBP)
+
+
+Category of artist/event* (dropdown to select from)
+
+
+Blank text field if ’others’ is chosen above (one line text)
+
+
+Preferred Event Location* (Enter City, Country)
+
+
+Preferred Event Timeline* (Month, Year)
+
+
+Name of the Event/ Artist (if already known who you’d like to partner with)
+
+
+Preferred Reward Rules* (e.g., first 20 sign-ups, random 50 people, people from a particular institution, postcode, etc) (text for upto 200 words)
+
+
+Any further information
+
+
+Campaign manager’s name*
+
+
+Campaign manager’s email address*
+
+
+Display Campaign Ticket Status (In-progress, Closed, Completed)
+
+
+
+Brand Options: Option to edit the details – Submit Request
+
+
+
+Platform Options: Change Campaign Ticket Status (In-progress, Closed, Completed)
+
+
+
+(Automatic email to be sent when they submit a request)
+
+
+
+Section 3: Linked Sponsored Event (Automate from Confirmed Events Dashboard)
+
+
+
+
+
+
+
+
+
+
+
+Section 4: Available events for Sponsorship
+
+(filter option by artist name, location, category)
+
+
+
+
+
+
+
+Artist / Event Profile
+
+Section 1: Artist / Event Account Info &amp; Profile
+
+
+
+Profile Question:
+
+Are you an Artist or an Event – Select the one that applies
+
+
+
+If Artist is selected:
+
+
+Artist Name* (text)
+
+
+Professional / Stage Name* (text)
+
+
+Artist Bio* (text up to 500 words)
+
+
+Artist Profile Picture and Banner* (image upload, give dimensions and file size)
+
+
+Artist/Event Category*: Music, Comedy, Sportsperson, Visual Artists, Digital or Multimedia Artists, Other (dropdown selection)
+
+
+Blank text field if ’others’ is chosen above (one line text)
+
+
+Website link
+
+
+Social media links (Facebook)
+
+
+Social media links (YouTube)
+
+
+Social media links (Instagram)
+
+
+Social media links (TikTok)
+
+
+Social media links (Spotify)
+
+
+Social media links (LinkedIn)
+
+
+Social media links (X)
+
+
+Social media links (Pinterest)
+
+
+Other Links (option to add more)
+
+
+
+
+
+
+Additional Information for internal use only:
+
+
+Date of Birth*
+
+
+Location*
+
+
+Contact Person’s Name*
+
+
+Contact Person’s Email*
+
+
+Contact Person’s Phone*
+
+
+Address*
+
+
+Keywords that describe your art (e.g., rock, pop, melodious, humorous, fast, street vibe, raw energy, etc)*
+
+
+Brief statement about artist’s mission and vision *
+
+
+
+
+
+
+
+
+
+If Event is selected, ask the questions:
+
+
+Event Name
+
+
+Event Description (e.g., event details, venue, dates, location, etc).
+
+
+Event Profile Image &amp; Banner Image
+
+
+Event Category: Music, Comedy, Sports, Conference &amp; Academic, Exhibition / Expo, Theatre, Gaming &amp; E-sports, Fashion, Other (dropdown selection)
+
+
+Blank text field if ’others’ is chosen above (one line text)
+
+
+Website and social media links
+
+
+
+Additional Information for internal use only:
+
+
+Give details of any other existing partners/sponsors the event has* (Mention n/a if none)
+
+
+Contact Person’s Name*
+
+
+Contact Person’s Email*
+
+
+Contact Person’s Phone*
+
+
+Company Address*
+
+
+Keywords that describe your event (e.g., sustainable, youth trendy, music lovers, etc)
+
+
+Brief statement about company/ event’s mission and vision *
+
+
+
+Section 2: Question about Sponsor’s Value details:
+
+
+
+Our Sponsor Partners typically collaborate with artists &amp; events by offering exciting deals and rewards, including reimbursing ticket amounts directly to your audiences – ensuring everyone wins!
+
+
+Brands build meaningful connections
+
+
+Artists / Events can ensure confirmed audience participation and ticket revenue
+
+
+Audiences receive exclusive sponsor-funded rewards and experiences – greater value for attending events
+
+
+
+
+ Please provide some details on how you can fulfil the sponsor partner’s branding duties:
+
+(Examples include posting social media content, collaborations, mentions, tags, logos on event promotion material, onsite experiential value (roll-up banner, merchandise table, etc).
+
+
+
+(text box up to 500 words)
+
+
+
+
+
+
+
+
+
+
+
+
+
+Section 3: List of upcoming events available for Sponsorship:
+
+
+
+Both Artists and Event Organisers have the option to create cards for their upcoming events that they would like to receive sponsorship for. Create an event with the following details:
+
+
+
+
+Artist / Event Name
+
+
+Event Date
+
+
+Venue Name, City, Country
+
+
+Event Category (dropdown selection)
+
+
+Capacity
+
+
+Ticket Price in GBP (including taxes and any additional charges)
+
+
+Ticket Buying Link
+
+
+Sponsorship budget range (select from dropdown)
+
+
+Details of any existing sponsors
+
+
+Benefit to Sponsors (e.g., Partner branding on event creatives, social media content, mentions, collaboration, tags, onsite branding options such as roll-up banners, merch stations, etc).
+
+
+Autolinked Artist Profile
+
+
+Contact Artist option
+
+
+
+
+
+(Autogenerate a unique event reference number)
+
+
+
+
+
+Section 4: Linked Sponsor Event:
+
+
+
+
+
+
+
+
+
+
+
+
+Sponsored Event Dashboard –
+
+Create the event that has been confirmed to receive sponsorship.
+
+This can be created by either artist, sponsor or live-en-synergy.
+
+The event will have option to link brands and artist profiles.
+
+Features:
+
+Option to create multiple events
+
+Link each event with the sponsor’s profile and the artist’s profile
+
+
+Event details: Name, Date, Venue Details, Location
+
+
+Sponsorship Management: Budget (Remaining Budget), Reward Rules
+
+
+Sponsorship Terms enter and Confirmation: Agreed checkbox for both Artists and Sponsors
+
+
+Sponsorship Status: In progress, Confirmed, Competed
+
+
+FAQs for the audience
+
+
+Audience Dashboard
+
+
+Form (event details and participation end date specified) - Raw Participants Data: Participants' Name, Age, Location, Gender, Postcode – option to customize questions
+
+
+(after receiving data, run selection)
+
+
+Selected Participant Data: Name, Email, Address, Gender, Age, Bank Account Details, Would you like to sign up for sponsor’s newsletters and promotions
+
+
+Verification: Step 1: Verification - Upload proof/ticket, Step 2: Physical Verification (Give artist option to upload data)
+
+
+Automate Payment Details
+
+
+
+Additional To-Do’s:
+
+
+Conduct Eligibility check and selection process
+
+
+Create a QR Code for the artist’s use at the venue (if box office data not available)
+
+
+Configuring Reward Rules
+
+
+Sponsor’s branded communication forms, emails, information distribution (Fill templates)
+
+
+Customize FAQs for each event
+
+
+Feedback forms and testimonials
+
+
+
+Event Analytics:
+
+
+View Metrics: Participation Rate, verified attendance, Rewards Redemption Rate, Cost-per-Verified attendance, Total Event Attendance, Attendance Life
+
+
+Conversion Funnel
+
+
+Sponsor Campaign Viewed  Registration  Ticket Purchased  Attendance Verified  Reward Claimed
+
+
+Audience Insights: Age range, Gender, Location, Interests, Category of Events Attended
+
+
+Sponsorship Intelligence – Compatibility Scores, report
+
+
+(Future Build): Predictive outcomes – based on proprietary data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Admin Dashboard
+
+Access to all the above dashboards
+
+Events List, Status
+
+Reviewing Sponsor Requests
+
+Customer Queries System
+
+Payment
+
+Audience Dashboard and Data Management (Helpful for tracking repeat engagement)
+
+
+
+
+
+Audience Dashboard
+
+Create Profile – Name, Email, Phone Number, Date of Birth, Address (Verify account)
+
+View Events
+
+My participated events
+
+Automate email (with branding template)
+
+
+
+
+
+
+Website: Homepage, About Us, Events, Contact Us
+
+
+FAQs:
+
+
+Privacy term:
+
+
+Terms &amp; Conditions:
+
+
+
+Technical:
+
+
+Sign in details, Sign in questions: Name, Are you an Artist / Event or Sponsor
+
+
+Managing permissions
+
+
+Payment &amp; Billing system
+
+
+Database
+
+
+Front end, Back end
+
+
+Chatbox between sponsor &amp; artist
+
+
+
+
+
+Platform Pricing
+
+
+There is no minimum amount that you can allocate for sponsorship budget.
+
+
+Live-En-Synergy charges minimum £315 + VAT (£378 including) or 9% + VAT (10.8% including) of the sponsorship budget, whichever is higher.
+
+
+
+
+
+Example 1: If your sponsorship budget is £1000: Our services will cost you £315+VAT (£378 including). So total budget available to you for sponsorship will be £622.
+
+
+
+
+
+Example 2: If you provision £4000 for the budget: Our services will cost you £360+VAT (£432 including). So total budget available to you for sponsorship will be £3568.
+
+
+
+
+
+
+
+
+
+
+The website infrastructure will comprise of:
+
+
+Brands Profile with the following Features:  Comprising of brand description, Product Category, Target audience, Website and social media links, Keywords that define the brand
+
+
+
+
+
+Sponsorship dashboard with the following Features:
+
+
+Option to create multiple campaigns, each campaign to include the option for: Campaign description, Sponsorship Budget, Category of artist / event, Event Location, Reward Rules (e.g. first 20 sign-ups, random 50 people, etc)
+
+
+
+
+Artist/Event profile with the following features:
+
+
+Artist/Event Details: Name, Professional / Stage Name, Age, Location, Contact details
+
+
+Artist/Event Category: Music, Comedy, Sportsperson, Visual Artists, Digital or Multimedia Artists, Other
+
+
+Website and social media links
+
+
+Keywords that describe your art/Event (e.g. melodious, humorous, fast, street vibe, raw energy, etc.)
+
+
+
+
+Sponsored Event dashboard with the following features:
+
+
+Link each event with sponsor’s profile and artist’s profile
+
+
+Event details: Name, Date, Venue Details, Location
+
+
+Sponsorship Management: Budget (Remaining Budget), Reward Rules
+
+
+Sponsorship Confirmation: Agreed checkbox for both Artists and Sponsors
+
+
+Sponsorship Status: In progress, Confirmed, Competed
+
+
+Google Form (event details and date range specified) - Raw Participants Data: Participants Name, Age, Location, Gender, Postcode
+
+
+Selected Participant Data: Name, Email, Address, Gender, Age, Bank Account Details
+
+
+Verification: Step 1: Verification - Upload proof/ticket, Step 2: Physical Verification
+
+
+Automate Payment Details
+
+
+FAQs for each event
+
+
+Legal Terms &amp; Conditions
+
+
+
+Chat box option between sponsor and artist
+
+
+
+
+Admin Dashboard with the following: Access to all above dashboards, Events List, Status, Reviewing Sponsor Requests, Customer Queries System, Payment, Audience Data Management (Helpful for tracking repeat engagement)
+
+
+
+
+
+

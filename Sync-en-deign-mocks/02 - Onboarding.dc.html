@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="180" y="200" width="300" height="380" rx="24" fill="#f6e092"/><rect x="500" y="200" width="520" height="380" rx="24" fill="#fff" stroke="#50464422"/><rect x="530" y="240" width="140" height="140" rx="18" fill="#ed9a4e"/><rect x="690" y="240" width="140" height="140" rx="18" fill="#baaae1"/><rect x="850" y="240" width="140" height="140" rx="18" fill="#c0cf72"/>
+    <text x="600" y="700" font-family="Georgia, serif" font-style="italic" font-size="34" fill="#504644" text-anchor="middle">Onboarding</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:40px 0 96px;">
+  <header style="max-width:1240px; margin:0 auto 32px; padding:0 32px; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+    <div>
+      <div style="font-family:'Playfair Display'; font-style:italic; font-size:14px; color:#6f6360;">Phase 2 · sign-in, role picker, brand · artist · audience flows</div>
+      <h1 style="font-family:'DM Sans'; font-weight:600; font-size:48px; line-height:1.05; margin:4px 0 0; color:#2c2422; letter-spacing:-0.02em;">Onboarding</h1>
+    </div>
+    <nav style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="./Mockups Index.dc.html" style="border:1px solid #50464426; background:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; color:#504644;">← Index</a>
+      <a href="./01 - Public Site.dc.html" style="border:1px solid #50464426; background:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; color:#504644;">← Public site</a>
+      <a href="./03 - Brand Portal.dc.html" style="border:none; background:#ed9a4e; color:#fff; padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600;">Brand portal →</a>
+    </nav>
+  </header>
+  <section id="onboarding" style="max-width:1240px; margin:0 auto 80px; padding:0 32px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:20px;">
+      <div style="font-family:'DM Sans'; font-weight:600; color:#8b76c2; font-size:13px; letter-spacing:0.14em;">02 — ONBOARDING</div>
+      <div style="flex:1; height:1px; background:#50464422;"></div>
+      <div style="color:#6f6360; font-size:13px;">Sign in · Role selection · Brand · Artist · Audience</div>
+    </div>
+
+    <!-- Role picker & sign-in modal -->
+    <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:24px; margin-bottom:24px;">
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">2.1 · Sign in</div>
+        <div style="padding:40px 32px; background:#f6e09240;">
+          <div style="text-align:center; margin-bottom:24px;">
+            <div style="font-family:'Playfair Display'; font-style:italic; font-size:15px; color:#6f6360;">Welcome back to</div>
+            <div style="font-family:'DM Sans'; font-weight:700; font-size:26px; color:#2c2422; margin-top:2px;">Live·En·Synergy</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div><label style="font-size:12px; color:#6f6360; font-weight:600;">Email</label><input value="jamie@northwave.co" style="width:100%; margin-top:6px; padding:12px 14px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:14px; font-family:inherit;"></div>
+            <div><label style="font-size:12px; color:#6f6360; font-weight:600;">Password</label><input type="password" value="••••••••" style="width:100%; margin-top:6px; padding:12px 14px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:14px; font-family:inherit;"></div>
+            <button style="margin-top:8px; border:none; background:#ed9a4e; color:#fff; padding:12px 24px; border-radius:999px; font-size:14px; font-weight:600;">Sign in →</button>
+            <div style="text-align:center; font-size:13px; color:#6f6360; margin-top:6px;">New here? <a href="#" style="font-weight:600;">Create an account</a></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden; position:relative;">
+        <!-- decorative pastel blobs -->
+        <div style="position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #f1ae6e33, transparent 70%); pointer-events:none;"></div>
+        <div style="position:absolute; left:-40px; bottom:-80px; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle at 40% 40%, #baaae133, transparent 70%); pointer-events:none;"></div>
+
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee; position:relative;">2.2 · Choose your role</div>
+        <div style="padding:40px 36px 44px; position:relative;">
+          <div style="display:inline-flex; align-items:center; gap:8px; background:#fcf7f0; border:1px solid #50464414; padding:5px 12px; border-radius:999px; font-size:11px; color:#6f6360; margin-bottom:12px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#c0cf72;"></span>Takes about 3 minutes
+          </div>
+          <h2 style="font-family:'DM Sans'; font-weight:600; font-size:34px; line-height:1.05; letter-spacing:-0.02em; margin:0 0 8px; color:#2c2422;">Who are you joining <em style="font-family:'Playfair Display'; font-style:italic; font-weight:400; color:#ed9a4e;">as</em>?</h2>
+          <p style="font-size:14px; color:#6f6360; margin:0 0 24px; max-width:520px;">Pick the role that fits best today — you can add another later without starting over.</p>
+
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+
+            <!-- Brand · SELECTED -->
+            <div style="position:relative; border-radius:22px; overflow:hidden; background:linear-gradient(180deg,#fcf7f0 0%, #ffffff 100%); border:2px solid #ed9a4e; box-shadow:0 12px 30px -14px #ed9a4e66, 0 2px 8px #50464414; transform:translateY(-2px); cursor:pointer;">
+              <div style="height:80px; background:linear-gradient(135deg,#ed9a4e 0%, #f1ae6e 100%); position:relative; overflow:hidden;">
+                <div style="position:absolute; right:-24px; top:-24px; width:110px; height:110px; border-radius:50%; background:#ffffff26;"></div>
+                <div style="position:absolute; left:-16px; bottom:-24px; width:70px; height:70px; border-radius:50%; background:#ffffff1a;"></div>
+                <div style="position:absolute; top:12px; left:14px; font-family:'DM Sans'; font-size:10.5px; font-weight:700; color:#fff; letter-spacing:0.14em; opacity:0.9;">FOR BRANDS</div>
+              </div>
+              <div style="position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:#fff; color:#ed9a4e; display:grid; place-items:center; font-size:14px; box-shadow:0 2px 6px #50464422; font-weight:700;">✓</div>
+              <div style="position:relative; padding:20px 20px 22px; margin-top:-30px;">
+                <div style="width:56px; height:56px; border-radius:18px; background:#fff; display:grid; place-items:center; border:3px solid #fff; box-shadow:0 4px 14px #50464422;">
+                  <div style="width:100%; height:100%; border-radius:12px; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:24px; font-weight:600;">B</div>
+                </div>
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:19px; color:#2c2422; margin-top:14px;">Brand / Sponsor</div>
+                <div style="font-size:13px; color:#6f6360; margin-top:4px; line-height:1.55; min-height:56px;">Fund campaigns, reach a verified audience, and only pay for attendance you can prove.</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px;">
+                  <span style="background:#fff; border:1px solid #ed9a4e33; color:#ed9a4e; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Sponsorship dashboard</span>
+                  <span style="background:#fff; border:1px solid #ed9a4e33; color:#ed9a4e; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Verified ROI</span>
+                  <span style="background:#fff; border:1px solid #ed9a4e33; color:#ed9a4e; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Chat with artists</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Artist -->
+            <div style="position:relative; border-radius:22px; overflow:hidden; background:linear-gradient(180deg,#ffffff 0%, #ffffff 100%); border:1px solid #50464426; box-shadow:0 2px 8px #50464410; cursor:pointer;">
+              <div style="height:80px; background:linear-gradient(135deg,#baaae1 0%, #edebf2 100%); position:relative; overflow:hidden;">
+                <div style="position:absolute; right:-20px; top:-30px; width:120px; height:120px; border-radius:50%; background:#ffffff26;"></div>
+                <div style="position:absolute; left:-24px; bottom:-30px; width:90px; height:90px; border-radius:50%; background:#ffffff1a;"></div>
+                <div style="position:absolute; top:12px; left:14px; font-family:'DM Sans'; font-size:10.5px; font-weight:700; color:#fff; letter-spacing:0.14em; opacity:0.9;">FOR ARTISTS &amp; EVENTS</div>
+              </div>
+              <div style="position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:#fff; color:#8b76c2; display:grid; place-items:center; font-size:13px; border:1.5px solid #baaae1; font-weight:700;">＋</div>
+              <div style="position:relative; padding:20px 20px 22px; margin-top:-30px;">
+                <div style="width:56px; height:56px; border-radius:18px; background:#fff; display:grid; place-items:center; border:3px solid #fff; box-shadow:0 4px 14px #50464422;">
+                  <div style="width:100%; height:100%; border-radius:12px; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:24px; font-weight:600;">A</div>
+                </div>
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:19px; color:#2c2422; margin-top:14px;">Artist / Organiser</div>
+                <div style="font-size:13px; color:#6f6360; margin-top:4px; line-height:1.55; min-height:56px;">List your events, match with sponsors, and fill the room before doors open.</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px;">
+                  <span style="background:#edebf2; color:#8b76c2; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Open events</span>
+                  <span style="background:#edebf2; color:#8b76c2; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Offer inbox</span>
+                  <span style="background:#edebf2; color:#8b76c2; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Venue QR</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audience -->
+            <div style="position:relative; border-radius:22px; overflow:hidden; background:linear-gradient(180deg,#ffffff 0%, #ffffff 100%); border:1px solid #50464426; box-shadow:0 2px 8px #50464410; cursor:pointer;">
+              <div style="height:80px; background:linear-gradient(135deg,#c0cf72 0%, #dee2c6 100%); position:relative; overflow:hidden;">
+                <div style="position:absolute; right:-30px; top:-30px; width:130px; height:130px; border-radius:50%; background:#ffffff26;"></div>
+                <div style="position:absolute; left:-16px; bottom:-24px; width:80px; height:80px; border-radius:50%; background:#ffffff1a;"></div>
+                <div style="position:absolute; top:12px; left:14px; font-family:'DM Sans'; font-size:10.5px; font-weight:700; color:#fff; letter-spacing:0.14em; opacity:0.95;">FOR AUDIENCE</div>
+              </div>
+              <div style="position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:#fff; color:#4f6b15; display:grid; place-items:center; font-size:13px; border:1.5px solid #c0cf72; font-weight:700;">＋</div>
+              <div style="position:relative; padding:20px 20px 22px; margin-top:-30px;">
+                <div style="width:56px; height:56px; border-radius:18px; background:#fff; display:grid; place-items:center; border:3px solid #fff; box-shadow:0 4px 14px #50464422;">
+                  <div style="width:100%; height:100%; border-radius:12px; background:#c0cf72; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-size:24px; font-weight:600;">L</div>
+                </div>
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:19px; color:#2c2422; margin-top:14px;">Live audience</div>
+                <div style="font-size:13px; color:#6f6360; margin-top:4px; line-height:1.55; min-height:56px;">Attend events you'd love anyway, verify at the door, and get your ticket paid back.</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px;">
+                  <span style="background:#dee2c6; color:#4f6b15; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Reward slots</span>
+                  <span style="background:#dee2c6; color:#4f6b15; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">2-step verify</span>
+                  <span style="background:#dee2c6; color:#4f6b15; font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px;">Bank payout</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Sticky footer of the picker card -->
+          <div style="margin-top:24px; padding:16px 20px; background:#fcf7f0; border:1px solid #50464414; border-radius:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; color:#6f6360;">
+              <div style="width:28px; height:28px; border-radius:8px; background:#ed9a4e; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-weight:600;">B</div>
+              <span>You're joining as <strong style="color:#2c2422;">Brand / Sponsor</strong> — Northwave, Waverly &amp; 40+ others already in.</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button style="border:1px solid #50464426; background:#fff; color:#504644; padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600;">Not sure yet?</button>
+              <button style="border:none; background:#2c2422; color:#fff; padding:11px 22px; border-radius:999px; font-size:13.5px; font-weight:600; display:inline-flex; align-items:center; gap:8px;">Continue as Brand <span style="color:#ed9a4e;">→</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onboarding stepped flows: Brand / Artist / Audience -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px;">
+      <!-- Brand onboarding -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">2.3 · Brand onboarding</div>
+        <div style="padding:28px 24px; background:#fcf7f0;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:#6f6360; letter-spacing:0.06em; margin-bottom:14px;">
+            <span style="background:#ed9a4e; color:#fff; padding:3px 8px; border-radius:999px;">1 · PROFILE</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">2 · INTERNAL</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">3 · DONE</span>
+          </div>
+          <h3 style="font-family:'DM Sans'; font-weight:600; font-size:20px; margin:0 0 4px; color:#2c2422;">Tell us about your brand</h3>
+          <p style="font-size:13px; color:#6f6360; margin:0 0 16px;">These fields are visible on your public profile.</p>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Brand name*</label><input value="Northwave Coffee" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Product category*</label><div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px;">Food &amp; Beverage <span style="color:#6f6360;">▾</span></div></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Profile description*</label><textarea rows="2" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit; resize:none;">Independent London roaster fuelling the late shift since 2014.</textarea></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Profile picture &amp; banner*</label><div style="margin-top:4px; padding:16px; border:1px dashed #50464433; border-radius:10px; background:#fff; text-align:center; font-size:12px; color:#6f6360;">Drop images or <span style="color:#ed9a4e; font-weight:600;">browse</span></div></div>
+          </div>
+          <a href="./02b - Brand Onboarding.dc.html" style="display:block; text-align:center; margin-top:16px; text-decoration:none; border:none; background:#ed9a4e; color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;">Open full brand onboarding →</a>
+        </div>
+      </div>
+
+      <!-- Artist onboarding -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">2.4 · Artist / Organiser onboarding</div>
+        <div style="padding:28px 24px; background:#edebf2;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:#6f6360; letter-spacing:0.06em; margin-bottom:14px;">
+            <span style="background:#8b76c2; color:#fff; padding:3px 8px; border-radius:999px;">1 · TYPE</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">2 · PROFILE</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">3 · VALUE</span>
+          </div>
+          <h3 style="font-family:'DM Sans'; font-weight:600; font-size:20px; margin:0 0 4px; color:#2c2422;">Are you an artist or an event?</h3>
+          <p style="font-size:13px; color:#6f6360; margin:0 0 16px;">The next steps adapt to your choice.</p>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="border:2px solid #8b76c2; background:#fff; border-radius:14px; padding:16px; display:flex; gap:12px; align-items:flex-start;">
+              <div style="width:34px; height:34px; border-radius:12px; background:#baaae1; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-weight:600;">A</div>
+              <div style="flex:1;">
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422;">I'm an artist</div>
+                <div style="font-size:12px; color:#6f6360; margin-top:2px; line-height:1.5;">Musician, comedian, visual artist, sportsperson, digital creator.</div>
+              </div>
+              <div style="width:20px; height:20px; border-radius:50%; background:#8b76c2; color:#fff; display:grid; place-items:center; font-size:12px;">✓</div>
+            </div>
+            <div style="border:1px solid #50464426; background:#fff; border-radius:14px; padding:16px; display:flex; gap:12px; align-items:flex-start;">
+              <div style="width:34px; height:34px; border-radius:12px; background:#c0cf72; color:#fff; display:grid; place-items:center; font-family:'Playfair Display'; font-style:italic; font-weight:600;">E</div>
+              <div style="flex:1;">
+                <div style="font-family:'DM Sans'; font-weight:600; font-size:15px; color:#2c2422;">I run an event</div>
+                <div style="font-size:12px; color:#6f6360; margin-top:2px; line-height:1.5;">Festival, exhibition, conference, sports tournament, expo.</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px; padding:12px 14px; background:#fff; border-radius:12px; border:1px solid #50464414; font-size:12px; color:#6f6360; line-height:1.5;">Next: profile basics · category · social links · then a private sponsor-value statement (up to 500 words).</div>
+          <a href="./02c - Artist Onboarding.dc.html" style="display:block; text-align:center; margin-top:14px; text-decoration:none; border:none; background:#8b76c2; color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;">Open full artist onboarding →</a>
+        </div>
+      </div>
+
+      <!-- Audience onboarding -->
+      <div style="background:#fff; border-radius:24px; border:1px solid #50464414; overflow:hidden;">
+        <div style="padding:10px 18px; border-bottom:1px solid #50464410; font-size:12px; color:#6f6360; background:#faf6ee;">2.5 · Audience onboarding</div>
+        <div style="padding:28px 24px; background:#dee2c6;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:#6f6360; letter-spacing:0.06em; margin-bottom:14px;">
+            <span style="background:#4f6b15; color:#fff; padding:3px 8px; border-radius:999px;">1 · SIGN UP</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">2 · VERIFY</span>
+            <span style="padding:3px 8px; border:1px dashed #50464433; border-radius:999px;">3 · BROWSE</span>
+          </div>
+          <h3 style="font-family:'DM Sans'; font-weight:600; font-size:20px; margin:0 0 4px; color:#2c2422;">Create your audience account</h3>
+          <p style="font-size:13px; color:#6f6360; margin:0 0 16px;">We only ask for what we need to verify you and pay you back.</p>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Full name*</label><input value="Priya Shah" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+              <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Date of birth*</label><input value="14 · 03 · 1997" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+            </div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Email*</label><input value="priya.s@gmail.com" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Mobile*</label><input value="+44 7700 900123" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+            <div><label style="font-size:11px; color:#6f6360; font-weight:600;">Address*</label><input value="8 Bethnal Green Rd, London E1" style="width:100%; margin-top:4px; padding:10px 12px; border:1px solid #50464426; border-radius:10px; background:#fff; font-size:13px; font-family:inherit;"></div>
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:12px; color:#504644; margin-top:4px;"><input type="checkbox" checked style="margin-top:3px;"> Send me an email to verify my account before I sign up for events.</label>
+          </div>
+          <a href="./02d - Audience Onboarding.dc.html" style="display:block; text-align:center; margin-top:16px; text-decoration:none; border:none; background:#4f6b15; color:#fff; padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;">Open full audience onboarding →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer style="max-width:1240px; margin:32px auto 0; padding:24px 32px; color:#6f6360; font-size:12.5px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · Onboarding · v0.1</div>
+    <div><a href="./Mockups Index.dc.html">Back to index</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>

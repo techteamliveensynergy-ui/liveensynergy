@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail" data-bg-color="#f4ede2">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f4ede2"/>
+    <rect x="120" y="140" width="700" height="580" rx="24" fill="#fff" stroke="#50464422"/>
+    <rect x="840" y="140" width="240" height="580" rx="24" fill="#dee2c680"/>
+    <rect x="160" y="200" width="620" height="60" rx="12" fill="#dee2c6"/>
+    <text x="600" y="770" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#504644" text-anchor="middle">Selected · Complete details</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4ede2; color:#504644; font-family:'Albert Sans', system-ui, sans-serif; }
+  * { box-sizing:border-box; }
+  a { color:#ed9a4e; text-decoration:none; }
+  a:hover { color:#e08a39; }
+  .card { background:#fff; border:1px solid #50464414; border-radius:24px; }
+  .badge { font-size:11px; font-weight:600; padding:4px 12px; border-radius:999px; }
+  .field label { font-size:11.5px; color:#6f6360; font-weight:600; }
+  .field input, .field textarea, .field .select { width:100%; margin-top:4px; padding:12px 14px; border:1px solid #50464426; border-radius:12px; background:#fff; font-size:14px; font-family:inherit; }
+  .field .select { display:flex; align-items:center; justify-content:space-between; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .step { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:#6f6360; }
+  .step .n { width:22px; height:22px; border-radius:50%; background:#50464422; color:#504644; display:grid; place-items:center; font-size:11px; }
+  .step.done .n { background:#4f6b15; color:#fff; }
+  .step.active .n { background:#ed9a4e; color:#fff; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:24px 0 64px;">
+  <header style="max-width:1240px; margin:0 auto 20px; padding:0 32px; display:flex; align-items:center; gap:24px;">
+    <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-family:'Playfair Display'; font-style:italic; font-size:22px;">Live·En·</span><span style="font-family:'DM Sans'; font-weight:700; font-size:22px; color:#ed9a4e;">Synergy</span></div>
+    <div style="height:20px; width:1px; background:#50464422;"></div>
+    <nav style="display:flex; gap:6px; font-size:14px;">
+      <a href="./Mockups Index.dc.html" style="padding:8px 14px; border-radius:999px; border:1px solid #50464422; background:#fff; color:#504644; font-size:13px;">← Index</a>
+      <a href="./05a - Audience · Browse.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Browse events</a>
+      <a href="./05e - Audience · My Events.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">My events</a>
+      <a href="./05f - Audience · Profile.dc.html" style="padding:8px 14px; border-radius:999px; color:#504644;">Profile</a>
+    </nav>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:14px; font-size:13px; color:#6f6360;">
+      <div style="display:flex; align-items:center; gap:8px;"><div style="width:34px; height:34px; border-radius:50%; background:#c0cf72; color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px;">PS</div><span>Priya Shah</span></div>
+    </div>
+  </header>
+
+  <div style="max-width:1240px; margin:0 auto; padding:0 32px;">
+    <!-- Congrats banner -->
+    <div class="card" style="padding:24px 32px; background:linear-gradient(135deg, #dee2c680, #f6e092); border-color:#dee2c6; display:flex; justify-content:space-between; align-items:center; gap:24px; margin-bottom:24px;">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:8px; background:#fff; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600; color:#4f6b15;">🎉 You made the reward pool</div>
+        <h1 style="font-family:'DM Sans'; font-weight:600; font-size:34px; margin:12px 0 4px; color:#2c2422; letter-spacing:-0.01em;">You're in for The Late Set · Vol. 11</h1>
+        <p style="font-size:14.5px; color:#504644; margin:0;">Northwave Coffee will reimburse your <strong>£12 entry fee</strong> after you verify attendance on the night.</p>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:#fff; border-radius:20px; border:1px solid #50464414;">
+        <div style="font-size:12px; color:#6f6360;">Slot</div>
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:32px; color:#4f6b15;">01 / 20</div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div style="display:flex; gap:18px; margin-bottom:20px; padding:16px 22px; background:#fff; border-radius:16px; border:1px solid #50464414;">
+      <div class="step done"><span class="n">✓</span> Reserved</div>
+      <div class="step done"><span class="n">✓</span> Selected</div>
+      <div class="step active"><span class="n">3</span> Complete details</div>
+      <div class="step"><span class="n">4</span> Verify · ticket</div>
+      <div class="step"><span class="n">5</span> Verify · at door</div>
+      <div class="step"><span class="n">6</span> Reward paid</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.6fr 1fr; gap:24px;">
+      <div class="card" style="padding:28px 32px;">
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:20px; color:#2c2422;">A few last details</div>
+        <p style="font-size:13.5px; color:#6f6360; margin:6px 0 20px;">Needed to process your ticket reimbursement. Only you, the artist &amp; Live·En·Synergy see these.</p>
+
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:14px; color:#2c2422; margin-bottom:10px;">Your details</div>
+        <div class="row2" style="margin-bottom:10px;">
+          <div class="field"><label>Full legal name*</label><input value="Priya Anisha Shah"></div>
+          <div class="field"><label>Contact phone*</label><input value="+44 7700 900123"></div>
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Full address*</label>
+          <input value="8 Bethnal Green Road, London, E1 6AN, UK">
+        </div>
+
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:14px; color:#2c2422; margin:18px 0 10px;">Bank details · for reward payout</div>
+        <div class="row2" style="margin-bottom:10px;">
+          <div class="field"><label>Account holder name*</label><input value="Priya A Shah"></div>
+          <div class="field"><label>Bank*</label><input value="Monzo"></div>
+          <div class="field"><label>Sort code*</label><input value="04-00-04"></div>
+          <div class="field"><label>Account number*</label><input value="12345678"></div>
+        </div>
+        <div style="padding:12px 16px; background:#edebf2; border-radius:12px; font-size:12.5px; color:#504644; line-height:1.55;">
+          🔒 Encrypted &amp; used only for this event's reimbursement. Live·En·Synergy processes payouts within <strong>5 working days</strong> of verification.
+        </div>
+
+        <div style="font-family:'DM Sans'; font-weight:600; font-size:14px; color:#2c2422; margin:22px 0 10px;">Consent</div>
+        <label style="display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:#504644; padding:12px 16px; background:#fcf7f0; border-radius:12px; border:1px solid #50464414; margin-bottom:8px;"><input type="checkbox" checked style="margin-top:2px;"> Yes — sign me up for <strong>Northwave Coffee</strong> newsletters &amp; promotions.</label>
+        <label style="display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:#504644; padding:12px 16px; background:#fcf7f0; border-radius:12px; border:1px solid #50464414;"><input type="checkbox" checked style="margin-top:2px;"> I agree to the <a href="#" style="font-weight:600;">reward terms</a> and confirm my details are accurate.</label>
+
+        <div style="margin-top:22px; display:flex; justify-content:space-between; align-items:center;">
+          <a href="./05b - Audience · Event Detail.dc.html" style="font-size:13px; font-weight:600;">← Back</a>
+          <button style="border:none; background:#ed9a4e; color:#fff; padding:14px 28px; border-radius:999px; font-size:14.5px; font-weight:600;">Save &amp; continue to verify →</button>
+        </div>
+      </div>
+
+      <!-- side rail -->
+      <aside style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card" style="padding:22px 24px; overflow:hidden;">
+          <div style="height:120px; background:#ffecf1; border-radius:14px; position:relative; margin:-6px -6px 12px; display:grid; place-items:center; color:#a02c4a; font-family:'Playfair Display'; font-style:italic;">event image
+            <span style="position:absolute; top:12px; left:12px; background:#fff; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;">Sponsored by Northwave</span>
+          </div>
+          <div style="font-family:'DM Sans'; font-weight:600; color:#2c2422; font-size:16px;">The Late Set · Vol. 11</div>
+          <div style="font-size:12.5px; color:#6f6360; margin-top:2px;">Thu 21 Aug · 8pm · The Bill Murray</div>
+          <div style="margin-top:12px; padding:12px 14px; background:#f6e09240; border:1px solid #f6e092; border-radius:12px; font-size:12.5px; color:#504644; line-height:1.5;"><strong>£12 back</strong> as the first 20 to sign up · reserved slot #01</div>
+        </div>
+
+        <div class="card" style="padding:22px 24px; background:#fcf7f0;">
+          <div style="font-family:'DM Sans'; font-weight:600; font-size:14px; color:#2c2422;">Why do you need my bank?</div>
+          <p style="font-size:13px; color:#6f6360; line-height:1.6; margin:8px 0 0;">Rewards are paid by manual bank transfer during V1 MVP. Your details are encrypted, never shared with brands, and deleted once payout is complete.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <footer style="max-width:1240px; margin:24px auto 0; padding:0 32px; display:flex; justify-content:space-between; color:#6f6360; font-size:12.5px;">
+    <div><em style="font-family:'Playfair Display';">Live·En·Synergy</em> · 05c Audience · Selected details</div>
+    <div><a href="./05b - Audience · Event Detail.dc.html">← Event detail</a> · <a href="./05d - Audience · Verify.dc.html">Next: Verify attendance →</a></div>
+  </footer>
+</div>
+</x-dc>
+</body>
+</html>
