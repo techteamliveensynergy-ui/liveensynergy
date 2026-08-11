@@ -7,6 +7,7 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
 import { normaliseUrl } from "@/lib/urls";
+import { getOrCreateConversation } from "@/lib/data/messaging";
 import {
   computePlatformFee,
   MIN_SPONSORSHIP_BUDGET_GBP,
@@ -168,6 +169,19 @@ export async function updateCampaign(
   const image = await uploadImage(formData.get("image"), "campaign");
   if (image.error) return { error: image.error };
 
+  // Read the suggestion as it stands, to tell an actual change from a save
+  // that happened to touch something else.
+  const { data: before } = await supabase
+    .from("campaigns")
+    .select("reference, suggested_event_note, suggested_event_url")
+    .eq("id", id)
+    .eq("brand_id", brandId)
+    .maybeSingle<{
+      reference: string;
+      suggested_event_note: string | null;
+      suggested_event_url: string | null;
+    }>();
+
   const { error } = await supabase
     .from("campaigns")
     // Leaving the picker empty keeps the existing artwork.
@@ -176,8 +190,93 @@ export async function updateCampaign(
     .eq("brand_id", brandId);
   if (error) return { error: error.message };
 
+  const suggestionChanged =
+    p.suggested_event_note !== (before?.suggested_event_note ?? null) ||
+    p.suggested_event_url !== (before?.suggested_event_url ?? null);
+  if (suggestionChanged && p.suggested_event_note) {
+    await shareSuggestion(id, before?.reference ?? "", p);
+  }
+
   revalidatePath("/dashboard/campaigns");
   redirect("/dashboard/campaigns");
+}
+
+/**
+ * Puts a changed suggestion into the chat with each artist working on this
+ * campaign.
+ *
+ * `matchCampaign` relays the suggestion when the team first puts events in
+ * front of a sponsor, which covers the case the standup described. It does
+ * nothing for a suggestion added *afterwards*: the campaign is matched by
+ * then, so it has dropped off the artist-facing browse (`open_campaigns`
+ * excludes matched campaigns) and there is no second match to trigger a
+ * relay — the artist would never see it. Found while testing on 11 Aug.
+ *
+ * Sent by the brand, from their own account, into a thread they're already a
+ * party to — so this needs no new permission.
+ */
+async function shareSuggestion(
+  campaignId: string,
+  reference: string,
+  p: ReturnType<typeof payload>,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: events } = await supabase
+    .from("sponsored_events")
+    .select("artist_profile_id, listing_id")
+    .eq("campaign_id", campaignId)
+    .not("artist_profile_id", "is", null);
+
+  const parties = (events ?? []) as {
+    artist_profile_id: string;
+    listing_id: string | null;
+  }[];
+  if (parties.length === 0) return;
+
+  const body = [
+    `We've updated the event we'd like to sponsor${reference ? ` for campaign ${reference}` : ""}:`,
+    "",
+    p.suggested_event_note,
+    p.suggested_event_url ?? "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const seen = new Set<string>();
+  for (const party of parties) {
+    // One message per artist, not per proposal — a campaign can carry several
+    // suggested events for the same act.
+    const key = `${party.artist_profile_id}:${party.listing_id ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const conversationId = await getOrCreateConversation({
+      brandProfileId: user.id,
+      partnerProfileId: party.artist_profile_id,
+      listingId: party.listing_id,
+    });
+    if (!conversationId) continue;
+
+    await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_profile_id: user.id,
+      body,
+    });
+    await notify({
+      eventKey: "message.received",
+      recipientProfileId: party.artist_profile_id,
+      link: `/dashboard/messages?c=${conversationId}`,
+      variables: {
+        sender_name: "The sponsor",
+        event_name: reference || "your sponsorship",
+      },
+    });
+  }
 }
 
 export async function deleteCampaign(formData: FormData) {

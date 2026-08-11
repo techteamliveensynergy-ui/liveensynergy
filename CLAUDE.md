@@ -24,24 +24,45 @@ capture for client review**, not an assertion suite — most of what they do is
 drive a role's screens and write screenshots + a `manifest.json` under
 `docs/client-review/screenshots` or `docs/standup-2026-08-10/screenshots`.
 
+Run against a **production build**, not `npm run dev` — dev-mode per-route
+compilation takes 60–90s a page and blows the Playwright timeouts.
+
 ```bash
-npx playwright test --project=brand           # needs `npm run dev` running
-npx playwright test --project=artist          # also runs standup-fixes.spec.ts
+npm run build && npm run start
+
+# every functional project — this is the pre-push check (L10)
+npx playwright test --project=brand --project=artist \
+  --project=s0810-admin --project=s0810-brand \
+  --project=s0810-artist --project=s0810-audience
+
 npx playwright test --project=standup-video   # records a walkthrough video
 npx playwright test --project=audience-video  # signed-out audience journey
 ```
 
+- ⚠️ **Don't run bare `npx playwright test`.** It also runs `standup-video`,
+  which points at the **deployed** site by default (`WALKTHROUGH_URL`
+  overrides), and `audience-video`, which creates an account.
 - `workers: 1`, `fullyParallel: false` on purpose — captures build on state the
-  previous ones set up.
-- `tests/auth.setup.ts` (the `setup` project) signs the QA accounts in and
-  writes `tests/.auth/*.json`; `brand`/`artist` depend on it. `audience-video`
-  deliberately has no storageState — it starts from account creation.
-- `tests/helpers.ts` reads `.env.local` itself (Playwright doesn't load it) and
-  can mint confirmed users via the Supabase admin API, because the dev project
-  has email confirmation on and a rate-limited mailer.
-- `standup-video` runs against the **deployed** site by default
-  (`WALKTHROUGH_URL` overrides). Everything else runs against localhost and the
-  dev Supabase project — never production.
+  previous ones set up. The `s0810-*` projects are chained
+  admin → brand → artist → audience for the same reason: the admin draw and the
+  campaign relay set up what the later ones read.
+- `tests/auth.setup.ts` (the `setup` project) signs all four QA accounts in and
+  writes `tests/.auth/*.json`. `audience-video` deliberately has no
+  storageState — it starts from account creation.
+- `tests/helpers.ts` reads `.env.local` itself (Playwright doesn't load it).
+  `createConfirmedUser()` needs `SUPABASE_SERVICE_ROLE_KEY`, which is **not**
+  currently in `.env.local`; nothing in `src/` uses it. `writeHandoff` /
+  `readHandoff` pass a fact from one project to the next — used so the admin
+  project can give the brand project an id the brand must not be able to
+  discover for itself.
+- Some specs consume fixture state (the draw empties its pool, `B3` writes a
+  campaign suggestion). Re-running from clean means resetting those rows; the
+  10 Aug tracker records which.
+- ⚠️ Running `brand` / `artist` **overwrites the committed screenshots** in
+  `docs/client-review/screenshots/`, which are the evidence for the 24–25 Jul
+  review. If you only wanted to check the specs still pass,
+  `git checkout -- docs/client-review/screenshots/` afterwards — otherwise the
+  July review's evidence silently becomes a picture of today's app.
 
 ### Database
 

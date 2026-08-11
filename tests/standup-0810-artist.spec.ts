@@ -20,31 +20,71 @@ test("R1 the artist receives the admin's message under the team tab", async ({
   });
 });
 
-test("R2 the artist sees the sponsor's suggested event on the campaign", async ({
+test("R2 the sponsor's suggestion reaches the artist in the chat", async ({
+  page,
+}) => {
+  // The brand spec (B3) saved a suggestion on an already-matched campaign.
+  // `open_campaigns` excludes matched campaigns, so the browse card can never
+  // carry it — the message has to arrive in the thread instead.
+  await page.goto("/dashboard/messages");
+  await expect(
+    page.getByText(/event we'd like to sponsor/i).first(),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Late-Shift Sessions at Peckham Audio/i).first())
+    .toBeVisible();
+  await shot(page, "R2-suggestion-chat", "The sponsor's suggestion, in the chat", {
+    selector: "section.card",
+  });
+});
+
+test("R2b an unmatched campaign carries the suggestion on the browse", async ({
   page,
 }) => {
   await page.goto("/dashboard/discover-campaigns");
   const suggestion = page.getByText(/They've suggested/i).first();
   test.skip(
     (await suggestion.count()) === 0,
-    "the seeded campaign is already matched, so it isn't on the open browse",
+    "no unmatched campaign carries a suggestion in this dataset",
   );
   await expect(suggestion).toBeVisible();
-  await shot(page, "R2-suggestion", "Sponsor's suggestion on the artist's browse", {
+  await shot(page, "R2b-suggestion-browse", "Suggestion on the artist's browse", {
     fullPage: true,
   });
 });
 
 test("R3 selection is not the artist's to make either", async ({ page }) => {
   await page.goto("/dashboard/sponsored");
-  const link = page.locator('a[href^="/dashboard/sponsored/"]').first();
-  test.skip((await link.count()) === 0, "no sponsorships on this account");
+  const links = page
+    .locator('a[href^="/dashboard/sponsored/"]')
+    .filter({ hasNotText: /New sponsored event/ });
+  test.skip((await links.count()) === 0, "no sponsorships on this account");
 
-  await link.click();
-  await page.waitForURL(/\/dashboard\/sponsored\/[0-9a-f-]{36}/);
+  const hrefs = [
+    ...new Set(
+      await links.evaluateAll((els) =>
+        els.map((e) => (e as HTMLAnchorElement).pathname),
+      ),
+    ),
+  ];
+
+  // An event with nobody registered would pass this trivially, so find one
+  // that actually lists people.
+  let ready = false;
+  for (const href of hrefs) {
+    await page.goto(href);
+    const heading = await page
+      .getByRole("heading", { name: /^Participants \(\d+\)$/ })
+      .first()
+      .textContent()
+      .catch(() => null);
+    if (heading && !heading.includes("(0)")) {
+      ready = true;
+      break;
+    }
+  }
+  test.skip(!ready, "no sponsorship on this account has any registrations");
 
   const panel = page.locator(".card:has-text('Participants')");
-  test.skip((await panel.count()) === 0, "not a party to this event");
   await panel.scrollIntoViewIfNeeded();
   await expect(panel.getByRole("button", { name: /^Select$/ })).toHaveCount(0);
   await expect(panel.getByRole("button", { name: /^Reject$/ })).toHaveCount(0);

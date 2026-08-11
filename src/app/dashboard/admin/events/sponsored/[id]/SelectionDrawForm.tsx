@@ -35,14 +35,12 @@ export function SelectionDrawForm({
     <form action={formAction} className="mt-4 space-y-3">
       <input type="hidden" name="event_id" value={eventId} />
 
+      {/* Only failures are reported here. A successful draw redirects with a
+          notice on the page instead, because emptying the pool unmounts this
+          whole form — see the comment in `runSelectionDraw`. */}
       {state.error && (
         <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
           {state.error}
-        </p>
-      )}
-      {state.message && (
-        <p className="rounded-lg bg-[var(--color-sage)] px-3 py-2 text-sm text-[var(--color-olive-deep)]">
-          ✓ {state.message}
         </p>
       )}
 

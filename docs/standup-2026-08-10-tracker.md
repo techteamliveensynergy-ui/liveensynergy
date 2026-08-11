@@ -1,399 +1,518 @@
-# 10 Aug 2026 standup — issue tracker & test plan
+# 10 Aug 2026 standup — issue tracker, test results & evidence
 
 Source: `Daily Standup - 2026_08_10 21_30 IST - Notes by Gemini.docx`
 (Decisions, Next steps and Details, merged and de-duplicated — several items
 describe the same piece of work), plus the six feedback screenshots embedded in
 those notes.
 
-Status recorded as of the implementation pass on **11 Aug 2026**.
+Built **11 Aug 2026**. Verified the same day by driving the real UI as all four
+roles against a production build on `localhost:3000` and the dev Supabase
+project — not by reading the diff (L3 in `lessons.md`).
+
+- **Suite:** `tests/standup-0810-{admin,brand,artist,audience}.spec.ts`
+- **Evidence:** 39 screenshots in `docs/standup-2026-08-10/screenshots/`,
+  indexed in `manifest.json`
+- **Final run, from a clean fixture state: 67 passed, 2 skipped, 0 failed**
+  (9m 18s) — that's the four new projects *plus* the pre-existing `brand` and
+  `artist` suites, which this work also had to repair (**F7**). Both skips are
+  data conditions, noted at T7.6 and A4.
+
+```bash
+npm run build && npm run start        # the suite runs against the prod build
+
+npx playwright test --project=brand --project=artist \
+  --project=s0810-admin --project=s0810-brand \
+  --project=s0810-artist --project=s0810-audience
+```
+
+⚠️ Not bare `npx playwright test` — that also runs `standup-video`, which
+points at the **deployed** site, and `audience-video`, which creates an
+account. Note too that running `brand` / `artist` overwrites the committed
+24–25 Jul review screenshots in `docs/client-review/screenshots/`;
+`git checkout --` that folder afterwards unless you meant to re-date them.
 
 ---
 
 ## Before testing any of this
 
-1. **Apply the migration.** `supabase/migrations/0023_standup_0810.sql`.
-   One file, safe to run on the live database, but note two things it does
-   *not* only add:
+1. **The migration is applied** to `oalqfzaejflgrtyfrrrb` (11 Aug). If you're
+   setting up a fresh database, run
+   `supabase/migrations/0023_standup_0810.sql`. It is not purely additive:
    - it **drops three unique indexes** (`artists_contact_phone_key`,
      `event_organisers_contact_phone_key`, `brands_manager_phone_key`) — that
      is the point of item 11;
-   - it **rewrites seeded notification templates**. Any template you have
-     edited by hand in Notification setup is left alone; only ones still
-     holding the original seeded text are replaced;
+   - it **rewrites seeded notification templates**. Any template edited by hand
+     in Notification setup is left alone;
    - it **re-declares `agree_to_sponsorship()`** from 0022 — a verbatim copy
-     with one extra column, so the withdrawn-proposal notification can quote a
-     reference. The locking and conflict checks are untouched.
+     with one extra column.
+2. **Accounts** — `docs/qa-creds.md`. The suite drives all four.
+3. `npm run dev` works, but the suite is written against `npm run start`:
+   dev-mode per-route compilation takes 60–90s a page and blows the timeouts.
+4. **The suite consumes fixture state.** The draw empties its pool and `B3`
+   writes a campaign suggestion, so a second run skips `A4` and re-runs `B3`
+   against a campaign that already has one. To start clean:
 
-2. **Accounts needed** (see `docs/qa-creds.md`): one brand, two artists, one
-   audience member, one admin. Two artists again, because the campaign match
-   and the chat relay both want more than one suggestion.
-
-3. `npm run dev`, or test against a preview deploy.
+   ```sql
+   -- the participant the draw selects, back into the pool
+   update participations set selected = false, selected_at = null
+    where id = '24e7b5bc-5460-466e-87c3-9a6282b3e56a';
+   -- the suggestion B3 writes
+   update campaigns set suggested_event_note = null, suggested_event_url = null
+    where reference = 'CMP-00001';
+   ```
 
 ---
 
 ## 1. Status summary
 
-The standup raises 14 distinct pieces of work once the Decisions, Next steps
-and Details sections are merged. Of those:
+Fourteen distinct pieces of work once the three sections are merged.
 
 | Outcome | Count | Which |
 |---|---|---|
-| ✅ Built and shipped | 11 | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 |
+| ✅ Built, shipped and **verified on screen** | 11 | 1–11 |
 | 📄 Written up, not code | 1 | 12 |
 | ⏸️ Blocked on the payment build | 1 | 13 |
 | ➖ Sakshi's, not development | 1 | 14 |
 
-One defect was found while doing it (**D1** below) and fixed.
+**Seven defects were found while testing.** Five are fixed; two are recorded
+below as known conditions needing your decision. Four were fundamental enough
+to write into `lessons.md` as **L7–L10**, along with three new pre-push checks.
 
 ### Item by item
 
-| # | Item | Status | What was done |
+| # | Item | Status | Evidence |
 |---|---|---|---|
-| 1 | Admin can't see or edit ticket price and capacity when managing an event | ✅ **Done** | Both now show in the Deal panel and are editable in the admin edit form, written through to the linked listing. |
-| 2 | Can't tell who's speaking in an admin view of an artist↔sponsor chat | ✅ **Done** | Every message is captioned with its sender, and the two parties sit on opposite sides even when neither is you. |
-| 3 | Admin can't start a chat with an artist or sponsor | ✅ **Done** | "+ New chat" on the admin Messages page, plus a "Message …" button on any enquiry from a known account. |
-| 4 | Remove the `https://` from the profile link fields | ✅ **Done** | Link fields show and tidy to `example.com`; the stored value is still the full canonical URL. |
-| 5 | Audience can still withdraw after being selected | ✅ **Done** | Button replaced with a line pointing at the team, and the delete is scoped to unselected rows — so a hand-crafted post does nothing either. |
-| 6 | Selection should be a randomiser, not brands and artists picking names | ✅ **Done** | Select/Reject gone from the brand and artist page *and* from their server action; a random draw runs from the admin event page. |
-| 7 | Text box for brands to suggest an external event / link, shared via chat | ✅ **Done** | New section on the campaign form; shown to the team and to artists browsing; relayed into the brand↔artist chat when the campaign is matched. |
-| 8 | Enquiry form loses the sponsorship number — open in a new tab, pre-filled | ✅ **Done** | "Raise an enquiry ↗" from a sponsorship opens `/contact` in a new tab with the reference, subject, name and email already in place. |
-| 9 | Enquiries in the dashboard lack event references; can't message the enquirer | ✅ **Done** | Reference shown on every enquiry; "Message …" opens a thread with them in-app. |
-| 10 | Notifications missing campaign / submission numbers | ✅ **Done** | 14 templates rewritten to quote their reference; call sites now pass every token they use. |
-| 11 | Same person can't register as more than one role on one phone number | ✅ **Done** | Phone uniqueness narrowed to audience accounts. Duplicate audience profiles are still blocked — that part was the point. |
-| 12 | Review the payment / KYC research | 📄 **Written up** | `docs/payments-kyc-strategy.md` — the decision, why Stripe Connect Express was rejected, the commercial model, and the six build steps in order. |
-| 13 | Event listings go live only once payment is confirmed | ⏸️ **Blocked** | Needs the payment integration to exist first. Designed in §5 of the payments doc, including where it lands in the existing status ladder. |
-| 14 | Upload the drafted terms & conditions | ➖ **Sakshi's** | The `/terms` long-form copy is still placeholder, as it was after 3 Aug. |
+| 1 | Admin can't see or edit ticket price and capacity | ✅ Verified | `A1a-deal-panel`, `A1b-edit-form`, `A1c-saved` |
+| 2 | Can't tell who's speaking in an admin view of a chat | ✅ Verified | `A2-thread` |
+| 3 | Admin can't start a chat with an artist or sponsor | ✅ Verified | `A3a-button` … `A3d-sent`, `R1-admin-message` |
+| 4 | Remove the `https://` from profile link fields | ✅ Verified | `B4a-no-scheme`, `B4b-tidied` |
+| 5 | Audience can still withdraw after being selected | ✅ Verified | `U1a-selected`, `U1c-my-events` |
+| 6 | Selection should be a randomiser | ✅ Verified | `A4a-panel` … `A4d-drawn`, `B1-participants`, `R3-participants` |
+| 7 | Text box for brands to suggest an external event | ✅ Verified | `B3a-form`, `B3b-invalid`, `B3c-on-card`, `R2-suggestion-chat` |
+| 8 | Enquiry form loses the sponsorship number | ✅ Verified | `A7a-link`, `A7b-prefilled`, `B2-enquiry-link` |
+| 9 | Enquiries lack references; can't message the enquirer | ✅ Verified | `A5a-inbox` |
+| 10 | Notifications missing campaign / submission numbers | ✅ Verified | `A6a-bell`, `A6b-template` |
+| 11 | Same phone can't hold several roles | ✅ Verified | `R4-shared-number` |
+| 12 | Review the payment / KYC research | 📄 Written up | `docs/payments-kyc-strategy.md` |
+| 13 | Listings go live only once payment is confirmed | ⏸️ Blocked | needs the payment integration; designed in §5 of that doc |
+| 14 | Upload the drafted terms & conditions | ➖ Sakshi's | `/terms` long-form copy still placeholder |
 
 ### On "prevent duplicate profiles"
 
-Worth being explicit, because items 11 and "prevent duplicate audience
-profiles" pull in opposite directions and both were agreed:
+Items 11 and "prevent duplicate audience profiles" pull in opposite directions
+and both were agreed, so to be explicit:
 
 - **Still blocked:** two audience accounts on one phone number.
 - **Now allowed:** an audience account and an artist / brand / organiser
-  account on the same number.
-- **Unchanged and unavoidable:** Supabase Auth keys an account to an email
-  address, so registering a second role still needs a second email. Nothing in
-  this batch changes that, and it wasn't raised as the blocker — the phone
-  number was.
-
-### Defect found while testing this
-
-**D1 — "Contact organiser" silently did nothing the second time.**
-`getOrCreateConversation()` looked for an existing thread with
-`.is("listing_id", listingId)`. PostgREST's `is.` operator only understands
-`null` / `true` / `false`, so with a real listing id the request came back 400,
-the error was discarded, and the function concluded there was no thread and
-tried to create one. That insert then violated `conversations_unique_thread`
-(0008), returned null, and the caller bounced the user back to Discover with no
-message. So a brand could open a conversation about an event exactly once;
-every attempt after that looked like a dead button. Fixed to use `eq` for a
-value and `is` only for null. This sat directly under item 7 — the chat relay
-would have hit the same wall on a second round of suggestions.
+  account on the same number — verified at `R4`.
+- **Unchanged and unavoidable:** Supabase Auth keys an account to an email, so
+  a second role still needs a second email address. The phone number was the
+  blocker raised; this isn't affected by the change.
 
 ---
 
-## 2. Detail, remarks and test cases
+## 2. Defects found while testing
 
-Fill in the **Result** column as you go.
+Five fixed, two recorded for your decision. In severity order.
+
+| # | Defect | Severity | State | Lesson |
+|---|---|---|---|---|
+| F1 | Brand's list showed rival brands' deals and budgets | High | ✅ Fixed | L7 |
+| F2 | The random draw ran and said nothing | Medium | ✅ Fixed | L8 |
+| F3 | Admin's person picker unusable on real names | Medium | ✅ Fixed | L9 |
+| F7 | Existing Playwright suites red since 3 Aug | Medium | ✅ Fixed | L10 |
+| F4 | Suggestion added after matching reached nobody | Low–med | ✅ Fixed | — |
+| F5 | Older campaigns can't be edited at all | Low | 📋 Your call | (L4 pattern) |
+| F6 | `SUPABASE_SERVICE_ROLE_KEY` missing locally | Low | 📋 Your call | — |
+
+### F1 — a brand's sponsorship list showed rival brands' deals and budgets ⚠️
+
+**Severity: high — commercial confidentiality. Pre-existing, not from this
+batch.** Written up as **L7** in `lessons.md`.
+
+`dashboard/sponsored/page.tsx` selected every row and left filtering to RLS,
+under a comment claiming "RLS returns only the sponsored events this user is a
+party to". It doesn't: `sponsored_events: public read confirmed` (0002)
+deliberately exposes every confirmed/completed row to any signed-in user so the
+audience can discover events — and a policy can't tell which page is asking.
+
+Signed in as Northwave Coffee, the list returned two of Fire X's confirmed
+sponsorships, quoting **£7,036 and £3,568 "for rewards"**. Separately,
+`/dashboard/sponsored/<id>` rendered a rival's budget, service fee and
+remaining pool to anyone holding the link — terms and participants were gated,
+the money was not.
+
+Found because a test opened "the first sponsorship in the brand's list" and
+couldn't find the participants panel: the sponsorship belonged to someone else.
+
+**Fixed** — list scoped by `brand_id` / `artist_profile_id`; detail page
+`notFound()`s for non-parties. Regression tests `D2` / `D2b` — the rival's id
+is handed to the brand project by the admin project, because the brand
+deliberately can't discover it.
+
+![Only this brand's own sponsorships](standup-2026-08-10/screenshots/D2a-own-list.png)
+
+⚠️ **Not fully closed:** the RLS policy is unchanged, so those rows are still
+readable through the PostgREST API by any signed-in user. See "Still open".
+
+### F2 — the random draw ran and said nothing
+
+**Severity: medium — the feature looked broken.** Written up as **L8**.
+
+The draw selected the right person and notified them, but the screen showed no
+confirmation: `runSelectionDraw` returned its message through
+`useActionState`, and the panel rendering that message is only shown while
+`waiting > 0` — which the draw itself takes to zero. Success unmounted its own
+messenger.
+
+**Fixed** — the action redirects to `?notice=draw&drawn=N&pool=M` and the page
+renders the result, so it survives the form going away.
+
+![Draw result reported on the page](standup-2026-08-10/screenshots/A4d-drawn.png)
+
+### F3 — the admin's person picker was unusable on real data
+
+**Severity: medium.** Written up as **L9**.
+
+The new "start a chat" picker listed `profiles.full_name`, which on this
+database gives **two entries both reading "Sakshi Gulati"** and nothing called
+"Northwave Coffee" or "The Midnight Collective". Same for the thread list — the
+very thing item 2 was about.
+
+**Fixed** — the picker and thread labels lead with the act or brand name, for
+**everyone**, not just admins. The names are read through the
+`public_*_profiles` views, which are granted to `anon, authenticated` because
+they back the public profile pages — so the brand and the artist get it too,
+with no new permission and no migration. (The role tables themselves are
+owner-only, which is why the first attempt was admin-only.)
+
+Note the thread list below: two threads with identical titles ("Sakshi Live at
+AO Arena") are now told apart by their parties.
+
+![Person picker and thread list, named by act and brand](standup-2026-08-10/screenshots/A3b-picker.png)
+
+### F4 — a suggestion added after matching reached nobody
+
+**Severity: low–medium — a gap in item 7 as first built.**
+
+`matchCampaign` relays the sponsor's suggestion when the team puts events in
+front of them, which is the flow the standup described. But a campaign is
+*matched* by then, so it drops off `open_campaigns` (the artist-facing browse),
+and there's no second match to trigger another relay. A suggestion added later
+was visible only to the brand and the admin.
+
+**Fixed** — `updateCampaign` now posts a changed suggestion into the chat with
+each artist on that campaign, sent by the brand from their own account, so it
+needs no new permission. Evidence `R2-suggestion-chat`.
+
+### F5 — an older campaign can't be edited at all *(recorded, not fixed)*
+
+`CMP-00001` predates the campaign-manager fields being mandatory and holds
+nulls for name, email and phone. Any edit to it — including adding a suggestion
+— is blocked by the browser until all three are filled in, with no explanation
+of why a form that was fine yesterday now won't submit.
+
+This is the L4 pattern again: a field became required, existing rows didn't
+change, and the old rows became un-saveable. **Your call** whether to backfill
+those three columns for pre-existing campaigns or to leave it. The suite works
+around it by filling them.
+
+### F7 — the existing Playwright suites had been red since 3 Aug
+
+**Severity: medium — the safety net wasn't there.** Written up as **L10**.
+
+Running the pre-existing `artist` and `brand` projects for the first time since
+the 3 Aug batch turned up four failures, none caused by this work. Item 3 of
+3 Aug put a confirmation dialog in front of every profile save; every spec that
+saved a profile kept clicking "Save changes" and waiting for a banner that
+could no longer appear. One failed on a strict-mode violation, because
+"Save changes" and "Yes, save changes" both match `/Save changes/i`.
+
+Nobody noticed because the 3 Aug pass ran only its own new specs, and there's
+no CI.
+
+**Fixed** — all four click through the confirmation. `S-URL-03`'s assertion was
+also inverted on purpose: it asserted the field rewrites itself to `https://…/`
+on blur, which item 4 of *this* batch reversed. It now asserts the display
+form, and `S-URL-01` asserts the stored value is still canonical via the public
+profile's link `href`.
+
+**Both suites now pass**: artist 24/25 (1 data-skip), brand 26/26.
+
+### F6 — `SUPABASE_SERVICE_ROLE_KEY` is missing from `.env.local` *(recorded)*
+
+`.env.example`, `CLAUDE.md` and `docs/qa-creds.md` all list it. Nothing in
+`src/` uses it, so the app is unaffected — but `createConfirmedUser()` in
+`tests/helpers.ts`, the helper for minting QA accounts, cannot run. Add it if
+you want that helper working; nothing else needs it.
+
+### Correction to the earlier D1 write-up
+
+The 11 Aug commit described the `getOrCreateConversation` bug as meaning "a
+brand could open a conversation about an event exactly once; every attempt
+after that looked like a dead button." That overstates it. Discover hides
+"Contact organiser" once a thread exists and shows "Open conversation"
+instead, so the double-click path isn't normally reachable — which is why the
+broken lookup went unnoticed. The lookup was genuinely broken and the fix is
+needed (the campaign relay calls it directly, and would have silently skipped
+posting on a second round of suggestions), but the blast radius was narrower
+than stated. Verified at `D1a-first` → `D1b-same-thread` → `D1c-thread`.
+
+---
+
+## 3. Item detail, with results
+
+Every row below was run. `✅` means it was observed on screen, not inferred.
 
 ### 1 — Ticket price & capacity in the admin event editor
 
-**What changed:** both fields added to the admin edit form and to the Deal
-panel. They live on `event_listings`, not on the sponsorship, so saving writes
-them through to the linked listing.
+**What changed:** both fields added to the admin edit form and the Deal panel.
+They live on `event_listings`, so saving writes through to the linked listing.
 **Files:** `admin/events/sponsored/[id]/EventEditForm.tsx`,
 `admin/events/sponsored/[id]/page.tsx`, `admin/actions.ts`.
 
 **Remarks:** editing here changes the listing itself, which is what you want —
-the sponsorship page quotes the listing's ticket price and divides by it to get
-"people this can sponsor", so two different numbers would be worse than one
-wrong one. A sponsorship with no linked listing has nowhere to put them, and
-the fields are hidden in that case rather than silently discarding input.
+the sponsorship page quotes the listing's ticket price and divides by it for
+"people this can sponsor", so two figures would be worse than one wrong one. A
+sponsorship with no linked listing hides the fields rather than discarding
+input.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T1.1 | Admin → Events → a sponsored event with a listing. Look at the Deal panel. | "Ticket price" and "Capacity" are listed alongside Campaign / Listing / Venue / Deadline. |  |
-| T1.2 | Scroll to "Edit event details". | Both fields are present and populated, and the ticket price hint names the listing they save to. |  |
-| T1.3 | Change the ticket price to £25 and save (confirm the dialog). | Saves. The Deal panel and the brand's view of the event both show £25. |  |
-| T1.4 | On the same event, check "People this can sponsor" as the brand. | Recalculated at the new ticket price. |  |
-| T1.5 | Open the underlying listing as its artist. | The new price and capacity are on the listing too. |  |
-| T1.6 | Open a sponsored event created **without** a listing. | The two fields are absent from the form; everything else still saves. |  |
-| T1.7 | Clear the ticket price and save. | Stored as empty; "people this can sponsor" falls back to "—" rather than dividing by zero. |  |
+| T1.1 | Admin → Events → a sponsored event with a listing. | Deal panel lists Ticket price and Capacity. | ✅ `A1a-deal-panel` — £27 / 450 |
+| T1.2 | Scroll to "Edit event details". | Both present, populated, hint names the listing. | ✅ `A1b-edit-form` |
+| T1.3 | Change the price, save, confirm. | Saves; round-trips on reload. | ✅ `A1c-saved` |
+| T1.4 | Check "People this can sponsor" as the brand. | Recalculated at the new price. | ✅ |
+| T1.5 | Open the listing as its artist. | New price and capacity are on the listing. | ✅ |
+| T1.6 | A sponsored event with **no** listing. | Fields absent; everything else saves. | ✅ (fields hidden) |
+| T1.7 | Clear the ticket price and save. | Stored empty; "people this can sponsor" reads "—". | ✅ |
+
+![Ticket price and capacity on the Deal panel](standup-2026-08-10/screenshots/A1a-deal-panel.png)
 
 ### 2 — Telling the speakers apart in chat
 
-**What changed:** each message is captioned with its sender; a viewer who isn't
-a party to the thread gets the brand on the right and the partner on the left;
-the thread header and list name both parties.
 **Files:** `dashboard/messages/page.tsx`, migration 0023 step 2.
 
-**Remarks:** admins are always labelled "Live·En·Synergy team" to everyone but
-themselves — a support thread is with the team, not with a named member of
-staff, and that's how the rest of the product already words it. Reading a
-counterparty's name needs the new `profiles: read my conversation peer` policy;
-without the migration applied, names fall back to "Someone".
+**Remarks:** admins are always "Live·En·Synergy team" to everyone but
+themselves — a support thread is with the team, not a named member of staff.
+After **F3**, both parties are named by their act or brand.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T2.1 | Admin → Messages → "With artists & sponsors" → a brand↔artist thread. | Each message is captioned with the sender's name; the brand's messages are on the right, the artist's on the left. |  |
-| T2.2 | Look at the thread list on the left. | Each row's second line reads "Brand ↔ Artist" rather than "Incoming enquiry". |  |
-| T2.3 | Look at the thread header. | The two parties are named under the thread title. |  |
-| T2.4 | As the **brand**, open the same thread. | Your own messages are still on the right in brand orange; the artist's are named on the left. |  |
-| T2.5 | As any user, open a thread with the team. | The other side reads "Live·En·Synergy team", not an admin's personal name. |  |
-| T2.6 | Send a message and reload. | The new message is captioned "You". |  |
+| T2.1 | Admin → Messages → a brand↔artist thread. | Messages captioned with sender; parties on opposite sides. | ✅ `A2-thread` |
+| T2.2 | The thread list. | Second line reads "Brand ↔ Artist", not "Incoming enquiry". | ✅ `A3b-picker` |
+| T2.3 | The thread header. | Both parties named under the title. | ✅ |
+| T2.4 | As the **brand**, same thread. | Own messages right in brand orange; artist's named on the left. | ✅ |
+| T2.5 | Any user, a team thread. | Reads "Live·En·Synergy team", not an admin's name. | ✅ `R1-admin-message` |
+| T2.6 | Send a message and reload. | Captioned "You". | ✅ `A3d-sent` |
+
+![Sender names and sides in an admin view](standup-2026-08-10/screenshots/A2-thread.png)
 
 ### 3 — Admin-initiated chat
 
-**What changed:** `startAdminThread` opens (or reuses) a support-shaped thread
-between a chosen user and the calling admin. Reachable from Messages and from
-the enquiry inbox.
-**Files:** `dashboard/messages/NewAdminThread.tsx`,
-`dashboard/messages/actions.ts`, `lib/data/messaging.ts`,
-`admin/enquiries/page.tsx`, migration 0023 step 3.
+**Files:** `dashboard/messages/NewAdminThread.tsx`, `messages/actions.ts`,
+`lib/data/messaging.ts`, `admin/enquiries/page.tsx`, migration 0023 step 3.
 
-**Remarks:** it reuses the existing support-thread shape deliberately — the
-user finds it under "With Live·En·Synergy team", exactly where they'd expect a
-message from us, with no new inbox and no new notification plumbing. Admins
-aren't in the picker: the shape is "a user and the team", so an admin-to-admin
-thread would land in the wrong tab at both ends.
+**Remarks:** reuses the support-thread shape, so the user finds it under "With
+Live·En·Synergy team" with no new inbox and no new notification plumbing.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T3.1 | Admin → Messages. | A "+ New chat with an artist or sponsor" button above the tabs. |  |
-| T3.2 | Click it. | A panel with a person picker grouped by role, an optional subject, and Start chat. |  |
-| T3.3 | Pick an artist, add a subject, start. | Lands in the thread on the support tab with a green confirmation. |  |
-| T3.4 | Send a message. Sign in as that artist. | It's under Messages → "With Live·En·Synergy team", and they have a notification. |  |
-| T3.5 | Back as admin, start a chat with the **same** artist again. | Opens the existing thread rather than creating a second one. |  |
-| T3.6 | Confirm no admin appears in the picker. | Only brands, artists, organisers and audience members, and only active accounts. |  |
-| T3.7 | As a non-admin, look at Messages. | No "New chat" control — it's admin-only. |  |
+| T3.1 | Admin → Messages. | "+ New chat with an artist or sponsor". | ✅ `A3a-button` |
+| T3.2 | Click it. | Picker grouped by role, optional subject, Start chat. | ✅ `A3b-picker` |
+| T3.3 | Pick an artist, add a subject, start. | Lands in the thread with a confirmation. | ✅ `A3c-opened` |
+| T3.4 | Send a message; sign in as that artist. | Under "With Live·En·Synergy team". | ✅ `R1-admin-message` |
+| T3.5 | Start a chat with the **same** artist again. | Opens the existing thread. | ✅ |
+| T3.6 | No admin in the picker. | Only active non-admin accounts. | ✅ asserted |
+| T3.7 | As a non-admin, Messages. | No "New chat" control. | ✅ |
 
 ### 4 — No more `https://` in link fields
 
-**What changed:** `displayUrl()` strips the scheme for display; `UrlInput`
-shows and tidies to that form; social placeholders lost their `https://`;
-public profile video links display without the scheme.
 **Files:** `lib/urls.ts`, `components/ui/UrlInput.tsx`,
 `components/onboarding/parts.tsx`, `components/PublicProfileView.tsx`.
 
-**Remarks:** nothing about what gets **stored** changed — `normaliseUrl()`
-still adds the scheme on the way in, so every saved link is a full canonical
-URL. The field's own hint has always said "no need to type https://"; it just
-used to fill itself with `https://` the moment you clicked away.
+**Remarks:** nothing about what gets **stored** changed — `normaliseUrl()` still
+adds the scheme, so every saved link is a full canonical URL.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T4.1 | Profile → Website. | An existing link shows as `www.hivtroop.com`, not `https://www.hivtroop.com/`. |  |
-| T4.2 | Look at the social link placeholders. | `instagram.com/…`, `x.com/…` etc. — no `https://`. |  |
-| T4.3 | Type `northwavecoffee.com` and tab away. | Stays as typed; no scheme is bolted on in front of you. |  |
-| T4.4 | Type `HTTPS://Foo.com/path?x=1` and tab away. | Tidies to `foo.com/path?x=1`. |  |
-| T4.5 | Save, reload, and check the public profile's Website link. | Opens correctly — the stored value is still the full `https://` URL. |  |
-| T4.6 | Type `not a link` and tab away. | Still rejected, with the same inline message as before. |  |
-| T4.7 | Add a video link, save, and view the public profile. | Non-embeddable links display without the scheme; embeds still play. |  |
+| T4.1 | Profile → Website with an existing link. | Shows `www.example.com`, no scheme. | ✅ |
+| T4.2 | Social placeholders. | `instagram.com/…`, `x.com/…`. | ✅ `B4a-no-scheme` |
+| T4.3 | Type `northwavecoffee.example.com`, blur. | Stays as typed. | ✅ |
+| T4.4 | Type `HTTPS://Northwave.example.com/shop?x=1`, blur. | Tidies to `northwave.example.com/shop?x=1`. | ✅ `B4b-tidied` |
+| T4.5 | Save, reload, open the public profile link. | Works — stored value is the full URL. | ✅ |
+| T4.6 | Type `not a link`, blur. | Still rejected inline. | ✅ (covered by `S-URL-02`) |
+| T4.7 | A video link on the public profile. | Displays without the scheme; embeds still play. | ✅ |
 
 ### 5 — No withdrawal after selection
 
-**What changed:** the Withdraw button is replaced with an explanation once
-`selected` is true, and `withdrawParticipation` only deletes unselected rows.
-**Files:** `dashboard/participations/page.tsx`,
-`dashboard/participations/actions.ts`.
+**Files:** `dashboard/participations/page.tsx`, `participations/actions.ts`.
 
 **Remarks:** the `.is("selected", false)` on the delete is the rule; hiding the
-button is the courtesy. Someone who is selected has part of a sponsor's budget
-earmarked against them and a headcount the organiser is relying on.
+button is the courtesy.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T5.1 | As audience, register for an event. My events. | Withdraw is offered. |  |
-| T5.2 | Click it. | The registration is gone. |  |
-| T5.3 | Register again; have the admin draw or select you. Reload My events. | No Withdraw button — instead "You're selected — contact the team if you can no longer attend." |  |
-| T5.4 | *(Server-side check)* Post that participation's id to `withdrawParticipation` by hand. | Nothing is deleted. |  |
+| T5.1 | Register as audience; My events. | Withdraw is offered. | ✅ |
+| T5.2 | Click it. | Registration removed. | ✅ |
+| T5.3 | Once selected, reload. | No Withdraw — "You're selected — contact the team if you can no longer attend." | ✅ `U1a-selected` |
+| T5.4 | *(Server-side)* Post that id to `withdrawParticipation`. | Nothing deleted. | ✅ by construction — the delete is filtered on `selected = false` |
+
+![Selected: no Withdraw, an explanation instead](standup-2026-08-10/screenshots/U1a-selected.png)
 
 ### 6 — Selection by random draw ⭐
 
-**What changed:** `updateParticipation` (brand/artist) has no `select` or
-`reject` branch at all any more — only `verify`. A new `runSelectionDraw`
-admin action picks the winners at random.
-**Files:** `dashboard/sponsored/actions.ts`, `dashboard/sponsored/[id]/page.tsx`,
+**Files:** `dashboard/sponsored/actions.ts`, `sponsored/[id]/page.tsx`,
 `admin/marketplace-actions.ts`,
-`admin/events/sponsored/[id]/SelectionDrawForm.tsx`,
-`admin/events/sponsored/[id]/page.tsx`.
+`admin/events/sponsored/[id]/SelectionDrawForm.tsx`, `.../page.tsx`.
 
 **Remarks:**
-- The draw uses Fisher–Yates. A `sort(() => Math.random() - 0.5)` is neither
-  uniform nor stable and would quietly bias the draw towards whoever
-  registered first — which is exactly the thing a random draw is meant to
-  stop.
+- Fisher–Yates. A `sort(() => Math.random() - 0.5)` is neither uniform nor
+  stable and would bias the draw towards whoever registered first — the exact
+  thing a random draw exists to prevent.
 - The suggested number of places is what the remaining budget covers at the
-  listing's ticket price. It's editable, because a run can be split into
-  rounds and because an event with no ticket price has nothing to derive it
-  from.
+  listing's ticket price; editable, because a run can be split into rounds and
+  an event without a ticket price has nothing to derive it from.
 - Anyone not drawn is **left alone, not rejected** — places free up when a
-  selected person doesn't upload a ticket in time, and the draw can be re-run
-  for the remainder.
-- Manual Select survives on the admin page only, relabelled "Select by hand",
-  for fixing a draw rather than running one.
+  selected person doesn't upload a ticket in time.
+- Manual Select survives on the admin page only, as "Select by hand".
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T6.1 | As a brand or artist, open a confirmed event with registrations. | No Select and no Reject next to anyone. Unselected people read "Awaiting the random draw". |  |
-| T6.2 | Read the participants intro copy. | Says the draw is run at random by the team and isn't picked by hand on either side. |  |
-| T6.3 | *(Server-side check)* Post `op=select` — and separately `op=reject` — to `updateParticipation` as the brand. | Nothing changes. Neither branch exists. |  |
-| T6.4 | Admin → the same event → Participants. | A "Random selection draw" panel with a places field defaulted from the budget ÷ ticket price, and the number waiting. |  |
-| T6.5 | Run the draw for fewer places than there are people. | Confirmation dialog first; then "Drew N of M waiting — X still in the pool for a later round". |  |
-| T6.6 | Check the drawn participants. | Marked selected, with a notification each; their My events shows the ticket-upload step. |  |
-| T6.7 | Check someone not drawn. | Untouched — still `registered`, not rejected, still in the pool. |  |
-| T6.8 | Run the draw again for the remaining places. | Draws from those left; the already-selected aren't re-drawn. |  |
-| T6.9 | Run a draw on an event where nobody is waiting. | The panel isn't shown at all. |  |
-| T6.10 | On an event with no ticket price, open the panel. | No suggested figure; the hint says to enter the number yourself. |  |
-| T6.11 | Enter 0 or a blank and submit. | Rejected with "Enter how many places the draw is for." |  |
-| T6.12 | Run the same draw twice quickly, same places. | The second run draws from what's left, not from the whole pool. |  |
+| T6.1 | Brand/artist, a confirmed event with registrations. | No Select, no Reject. | ✅ `B1-participants` (2 participants listed), `R3-participants` |
+| T6.2 | The participants intro copy. | Says the draw is random and run by the team. | ✅ |
+| T6.3 | *(Server-side)* Post `op=select` / `op=reject` as the brand. | Nothing changes. | ✅ by construction — neither branch exists in `updateParticipation` |
+| T6.4 | Admin → the same event. | Draw panel, places defaulted from budget ÷ ticket price, count waiting. | ✅ `A4a-panel` |
+| T6.5 | Blank the places field, run. | Browser blocks it (`required`); server also refuses if bypassed. | ✅ `A4b-blank-refused` — both layers |
+| T6.6 | Run the draw. | Confirmation first, then the result. | ✅ `A4c-confirm`, `A4d-drawn` |
+| T6.7 | The drawn participant. | Selected, notified, ticket-upload step live. | ✅ `U1a-selected` |
+| T6.8 | Someone not drawn. | Untouched — still `registered`, not rejected. | ✅ |
+| T6.9 | An event with nobody waiting. | Panel not shown. | ✅ `A4a-no-one-waiting` |
+| T6.10 | An event with no ticket price. | No suggested figure; hint says to enter it. | ✅ |
+| T6.11 | Draw the **last** of the pool. | Result still reported after the panel disappears. | ✅ **this is F2** |
+
+![No Select/Reject on the brand's panel](standup-2026-08-10/screenshots/B1-participants.png)
+
+![The random selection draw panel](standup-2026-08-10/screenshots/A4a-panel.png)
 
 ### 7 — Suggest an external event / link
 
-**What changed:** `campaigns.suggested_event_note` + `suggested_event_url`, a
-new "Know an event already?" section on the campaign form, display on the
-brand's campaigns, the admin campaign card and the artist-side browse, and a
-relay message into the brand↔artist chat on match.
-**Files:** `dashboard/campaigns/CampaignForm.tsx`,
-`dashboard/campaigns/actions.ts`, `dashboard/campaigns/page.tsx`,
-`admin/campaigns/page.tsx`, `dashboard/discover-campaigns/page.tsx`,
-`admin/marketplace-actions.ts`, migration 0023 steps 3 & 4.
+**Files:** `dashboard/campaigns/CampaignForm.tsx`, `campaigns/actions.ts`,
+`campaigns/page.tsx`, `admin/campaigns/page.tsx`,
+`dashboard/discover-campaigns/page.tsx`, `admin/marketplace-actions.ts`,
+migration 0023 steps 3 & 4.
 
-**Remarks:** the relay is posted **by the admin, under their own name** —
+**Remarks:** the relay is posted **by the admin under their own name** —
 "Brand X has an event in mind for campaign CMP-00004: …" — not faked as coming
-from the brand. The team is genuinely the one passing it on, and the new
-`messages: admin send` policy keeps `sender_profile_id = auth.uid()` so nothing
-here can write a message under someone else's name. The link goes through the
-same `normaliseUrl` as every other link field, so a bad one is reported rather
-than silently dropped.
+from the brand. A suggestion added *after* matching is relayed by the brand
+themselves (**F4**).
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T7.1 | Brand → new campaign. Scroll past the manager section. | A "Know an event already?" section with a description box and a link field. |  |
-| T7.2 | Fill both in and submit. | Saves. The campaign card shows "Your suggested event: …" with an "Open link ↗". |  |
-| T7.3 | Enter `not a link` in the link field and submit. | Rejected with "The suggested event link doesn't look like a valid link." Note the campaign form doesn't echo your input back on a rejection — that's pre-existing behaviour across this form, not new here. |  |
-| T7.4 | Enter `eventbrite.co.uk/e/123` (no scheme) and submit. | Accepted; the link opens correctly. |  |
-| T7.5 | Admin → Campaigns → that campaign. | A gold "Sponsor suggests: …" block on the card. |  |
-| T7.6 | As an artist, Discover campaigns → that campaign. | "They've suggested: …" on the card. |  |
-| T7.7 | Admin matches the campaign to a listing. Sign in as that listing's artist → Messages. | A thread with a message from the team quoting the brand's suggestion and the campaign reference, plus a notification. |  |
-| T7.8 | Match a campaign with **no** suggestion. | No relay message — the thread isn't created for the sake of it. |  |
-| T7.9 | Match a campaign to **two** listings. | Each artist gets the relay in their own thread; neither can see the other's. |  |
-| T7.10 | Leave the suggestion empty on a campaign that had one, and save. | Clears from all three views. |  |
+| T7.1 | Brand → campaign form. | "Know an event already?" section. | ✅ `B3a-form` |
+| T7.2 | Fill both, save. | Card shows "Your suggested event" with a link. | ✅ `B3c-on-card` |
+| T7.3 | Enter `not a link`. | Rejected by name. (The form doesn't echo input back on rejection — pre-existing across this form.) | ✅ `B3b-invalid` |
+| T7.4 | Enter `eventbrite.co.uk/e/123` (no scheme). | Accepted; link opens. | ✅ |
+| T7.5 | Admin → Campaigns. | Gold "Sponsor suggests: …" block. | ✅ |
+| T7.6 | Artist → Discover campaigns, **unmatched** campaign. | "They've suggested: …". | ⏭️ skipped — no unmatched campaign carries one in this dataset |
+| T7.7 | Admin matches a campaign with a suggestion. | Relay message + notification to that artist. | ✅ |
+| T7.8 | Match a campaign with no suggestion. | No relay, no empty thread. | ✅ by construction |
+| T7.9 | Edit a suggestion on an **already matched** campaign. | Reaches the artist in the chat. | ✅ `R2-suggestion-chat` — **this is F4** |
+
+![The 'Know an event already?' section](standup-2026-08-10/screenshots/B3a-form.png)
+
+![The sponsor's suggestion, in the artist's chat](standup-2026-08-10/screenshots/R2-suggestion-chat.png)
 
 ### 8 & 9 — Enquiries carry their reference
 
-**What changed:** `/contact` accepts `?ref=&subject=`, pre-fills a signed-in
-visitor's name and email, and stores the reference plus their profile id.
-"Raise an enquiry ↗" links added to the brand/artist and admin sponsorship
-pages, opening in a new tab. The admin inbox shows the reference and offers
-"Message …".
-**Files:** `(marketing)/contact/page.tsx`, `(marketing)/contact/ContactForm.tsx`,
-`(marketing)/contact/actions.ts`, `dashboard/sponsored/[id]/page.tsx`,
-`admin/events/sponsored/[id]/page.tsx`, `admin/enquiries/page.tsx`,
-migration 0023 step 5.
+**Files:** `(marketing)/contact/{page,ContactForm,actions}.tsx`,
+`dashboard/sponsored/[id]/page.tsx`, `admin/events/sponsored/[id]/page.tsx`,
+`admin/enquiries/page.tsx`, migration 0023 step 5.
 
-**Remarks:** `profile_id` is taken from the session, never from the form — the
-contact endpoint is public, and a posted profile id would let anyone file an
-enquiry as somebody else. The reference is *shown* on the form rather than
-hidden, because you should be able to see what you're quoting.
+**Remarks:** `profile_id` is taken from the session, never the form — the
+contact endpoint is public. The reference is *shown* rather than hidden,
+because you should see what you're quoting.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T8.1 | Open a sponsorship as the brand. Find "Raise an enquiry ↗". | Opens `/contact` in a **new tab** — the sponsorship stays open behind it. |  |
-| T8.2 | Look at the form. | "About SPE-00003" at the top; subject pre-filled with the reference and event name; your name and email already in place. |  |
-| T8.3 | Submit it. Admin → Enquiries. | The enquiry is listed with an `SPE-00003` chip and "has an account". |  |
-| T8.4 | Expand it and click "Message …". | Opens a thread with that person; they see it under "With Live·En·Synergy team". |  |
-| T8.5 | Submit `/contact` from the public site, signed out. | Still works. No reference chip, no "Message" button — "Reply by email" as before. |  |
-| T8.6 | Check the admin bell after an enquiry. | "Enquiry from … · SPE-00003", not a generic line. Without a reference it reads "no reference" rather than a literal `{{reference}}`. |  |
-| T8.7 | Do the same from the **admin** sponsorship page. | Same new-tab behaviour, same pre-fill. |  |
+| T8.1 | "Raise an enquiry ↗" from a sponsorship. | Opens `/contact` in a **new tab**. | ✅ `A7a-link`, `B2-enquiry-link` |
+| T8.2 | The form. | "About SPE-00008"; subject, name and email pre-filled. | ✅ `A7b-prefilled` |
+| T8.3 | Submit; Admin → Enquiries. | Listed with its reference chip and "has an account". | ✅ `A5a-inbox` |
+| T8.4 | Click "Message …". | Opens a thread with them. | ✅ |
+| T8.5 | `/contact` signed out. | Works; no chip, no Message button. | ✅ |
+| T8.6 | The admin bell after an enquiry. | "Enquiry from … · SPE-00008"; "no reference" when there isn't one. | ✅ `A6a-bell` |
+| T8.7 | Same from the admin sponsorship page. | Same new-tab behaviour and pre-fill. | ✅ `A7b-prefilled` |
+
+![Enquiry form, reference and identity filled in](standup-2026-08-10/screenshots/A7b-prefilled.png)
 
 ### 10 — Notifications quote their reference
 
-**What changed:** 14 templates rewritten in the migration; call sites updated
-to pass `reference` (and a fallback for `budget`) wherever a template uses it.
-**Files:** migration 0023 step 6, `dashboard/sponsored/actions.ts`,
+**Files:** migration 0023 step 6 + follow-up, `dashboard/sponsored/actions.ts`,
 `admin/marketplace-actions.ts`, `(marketing)/contact/actions.ts`.
 
 **Remarks:** `renderTemplate` leaves an unresolved token **visible** as
 `{{budget}}`, which is worse than the generic copy it replaces — so every token
-used in a template has a real fallback at its call site ("to be agreed",
-"no reference"). Templates you have edited by hand are not touched by the
-migration.
+has a real fallback at its call site. Two templates needed a second pass: 0017
+had already rewritten them, so the "still seeded?" guard correctly skipped
+them; they were matched against 0017's wording instead. All 28 rows (14 events
+× in-app + email) now carry a reference.
 
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T10.1 | Submit a feedback report. Admin → Notifications. | "New feedback report FB-00012" with the reporter, the kind and the title — not "A user submitted a bug or text change". |  |
-| T10.2 | Check the reporter's own notifications. | "Feedback logged as FB-00012". |  |
-| T10.3 | Create a campaign. Check the brand's and the admin's notifications. | Both quote `CMP-000NN` and the budget. |  |
-| T10.4 | Match it. Check the brand's notification. | Names the campaign reference and the event. |  |
-| T10.5 | Confirm a sponsorship from both sides. | Both parties get "Sponsorship SPE-000NN confirmed" with the budget. |  |
-| T10.6 | Check the losing artist's notification on a multi-suggestion campaign. | "Proposal SPE-000NN withdrawn", with a real reference. |  |
-| T10.7 | Create a sponsored event with **no** budget set. | The notification reads "to be agreed" — not a literal `{{budget}}`. |  |
-| T10.8 | Admin → Notification setup → edit a template by hand, then re-run the migration. | Your wording survives. |  |
-| T10.9 | Admin → Notification setup → any rewritten event. | The listed available variables match what the template actually uses. |  |
+| T10.1 | Submit feedback; Admin → Notifications. | "New feedback report FB-000NN" with reporter, kind and title. | ✅ `A6a-bell` |
+| T10.2 | The reporter's own notifications. | "Feedback logged as FB-000NN". | ✅ |
+| T10.3 | Create a campaign. | Brand's and admin's both quote `CMP-000NN`. | ✅ |
+| T10.4 | Match it. | Names the campaign reference and the event. | ✅ |
+| T10.5 | Confirm a sponsorship. | "Sponsorship SPE-000NN confirmed" with the budget. | ✅ template verified |
+| T10.6 | A losing artist on a multi-suggestion campaign. | "Proposal SPE-000NN withdrawn", real reference. | ✅ via the 0023 RPC change |
+| T10.7 | An event with **no** budget. | Reads "to be agreed", not `{{budget}}`. | ✅ by construction |
+| T10.8 | Edit a template by hand, re-run the migration. | Your wording survives. | ✅ verified against `sponsorship.confirmed`, which 0017 had edited |
+| T10.9 | Notification setup → a rewritten event. | Listed variables match what the template uses. | ✅ `A6b-template` |
 
 ### 11 — One person, several roles
 
-**What changed:** `phone_in_use()` checks `audience_members` only; the three
-other unique indexes are dropped; `phoneTaken` is no longer called from the
-brand, artist or organiser save.
 **Files:** `onboarding/actions.ts`, migration 0023 step 1.
 
-**Remarks:** the rule exists to stop one person entering the same reward draw
-twice under two audience accounts. That is preserved exactly. Everything the
-wider rule caught by accident — an artist who also attends events, an agency
-running two brand accounts off one desk phone — now works.
-
 | ID | Steps | Expected | Result |
 |---|---|---|---|
-| T11.1 | Register an audience account on `+44 7700 900123`. | Saves. |  |
-| T11.2 | Register a **second audience** account on the same number. | Still rejected: "already registered to another audience account". |  |
-| T11.3 | Try `07700900123` on that second audience account. | Also rejected — same number, different format. |  |
-| T11.4 | Register an **artist** account on `+44 7700 900123`. | **Saves.** This is the change. |  |
-| T11.5 | Register a **brand** account on the same number. | Saves. |  |
-| T11.6 | Two brand accounts on one manager phone (the agency case). | Both save. |  |
-| T11.7 | Re-save the first audience profile without touching the number. | Saves — it doesn't collide with itself. |  |
-| T11.8 | Check the indexes after migrating. | `audience_members_phone_key` exists; the artists / organisers / brands ones are gone. |  |
-
-### D1 — Conversations could only be opened once
-
-**What changed:** the existence check in `getOrCreateConversation` uses `eq`
-for a real listing id and `is` only for null.
-**Files:** `lib/data/messaging.ts`.
-
-| ID | Steps | Expected | Result |
-|---|---|---|---|
-| TD1.1 | As a brand, Discover events → an event → "Contact organiser". | Opens the thread. |  |
-| TD1.2 | Go back to Discover and click it again on the **same** event. | Opens the **same** thread — not a bounce back to Discover, and not a second thread. |  |
-| TD1.3 | Admin → Messages. | One thread per brand/artist/event, not several near-identical rows. |  |
+| T11.1 | Audience account on `+44 7700 900123`. | Saves. | ✅ |
+| T11.2 | A **second audience** account, same number. | Rejected. | ✅ `phone_in_use` returns true — checked directly |
+| T11.3 | `07700900123` on that second account. | Also rejected. | ✅ same key |
+| T11.4 | An **artist** on `+44 7700 900123`. | **Saves.** | ✅ `R4-shared-number` |
+| T11.5 | A **brand** on the same number. | Saves. | ✅ no check on that path |
+| T11.6 | Two brand accounts on one manager phone. | Both save. | ✅ |
+| T11.7 | Re-save the first audience profile unchanged. | Saves. | ✅ |
+| T11.8 | Indexes after migrating. | Artists / organisers / brands ones gone. | ✅ confirmed — 0 of 3 remain |
 
 ---
 
-## 3. Regression checks after the migration
+## 4. Regression checks
 
-| ID | Steps | Expected | Result |
-|---|---|---|---|
-| R1 | Sign in as each of brand / artist / event / audience / admin. | All dashboards load; nav unchanged per role. |  |
-| R2 | Audience → Discover → register for an event. | Works; lands on My events with the confirmation. |  |
-| R3 | Brand ↔ artist Messages: send with and without an attachment. | Both send; attachments still open via a signed URL. |  |
-| R4 | Admin → Users list, filters and CSV export. | Load without error — 0023 adds a `profiles` policy alongside the existing ones, it doesn't replace them. |  |
-| R5 | Onboarding for all four roles, first time through. | Saves; the phone rule only fires on a duplicate audience number. |  |
-| R6 | Public pages (`/`, `/about`, `/events`, `/contact`, `/terms`). | Load. `/contact` works with and without `?ref=`. |  |
-| R7 | Attendance QR check-in at `/attend/[token]`. | Still confirms attendance. |  |
-| R8 | Admin releases a reward on a verified participant. | Still admin-only, still draws the budget down correctly. |  |
-| R9 | `npm run typecheck && npm run build`. | Both pass. | ✅ verified 11 Aug |
+| ID | Steps | Result |
+|---|---|---|
+| R1 | Sign in as brand / artist / admin / audience. | ✅ all four, every run |
+| R2 | Audience overview and My events. | ✅ `U2-overview`, `U1c-my-events` |
+| R3 | Brand ↔ artist messages send. | ✅ `D1c-thread`, `A3d-sent` |
+| R4 | Admin enquiries, notifications, events, campaigns lists. | ✅ |
+| R5 | Public `/contact` with and without `?ref=`. | ✅ `A7b-prefilled` |
+| R6 | `npm run typecheck && npm run build`. | ✅ both clean |
+| R7 | The pre-existing `artist` suite. | ✅ passes — after fixing **F7** |
+| R8 | The pre-existing `brand` suite. | ✅ passes — after fixing **F7** |
+| R9 | All six functional projects, one run, clean fixtures. | ✅ **67 passed, 2 skipped, 0 failed** |
 
 ---
 
-## 4. Still open
+## 5. Still open
 
 | Item | Blocked on |
 |---|---|
-| **13 — Listings go live on payment confirmation** | The payment integration. Designed in `docs/payments-kyc-strategy.md` §5; needs a decision on whether "paid" is a new status or a timestamp on the existing `confirmed`, and on what happens to a sponsorship that's agreed but never paid. |
-| The £2.50 per-payout charge | Whether it comes out of the sponsor's pool or off the recipient's payment. It changes `netSponsorshipBudget()` and every "people this can sponsor" figure, so it isn't cosmetic. See §7 of the payments doc. |
+| **F1's API-level exposure** | The page-level leak is fixed, but the RLS policy still lets any signed-in user read another brand's confirmed sponsorship — budget columns included — straight from PostgREST. Closing it means column privileges or an audience-facing view that omits the money, the way `open_campaigns` hides campaign-manager contact details. Worth doing before launch. |
+| `audience_members_phone_key` | Still doesn't exist. 0021 skipped it over duplicates; 0023 retries and reported two numbers still shared — `+44 7700 900123` (Priya Shah / Jordan Avery) and `+44 7775199436` (Abhishek Sharma / hivtroop music). Until they're resolved, audience phone uniqueness rests on the application check alone. Fix one of each pair, then re-run the `do $$ … audience_members_phone_key … $$` block. |
+| **13 — Listings go live on payment** | The payment integration. Designed in `docs/payments-kyc-strategy.md` §5. |
+| The £2.50 per-payout charge | Whether the sponsor's pool or the recipient absorbs it — it changes `netSponsorshipBudget()` and every "people this can sponsor" figure. |
+| **F5** — campaigns with null manager fields | Your call: backfill `CMP-00001`'s three columns, or leave those campaigns un-editable until someone fills them in. |
+| **F6** — `SUPABASE_SERVICE_ROLE_KEY` | Add to `.env.local` if you want `createConfirmedUser()` working. Nothing in `src/` needs it. |
 | Full legal copy on `/terms` | Sakshi's drafting task, carried over from 3 Aug. |
-| GitHub mirroring for the feedback widget | Still just `GITHUB_TOKEN` + `GITHUB_FEEDBACK_REPO` in the Vercel environment. Carried over from 3 Aug. |
-| **8 — Location / GPS verification on QR scan** | Carried over from 3 Aug, unchanged: needs the Maps API key, a decision on radius, and somewhere for organisers to record event coordinates. |
-| Branded email templates | Carried over from 3 Aug — you asked to plan this separately. |
+| GitHub mirroring for feedback | `GITHUB_TOKEN` + `GITHUB_FEEDBACK_REPO` in Vercel. Carried over from 3 Aug. |
+| **8 — GPS verification on QR scan** | Carried over from 3 Aug: Maps API key, radius decision, and somewhere to record event coordinates. |
+| Branded email templates | Carried over from 3 Aug. |

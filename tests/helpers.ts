@@ -51,6 +51,30 @@ export async function createConfirmedUser(input: {
   return body.id;
 }
 
+/**
+ * A scratch file passed from one project to the next.
+ *
+ * Used so the admin spec can hand the brand spec a fact the brand must not be
+ * able to discover for itself — the id of another brand's sponsorship, to
+ * prove that opening it 404s. (`SUPABASE_SERVICE_ROLE_KEY` would be the other
+ * way to get it, but it isn't in `.env.local` and nothing in `src/` needs it.)
+ */
+const HANDOFF = path.join("tests", ".auth", "handoff.json");
+
+export function writeHandoff(patch: Record<string, string>) {
+  fs.mkdirSync(path.dirname(HANDOFF), { recursive: true });
+  const existing = fs.existsSync(HANDOFF)
+    ? (JSON.parse(fs.readFileSync(HANDOFF, "utf8")) as Record<string, string>)
+    : {};
+  fs.writeFileSync(HANDOFF, JSON.stringify({ ...existing, ...patch }, null, 2));
+}
+
+export function readHandoff(): Record<string, string> {
+  return fs.existsSync(HANDOFF)
+    ? (JSON.parse(fs.readFileSync(HANDOFF, "utf8")) as Record<string, string>)
+    : {};
+}
+
 /** Accounts from docs/qa-creds.md — dev Supabase project only. */
 export const ACCOUNTS = {
   brand: {

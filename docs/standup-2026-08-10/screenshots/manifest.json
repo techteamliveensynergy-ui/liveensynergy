@@ -1,5 +1,10 @@
 [
   {
+    "id": "A0-rival",
+    "title": "A sponsorship belonging to another brand",
+    "file": "A0-rival.png"
+  },
+  {
     "id": "A1a-deal-panel",
     "title": "Ticket price and capacity on the Deal panel",
     "file": "A1a-deal-panel.png"
@@ -26,13 +31,43 @@
   },
   {
     "id": "A3b-picker",
-    "title": "Person picker, grouped by role",
+    "title": "Person picker, named by act and brand",
     "file": "A3b-picker.png"
+  },
+  {
+    "id": "A3c-opened",
+    "title": "Thread opened with the artist",
+    "file": "A3c-opened.png"
+  },
+  {
+    "id": "A3d-sent",
+    "title": "Admin message sent, captioned 'You'",
+    "file": "A3d-sent.png"
   },
   {
     "id": "A4a-no-one-waiting",
     "title": "Draw hidden when nobody is waiting",
     "file": "A4a-no-one-waiting.png"
+  },
+  {
+    "id": "A4a-panel",
+    "title": "The random selection draw panel",
+    "file": "A4a-panel.png"
+  },
+  {
+    "id": "A4b-blank-refused",
+    "title": "A blank number of places is refused",
+    "file": "A4b-blank-refused.png"
+  },
+  {
+    "id": "A4c-confirm",
+    "title": "Confirmation before the draw runs",
+    "file": "A4c-confirm.png"
+  },
+  {
+    "id": "A4d-drawn",
+    "title": "Draw result, reported on the page",
+    "file": "A4d-drawn.png"
   },
   {
     "id": "A5a-inbox",
@@ -45,8 +80,118 @@
     "file": "A6a-bell.png"
   },
   {
+    "id": "A6b-template",
+    "title": "Feedback template now quotes {{reference}}",
+    "file": "A6b-template.png"
+  },
+  {
     "id": "A7a-link",
     "title": "Raise an enquiry, carrying the reference",
     "file": "A7a-link.png"
+  },
+  {
+    "id": "A7b-prefilled",
+    "title": "Enquiry form, reference and identity filled in",
+    "file": "A7b-prefilled.png"
+  },
+  {
+    "id": "B1-participants",
+    "title": "No Select/Reject on the brand's panel",
+    "file": "B1-participants.png"
+  },
+  {
+    "id": "B2-enquiry-link",
+    "title": "Raise an enquiry from a sponsorship",
+    "file": "B2-enquiry-link.png"
+  },
+  {
+    "id": "B3a-form",
+    "title": "The 'Know an event already?' section",
+    "file": "B3a-form.png"
+  },
+  {
+    "id": "B3b-invalid",
+    "title": "An invalid suggestion link is reported",
+    "file": "B3b-invalid.png"
+  },
+  {
+    "id": "B3c-on-card",
+    "title": "The suggestion on the brand's campaign card",
+    "file": "B3c-on-card.png"
+  },
+  {
+    "id": "B4a-no-scheme",
+    "title": "Link fields keep the address as typed",
+    "file": "B4a-no-scheme.png"
+  },
+  {
+    "id": "B4b-tidied",
+    "title": "A pasted URL is tidied to its display form",
+    "file": "B4b-tidied.png"
+  },
+  {
+    "id": "D1a-already",
+    "title": "A listing already enquired on",
+    "file": "D1a-already.png"
+  },
+  {
+    "id": "D1a-first",
+    "title": "First enquiry opens a thread",
+    "file": "D1a-first.png"
+  },
+  {
+    "id": "D1b-same-thread",
+    "title": "Discover points back at the same thread",
+    "file": "D1b-same-thread.png"
+  },
+  {
+    "id": "D1c-thread",
+    "title": "…and it opens",
+    "file": "D1c-thread.png"
+  },
+  {
+    "id": "D2a-own-list",
+    "title": "Only this brand's own sponsorships",
+    "file": "D2a-own-list.png"
+  },
+  {
+    "id": "D2b-rival-404",
+    "title": "A rival's sponsorship is not reachable",
+    "file": "D2b-rival-404.png"
+  },
+  {
+    "id": "R1-admin-message",
+    "title": "Admin-started thread, seen by the artist",
+    "file": "R1-admin-message.png"
+  },
+  {
+    "id": "R2-suggestion-chat",
+    "title": "The sponsor's suggestion, in the chat",
+    "file": "R2-suggestion-chat.png"
+  },
+  {
+    "id": "R3-participants",
+    "title": "No Select/Reject on the artist's panel",
+    "file": "R3-participants.png"
+  },
+  {
+    "id": "R4-shared-number",
+    "title": "An artist may share a number with an audience account",
+    "file": "R4-shared-number.png"
+  },
+  {
+    "id": "U1a-selected",
+    "title": "Selected: no Withdraw, an explanation instead",
+    "file": "U1a-selected.png"
+  },
+  {
+    "id": "U1c-my-events",
+    "title": "My events, after the draw",
+    "file": "U1c-my-events.png"
+  },
+  {
+    "id": "U2-overview",
+    "title": "Audience overview",
+    "file": "U2-overview.png"
   }
 ]

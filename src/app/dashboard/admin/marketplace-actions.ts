@@ -400,9 +400,12 @@ export async function adminUpdateParticipation(formData: FormData) {
 
 // --- Random selection draw --------------------------------------------------
 
+/**
+ * Only carries failures — a successful draw redirects with a notice instead,
+ * so the result survives the draw form unmounting.
+ */
 export interface DrawState {
   error?: string;
-  message?: string;
 }
 
 /**
@@ -486,12 +489,18 @@ export async function runSelectionDraw(
   }
 
   revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
-  const left = waiting.length - drawn.length;
-  return {
-    message: `Drew ${drawn.length} of ${waiting.length} waiting${
-      left > 0 ? ` — ${left} still in the pool for a later round` : ""
-    }.`,
-  };
+
+  // The result is reported through the URL, not through this action's return
+  // value. Drawing the last of the pool takes `waiting` to zero, which hides
+  // the draw panel — and the panel is what renders the returned message, so it
+  // unmounts before anyone can read it. The admin was left with a form that
+  // silently vanished and no statement of what had happened (L6 all over
+  // again). A notice on the page survives the panel going away.
+  redirect(
+    `/dashboard/admin/events/sponsored/${eventId}?notice=draw&drawn=${
+      drawn.length
+    }&pool=${waiting.length}`,
+  );
 }
 
 /** A year in milliseconds — kept as a constant so the suspension length reads clearly at the call site. */

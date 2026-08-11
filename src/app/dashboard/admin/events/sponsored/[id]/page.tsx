@@ -37,11 +37,14 @@ function Money({ value }: { value: number | null | undefined }) {
 
 export default async function AdminSponsoredDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string; drawn?: string; pool?: string }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
+  const { notice, drawn, pool } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
@@ -445,6 +448,19 @@ export default async function AdminSponsoredDetailPage({
           longer pick participants themselves (10 Aug standup). Verification,
           no-shows and reward release stay available per person below.
         </p>
+
+        {/* Reported here rather than inside the draw form: drawing the last of
+            the pool hides that form, so a message rendered inside it would
+            unmount before it could be read. */}
+        {notice === "draw" && (
+          <p className="mt-4 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+            ✓ Drew {drawn} of {pool} waiting
+            {Number(pool) - Number(drawn) > 0
+              ? ` — ${Number(pool) - Number(drawn)} still in the pool for a later round.`
+              : " — the pool is now empty."}{" "}
+            Everyone drawn has been notified.
+          </p>
+        )}
 
         {/* The draw itself. Hidden once there's nobody left to draw, so a
             finished event doesn't show a dead control. */}

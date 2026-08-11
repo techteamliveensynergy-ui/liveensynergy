@@ -314,6 +314,201 @@ this action was the one place that skipped it.
 
 ---
 
+## L7 — RLS is not a `where` clause: a read left unscoped showed rival brands' deals
+
+**Found:** 11 Aug 2026, writing a Playwright check for the 10 Aug batch. The
+test opened "the first sponsorship in the brand's list" and then couldn't find
+the participants panel — because the sponsorship it had opened **belonged to a
+different brand**.
+
+`src/app/dashboard/sponsored/page.tsx` selected every row and left the
+filtering to the database:
+
+```ts
+// RLS returns only the sponsored events this user is a party to.   ← wrong
+const { data } = await supabase.from("sponsored_events").select("*")
+```
+
+The comment was the bug. `0002_policies.sql` has **two** policies on that
+table, and they're additive:
+
+```sql
+create policy "sponsored_events: parties or admin" …   -- the one the comment means
+create policy "sponsored_events: public read confirmed"
+  on sponsored_events for select
+  using (status in ('confirmed', 'completed'));        -- the one it forgot
+```
+
+The second exists so the **audience** can discover events. It also applies to
+brands and artists, because a policy has no idea which page is asking. So
+Northwave Coffee's own "Sponsored events" page listed Fire X's confirmed
+deals — name, date, and *"£7,036 for rewards"* — and `/dashboard/sponsored/<id>`
+rendered a rival's budget, service fee and remaining pool to anyone with the
+link. Terms and the participant list were correctly gated on being a party;
+the money was not.
+
+Verified with real data before fixing: signed in as Northwave Coffee, two of
+the five rows returned belonged to Fire X, carrying £8,000 and £4,000 budgets.
+
+**Fixed** 11 Aug 2026 — the list is scoped by `brand_id` / `artist_profile_id`
+like every other page in the codebase already was, and the detail page
+`notFound()`s for anyone who isn't a party. Regression tests `D2` / `D2b` in
+`tests/standup-0810-brand.spec.ts`; the rival's id is handed to the brand
+project by the admin project, because the brand deliberately can't discover it.
+
+**Rules.**
+
+- `CLAUDE.md` says mutations are scoped by owner id "in the query itself — RLS
+  is the backstop, not the only check." **That applies to reads.** This page was
+  the one place that didn't, and it's the one that leaked.
+- Before trusting a policy, count the policies on that table. `PERMISSIVE`
+  policies are OR-ed: a second, wider one silently defeats the first. Grep the
+  migrations for the table name rather than recalling "there's a policy on it".
+- A comment asserting a security property is a claim that needs a test, not
+  documentation. This one was wrong for months and read as reassuring.
+- Deliberately-wide read policies (`public read confirmed`, `status =
+  'available'`) exist for one audience and one screen. Write down which, and
+  scope every *other* screen explicitly.
+
+**Still open — the API-level exposure.** The fix is at the page level. The RLS
+policy is unchanged, so a signed-in brand can still read another brand's
+confirmed sponsorship — budget columns included — by calling PostgREST
+directly. Closing that properly means either column privileges or an
+audience-facing view that omits the money (the pattern `open_campaigns`
+already uses to hide campaign-manager contact details). Worth doing before
+launch; it wasn't in the 10 Aug scope.
+
+---
+
+## L8 — Don't report a result from the component the result destroys
+
+**Found:** 11 Aug 2026, testing the new random selection draw.
+
+Running the draw worked — the right participant was selected, `selected_at`
+stamped, the notification sent. The screen said **nothing at all**. The draw
+panel simply vanished.
+
+`runSelectionDraw` returned `{ message: "Drew 1 of 1 waiting…" }` through
+`useActionState`, and `SelectionDrawForm` rendered it. But the parent only
+renders that form `{waiting > 0 && …}`, and the draw is what takes `waiting` to
+zero. So the successful path revalidated, the form unmounted, and the message
+went with it. The admin is left looking at a control that disappeared, with no
+statement of what it did.
+
+This is L6's family — a correct write with nothing on screen to show for it —
+but a different cause. L6 was a stale cache; this is a *fresh* render that
+correctly no longer contains the messenger.
+
+**Fixed** 11 Aug 2026: the action redirects to `?notice=draw&drawn=N&pool=M`
+and the page renders the result, so it survives the form going away.
+
+**Rules.**
+
+- If a successful action changes the condition that renders its own form, the
+  confirmation cannot live inside that form. Put it on the page — the
+  `?notice=` pattern this codebase already uses in `sponsored/[id]`,
+  `participations` and `messages`.
+- Ask of every success message: *what does this action change, and does that
+  change remove the thing displaying the message?* Emptying a list, completing
+  the last item, transitioning out of a status — all of these hide their own
+  form.
+- Test the **last** one, not the first. Drawing 1 of 5 would have shown the
+  message perfectly; it was drawing the last of the pool that broke it. Same
+  for "delete the last row", "approve the final request".
+
+---
+
+## L9 — Naming people by their login name makes an admin picker useless
+
+**Found:** 11 Aug 2026, testing the new admin "start a chat" control.
+
+The picker listed `profiles.full_name`. On real data that produced two entries
+reading **"Sakshi Gulati"** (one a brand, one an artist), an entry called
+"Artist Tester", and nothing anywhere called "Northwave Coffee" or "The
+Midnight Collective" — the names the team actually uses for these accounts.
+Choosing the right one was guesswork. The same was true of the thread list,
+which is what the 10 Aug standup asked to be made readable in the first place.
+
+**Fixed** 11 Aug 2026: the picker and the thread labels lead with the act or
+brand, falling back to the person's name.
+
+The first attempt read the role tables directly, which are owner-only under
+RLS — so it worked for an admin and nobody else, and an artist still saw
+"Brand Tester" instead of "Northwave Coffee". The `public_*_profiles` views
+already expose `profile_id` + the display name and are granted to `anon,
+authenticated` (they back the public profile pages), so reading through those
+gives every viewer the right label with **no new permission and no migration**.
+
+**Rules.**
+
+- A platform account has two names: the person who logs in, and the thing they
+  represent. Anywhere staff pick or scan accounts, lead with the workspace
+  name — that's the one on the campaign, the listing and the invoice.
+- Seeded test data hides this. "Brand Tester" and "Artist Tester" are
+  unambiguous precisely because they're fake; the duplicate "Sakshi Gulati"
+  rows are what real data looks like. Check a picker against production-shaped
+  names, not fixtures.
+- Before adding a policy to reach data you're missing, check whether a view
+  already exposes the safe subset. This codebase has three
+  (`public_artist_profiles`, `public_brand_profiles`,
+  `public_organiser_profiles`) plus `open_campaigns`, all built for exactly
+  this: the display fields without the contact details.
+
+---
+
+## L10 — The evidence suite had been red for a week and nobody knew
+
+**Found:** 11 Aug 2026, running `--project=artist` and `--project=brand` for the
+first time since the 3 Aug batch.
+
+Four tests failed, none of them because of the 10 Aug work:
+
+| Spec | Broken by | Since |
+|---|---|---|
+| `artist.spec.ts` A-PROF-01 | the `ConfirmSubmit` dialog | 3 Aug |
+| `brand.spec.ts` B-PROF-01 | same | 3 Aug |
+| `standup-fixes.spec.ts` S-URL-01 / S-URL-02 | same | 3 Aug |
+
+Item 3 of the 3 Aug batch put a confirmation dialog in front of every profile
+save. Every spec that saved a profile carried on clicking "Save changes" and
+waiting for a success banner that could no longer appear without a second
+click. One of them (S-URL-02) didn't even fail cleanly — it hit a strict-mode
+violation, because "Save changes" and "Yes, save changes" both match
+`/Save changes/i`.
+
+Nothing caught it, because the 3 Aug pass only ran the *new* specs and there's
+no CI. So the suite that exists to prove the app works had itself stopped
+working, quietly, for a week — and would have been the thing we reached for the
+next time something looked wrong.
+
+**Fixed** 11 Aug 2026 — all four updated to click through the confirmation.
+`S-URL-03`'s assertion was also inverted deliberately: it asserted the field
+rewrites itself to `https://…/` on blur, which the 10 Aug standup reversed.
+It now asserts the display form, and `S-URL-01` asserts the *stored* value is
+still canonical by checking the public profile's link `href` — which is the
+guarantee that actually matters.
+
+**Rules.**
+
+- A change to a **shared UI primitive** (`ConfirmSubmit`, `UnsavedChangesGuard`,
+  `FileDrop`, `.input`) breaks every spec that drives it. Grep the specs for
+  the affected interaction before assuming a batch is done.
+- Run the **whole** suite after a batch, not just the specs you wrote for it.
+  `npx playwright test` with no `--project` is the check; it takes minutes.
+- `getByRole("button", { name: /Save changes/i })` matches "Yes, save changes"
+  too. Use `{ exact: true }` for a button whose label is a prefix of another's.
+- An untested capture suite is worse than none: it looks like a safety net
+  right up to the moment you need it.
+- **Running the July suites overwrites the July evidence.** `brand` / `artist`
+  write into `docs/client-review/screenshots/`, which is committed and dated.
+  Run them to check the specs pass, then
+  `git checkout -- docs/client-review/screenshots/` unless you actually meant
+  to re-date that review. A capture suite that doubles as a regression suite
+  needs its output separated from its archive — the `s0810-*` projects write
+  to their own folder for this reason.
+
+---
+
 ## Pre-push checklist
 
 Run through this before `git push liveensynergy HEAD:main`. Most of it is a
@@ -372,6 +567,21 @@ npm run build
 - [ ] Note: `npm run lint` is **not usable** — the repo has no ESLint config, so
       `next lint` drops into an interactive setup prompt and lints nothing.
       Treat the script as absent until someone configures it.
+- [ ] **Every functional project**, not just the specs for this batch (L10):
+
+      ```bash
+      npm run build && npm run start      # dev-mode compilation blows the timeouts
+      npx playwright test --project=brand --project=artist \
+        --project=s0810-admin --project=s0810-brand \
+        --project=s0810-artist --project=s0810-audience
+      ```
+
+      A change to a shared primitive (`ConfirmSubmit`, `FileDrop`, `.input`)
+      breaks every spec that drives it, in files you didn't open.
+
+      ⚠️ **Not bare `npx playwright test`.** That also runs `standup-video`,
+      which points at the **deployed** site by default, and `audience-video`,
+      which creates an account. Neither belongs in a pre-push check.
 
 ### 3b. Exercise the change as the affected role
 
@@ -380,6 +590,28 @@ npm run build
 - [ ] For a write action: looked at **the screen the user is left on**
       afterwards. A correct DB row with a stale screen is still a broken
       feature (L6).
+- [ ] For a write that empties a list or completes the last item: ran it on the
+      **last** one and checked the confirmation still appears. A message
+      rendered inside a form the action removes goes with it (L8).
+- [ ] For anything showing a list of records: signed in as a **second account
+      of the same role** and confirmed it can't see the first one's rows.
+      Fixtures with one brand cannot surface a scoping bug (L7).
+
+### 3c. Reads are scoped too
+
+- [ ] Any new or edited `.from(table).select(...)` that isn't inherently
+      global: does it filter by owner id, or is it trusting RLS? Trusting RLS
+      is only safe if you've read **every** policy on that table — permissive
+      policies are OR-ed, and this codebase deliberately has wide ones
+      (`sponsored_events` confirmed/completed, `event_listings` available) for
+      the audience (L7).
+
+      ```bash
+      grep -n "on <table>" supabase/migrations/*.sql     # count them, don't recall them
+      ```
+- [ ] A detail page reached by id: does it check the viewer is entitled to it,
+      or only that the row loaded? `notFound()` beats rendering a stranger's
+      figures (L7).
 
 ### 4. New env vars or dependencies
 
@@ -433,3 +665,13 @@ A push is not a deploy. Confirm the new build is actually serving:
   route) rather than starting from the stated hypothesis.
 - **Verifying against `.env.local` and calling it production.** They're the same
   project until someone proves otherwise — and nobody has.
+- **Believing a comment about a security property.** `// RLS returns only the
+  sponsored events this user is a party to` was wrong for months and read as
+  reassuring, which is precisely why nobody checked it (L7). A claim like that
+  needs a test next to it or it's decoration.
+- **Testing the first item instead of the last.** Drawing 1 of 5 works; drawing
+  the last of 5 is what removes the form showing the result (L8). Empty the
+  list, complete the final step, delete the last row.
+- **One fixture per role.** A single brand cannot reveal that the page shows
+  every *other* brand's rows. Scoping bugs need a second account of the same
+  role to be visible at all (L7).

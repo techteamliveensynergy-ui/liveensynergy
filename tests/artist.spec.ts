@@ -10,7 +10,11 @@ test("A-PROF-01 artist profile image + banner upload", async ({ page }) => {
   await page.goto("/dashboard/profile");
   await page.setInputFiles('input[name="profile_image"]', fixture("logo.png"));
   await page.setInputFiles('input[name="banner"]', fixture("banner.png"));
-  await page.getByRole("button", { name: /Save changes/i }).click();
+  // Saving a profile has gone through a confirmation since the 3 Aug standup;
+  // this spec predates it and was silently red until 11 Aug.
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  const confirm = page.getByRole("button", { name: /Yes, save changes/i });
+  if (await confirm.count()) await confirm.click();
   await expect(page.getByText("Your changes have been saved.")).toBeVisible({
     timeout: 60_000,
   });

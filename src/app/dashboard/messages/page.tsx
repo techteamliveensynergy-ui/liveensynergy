@@ -104,17 +104,33 @@ export default async function MessagesPage({
     email: string | null;
   })[];
 
-  // Label them by the act or brand, not just the account holder's name.
-  // Listing `profiles.full_name` alone put three entries reading "Sakshi
-  // Gulati" in the picker — a brand, an artist and an admin — with nothing to
-  // tell them apart, and no sign of "Northwave Coffee" anywhere. The team
-  // thinks in acts and brands; that's what has to be on the option.
+  // Label everyone by the act or brand, not just the account holder's name.
+  //
+  // `profiles.full_name` alone put two entries reading "Sakshi Gulati" in the
+  // picker — one a brand, one an artist — with nothing to tell them apart, and
+  // no sign of "Northwave Coffee" anywhere. People here are known by what they
+  // represent.
+  //
+  // Read through the `public_*_profiles` views rather than the role tables:
+  // those are owner-only under RLS, but the views are granted to `anon,
+  // authenticated` (they back the public profile pages), so this works for the
+  // brand and the artist too — not just an admin — with no new permission.
+  const nameIds = [...new Set([...partyIds, ...contactProfiles.map((c) => c.id)])];
   const [{ data: brandNames }, { data: artistNames }, { data: organiserNames }] =
-    isAdmin
+    nameIds.length
       ? await Promise.all([
-          supabase.from("brands").select("profile_id, brand_name"),
-          supabase.from("artists").select("profile_id, artist_name"),
-          supabase.from("event_organisers").select("profile_id, event_name"),
+          supabase
+            .from("public_brand_profiles")
+            .select("profile_id, brand_name")
+            .in("profile_id", nameIds),
+          supabase
+            .from("public_artist_profiles")
+            .select("profile_id, artist_name")
+            .in("profile_id", nameIds),
+          supabase
+            .from("public_organiser_profiles")
+            .select("profile_id, event_name")
+            .in("profile_id", nameIds),
         ])
       : [{ data: [] }, { data: [] }, { data: [] }];
 
@@ -148,11 +164,9 @@ export default async function MessagesPage({
    * support thread is with the team, not with a named member of staff, and
    * that's how the rest of the product already words it.
    *
-   * The act/brand name comes first because that's how the thread is actually
-   * identified in conversation: "Northwave Coffee" means something to the team
-   * in a way "Brand Tester" does not. `workspaceName` is only populated for an
-   * admin (RLS gives nobody else those rows), which is exactly who needs it —
-   * a brand and an artist already know who they're talking to.
+   * The act/brand name comes first because that's how a thread is actually
+   * identified in conversation: "Northwave Coffee" means something that
+   * "Brand Tester" does not — to the team and to the artist alike.
    */
   function partyLabel(id: string | null | undefined) {
     if (!id) return "Someone";

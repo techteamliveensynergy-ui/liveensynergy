@@ -6,12 +6,23 @@ import { capture } from "./helpers";
  * Runs under the artist project — see playwright.config.ts.
  */
 
+/**
+ * Saving a profile goes through a confirmation dialog (3 Aug standup), so
+ * clicking "Save changes" is only half of it. These specs predate that and
+ * were silently red until 11 Aug — see the note in the 10 Aug tracker.
+ */
+async function saveProfile(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  const confirm = page.getByRole("button", { name: /Yes, save changes/i });
+  if (await confirm.count()) await confirm.click();
+}
+
 test("S-URL-01 a website typed without https:// saves", async ({ page }) => {
   await page.goto("/dashboard/profile");
 
   // Exactly what was reported: type it the way people write a web address.
   await page.fill("#website_url", "midnightcollective.example.com");
-  await page.getByRole("button", { name: /Save changes/i }).click();
+  await saveProfile(page);
 
   await expect(page.getByText("Your changes have been saved.")).toBeVisible({
     timeout: 60_000,
@@ -21,11 +32,20 @@ test("S-URL-01 a website typed without https:// saves", async ({ page }) => {
     fullPage: true,
   });
 
-  // Stored canonicalised, so it renders as a working link.
+  // The field shows it the way it was typed (10 Aug standup)…
   await page.goto("/dashboard/profile");
   await expect(page.locator("#website_url")).toHaveValue(
-    "https://midnightcollective.example.com/",
+    "midnightcollective.example.com",
   );
+
+  // …while what's *stored* is still the canonical URL, which is what makes the
+  // public profile link work. That's the guarantee worth asserting.
+  await page.goto("/dashboard");
+  await page.getByTitle(/View .* public profile/).click();
+  await page.waitForURL(/\/(artists|brands|organisers)\/[0-9a-f-]{36}/);
+  await expect(
+    page.getByRole("link", { name: /Website/i }).first(),
+  ).toHaveAttribute("href", "https://midnightcollective.example.com/");
 });
 
 test("S-URL-02 a genuinely invalid link is reported, not silently dropped", async ({
@@ -33,15 +53,16 @@ test("S-URL-02 a genuinely invalid link is reported, not silently dropped", asyn
 }) => {
   await page.goto("/dashboard/profile");
   await page.fill("#website_url", "not a website");
-  await page.getByRole("button", { name: /Save changes/i }).click();
+  await saveProfile(page);
   await expect(
     page.getByText(/Your website link doesn't look like a valid link/i),
   ).toBeVisible({ timeout: 60_000 });
   await capture(page, "S-URL-02", "Invalid website link reported inline");
 
   // Put it back so the suite is re-runnable.
-  await page.fill("#website_url", "https://midnightcollective.example.com/");
-  await page.getByRole("button", { name: /Save changes/i }).click();
+  await page.goto("/dashboard/profile");
+  await page.fill("#website_url", "midnightcollective.example.com");
+  await saveProfile(page);
   await expect(page.getByText("Your changes have been saved.")).toBeVisible({
     timeout: 60_000,
   });
@@ -135,15 +156,19 @@ test("S-URL-03 link fields hint the format and flag mistakes inline", async ({
   await inlineError.scrollIntoViewIfNeeded();
   await capture(page, "S-URL-03a", "Inline warning on a malformed link");
 
-  // Good input without a scheme: accepted and canonicalised in place, so the
-  // user can see what will be saved.
+  // Good input without a scheme: accepted, and left as the person wrote it.
+  //
+  // This used to assert the field rewrote itself to "https://…/" on blur. The
+  // 10 Aug standup reversed that: a field whose own hint says "no need to type
+  // https://" shouldn't fill itself with https:// the moment you look away.
+  // The scheme is still added on the way into the database — see S-URL-01.
   await page.fill("#website_url", "midnightcollective.example.com");
   await page.locator("#website_url").blur();
   await expect(inlineError).toHaveCount(0);
   await expect(page.locator("#website_url")).toHaveValue(
-    "https://midnightcollective.example.com/",
+    "midnightcollective.example.com",
   );
-  await capture(page, "S-URL-03b", "Scheme completed automatically on blur");
+  await capture(page, "S-URL-03b", "A valid address is left as it was typed");
 });
 
 test("S-TZ-01 event start time and zone save and display", async ({ page }) => {

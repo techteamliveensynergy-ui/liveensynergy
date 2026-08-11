@@ -168,7 +168,11 @@ test("B-PROF-01 profile logo + banner upload", async ({ page }) => {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: /Save changes/i }).click();
+  // Saving a profile has gone through a confirmation since the 3 Aug standup;
+  // this spec predates it and was silently red until 11 Aug.
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  const confirm = page.getByRole("button", { name: /Yes, save changes/i });
+  if (await confirm.count()) await confirm.click();
   // The bug being verified: this used to 413 at the Server Action body limit
   // and render "Application error: a client-side exception has occurred".
   await expect(

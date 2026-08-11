@@ -97,6 +97,19 @@ export default async function SponsoredEventPage({
 
   const isBrand = !!brand && brand.id === event.brand_id;
   const isArtist = event.artist_profile_id === profile.id;
+
+  // Only the two parties may open a sponsorship.
+  //
+  // The lookup above is by id alone, and `sponsored_events: public read
+  // confirmed` (0002) lets any signed-in user read a confirmed or completed
+  // row — so a rival brand who had the URL could read this deal's budget,
+  // service fee and remaining reward pool from the tiles below. The
+  // participant list and terms were already gated on being a party; the money
+  // was not. Found 11 Aug 2026 — see L7 in lessons.md. Audience members reach
+  // events through /dashboard/discover/[id], which is the page meant to be
+  // public to signed-in users.
+  if (!isBrand && !isArtist) notFound();
+
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";

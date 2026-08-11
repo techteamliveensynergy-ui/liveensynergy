@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { shot } from "./helpers";
+import { shot, writeHandoff } from "./helpers";
 
 /**
  * Verification + evidence capture for the 10 Aug standup batch — admin seat.
@@ -8,21 +8,45 @@ import { shot } from "./helpers";
  * relay set up state the brand/artist/audience specs then read.
  */
 
-/** Opens the first sponsored event in the admin events list. */
-async function openFirstSponsoredEvent(page: import("@playwright/test").Page) {
+/**
+ * Opens a sponsored event from the admin events list.
+ *
+ * `withListing` walks until it finds one that has a linked event listing.
+ * Ticket price and capacity live on the listing, so a sponsorship created
+ * without one deliberately hides those fields — and the other suites create
+ * exactly that kind of sponsorship, so "the first one" is not stable across
+ * runs.
+ */
+async function openSponsoredEvent(
+  page: import("@playwright/test").Page,
+  opts: { withListing?: boolean } = {},
+) {
   await page.goto("/dashboard/admin/events");
-  const link = page
-    .locator('a[href^="/dashboard/admin/events/sponsored/"]')
-    .first();
-  await expect(link).toBeVisible();
-  await link.click();
-  await page.waitForURL(/\/dashboard\/admin\/events\/sponsored\//);
+  const links = page.locator('a[href^="/dashboard/admin/events/sponsored/"]');
+  await expect(links.first()).toBeVisible();
+
+  const hrefs = [
+    ...new Set(
+      await links.evaluateAll((els) =>
+        els.map((e) => (e as HTMLAnchorElement).pathname),
+      ),
+    ),
+  ];
+
+  for (const href of hrefs) {
+    await page.goto(href);
+    if (!opts.withListing) return;
+    if (await page.locator("#edit-ticket-price").count()) return;
+  }
+  if (opts.withListing) {
+    test.skip(true, "no sponsored event has a linked listing");
+  }
 }
 
 test("A1 ticket price and capacity are visible and editable", async ({
   page,
 }) => {
-  await openFirstSponsoredEvent(page);
+  await openSponsoredEvent(page, { withListing: true });
 
   // Visible on the Deal panel — neither was shown at all before.
   await expect(page.getByText("Ticket price", { exact: true })).toBeVisible();
@@ -115,7 +139,7 @@ test("A3 an admin can start a chat with a user who hasn't written in", async ({
 
   // Send the first message so the artist spec can find it.
   await page.fill(
-    'textarea[name="body"]',
+    'input[name="body"]',
     "Checking in from the team — 10 Aug verification pass.",
   );
   await page.getByRole("button", { name: /^Send$/i }).click();
@@ -126,7 +150,32 @@ test("A3 an admin can start a chat with a user who hasn't written in", async ({
 });
 
 test("A4 selection runs as a random draw", async ({ page }) => {
-  await openFirstSponsoredEvent(page);
+  // Most seeded events have nobody registered, and the draw is deliberately
+  // hidden on those — so walk the list until one has a pool to draw from
+  // rather than assuming the first.
+  await page.goto("/dashboard/admin/events");
+  const hrefs = await page
+    .locator('a[href^="/dashboard/admin/events/sponsored/"]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).pathname));
+
+  let found = false;
+  let firstEmpty: string | null = null;
+  for (const href of [...new Set(hrefs)]) {
+    await page.goto(href);
+    if (await page.locator("#draw-places").isVisible().catch(() => false)) {
+      found = true;
+      break;
+    }
+    firstEmpty ??= href;
+  }
+
+  if (!found) {
+    if (firstEmpty) await page.goto(firstEmpty);
+    await shot(page, "A4a-no-one-waiting", "Draw hidden when nobody is waiting", {
+      selector: ".card:has-text('Participants')",
+    });
+    test.skip(true, "no event has anyone waiting in the draw");
+  }
 
   const panel = page.locator(".card:has-text('Participants')");
   await panel.scrollIntoViewIfNeeded();
@@ -135,21 +184,24 @@ test("A4 selection runs as a random draw", async ({ page }) => {
   await expect(
     panel.getByText(/Selection is a random draw run here/i),
   ).toBeVisible();
-
   const draw = page.locator("#draw-places");
-  if (!(await draw.isVisible().catch(() => false))) {
-    await shot(page, "A4a-no-one-waiting", "Draw hidden when nobody is waiting", {
-      selector: ".card:has-text('Participants')",
-    });
-    test.skip(true, "nobody waiting in the draw on this event");
-  }
 
   await shot(page, "A4a-panel", "The random selection draw panel", {
     selector: ".card:has-text('Participants')",
   });
 
-  // Blank is refused rather than drawing zero.
+  // Blank is refused twice over. First the browser: the field is `required`,
+  // so nothing is submitted at all.
   await draw.fill("");
+  await page.getByRole("button", { name: /Run the draw/i }).click();
+  await page.getByRole("button", { name: /Yes, draw now/i }).click();
+  await expect(draw).toHaveJSProperty("validity.valid", false);
+  await expect(page.getByText(/Drew \d+ of \d+ waiting/i)).toHaveCount(0);
+
+  // Then the server, for a request that never went through the browser's
+  // validation — strip `required` and submit, which is what a hand-crafted
+  // post looks like from the action's point of view.
+  await draw.evaluate((el) => el.removeAttribute("required"));
   await page.getByRole("button", { name: /Run the draw/i }).click();
   await page.getByRole("button", { name: /Yes, draw now/i }).click();
   await expect(
@@ -163,12 +215,38 @@ test("A4 selection runs as a random draw", async ({ page }) => {
   await shot(page, "A4c-confirm", "Confirmation before the draw runs");
   await page.getByRole("button", { name: /Yes, draw now/i }).click();
 
+  // The result has to survive the draw form unmounting when the pool empties,
+  // so it's a notice on the page rather than a message inside the form.
   await expect(page.getByText(/Drew \d+ of \d+ waiting/i)).toBeVisible({
     timeout: 30_000,
   });
-  await shot(page, "A4d-drawn", "Draw result, with the pool left over", {
+  await expect(page).toHaveURL(/notice=draw/);
+  await shot(page, "A4d-drawn", "Draw result, reported on the page", {
     selector: ".card:has-text('Participants')",
   });
+});
+
+test("A0 hand the brand spec a rival sponsorship id", async ({ page }) => {
+  // Only an admin can see every deal, so this is where the id comes from. The
+  // brand spec uses it to prove that opening someone else's sponsorship 404s —
+  // which it can't set up for itself, by design.
+  await page.goto("/dashboard/admin/events");
+
+  const rows = page.locator('a[href^="/dashboard/admin/events/sponsored/"]');
+  const hrefs = await rows.evaluateAll((els) =>
+    els.map((e) => (e as HTMLAnchorElement).pathname),
+  );
+
+  for (const href of [...new Set(hrefs)]) {
+    await page.goto(href);
+    const parties = await page.locator("p", { hasText: "↔" }).first().textContent();
+    if (parties && !parties.includes("Northwave Coffee")) {
+      writeHandoff({ rivalSponsorship: href.split("/").pop()! });
+      await shot(page, "A0-rival", "A sponsorship belonging to another brand");
+      return;
+    }
+  }
+  test.skip(true, "every sponsorship belongs to Northwave Coffee");
 });
 
 test("A5 enquiries carry a reference and can be answered in-app", async ({
@@ -199,7 +277,7 @@ test("A6 notifications quote the reference they are about", async ({ page }) => 
 test("A7 raising an enquiry from a sponsorship opens in a new tab", async ({
   page,
 }) => {
-  await openFirstSponsoredEvent(page);
+  await openSponsoredEvent(page);
   const link = page.getByRole("link", { name: /Raise an enquiry about this/i });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("target", "_blank");

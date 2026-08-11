@@ -12,14 +12,33 @@ export default async function SponsoredPage() {
   const { profile } = await requireRole(["brand", "artist", "event"]);
   const supabase = await createClient();
 
-  // RLS returns only the sponsored events this user is a party to.
-  const { data } = await supabase
-    .from("sponsored_events")
-    .select("*")
-    .order("created_at", { ascending: false });
-  const events = (data ?? []) as SponsoredEvent[];
-
   const isBrand = profile.role === "brand";
+
+  const { data: brand } = isBrand
+    ? await supabase
+        .from("brands")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .maybeSingle<{ id: string }>()
+    : { data: null };
+
+  // Scoped by owner, not left to RLS.
+  //
+  // This used to select every row and rely on the policy to filter, with a
+  // comment claiming RLS "returns only the sponsored events this user is a
+  // party to". It doesn't: `sponsored_events: public read confirmed` (0002)
+  // deliberately exposes every `confirmed` and `completed` row to any
+  // signed-in user so the *audience* can discover events. On this page that
+  // meant a brand's own list included rival brands' confirmed deals, budgets
+  // and remaining reward pools. Found 11 Aug 2026 — see L7 in lessons.md.
+  const query = supabase.from("sponsored_events").select("*");
+  const { data } = await (isBrand
+    ? // A brand with no `brands` row yet owns nothing; match nothing rather
+      // than dropping the filter and showing everything.
+      query.eq("brand_id", brand?.id ?? "00000000-0000-0000-0000-000000000000")
+    : query.eq("artist_profile_id", profile.id)
+  ).order("created_at", { ascending: false });
+  const events = (data ?? []) as SponsoredEvent[];
 
   // Split by status rather than showing one undifferentiated list — a live deal
   // and one still being negotiated need completely different attention, and
