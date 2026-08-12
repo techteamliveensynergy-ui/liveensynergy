@@ -183,6 +183,27 @@ export default async function AdminFeedbackPage({
                     Open attachment ↗
                   </a>
                 )}
+
+                {/* Go back to the reporter in-app rather than by email. Most
+                    reports need one question answered before they can be
+                    actioned, and the thread keeps that with the account.
+                    Opens in a new tab so you keep the report you're reading;
+                    re-opening it lands in the same thread rather than starting
+                    another. Absent when the reporting profile has since been
+                    deleted. */}
+                {r.profile_id && (
+                  <a
+                    href={`/dashboard/messages/with/${r.profile_id}?subject=${encodeURIComponent(
+                      `Feedback ${r.reference}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"
+                  >
+                    Message{" "}
+                    {r.profiles?.full_name?.split(" ")[0] ?? "the reporter"} ↗
+                  </a>
+                )}
                 {r.github_issue_url && (
                   <a
                     href={r.github_issue_url}

@@ -52,6 +52,38 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
+/** Clock time on its own, e.g. "19:48" — for stamping a chat message. */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Day heading for a run of chat messages: "Today", "Yesterday", then the date.
+ * Compared on calendar days rather than elapsed hours, so a message sent at
+ * 23:50 doesn't still read "Today" the following morning.
+ */
+export function formatDayLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const startOfDay = (x: Date) =>
+    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return d.toLocaleDateString("en-GB", {
+    weekday: days < 7 ? "long" : undefined,
+    day: "numeric",
+    month: "short",
+    year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  });
+}
+
 /** Adds `days` to an ISO timestamp, returning a new ISO string. */
 export function addDays(
   iso: string | null | undefined,

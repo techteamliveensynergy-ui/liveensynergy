@@ -185,6 +185,31 @@
     "file": "F3-inbox-full.png"
   },
   {
+    "id": "F4a-message-button",
+    "title": "Message the reporter, from the inbox",
+    "file": "F4a-message-button.png"
+  },
+  {
+    "id": "F4b-thread",
+    "title": "A thread with the reporter, in its own tab",
+    "file": "F4b-thread.png"
+  },
+  {
+    "id": "F5a-public",
+    "title": "No feedback tab when signed out",
+    "file": "F5a-public.png"
+  },
+  {
+    "id": "F5b-redirected",
+    "title": "The report form redirects to sign-in",
+    "file": "F5b-redirected.png"
+  },
+  {
+    "id": "F6-chat-timestamps",
+    "title": "Day headings and message times",
+    "file": "F6-chat-timestamps.png"
+  },
+  {
     "id": "R1-admin-message",
     "title": "Admin-started thread, seen by the artist",
     "file": "R1-admin-message.png"

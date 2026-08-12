@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/dashboard/ui";
 import { signedUrlFor } from "@/lib/storage";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
+import {
+  formatDateTime,
+  formatDayLabel,
+  formatTime,
+  timeAgo,
+} from "@/lib/format";
 import type { Conversation, Message } from "@/lib/types";
 import { startSupportThread } from "./actions";
 import { Composer } from "./Composer";
@@ -73,6 +79,30 @@ export default async function MessagesPage({
   const parties = new Map(
     ((partyRows ?? []) as Party[]).map((p) => [p.id, p]),
   );
+
+  // When each thread last had a message, for the list. One query for every
+  // thread on the page rather than one per thread: newest first, then keep the
+  // first sighting of each conversation.
+  const { data: activityRows } = all.length
+    ? await supabase
+        .from("messages")
+        .select("conversation_id, created_at")
+        .in(
+          "conversation_id",
+          all.map((c) => c.id),
+        )
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
+  const lastMessageAt = new Map<string, string>();
+  for (const row of (activityRows ?? []) as {
+    conversation_id: string;
+    created_at: string;
+  }[]) {
+    if (!lastMessageAt.has(row.conversation_id)) {
+      lastMessageAt.set(row.conversation_id, row.created_at);
+    }
+  }
 
   let messages: Message[] = [];
   let attachmentUrls: (string | null)[] = [];
@@ -272,7 +302,23 @@ export default async function MessagesPage({
                         : "hover:bg-[var(--color-mist)]"
                     }`}
                   >
-                    <p className="truncate">{threadTitle(conv)}</p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate">{threadTitle(conv)}</p>
+                      {/* When this thread was last active — otherwise a list
+                          of threads gives no sense of what's current. */}
+                      <span
+                        className="shrink-0 text-[11px] font-normal text-[var(--color-ink-soft)]"
+                        title={
+                          lastMessageAt.has(conv.id)
+                            ? formatDateTime(lastMessageAt.get(conv.id))
+                            : `Started ${formatDateTime(conv.created_at)}`
+                        }
+                      >
+                        {lastMessageAt.has(conv.id)
+                          ? timeAgo(lastMessageAt.get(conv.id))
+                          : "No messages"}
+                      </span>
+                    </div>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">
                       {/* Someone watching a thread they aren't in — an admin —
                           needs to know whose it is, not whether it was
@@ -344,6 +390,14 @@ export default async function MessagesPage({
                   ) : (
                     messages.map((m, i) => {
                       const mine = m.sender_profile_id === profile!.id;
+                      // A date heading whenever the day changes, so a thread
+                      // spanning weeks reads as a conversation with gaps
+                      // rather than one undated run.
+                      const previous = messages[i - 1];
+                      const newDay =
+                        !previous ||
+                        new Date(previous.created_at).toDateString() !==
+                          new Date(m.created_at).toDateString();
                       // Watching someone else's thread, "mine" is never true,
                       // so the two speakers have to be told apart some other
                       // way: the brand side goes right, the partner left, and
@@ -352,12 +406,27 @@ export default async function MessagesPage({
                         ? mine
                         : m.sender_profile_id === active.brand_profile_id;
                       return (
-                        <div
-                          key={m.id}
-                          className={`flex flex-col ${right ? "items-end" : "items-start"}`}
-                        >
+                        <div key={m.id}>
+                          {newDay && (
+                            <div className="my-3 flex items-center gap-3">
+                              <span className="h-px flex-1 bg-black/10" />
+                              <span className="text-xs font-semibold text-[var(--color-ink-soft)]">
+                                {formatDayLabel(m.created_at)}
+                              </span>
+                              <span className="h-px flex-1 bg-black/10" />
+                            </div>
+                          )}
+                          <div
+                            className={`flex flex-col ${right ? "items-end" : "items-start"}`}
+                          >
                           <p className="mb-0.5 px-1 text-xs font-medium text-[var(--color-ink-soft)]">
                             {partyLabel(m.sender_profile_id)}
+                            <span
+                              className="ml-2 font-normal"
+                              title={formatDateTime(m.created_at)}
+                            >
+                              {formatTime(m.created_at)}
+                            </span>
                           </p>
                           <div
                             className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
@@ -379,6 +448,7 @@ export default async function MessagesPage({
                                 📎 {m.attachment_name ?? "Attachment"}
                               </a>
                             )}
+                          </div>
                           </div>
                         </div>
                       );

@@ -499,6 +499,21 @@ guarantee that actually matters.
   too. Use `{ exact: true }` for a button whose label is a prefix of another's.
 - An untested capture suite is worse than none: it looks like a safety net
   right up to the moment you need it.
+- **A client-side handler needs hydration; a test right after navigation races
+  it.** `B4` asserts that `UrlInput` tidies a link on blur — a React `onBlur`,
+  which does nothing until the component hydrates. Filling and blurring
+  immediately after `goto` left the value exactly as typed, indistinguishable
+  from the feature being broken, and only in a long run where the machine was
+  busy. Asserting harder doesn't help, because the blur fires once: re-drive
+  the interaction instead.
+
+  ```ts
+  await expect(async () => {
+    await field.fill(typed);
+    await somethingElse.click();            // blur
+    await expect(field).toHaveValue(want, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+  ```
 - **Running the July suites overwrites the July evidence.** `brand` / `artist`
   write into `docs/client-review/screenshots/`, which is committed and dated.
   Run them to check the specs pass, then
@@ -571,6 +586,19 @@ attached and asserts it arrives in the inbox.
   passed; nobody checked that the thing submitted then appeared where it was
   supposed to appear. A feature that spans two screens needs a test that spans
   both.
+
+**Also checked while in here** (12 Aug), because it was asked and is worth
+having written down. Reporting is signed-in only, enforced four times over:
+
+| Layer | What stops an anonymous report |
+|---|---|
+| Rendering | `FeedbackWidget` only mounts in `dashboard/layout.tsx` and `OnboardingShell` |
+| Routing | middleware bounces anonymous requests off `/dashboard` and `/onboarding`, preserving `redirectTo` |
+| Action | `submitFeedback` calls `getUser()` and redirects when there's no user |
+| Database | `feedback_reports: own insert` checks `profile_id = auth.uid()`, which no anonymous caller satisfies |
+
+`F5` in `tests/feedback-loop.spec.ts` drives the first two from a genuinely
+signed-out browser context rather than asserting them from the source.
 
 ---
 

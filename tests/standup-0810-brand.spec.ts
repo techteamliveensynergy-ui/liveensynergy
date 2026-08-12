@@ -181,10 +181,25 @@ test("B4 link fields don't fill themselves with https://", async ({ page }) => {
 
   const website = page.locator("#website_url");
   await website.scrollIntoViewIfNeeded();
-  await website.fill("northwavecoffee.example.com");
-  // Blur — this is the moment it used to rewrite itself to https://…/
-  await page.locator("#social_instagram").click();
-  await expect(website).toHaveValue("northwavecoffee.example.com");
+
+  /**
+   * Type, blur, check — retrying the whole thing.
+   *
+   * The tidy-on-blur is a React `onBlur`, so it does nothing until the client
+   * component has hydrated. Filling and blurring immediately after navigation
+   * raced that and left the value exactly as typed, which looks identical to
+   * the feature being broken. Re-driving the interaction is the fix; asserting
+   * harder wouldn't help, because the blur only fires once.
+   */
+  const typeAndBlur = async (typed: string, expected: string) => {
+    await expect(async () => {
+      await website.fill(typed);
+      await page.locator("#social_instagram").click();
+      await expect(website).toHaveValue(expected, { timeout: 2_000 });
+    }).toPass({ timeout: 30_000 });
+  };
+
+  await typeAndBlur("northwavecoffee.example.com", "northwavecoffee.example.com");
 
   // Placeholders don't advertise a scheme either.
   await expect(page.locator("#social_instagram")).toHaveAttribute(
@@ -196,9 +211,10 @@ test("B4 link fields don't fill themselves with https://", async ({ page }) => {
   });
 
   // A pasted full URL is tidied down, not up.
-  await website.fill("HTTPS://Northwave.example.com/shop?x=1");
-  await page.locator("#social_instagram").click();
-  await expect(website).toHaveValue("northwave.example.com/shop?x=1");
+  await typeAndBlur(
+    "HTTPS://Northwave.example.com/shop?x=1",
+    "northwave.example.com/shop?x=1",
+  );
   await shot(page, "B4b-tidied", "A pasted URL is tidied to its display form", {
     selector: "section:has(#website_url)",
   });

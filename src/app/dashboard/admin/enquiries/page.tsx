@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
 import { toggleContactHandled } from "../marketplace-actions";
-import { startAdminThread } from "../../messages/actions";
 
 export const metadata = { title: "Enquiries · Admin" };
 
@@ -121,28 +120,23 @@ export default async function AdminEnquiriesPage({
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   {/* Replying in-app keeps the conversation on the platform,
-                      which is where every other exchange lives. Only possible
-                      when we can tie the enquiry to an account. */}
+                      which is where every other exchange lives. Opens in a new
+                      tab, and re-opening lands in the same thread rather than
+                      starting another. Only possible when we can tie the
+                      enquiry to an account. */}
                   {m.profile_id && (
-                    <form action={startAdminThread}>
-                      <input
-                        type="hidden"
-                        name="profile_id"
-                        value={m.profile_id}
-                      />
-                      <input
-                        type="hidden"
-                        name="subject"
-                        value={
-                          m.reference
-                            ? `Enquiry ${m.reference}`
-                            : m.subject || "Your enquiry"
-                        }
-                      />
-                      <button type="submit" className="btn btn-ghost text-sm">
-                        Message {m.name.split(" ")[0]}
-                      </button>
-                    </form>
+                    <a
+                      href={`/dashboard/messages/with/${m.profile_id}?subject=${encodeURIComponent(
+                        m.reference
+                          ? `Enquiry ${m.reference}`
+                          : m.subject || "Your enquiry",
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost text-sm"
+                    >
+                      Message {m.name.split(" ")[0]} ↗
+                    </a>
                   )}
                   <a
                     href={`mailto:${m.email}?subject=${encodeURIComponent(

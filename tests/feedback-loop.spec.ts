@@ -101,3 +101,101 @@ test("F3 the inbox says so when the query fails, rather than looking empty", asy
     fullPage: true,
   });
 });
+
+test("F4 an admin opens a chat with the reporter in a new tab", async ({
+  page,
+}) => {
+  await page.goto("/dashboard/admin/feedback");
+
+  const link = page.getByRole("link", { name: /^Message .+ ↗$/ }).first();
+  await expect(link).toBeVisible();
+  // A link, not a server-action form — a form submits over fetch, so
+  // target="_blank" on it is ignored and the thread steals the current tab.
+  await expect(link).toHaveAttribute("target", "_blank");
+  await shot(page, "F4a-message-button", "Message the reporter, from the inbox", {
+    selector: ".card:has-text('FB-')",
+  });
+
+  const first = await Promise.all([page.waitForEvent("popup"), link.click()]).then(
+    ([p]) => p,
+  );
+  await first.waitForURL(/\/dashboard\/messages\?c=/, { timeout: 30_000 });
+  const conversationId = new URL(first.url()).searchParams.get("c");
+  expect(conversationId).toBeTruthy();
+  await expect(first.locator("section.card")).toBeVisible();
+  await shot(first, "F4b-thread", "A thread with the reporter, in its own tab");
+
+  // The report itself is still open behind it.
+  await expect(page).toHaveURL(/\/dashboard\/admin\/feedback/);
+  await first.close();
+
+  // Clicking again reuses that thread rather than starting a second one.
+  const second = await Promise.all([
+    page.waitForEvent("popup"),
+    page.getByRole("link", { name: /^Message .+ ↗$/ }).first().click(),
+  ]).then(([p]) => p);
+  await second.waitForURL(/\/dashboard\/messages\?c=/, { timeout: 30_000 });
+  expect(new URL(second.url()).searchParams.get("c")).toBe(conversationId);
+  await second.close();
+});
+
+/**
+ * Reporting is for signed-in accounts only. Enforced four times over — the
+ * widget only mounts inside the dashboard and onboarding shells, middleware
+ * bounces anonymous requests off those prefixes, `submitFeedback` redirects
+ * without a user, and the `feedback_reports: own insert` policy checks
+ * `profile_id = auth.uid()`, which no anonymous caller can satisfy.
+ *
+ * Uses a fresh context with no storage state, because the project this runs
+ * under is signed in as the admin.
+ */
+test("F5 a signed-out visitor cannot see or reach the report form", async ({
+  browser,
+  baseURL,
+}) => {
+  const anon = await browser.newContext({ storageState: undefined });
+  const page = await anon.newPage();
+
+  try {
+    // No widget anywhere on the public site.
+    for (const path of ["/", "/about", "/events", "/contact", "/faqs"]) {
+      await page.goto(`${baseURL}${path}`);
+      await expect(
+        page.getByRole("button", { name: /Feedback/i }),
+      ).toHaveCount(0);
+    }
+    await shot(page, "F5a-public", "No feedback tab when signed out");
+
+    // And the form's own route bounces to sign-in, keeping the destination.
+    await page.goto(`${baseURL}/dashboard/feedback`);
+    await expect(page).toHaveURL(/\/auth\/sign-in/);
+    expect(new URL(page.url()).searchParams.get("redirectTo")).toBe(
+      "/dashboard/feedback",
+    );
+    await shot(page, "F5b-redirected", "The report form redirects to sign-in");
+  } finally {
+    await anon.close();
+  }
+});
+
+test("F6 chat messages carry a time, grouped under a day heading", async ({
+  page,
+}) => {
+  await page.goto("/dashboard/messages");
+  const thread = page.locator('a[href^="/dashboard/messages?c="]').first();
+  test.skip((await thread.count()) === 0, "no threads to look at");
+  await thread.click();
+  await page.waitForURL(/\?c=/);
+
+  const panel = page.locator("section.card");
+  // One heading per day, at the top of that day's run — Today / Yesterday /
+  // the date — with a clock time on each message under it.
+  await expect(
+    panel.getByText(/^(Today|Yesterday|\d{1,2} \w{3}|\w+day)$/).first(),
+  ).toBeVisible();
+  await expect(panel.getByText(/^\d{2}:\d{2}$/).first()).toBeVisible();
+
+  await shot(page, "F6-chat-timestamps", "Day headings and message times", {
+    selector: "section.card",
+  });
+});
