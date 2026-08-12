@@ -42,7 +42,7 @@ export default defineConfig({
     // draw and the campaign relay set up state the later ones read.
     {
       name: "s0810-admin",
-      testMatch: /standup-0810-admin\.spec\.ts/,
+      testMatch: /(standup-0810-admin|feedback-loop)\.spec\.ts/,
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/admin.json" },
     },

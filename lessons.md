@@ -509,6 +509,71 @@ guarantee that actually matters.
 
 ---
 
+## L11 — An ambiguous embed failed the whole query, and the page called it "empty"
+
+**Reported:** 12 Aug 2026 — *"I am still not able to add feedback through the
+panel and it does not reflect on the admin panel's feedback list."*
+
+Two findings, one of them the opposite of the report.
+
+**Submitting worked the whole time.** Every report was saved: the reporter's
+own `/dashboard/feedback` page listed them, references and all, including the
+ones the client had submitted while believing nothing happened. What failed was
+only the admin inbox, and because that's where anyone would look to confirm,
+the whole feature read as broken.
+
+**The admin inbox was permanently empty.** `admin/feedback/page.tsx` ran:
+
+```ts
+.select("*, profiles(full_name, email)")
+```
+
+`feedback_reports` has **two** foreign keys to `profiles` — `profile_id` (who
+reported it) and `resolved_by` (which admin closed it). PostgREST won't guess
+between them:
+
+```
+PGRST201  Could not embed because more than one relationship was found
+          feedback_reports_profile_id_fkey  using feedback_reports(profile_id)
+          feedback_reports_resolved_by_fkey using feedback_reports(resolved_by)
+```
+
+The query errored, `data` came back `null`, `(data ?? [])` turned that into an
+empty array, and the page rendered its empty state — *"🐞 Nothing reported —
+when someone submits a bug or an idea from the product, it lands here."* A
+confident, friendly sentence, over a table full of reports, for nine days.
+
+**Fixed** 12 Aug 2026: the embed names its key,
+`profiles!feedback_reports_profile_id_fkey(full_name, email)`. The error is
+logged and rendered as an error rather than as emptiness, the reporter's email
+is shown as a `mailto:` link next to their name, and the screenshot renders as
+a clickable thumbnail instead of a "View screenshot →" link. Covered by
+`tests/feedback-loop.spec.ts`, which submits from the widget with an image
+attached and asserts it arrives in the inbox.
+
+**Rules.**
+
+- **`(data ?? [])` throws the error away.** Every `??`-defaulted Supabase read
+  turns a failure into a convincing empty state. Destructure `error` and, at
+  minimum, log it; on a page whose whole purpose is a list, render it.
+- An embed on a table with more than one FK to the same target **must** name
+  the constraint. Before writing `parent(...)`, count the FKs:
+
+  ```bash
+  grep -nE "references profiles" supabase/migrations/*.sql   # per table
+  ```
+
+  In this schema `feedback_reports`, `conversations` and (since 0023)
+  `contact_messages` all point at `profiles` twice.
+- "Nothing here yet" is a claim about the data. If the code cannot tell an
+  empty result from a failed one, it must not make that claim.
+- Test the loop, not the leg. Submitting was verified in isolation on 3 Aug and
+  passed; nobody checked that the thing submitted then appeared where it was
+  supposed to appear. A feature that spans two screens needs a test that spans
+  both.
+
+---
+
 ## Pre-push checklist
 
 Run through this before `git push liveensynergy HEAD:main`. Most of it is a
@@ -612,6 +677,12 @@ npm run build
 - [ ] A detail page reached by id: does it check the viewer is entitled to it,
       or only that the row loaded? `notFound()` beats rendering a stranger's
       figures (L7).
+- [ ] Any new `.select()` that **embeds** a related table (`profiles(...)`,
+      `brands(...)`): does the source table have more than one FK to it? If so
+      the embed must name the constraint, or the whole query fails with
+      PGRST201 — and `(data ?? [])` will render that as an empty list (L11).
+- [ ] Any read whose result is `?? []` or `?? null`: is `error` checked? An
+      unchecked error is indistinguishable from "no rows" on screen (L11).
 
 ### 4. New env vars or dependencies
 
