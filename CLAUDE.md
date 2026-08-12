@@ -35,9 +35,16 @@ npx playwright test --project=brand --project=artist \
   --project=s0810-admin --project=s0810-brand \
   --project=s0810-artist --project=s0810-audience
 
-npx playwright test --project=standup-video   # records a walkthrough video
+npx playwright test --project=standup-video   # 3 Aug walkthrough video
+npx playwright test --project=s0810-video     # 10 Aug walkthrough video
 npx playwright test --project=audience-video  # signed-out audience journey
 ```
+
+Both walkthrough projects record against the **deployed** site by default and
+are read-only by design for that reason — they open dialogs and panels without
+submitting. Playwright writes the video under `test-results/…/video.webm`; copy
+it into `docs/` by hand (see `docs/standup-2026-08-10/video/`). Shared captions,
+title cards and sign-in live in `tests/walkthrough-kit.ts`.
 
 - ⚠️ **Don't run bare `npx playwright test`.** It also runs `standup-video`,
   which points at the **deployed** site by default (`WALKTHROUGH_URL`

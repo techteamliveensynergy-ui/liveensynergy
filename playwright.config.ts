@@ -90,6 +90,24 @@ export default defineConfig({
       },
     },
     {
+      // Walkthrough of everything the 10 Aug standup changed, plus the defects
+      // that verifying it turned up. Same conventions as `standup-video`, and
+      // read-only for the same reason: it records against the deployed site,
+      // which shares the live Supabase project.
+      name: "s0810-video",
+      testMatch: /standup-0810-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL:
+          process.env.WALKTHROUGH_URL ?? "https://liveensynergy-rho.vercel.app",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 250 },
+      },
+    },
+    {
       // Walkthrough recording of the audience journey. Deliberately signed out
       // — the whole point is to start from account creation — so no
       // storageState, and no dependency on the setup project.
