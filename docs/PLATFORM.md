@@ -125,15 +125,18 @@ complements the concept doc and the 26 Jun 2026 scoping call.
 | Area | Integration | Purpose |
 | --- | --- | --- |
 | **Auth** | Supabase Auth | Email/password now; OAuth (Google) later |
-| **Payments (in)** | Stripe | Brands fund sponsorship budgets |
-| **Payments (out)** | Stripe Connect / payouts | Reimburse selected audience members; optional virtual cards to avoid sharing bank details |
-| **Identity verification** | Third-party KYC (e.g. Stripe Identity / Onfido) | Verify audience identity & reduce fraud |
+| **Payments (in)** | Direct bank transfer against an invoice — no on-platform collection | Brands fund sponsorship budgets. Superseded 10 Aug (`docs/payments-kyc-strategy.md`) — Stripe/Connect was evaluated and explicitly rejected (account-freezing risk on sponsorship-sized payments, no escrow product). `invoices` table + `sendInvoice()` stub landed 26 Aug; real invoice-sending vendor still to be provisioned via the `vercel:marketplace` skill. |
+| **Payments (out)** | Wise | Reimburse artists and selected audience members — a transfer rail, not a balance the platform holds. |
+| **Identity verification** | Stripe Identity (verification only — no funds flow through it) | Verify recipients (artists, organisers, reward-claiming audience members) at payout time, not every sign-up. |
 | **Attendance** | QR code generation + box-office data | Physical attendance verification at venue |
 | **Email** | Transactional email (Resend / Postmark / Supabase) | Confirmations, branded templates, notifications |
 | **File storage** | Supabase Storage | Logos, banners, profile images, ticket proof uploads |
-| **Chat** | Supabase Realtime | Sponsor ↔ artist messaging |
+| **Chat** | Admin-mediated support threads only (26 Aug) | Brand ↔ Live·En·Synergy and artist ↔ Live·En·Synergy; direct brand↔artist messaging was removed — admin is the required intermediary. |
 | **Analytics** | Product analytics + in-app metrics | Funnel, participation, audience insights |
 | **Templates / creatives** | AI generation (roadmap) | Per-event branded audience-facing templates |
+
+Row-by-row detail on the payments direction and the messaging change:
+`docs/payments-kyc-strategy.md`, `docs/new-model-implementation-plan.md`.
 
 ---
 
@@ -172,13 +175,22 @@ between participants, public insert on the contact form).
 
 **Shipped:** landing + marketing pages, role-first auth, role-based onboarding,
 editable profiles, responsive dashboard with role-based sidebar, and the full
-working platform loop — brand campaigns, artist/event listings, discovery,
-sponsor↔artist chat, the sponsored-event workspace (terms, dual agreement,
-participant selection → verification → reward release), audience participation
-& rewards, and an admin console — all on the database schema with RLS.
+working platform loop — admin-created campaigns (from a brand intake
+request) with an admin-managed package/tier catalogue, artist/event
+listings, discovery, admin-mediated support chat (26 Aug — direct
+brand↔artist messaging was removed), the sponsored-event workspace (terms,
+dual agreement, participant selection → verification → reward release,
+proof-of-terms uploads, a reward-tier/code engine, artist payment-split
+tracking, 2-day change-request cutoff, invoice tracking), audience
+participation & rewards, and an admin console — all on the database schema
+with RLS. See `docs/new-model-implementation-plan.md` for what's new here
+and what's still stubbed (survey-quality gating, real invoice sending).
 
-**Next up (integrations & polish):** Stripe payments (fund-in + payouts,
-optional virtual cards), KYC identity verification, storage-backed file uploads
-(logos, banners, ticket proof), realtime chat updates, QR/box-office attendance
-capture, transactional email templates, and analytics dashboards
+**Next up (integrations & polish):** the survey/quality-engine system
+(`docs/survey-form-builder-design.md`, deliberately out of scope for the
+26 Aug batch), a real invoicing vendor (`sendInvoice()` is currently a
+stub), Wise payouts and Stripe Identity verification (`docs/payments-kyc-
+strategy.md` — none of the money-movement itself is built yet, only the
+`invoices`/tracking layer around it), realtime chat updates, QR/box-office
+attendance capture, transactional email templates, and analytics dashboards
 (funnel, participation, audience insights).

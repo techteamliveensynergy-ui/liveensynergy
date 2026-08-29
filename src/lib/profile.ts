@@ -43,6 +43,28 @@ export async function requireRole(allowed: readonly Profile["role"][]) {
 }
 
 /**
+ * Like requireProfile, but for server actions guarding admin-only writes:
+ * redirects to sign-in when signed out, to the dashboard when the caller
+ * isn't an admin. Previously copy-pasted per admin actions.ts file.
+ */
+export async function requireAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/sign-in");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") redirect("/dashboard");
+
+  return { supabase, userId: user.id };
+}
+
+/**
  * Scores the caller's role-specific profile row. Used both for the "complete
  * your profile" badge and for the gate on creating events / campaigns.
  */

@@ -301,3 +301,10 @@ Path alias: `@/*` → `./src/*`.
 - `docs/qa-creds.md` — seeded dev-only test accounts and how to add more.
 - `docs/TEST-CASES.md`, `docs/standup-*-tracker.md`, `docs/standup-*-testing-log.md` — client review items and their status; the standup trackers are what recent commits are working through.
 - `docs/payments-kyc-strategy.md`, `docs/email-branding-research.md` — design notes for work not yet built.
+- `docs/new-model-implementation-plan.md` — phased plan for the pricing-tier,
+  admin-only-campaign, survey, artist-payment-split and admin-mediated-
+  messaging changes from `docs/New-model/`; read before touching campaigns,
+  sponsored events, participations, or messaging.
+- `docs/survey-form-builder-design.md` — schema and admin drag-and-drop
+  builder design for the (not yet built) survey system; Phase 3 of the plan
+  above.

@@ -8,7 +8,11 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { BANNER_HINT, IMAGE_HINT } from "@/lib/upload-limits";
 import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
-import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
+import {
+  computePlatformFee,
+  netSponsorshipBudget,
+  SPONSORED_ASSET_SLOTS,
+} from "@/lib/constants";
 import { createSponsoredEvent, type SponsoredState } from "../actions";
 
 export interface ListingOption {
@@ -30,9 +34,6 @@ export interface CampaignOption {
   label: string;
   budget: number;
 }
-
-/** How many branding creatives a sponsorship can carry. */
-const ASSET_SLOTS = 5;
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -282,9 +283,9 @@ export function SponsoredEventForm({
 
         <div className="grid gap-3">
           <p className="field-hint">
-            Upload up to {ASSET_SLOTS} images, and say what each one is.
+            Upload up to {SPONSORED_ASSET_SLOTS} images, and say what each one is.
           </p>
-          {Array.from({ length: ASSET_SLOTS }, (_, i) => (
+          {Array.from({ length: SPONSORED_ASSET_SLOTS }, (_, i) => (
             <div
               key={i}
               className="grid gap-3 rounded-xl border border-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"

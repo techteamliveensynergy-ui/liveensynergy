@@ -8,18 +8,13 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
 import { IMAGE_HINT } from "@/lib/upload-limits";
+import { ARTIST_CATEGORIES } from "@/lib/constants";
+import type { CampaignIntakeRequest } from "@/lib/types";
 import {
-  ARTIST_CATEGORIES,
-  computePlatformFee,
-  MIN_SPONSORSHIP_BUDGET_GBP,
-} from "@/lib/constants";
-import type { Campaign } from "@/lib/types";
-import {
-  createCampaign,
-  updateCampaign,
+  submitCampaignIntake,
+  updateCampaignIntake,
   type CampaignState,
 } from "./actions";
-import { useState } from "react";
 
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -30,20 +25,18 @@ function Submit({ label }: { label: string }) {
   );
 }
 
-export function CampaignForm({ campaign }: { campaign?: Campaign }) {
-  const editing = Boolean(campaign);
-  const action = editing ? updateCampaign : createCampaign;
+export function CampaignForm({ intake }: { intake?: CampaignIntakeRequest }) {
+  const editing = Boolean(intake);
+  const action = editing ? updateCampaignIntake : submitCampaignIntake;
   const [state, formAction] = useActionState<CampaignState, FormData>(
     action,
     {},
   );
-  const d = campaign;
-  const [budget, setBudget] = useState<number>(d?.budget_gbp ?? 0);
-  const fee = budget > 0 ? computePlatformFee(budget) : null;
+  const d = intake;
 
   return (
     <form action={formAction} className="space-y-6">
-      {editing && <input type="hidden" name="id" value={campaign!.id} />}
+      {editing && <input type="hidden" name="id" value={intake!.id} />}
       <ErrorBanner error={state.error} />
 
       {!editing && (
@@ -53,8 +46,9 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
           </h2>
           <p className="mt-2 text-sm text-[var(--color-ink)]/80">
             Submit your campaign details and sponsorship goals. Our team at
-            Live·En·Synergy will analyse your brief and pair you with the ideal
-            artist or event to bring your vision to life.
+            Live·En·Synergy will analyse your brief, put together a package,
+            and pair you with the ideal artist or event to bring your vision
+            to life — we'll be in touch within 3 days.
           </p>
         </section>
       )}
@@ -76,56 +70,21 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
           />
         </Field>
 
-        {/* Budget sits next to its own fee breakdown so the number the brand
-            actually gets to spend updates in place as they type. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Sponsorship budget (GBP)" htmlFor="budget_gbp" required>
-            <input
-              id="budget_gbp"
-              name="budget_gbp"
-              type="number"
-              min={MIN_SPONSORSHIP_BUDGET_GBP}
-              step="0.01"
-              className="input"
-              required
-              defaultValue={d?.budget_gbp ?? ""}
-              onChange={(e) => setBudget(Number(e.target.value) || 0)}
-            />
-          </Field>
-          <div>
-            <p className="field-label">Estimated breakdown</p>
-            {fee && fee.availableForSponsorship <= 0 ? (
-              // Never render a negative "available" figure — at this budget the
-              // flat minimum fee takes everything, and the action rejects it.
-              <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
-                <p className="font-semibold">Budget is below the minimum</p>
-                <p className="mt-1">
-                  The service fee is {fmt(fee.feeIncVat)} inc. VAT, so a budget
-                  of {fmt(MIN_SPONSORSHIP_BUDGET_GBP)} or less leaves nothing to
-                  sponsor with. Enter more than{" "}
-                  {fmt(MIN_SPONSORSHIP_BUDGET_GBP)}.
-                </p>
-              </div>
-            ) : fee ? (
-              <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm">
-                <p className="text-[var(--color-ink-soft)]">
-                  Service fee {fmt(fee.feeIncVat)} inc. VAT
-                </p>
-                <p className="mt-1">
-                  Available for sponsorship{" "}
-                  <span className="font-semibold text-[var(--color-brand-dark)]">
-                    {fmt(fee.availableForSponsorship)}
-                  </span>
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-                Enter a budget to see the service fee and the amount available
-                for sponsorship.
-              </div>
-            )}
-          </div>
-        </div>
+        <Field
+          label="Sponsorship budget guidance (GBP)"
+          htmlFor="budget_expectation_gbp"
+          hint="Optional — a rough figure to work from. Our team will put together a package and confirm the real budget with you."
+        >
+          <input
+            id="budget_expectation_gbp"
+            name="budget_expectation_gbp"
+            type="number"
+            min={0}
+            step="0.01"
+            className="input"
+            defaultValue={d?.budget_expectation_gbp ?? ""}
+          />
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Category of artist / event" htmlFor="category">
@@ -238,11 +197,11 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
 
       {/* The brief captured what kind of event you're after but never "this
           one, here" — so a sponsor who already had an event in mind had
-          nowhere to say so (10 Aug standup). We pass it to the artist in the
-          chat when the campaign is matched. */}
+          nowhere to say so (10 Aug standup). Our team relays it to the
+          artist once your request is reviewed. */}
       <FormSection
         title="Know an event already?"
-        description="Optional. If there's a specific event — one of ours or one you've seen elsewhere — describe it here and we'll put it to the artist or organiser in your chat."
+        description="Optional. If there's a specific event — one of ours or one you've seen elsewhere — describe it here and we'll put it to the artist or organiser."
       >
         <Field
           label="Event you'd like to sponsor"
@@ -269,7 +228,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
 
       <FormSection
         title="Campaign manager"
-        description="Who our team should speak to about this campaign. We contact this person within 48 hours of a match."
+        description="Who our team should speak to about this campaign. We contact this person within 3 days."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Manager's name" htmlFor="manager_name" required>
@@ -296,7 +255,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
           label="Manager's phone"
           htmlFor="manager_phone"
           required
-          hint="Used to reach you quickly once we've matched your campaign."
+          hint="Used to reach you quickly once we've reviewed your request."
         >
           <input
             id="manager_phone"
@@ -315,8 +274,4 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
       </div>
     </form>
   );
-}
-
-function fmt(n: number) {
-  return `£${n.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 }

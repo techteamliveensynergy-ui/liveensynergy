@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import {
   ROLES,
   ROLE_LABELS,
@@ -16,6 +15,7 @@ import {
   specFieldNames,
 } from "@/lib/admin-user-fields";
 import { notify } from "@/lib/notifications";
+import { requireAdmin } from "@/lib/profile";
 
 export interface AdminState {
   error?: string;
@@ -47,23 +47,6 @@ function toArray(v: FormDataEntryValue | null): string[] | null {
     .filter(Boolean);
 }
 
-/** Ensures the caller is an admin (RLS also enforces this at the DB layer). */
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/sign-in");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/dashboard");
-
-  return { supabase };
-}
 
 const ALL_ROLES = [...ROLES, "admin"] as const;
 
@@ -273,6 +256,83 @@ export async function togglePlanActive(formData: FormData) {
   if (!id) return;
   await supabase.from("plans").update({ is_active: next }).eq("id", id);
   revalidatePath("/dashboard/admin/plans");
+}
+
+// --- Campaign packages -------------------------------------------------------
+
+function packagePayload(formData: FormData) {
+  return {
+    slug: str(formData.get("slug")),
+    name: str(formData.get("name")),
+    description: str(formData.get("description")),
+    is_custom_price: formData.get("is_custom_price") === "on",
+    participant_count: numOrNull(formData.get("participant_count")),
+    price_gbp: numOrNull(formData.get("price_gbp")),
+    min_price_gbp: numOrNull(formData.get("min_price_gbp")),
+    price_increment_gbp: numOrNull(formData.get("price_increment_gbp")),
+    platform_margin_gbp: num(formData.get("platform_margin_gbp")),
+    sort_order: num(formData.get("sort_order")),
+  };
+}
+
+/** Mirrors the campaign_packages_pricing_shape DB check constraint, so a bad
+ * combination surfaces as a form error instead of a raw constraint-violation
+ * message. */
+function validatePackage(p: ReturnType<typeof packagePayload>) {
+  if (!p.name || !p.slug) return "Name and slug are required.";
+  if (p.is_custom_price) {
+    if (p.min_price_gbp == null || p.price_increment_gbp == null) {
+      return "Custom-price packages need a minimum price and an increment.";
+    }
+  } else if (p.price_gbp == null || p.participant_count == null) {
+    return "Fixed-price packages need a price and a participant count.";
+  }
+  return null;
+}
+
+export async function createPackage(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const { supabase } = await requireAdmin();
+  const p = packagePayload(formData);
+  const invalid = validatePackage(p);
+  if (invalid) return { error: invalid };
+  const { error } = await supabase.from("campaign_packages").insert(p);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/admin/packages");
+  redirect("/dashboard/admin/packages");
+}
+
+export async function updatePackage(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return { error: "Missing package id." };
+  const p = packagePayload(formData);
+  const invalid = validatePackage(p);
+  if (invalid) return { error: invalid };
+  const { error } = await supabase
+    .from("campaign_packages")
+    .update(p)
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/admin/packages");
+  redirect("/dashboard/admin/packages");
+}
+
+export async function togglePackageActive(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const next = str(formData.get("next")) === "true";
+  if (!id) return;
+  await supabase
+    .from("campaign_packages")
+    .update({ is_active: next })
+    .eq("id", id);
+  revalidatePath("/dashboard/admin/packages");
 }
 
 // --- Events / monitoring ---------------------------------------------------

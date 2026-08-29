@@ -3,18 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { netSponsorshipBudget } from "@/lib/constants";
+import { netForCampaign, SPONSORED_ASSET_SLOTS } from "@/lib/constants";
 import { notify, notifyAdmins } from "@/lib/notifications";
-import { uploadImage } from "@/lib/storage";
-import { DEFAULT_TIMEZONE } from "@/lib/event-time";
+import { uploadImage, uploadPrivateFile } from "@/lib/storage";
+import { DEFAULT_TIMEZONE, eventStartInstant } from "@/lib/event-time";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 
 export interface SponsoredState {
   error?: string;
 }
-
-/** How many branding creatives a sponsorship can carry (matches the form). */
-const ASSET_SLOTS = 5;
 
 function str(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "").trim();
@@ -53,7 +50,7 @@ async function saveBrandingAssets(
     uploaded_by: string;
   }[] = [];
 
-  for (let i = 0; i < ASSET_SLOTS; i++) {
+  for (let i = 0; i < SPONSORED_ASSET_SLOTS; i++) {
     const upload = await uploadImage(
       formData.get(`asset_${i}`),
       "sponsored-assets",
@@ -117,6 +114,17 @@ export async function createSponsoredEvent(
   // Artist-initiated: the artist is the caller, and the brand comes from the
   // chosen brief — resolved server-side so a posted brand_id can't spoof it.
   let artistProfileId = listingOwnerId;
+  let packagePlatformMarginGbp: number | null = null;
+
+  if (initiatedByBrand && campaignId) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("package_platform_margin_gbp")
+      .eq("id", campaignId)
+      .eq("brand_id", brandId)
+      .maybeSingle<{ package_platform_margin_gbp: number | null }>();
+    packagePlatformMarginGbp = campaign?.package_platform_margin_gbp ?? null;
+  }
 
   if (!initiatedByBrand) {
     artistProfileId = userId;
@@ -132,9 +140,13 @@ export async function createSponsoredEvent(
 
     const { data: campaign } = await supabase
       .from("open_campaigns")
-      .select("brand_id, brand_profile_id")
+      .select("brand_id, brand_profile_id, package_platform_margin_gbp")
       .eq("id", campaignId)
-      .maybeSingle<{ brand_id: string; brand_profile_id: string }>();
+      .maybeSingle<{
+        brand_id: string;
+        brand_profile_id: string;
+        package_platform_margin_gbp: number | null;
+      }>();
     if (!campaign) {
       return { error: "That campaign is no longer open for proposals." };
     }
@@ -142,6 +154,7 @@ export async function createSponsoredEvent(
     // Taken from the view because `brands` is owner-only under RLS — an artist
     // querying it directly gets nothing back.
     brandProfileId = campaign.brand_profile_id;
+    packagePlatformMarginGbp = campaign.package_platform_margin_gbp;
   }
 
   if (!brandId) redirect("/onboarding");
@@ -164,9 +177,13 @@ export async function createSponsoredEvent(
       venue_details: str(formData.get("venue_details")),
       location: str(formData.get("location")),
       budget_gbp: budget,
-      // Net of the platform fee inc VAT — the gross budget is never what's
+      // Net of the package margin if this came from one, otherwise the
+      // global platform fee inc VAT — the gross budget is never what's
       // available to pay out in rewards (3 Aug standup).
-      remaining_budget_gbp: netSponsorshipBudget(budget),
+      remaining_budget_gbp: netForCampaign({
+        budget_gbp: budget,
+        package_platform_margin_gbp: packagePlatformMarginGbp,
+      }),
       reward_rules: str(formData.get("reward_rules")),
       terms: str(formData.get("terms")),
       banner_url: banner.url ?? null,
@@ -467,4 +484,195 @@ export async function updateParticipation(formData: FormData) {
   }
 
   if (eventId) revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+// --- New-model additions: proofs, change requests, artist reports, rewards -
+
+interface PartyRow {
+  name: string;
+  event_date: string | null;
+  start_time: string | null;
+  timezone: string;
+  brand_id: string | null;
+  artist_profile_id: string | null;
+}
+
+/** Confirms the caller is one of the two parties on this sponsorship. */
+async function loadPartyEvent(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  eventId: string,
+  userId: string,
+) {
+  const [{ data: event }, { data: brand }] = await Promise.all([
+    supabase
+      .from("sponsored_events")
+      .select("name, event_date, start_time, timezone, brand_id, artist_profile_id")
+      .eq("id", eventId)
+      .maybeSingle<PartyRow>(),
+    supabase.from("brands").select("id").eq("profile_id", userId).maybeSingle(),
+  ]);
+  if (!event) return null;
+  const isBrand = brand && event.brand_id === brand.id;
+  const isArtist = event.artist_profile_id === userId;
+  if (!isBrand && !isArtist) return null;
+  return { event, isBrand, isArtist };
+}
+
+const PROOF_PURPOSE: Record<string, string> = {
+  social_mention: "sponsored-proof-social",
+  onsite_branding: "sponsored-proof-branding",
+};
+
+export async function uploadEventProof(
+  _prev: SponsoredState,
+  formData: FormData,
+): Promise<SponsoredState> {
+  const { supabase, userId } = await requireUser();
+  const eventId = str(formData.get("id"));
+  const proofType = str(formData.get("proof_type"));
+  if (!eventId || !proofType || !PROOF_PURPOSE[proofType]) {
+    return { error: "Missing sponsorship or proof type." };
+  }
+
+  const party = await loadPartyEvent(supabase, eventId, userId);
+  if (!party) return { error: "You're not a party to this sponsorship." };
+
+  const upload = await uploadImage(formData.get("file"), PROOF_PURPOSE[proofType]);
+  if (upload.error) return { error: upload.error };
+  if (!upload.url) return { error: "Choose a file to upload." };
+
+  const { error } = await supabase.from("sponsored_event_proofs").insert({
+    sponsored_event_id: eventId,
+    proof_type: proofType,
+    url: upload.url,
+    description: str(formData.get("description")),
+    uploaded_by: userId,
+  });
+  if (error) return { error: error.message };
+
+  await notifyAdmins({
+    eventKey: "admin.sponsored_proof_submitted",
+    link: `/dashboard/admin/events/sponsored/${eventId}`,
+    variables: {
+      event_name: party.event.name,
+      proof_type: proofType === "social_mention" ? "social mention" : "onsite branding",
+    },
+  });
+
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  return {};
+}
+
+const CHANGE_REQUEST_CUTOFF_MS = 2 * 24 * 60 * 60 * 1000;
+
+export async function requestEventChange(
+  _prev: SponsoredState,
+  formData: FormData,
+): Promise<SponsoredState> {
+  const { supabase, userId } = await requireUser();
+  const eventId = str(formData.get("id"));
+  const summary = str(formData.get("summary"));
+  if (!eventId || !summary) return { error: "Describe the change you're asking for." };
+
+  const party = await loadPartyEvent(supabase, eventId, userId);
+  if (!party) return { error: "You're not a party to this sponsorship." };
+
+  const instant = eventStartInstant({
+    date: party.event.event_date,
+    time: party.event.start_time,
+    timeZone: party.event.timezone,
+  });
+  if (instant && Date.now() > instant.getTime() - CHANGE_REQUEST_CUTOFF_MS) {
+    return {
+      error: "This event is within 2 days — changes this close in need to go through Contact Live·En·Synergy instead.",
+    };
+  }
+
+  const { error } = await supabase.from("sponsored_event_change_requests").insert({
+    sponsored_event_id: eventId,
+    requested_by: userId,
+    summary,
+  });
+  if (error) return { error: error.message };
+
+  await notifyAdmins({
+    eventKey: "admin.sponsored_change_requested",
+    link: `/dashboard/admin/events/sponsored/${eventId}`,
+    variables: { event_name: party.event.name, summary },
+  });
+
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  return {};
+}
+
+export async function submitTicketSalesReport(
+  _prev: SponsoredState,
+  formData: FormData,
+): Promise<SponsoredState> {
+  const { supabase, userId } = await requireUser();
+  const eventId = str(formData.get("id"));
+  if (!eventId) return { error: "Missing sponsorship." };
+
+  const party = await loadPartyEvent(supabase, eventId, userId);
+  if (!party?.isArtist) {
+    return { error: "Only the artist on this sponsorship can submit a sales report." };
+  }
+
+  const upload = await uploadPrivateFile(
+    formData.get("file"),
+    "artist-sales-report",
+  );
+  if (upload.error) return { error: upload.error };
+
+  const { error } = await supabase.from("ticket_sales_reports").insert({
+    sponsored_event_id: eventId,
+    submitted_by: userId,
+    tickets_sold: num(formData.get("tickets_sold")),
+    gross_revenue_gbp: num(formData.get("gross_revenue_gbp")),
+    report_file_path: upload.path ?? null,
+    notes: str(formData.get("notes")),
+  });
+  if (error) return { error: error.message };
+
+  await notifyAdmins({
+    eventKey: "admin.ticket_sales_report_submitted",
+    link: `/dashboard/admin/events/sponsored/${eventId}`,
+    variables: { event_name: party.event.name, artist_name: "The artist" },
+  });
+
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  return {};
+}
+
+/** Participant marks their own reward code redeemed — via the narrow
+ * redeem_reward_code() RPC, not a direct table write (see 0027). */
+export async function selfReportRewardCodeRedeemed(formData: FormData) {
+  const { supabase } = await requireUser();
+  const codeId = str(formData.get("code_id"));
+  if (!codeId) return;
+
+  const { data: ok } = await supabase.rpc("redeem_reward_code", {
+    p_code_id: codeId,
+  });
+  if (!ok) return;
+
+  const { data: reward } = await supabase
+    .from("reward_codes")
+    .select("code, sponsored_events(name)")
+    .eq("id", codeId)
+    .maybeSingle<{ code: string; sponsored_events: { name: string } | null }>();
+
+  if (reward) {
+    await notifyAdmins({
+      eventKey: "admin.reward_code_redeemed",
+      link: "/dashboard/admin/participants",
+      variables: {
+        event_name: reward.sponsored_events?.name ?? "an event",
+        reference: reward.code,
+        code: reward.code,
+      },
+    });
+  }
+
+  revalidatePath("/dashboard/rewards");
 }

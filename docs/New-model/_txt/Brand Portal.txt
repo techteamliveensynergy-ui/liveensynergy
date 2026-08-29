@@ -1,0 +1,102 @@
+Brand Portal
+Brand / Sponsors Dashboard
+1.        Overview:
+Active Campaigns, Sponsored Ticket Campaign, Survey Completion, Reward Distributed
+Breaking into each Sponsored Ticket Campaign:
+Dashboard for campaign:
+o   Campaign spend
+o   Total Number of Tickets Incentivised
+o   Survey Completion
+o   Survey Completion (Pre event, main)
+o   Survey Completion (Post event, small)
+o   Insights 
+o   Measurement
+o   Campaign Performance Report
+2.        Campaign Packages:
+Choose a campaign package suited to your needs
+£2,500 – Starter 
+£3,750 – Growth
+£5,000 – Premium
+Enterprise Custom
+(Please enter sponsorship budget in the multiple of £500, minimum £6000. Auto-calculates Number of surveys)
+Enterprise Bespoke
+(Please contact us or submit a campaign)
+[Heading 3] (Benefits List Overview below, each breakdowns into more details - listed on other doc)
+[Heading 3] Reach
+Live-event audience exposure
+[Heading 3] Targeting
+Defined audience and demographic targeting
+[Heading 3] Research
+Custom consumer research
+[Heading 3] Engagement
+Incentivised participant engagement
+[Heading 3] Brand Awareness
+Brand exposure and awareness measurement
+[Heading 3] Emotional Brand Impact
+[Heading 3] Associate your brand with a meaningful consumer experience
+[Heading 3] Insights
+Audience and consumer intelligence
+[Heading 3] Measurement
+Campaign performance and outcomes
+[Heading 3] Campaign Management
+End-to-end campaign execution
+Include a benefit matrix according to the budget (see other page)
+-            Add to cart, checkout
+-            Billing, invoicing
+-            Order confirmation email
+*All above pricing is exclusive of VAT
+ Our team will be in touch within the next 3 days to discuss your Campaign details.
+3.        Tell us about your Campaign
+Brand name
+Campaign objective
+Sponsorship budget
+Approx. number of survey’s desired 
+Location
+Event Category
+Target audience (e.g. Young, Mainstream, Affluent, Value-conscious, etc)
+Campaign Month, Year
+Eligibility criteria (if any)
+Brand messaging – Market research area
+Brand Assets (Upload New or Indicate to use from Brand’s profile)
+Artist/event name (choose from our platform or input text)
+Event (choose from our website)
+Can’t find the event? Nominate an artist/event (click to add more)
+o   Artist/event name
+o   Event URL
+          	(We'll contact the organiser and invite them to add/confirm the event)
+Any additional information
+We'll select suitable events and audiences to fulfil your campaign. Our team will be in touch shortly.
+4.        Sponsored Events
+Live En Synergy team will prepare this, it will auto appear in the both Brands & Artists Profiles 
+Details for each event will contain:
+Sponsorship Overview
+o   Campaign Name (Amount) | Number of Surveys | Participation Start Date | Survey’s Remaining
+Event Details
+o   Event Name | Artist / Act | Date & Time | Location | Venue | Category | Capacity | Ticket Price
+Branding
+o   Use only brand assets
+Sponsorship Details
+Reward Engine:
+First 50 Surveys:
+o   Pre Event: Sponsorship Ticket Subsidy (Pre Event Survey)
+o   Post Event: Discount Code, Merchandise Code (for verified audience, Post Event Survey)
+o   Late Participants: Discount Code, Merchandise Code (for verified audience, Open for all participants)
+Any other terms:
+o   Artist will give us X social media mentions (upload proof option – or link to where proof is uploaded)
+o   Artist will give us onsite branding (upload proof option)
+Brand Name | Artist Name
+Contact Live=En-Synergy | Raise Enquiry | Mark Completed
+View Survey
+Participants Info
+Anonymised Name | Survey Completed | Verified Attendance
+Attendance Check-In
+(Display this QR code at the venue — audience members who scan it (or follow the link) confirm their own attendance, no manual verification needed. Alternatively, audience can check-in directly inside their portal)
+____________________________________________________________________________
+Order form details:
+Name, Company Name, Address, Email, Campaign Name, 
+My Orders Page:
+Show Package Name (Starter, Growth, Premium, Enterprise Custom, Enterprise Bespoke)
+Campaign Name
+Order Date 
+Order Status
+.. etc

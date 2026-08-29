@@ -131,6 +131,28 @@ export function formatEventDateTime(
   }).format(instant);
 }
 
+/**
+ * The real UTC instant an event starts at, for date-cutoff comparisons (e.g.
+ * "no changes within 2 days of the event") — `zonedToUtc()` stays private
+ * since every other caller only needs display formatting; this is the one
+ * that needs a comparable instant. Falls back to midnight when no clock time
+ * is set, matching `formatEventDateTime()`'s own no-time behaviour.
+ */
+export function eventStartInstant({
+  date,
+  time,
+  timeZone,
+}: EventTimeParts): Date | null {
+  if (!date) return null;
+  const zone = timeZone || DEFAULT_TIMEZONE;
+  const normalisedTime = time
+    ? time.length === 5
+      ? `${time}:00`
+      : time
+    : "00:00:00";
+  return zonedToUtc(date, normalisedTime, zone);
+}
+
 /** The zone abbreviation alone for a given date, e.g. "BST". */
 export function zoneAbbreviation(date: string, timeZone: string): string {
   const instant = new Date(`${date}T12:00:00Z`);

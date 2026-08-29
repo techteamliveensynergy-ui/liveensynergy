@@ -53,6 +53,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin", label: "Overview", icon: "📊" },
     { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
     { href: "/dashboard/admin/campaigns", label: "Campaigns", icon: "📣" },
+    { href: "/dashboard/admin/campaigns/intake", label: "Campaign requests", icon: "📥" },
     { href: "/dashboard/admin/events", label: "Events", icon: "🎫" },
     { href: "/dashboard/admin/participants", label: "Participants", icon: "🎟️" },
     { href: "/dashboard/admin/enquiries", label: "Enquiries", icon: "📨" },
@@ -60,6 +61,8 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     // Distinct from the personal inbox in COMMON_BOTTOM — this is the config.
     { href: "/dashboard/admin/notifications", label: "Notification setup", icon: "🔔" },
     { href: "/dashboard/admin/plans", label: "Plans", icon: "💳" },
+    { href: "/dashboard/admin/packages", label: "Packages", icon: "📦" },
+    { href: "/dashboard/admin/invoices", label: "Invoices", icon: "🧾" },
   ],
 };
 

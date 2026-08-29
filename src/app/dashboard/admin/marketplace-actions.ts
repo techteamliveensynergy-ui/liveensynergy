@@ -2,29 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { netSponsorshipBudget, roundMoney } from "@/lib/constants";
+import { netSponsorshipBudget, netForCampaign, roundMoney } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
-import { getOrCreateConversation } from "@/lib/data/messaging";
+import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { requireAdmin } from "@/lib/profile";
 
 export interface MarketplaceState {
   error?: string;
   success?: boolean;
-}
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/sign-in");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/dashboard");
-  return { supabase, userId: user.id };
 }
 
 function str(v: FormDataEntryValue | null): string | null {
@@ -87,7 +72,7 @@ export async function matchCampaign(
     supabase
       .from("campaigns")
       .select(
-        "id, reference, brand_id, budget_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
+        "id, reference, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
       )
       .eq("id", campaignId)
       .maybeSingle<{
@@ -95,6 +80,7 @@ export async function matchCampaign(
         reference: string;
         brand_id: string;
         budget_gbp: number | null;
+        package_platform_margin_gbp: number | null;
         reward_rules: string | null;
         suggested_event_note: string | null;
         suggested_event_url: string | null;
@@ -134,8 +120,12 @@ export async function matchCampaign(
         location:
           [listing.city, listing.country].filter(Boolean).join(", ") || null,
         budget_gbp: budget,
-        // Net of the platform fee inc VAT — see netSponsorshipBudget().
-        remaining_budget_gbp: netSponsorshipBudget(budget),
+        // Net of the package margin if this campaign came from one,
+        // otherwise the global platform fee inc VAT — see netForCampaign().
+        remaining_budget_gbp: netForCampaign({
+          budget_gbp: budget,
+          package_platform_margin_gbp: campaign.package_platform_margin_gbp,
+        }),
         reward_rules: campaign.reward_rules,
         // Matched by the team — neither side has agreed yet.
         brand_agreed: false,
@@ -208,10 +198,12 @@ export async function matchCampaign(
     });
   }
 
-  // Relay the sponsor's suggested event into the brand↔artist chat, if they
-  // gave one (10 Aug standup). Posted as the admin, under their own name, not
-  // faked as the brand — the team is genuinely the one passing it on, and the
-  // "messages: admin send" policy in 0023 keeps it that way.
+  // Relay the sponsor's suggested event, if they gave one (10 Aug standup) —
+  // through admin-mediated support threads rather than opening a direct
+  // brand↔artist line (26 Aug: direct chat between the two parties is
+  // removed; admin is the required intermediary). Posted once into the
+  // brand's own thread with us and once into each candidate artist's thread
+  // with us, not a shared thread between the two of them.
   if (campaign.brands?.profile_id && campaign.suggested_event_note) {
     const suggestion = [
       `${campaign.brands.brand_name} has an event in mind for campaign ${campaign.reference}:`,
@@ -222,11 +214,22 @@ export async function matchCampaign(
       .filter(Boolean)
       .join("\n");
 
+    const brandThreadId = await getOrCreateSupportConversation({
+      userProfileId: campaign.brands.profile_id,
+      adminProfileId: userId,
+    });
+    if (brandThreadId) {
+      await supabase.from("messages").insert({
+        conversation_id: brandThreadId,
+        sender_profile_id: userId,
+        body: `Passing this on to the artists/organisers we think fit: ${suggestion}`,
+      });
+    }
+
     for (const listing of listings) {
-      const conversationId = await getOrCreateConversation({
-        brandProfileId: campaign.brands.profile_id,
-        partnerProfileId: listing.owner_profile_id,
-        listingId: listing.id,
+      const conversationId = await getOrCreateSupportConversation({
+        userProfileId: listing.owner_profile_id,
+        adminProfileId: userId,
       });
       if (!conversationId) continue;
 
@@ -283,6 +286,246 @@ export async function setCampaignStatus(formData: FormData) {
   }
 
   revalidatePath("/dashboard/admin/campaigns");
+}
+
+// --- Campaign intake (26 Aug: campaigns are now admin-created) -------------
+
+export async function reviewCampaignIntake(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const op = str(formData.get("op")); // "approve" | "decline"
+  if (!id || !op) return;
+
+  if (op === "approve") {
+    await supabase
+      .from("campaign_intake_requests")
+      .update({ status: "in_review", reviewed_by: userId, reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "submitted");
+    redirect(`/dashboard/admin/campaigns/new?from_intake=${id}`);
+  }
+
+  if (op === "decline") {
+    const reason = str(formData.get("decline_reason"));
+    const { data: updated } = await supabase
+      .from("campaign_intake_requests")
+      .update({
+        status: "declined",
+        decline_reason: reason,
+        reviewed_by: userId,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("status", "submitted")
+      .select("reference, brands(profile_id)")
+      .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
+
+    if (updated?.brands?.profile_id) {
+      await notify({
+        eventKey: "campaign_intake.declined",
+        recipientProfileId: updated.brands.profile_id,
+        link: "/dashboard/campaigns",
+        variables: { reference: updated.reference, reason: reason ?? "no reason given" },
+      });
+    }
+    revalidatePath("/dashboard/admin/campaigns/intake");
+  }
+}
+
+interface CampaignPackageRow {
+  id: string;
+  price_gbp: number | null;
+  is_custom_price: boolean;
+  min_price_gbp: number | null;
+  price_increment_gbp: number | null;
+  platform_margin_gbp: number;
+  participant_count: number | null;
+}
+
+function campaignPayload(formData: FormData) {
+  return {
+    description: str(formData.get("description")),
+    category: str(formData.get("category")),
+    category_other: str(formData.get("category_other")),
+    preferred_location: str(formData.get("preferred_location")),
+    preferred_timeline: str(formData.get("preferred_timeline")),
+    target_name: str(formData.get("target_name")),
+    reward_rules: str(formData.get("reward_rules")),
+    expected_outcomes: str(formData.get("expected_outcomes")),
+    additional_info: str(formData.get("additional_info")),
+    suggested_event_note: str(formData.get("suggested_event_note")),
+    suggested_event_url: str(formData.get("suggested_event_url")),
+    manager_name: str(formData.get("manager_name")),
+    manager_email: str(formData.get("manager_email")),
+    manager_phone: str(formData.get("manager_phone")),
+    image_url: str(formData.get("image_url")),
+  };
+}
+
+/**
+ * Resolves what a submitted package + budget actually mean for the money
+ * columns, re-deriving rather than trusting the client: a fixed-price
+ * package's budget is the package's own price regardless of what was
+ * posted; a custom-price package's budget must land on one of its allowed
+ * increments; no package at all keeps today's free-entry budget.
+ */
+async function resolveCampaignMoney(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  packageId: string | null,
+  submittedBudget: number | null,
+  submittedMarginOverride: number | null,
+) {
+  if (!packageId) {
+    if (submittedBudget == null) {
+      return { error: "Budget is required when no package is selected." };
+    }
+    return {
+      budget_gbp: submittedBudget,
+      campaign_package_id: null,
+      package_platform_margin_gbp: null,
+      package_participant_count: null,
+    };
+  }
+
+  const { data: pkg } = await supabase
+    .from("campaign_packages")
+    .select("id, price_gbp, is_custom_price, min_price_gbp, price_increment_gbp, platform_margin_gbp, participant_count")
+    .eq("id", packageId)
+    .maybeSingle<CampaignPackageRow>();
+  if (!pkg) return { error: "Selected package no longer exists." };
+
+  const margin = submittedMarginOverride ?? pkg.platform_margin_gbp;
+
+  if (!pkg.is_custom_price) {
+    return {
+      budget_gbp: pkg.price_gbp as number,
+      campaign_package_id: pkg.id,
+      package_platform_margin_gbp: margin,
+      package_participant_count: pkg.participant_count,
+    };
+  }
+
+  // Custom-price (Enterprise): budget must be admin-entered and land on an
+  // allowed increment above the package's minimum.
+  const min = pkg.min_price_gbp ?? 0;
+  const step = pkg.price_increment_gbp ?? 0;
+  if (submittedBudget == null || submittedBudget < min) {
+    return { error: `Budget must be at least £${min.toLocaleString("en-GB")} for this package.` };
+  }
+  if (step > 0) {
+    const diff = roundMoney(submittedBudget - min);
+    const remainder = roundMoney(diff % step);
+    if (remainder !== 0) {
+      return {
+        error: `Budget must be a multiple of £${step.toLocaleString("en-GB")} above £${min.toLocaleString("en-GB")}.`,
+      };
+    }
+  }
+  return {
+    budget_gbp: submittedBudget,
+    campaign_package_id: pkg.id,
+    package_platform_margin_gbp: margin,
+    package_participant_count: null,
+  };
+}
+
+export async function createCampaignFromAdmin(
+  _prev: MarketplaceState,
+  formData: FormData,
+): Promise<MarketplaceState> {
+  const { supabase } = await requireAdmin();
+
+  const fromIntakeId = str(formData.get("from_intake_id"));
+  let brandId = str(formData.get("brand_id"));
+
+  if (fromIntakeId && !brandId) {
+    const { data: intake } = await supabase
+      .from("campaign_intake_requests")
+      .select("brand_id")
+      .eq("id", fromIntakeId)
+      .maybeSingle<{ brand_id: string }>();
+    brandId = intake?.brand_id ?? null;
+  }
+  if (!brandId) return { error: "Select a brand for this campaign." };
+
+  const p = campaignPayload(formData);
+  if (!p.description) return { error: "Campaign description is required." };
+  if (!p.manager_name || !p.manager_email || !p.manager_phone) {
+    return { error: "Campaign manager name, email and phone are required." };
+  }
+
+  const money = await resolveCampaignMoney(
+    supabase,
+    str(formData.get("campaign_package_id")),
+    num(formData.get("budget_gbp")),
+    num(formData.get("package_platform_margin_gbp")),
+  );
+  if ("error" in money) return { error: money.error };
+
+  // Technical floor regardless of package — a campaign that leaves nothing
+  // for the reward pool isn't viable, package price or not.
+  const net = netForCampaign(money);
+  if (net == null || net <= 0) {
+    return { error: "This budget leaves nothing available for sponsorship after the platform margin." };
+  }
+
+  const { data: created, error } = await supabase
+    .from("campaigns")
+    .insert({ ...p, brand_id: brandId, ...money })
+    .select("id, reference")
+    .single();
+  if (error) return { error: error.message };
+
+  if (fromIntakeId) {
+    const { data: intake } = await supabase
+      .from("campaign_intake_requests")
+      .update({ status: "converted", converted_campaign_id: created.id })
+      .eq("id", fromIntakeId)
+      .select("reference, brands(profile_id)")
+      .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
+
+    if (intake?.brands?.profile_id) {
+      await notify({
+        eventKey: "campaign_intake.converted",
+        recipientProfileId: intake.brands.profile_id,
+        link: `/dashboard/campaigns`,
+        variables: { reference: intake.reference, campaign_reference: created.reference },
+      });
+    }
+  }
+
+  revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/admin/campaigns/intake");
+  redirect("/dashboard/admin/campaigns");
+}
+
+export async function updateCampaignAdmin(
+  _prev: MarketplaceState,
+  formData: FormData,
+): Promise<MarketplaceState> {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return { error: "Missing campaign id." };
+
+  const p = campaignPayload(formData);
+  if (!p.description) return { error: "Campaign description is required." };
+
+  const money = await resolveCampaignMoney(
+    supabase,
+    str(formData.get("campaign_package_id")),
+    num(formData.get("budget_gbp")),
+    num(formData.get("package_platform_margin_gbp")),
+  );
+  if ("error" in money) return { error: money.error };
+
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ ...p, ...money })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/admin/campaigns");
+  redirect("/dashboard/admin/campaigns");
 }
 
 // --- Admin-side participant management -------------------------------------
@@ -557,4 +800,314 @@ export async function adminMarkNoShow(formData: FormData) {
 
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
   revalidatePath("/dashboard/admin/participants");
+}
+
+// --- Sponsored-event proofs -------------------------------------------------
+
+export async function reviewEventProof(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const op = str(formData.get("op")); // "approve" | "reject"
+  const eventId = str(formData.get("event_id"));
+  if (!id || !op) return;
+
+  const { data: updated } = await supabase
+    .from("sponsored_event_proofs")
+    .update({
+      status: op === "approve" ? "approved" : "rejected",
+      reviewed_by: userId,
+      reviewed_at: new Date().toISOString(),
+      review_note: str(formData.get("review_note")),
+    })
+    .eq("id", id)
+    .select("proof_type, uploaded_by, sponsored_events(name)")
+    .maybeSingle<{
+      proof_type: string;
+      uploaded_by: string;
+      sponsored_events: { name: string } | null;
+    }>();
+
+  if (updated) {
+    await notify({
+      eventKey: "sponsored.proof_reviewed",
+      recipientProfileId: updated.uploaded_by,
+      link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
+      variables: {
+        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        proof_type: updated.proof_type === "social_mention" ? "social mention" : "onsite branding",
+        status: op === "approve" ? "approved" : "rejected",
+      },
+    });
+  }
+
+  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+// --- Reward engine -----------------------------------------------------------
+
+/**
+ * Replaces a sponsorship's reward tiers wholesale — the same delete-and-
+ * reinsert shape the survey-builder design recommends for its own question
+ * list, since no participation references a tier's row identity directly
+ * (reward_codes snapshots the tier's values at issuance instead).
+ */
+export async function upsertRewardTiers(
+  _prev: MarketplaceState,
+  formData: FormData,
+): Promise<MarketplaceState> {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return { error: "Missing sponsorship." };
+
+  const labels = formData.getAll("tier_label").map((v) => String(v).trim());
+  const caps = formData.getAll("tier_cap").map((v) => str(v as FormDataEntryValue));
+  const codeTypes = formData.getAll("tier_code_type").map((v) => String(v));
+  const valueLabels = formData.getAll("tier_value_label").map((v) => str(v as FormDataEntryValue));
+
+  const rows = labels
+    .map((label, i) => ({
+      sponsored_event_id: eventId,
+      label,
+      rank: i,
+      participant_cap: caps[i] ? Number(caps[i]) : null,
+      code_type: codeTypes[i] || null,
+      value_label: valueLabels[i] ?? null,
+    }))
+    .filter((r) => r.label);
+
+  if (rows.length === 0) return { error: "Add at least one tier." };
+
+  const { error: deleteError } = await supabase
+    .from("sponsored_event_reward_tiers")
+    .delete()
+    .eq("sponsored_event_id", eventId);
+  if (deleteError) return { error: deleteError.message };
+
+  const { error } = await supabase.from("sponsored_event_reward_tiers").insert(rows);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  return {};
+}
+
+export async function issueRewardCode(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const participationId = str(formData.get("participation_id"));
+  const tierId = str(formData.get("tier_id"));
+  if (!eventId || !participationId) return;
+
+  // TODO(survey-gate): once survey_responses exists
+  // (docs/survey-form-builder-design.md §2/§5), reject issuance unless
+  //   exists(select 1 from survey_responses sr where sr.participation_id = participationId and sr.quality_status = 'pass')
+  // Until then, issuance is pure admin discretion — same trust model as
+  // adminUpdateParticipation's `release` case.
+
+  let tier: { code_type: string; value_label: string | null; value_gbp: number | null } | null = null;
+  if (tierId) {
+    const { data } = await supabase
+      .from("sponsored_event_reward_tiers")
+      .select("code_type, value_label, value_gbp")
+      .eq("id", tierId)
+      .maybeSingle();
+    tier = data;
+  }
+
+  const { data: created, error } = await supabase
+    .from("reward_codes")
+    .insert({
+      sponsored_event_id: eventId,
+      participation_id: participationId,
+      tier_id: tierId || null,
+      code_type: tier?.code_type ?? "discount",
+      value_label: tier?.value_label ?? str(formData.get("value_label")),
+      value_gbp: tier?.value_gbp ?? num(formData.get("value_gbp")),
+      issued_by: userId,
+    })
+    .select("code, sponsored_events(name)")
+    .single<{ code: string; sponsored_events: { name: string } | null }>();
+  if (error) return;
+
+  const { data: participation } = await supabase
+    .from("participations")
+    .select("audience_profile_id")
+    .eq("id", participationId)
+    .maybeSingle<{ audience_profile_id: string }>();
+
+  if (participation) {
+    await notify({
+      eventKey: "reward.code_issued",
+      recipientProfileId: participation.audience_profile_id,
+      link: "/dashboard/rewards",
+      variables: {
+        event_name: created.sponsored_events?.name ?? "your event",
+        code: created.code,
+        value_label: tier?.value_label ?? "a reward",
+      },
+    });
+  }
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+export async function markRewardCodeRedeemed(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const eventId = str(formData.get("event_id"));
+  if (!id) return;
+  await supabase
+    .from("reward_codes")
+    .update({ status: "redeemed", redeemed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+// --- Artist payment split ----------------------------------------------------
+
+export async function setArtistPaymentSplit(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const fee = num(formData.get("artist_fee_gbp"));
+  const upfront = num(formData.get("artist_upfront_gbp"));
+  if (!eventId || fee == null || upfront == null) return;
+  if (upfront > fee) return;
+
+  const { data: updated } = await supabase
+    .from("sponsored_events")
+    .update({
+      artist_fee_gbp: fee,
+      artist_upfront_gbp: upfront,
+      artist_remainder_gbp: roundMoney(fee - upfront),
+    })
+    .eq("id", eventId)
+    .select("name, artist_profile_id")
+    .maybeSingle<{ name: string; artist_profile_id: string | null }>();
+
+  if (updated?.artist_profile_id) {
+    await notify({
+      eventKey: "sponsorship.artist_split_set",
+      recipientProfileId: updated.artist_profile_id,
+      link: `/dashboard/sponsored/${eventId}`,
+      variables: {
+        event_name: updated.name,
+        upfront: `£${upfront.toLocaleString("en-GB")}`,
+        remainder: `£${roundMoney(fee - upfront).toLocaleString("en-GB")}`,
+      },
+    });
+  }
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+export async function markArtistUpfrontPaid(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+
+  const { data: updated } = await supabase
+    .from("sponsored_events")
+    .update({ artist_upfront_paid_at: new Date().toISOString() })
+    .eq("id", eventId)
+    .select("name, artist_profile_id, artist_upfront_gbp")
+    .maybeSingle<{ name: string; artist_profile_id: string | null; artist_upfront_gbp: number | null }>();
+
+  if (updated?.artist_profile_id) {
+    await notify({
+      eventKey: "sponsorship.upfront_paid",
+      recipientProfileId: updated.artist_profile_id,
+      link: `/dashboard/sponsored/${eventId}`,
+      variables: {
+        event_name: updated.name,
+        upfront: updated.artist_upfront_gbp != null
+          ? `£${Number(updated.artist_upfront_gbp).toLocaleString("en-GB")}`
+          : "your upfront amount",
+      },
+    });
+  }
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+export async function reviewTicketSalesReport(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const eventId = str(formData.get("event_id"));
+  if (!id) return;
+  await supabase
+    .from("ticket_sales_reports")
+    .update({ status: "reviewed", reviewed_by: userId, reviewed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+export async function releaseArtistRemainder(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+
+  const { data: updated } = await supabase
+    .from("sponsored_events")
+    .update({
+      artist_remainder_released_at: new Date().toISOString(),
+      artist_remainder_released_by: userId,
+    })
+    .eq("id", eventId)
+    .select("name, artist_profile_id, artist_remainder_gbp")
+    .maybeSingle<{ name: string; artist_profile_id: string | null; artist_remainder_gbp: number | null }>();
+
+  if (updated?.artist_profile_id) {
+    await notify({
+      eventKey: "sponsorship.remainder_released",
+      recipientProfileId: updated.artist_profile_id,
+      link: `/dashboard/sponsored/${eventId}`,
+      variables: {
+        event_name: updated.name,
+        remainder: updated.artist_remainder_gbp != null
+          ? `£${Number(updated.artist_remainder_gbp).toLocaleString("en-GB")}`
+          : "the remainder",
+      },
+    });
+  }
+
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+// --- Event change requests ---------------------------------------------------
+
+export async function resolveEventChangeRequest(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const eventId = str(formData.get("event_id"));
+  const op = str(formData.get("op")); // "approve" | "decline"
+  if (!id || !op) return;
+
+  const { data: updated } = await supabase
+    .from("sponsored_event_change_requests")
+    .update({
+      status: op === "approve" ? "approved" : "declined",
+      admin_response: str(formData.get("admin_response")),
+      resolved_by: userId,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("requested_by, sponsored_events(name)")
+    .maybeSingle<{ requested_by: string; sponsored_events: { name: string } | null }>();
+
+  if (updated) {
+    await notify({
+      eventKey: "sponsored.change_resolved",
+      recipientProfileId: updated.requested_by,
+      link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
+      variables: {
+        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        status: op === "approve" ? "approved" : "declined",
+      },
+    });
+  }
+
+  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
 }

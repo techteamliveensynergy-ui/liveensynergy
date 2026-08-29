@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOrCreateConversation } from "@/lib/data/messaging";
-import { notify } from "@/lib/notifications";
+import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { notify, notifyAdmins } from "@/lib/notifications";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -16,8 +16,10 @@ async function requireUser() {
 }
 
 /**
- * Brand starts a conversation with a listing's owner, then jumps into the
- * message thread.
+ * Brand raises interest in a listing with the Live·En·Synergy team, who
+ * relay it to the organiser (26 Aug: brands and artists/organisers no
+ * longer message each other directly — admin is the required
+ * intermediary, matching how campaign matching already works).
  */
 export async function contactOrganiser(formData: FormData) {
   const { supabase, userId } = await requireUser();
@@ -25,32 +27,42 @@ export async function contactOrganiser(formData: FormData) {
 
   const { data: listing } = await supabase
     .from("event_listings")
-    .select("owner_profile_id")
+    .select("owner_profile_id, name")
     .eq("id", listingId)
     .maybeSingle();
 
   if (!listing) redirect("/dashboard/discover");
 
-  const conversationId = await getOrCreateConversation({
-    brandProfileId: userId,
-    partnerProfileId: listing.owner_profile_id,
-    listingId,
+  const conversationId = await getOrCreateSupportConversation({
+    userProfileId: userId,
+    subject: `Interested in ${listing.name}`,
   });
 
   if (!conversationId) redirect("/dashboard/discover");
 
-  // The organiser has a new sponsor enquiry sitting in their offers inbox.
   const { data: brand } = await supabase
     .from("brands")
     .select("brand_name")
     .eq("profile_id", userId)
     .maybeSingle();
 
-  await notify({
-    eventKey: "offer.received",
-    recipientProfileId: listing.owner_profile_id,
+  await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_profile_id: userId,
+    body: `Interested in sponsoring: ${listing.name}`,
+  });
+
+  // The team relays this to the organiser's own thread with us if it's
+  // worth pursuing. Same event key `sendMessage()` already fires for any
+  // support-thread message from a non-admin — kept consistent rather than
+  // inventing a parallel one for this entry point.
+  await notifyAdmins({
+    eventKey: "message.received",
     link: `/dashboard/messages?c=${conversationId}`,
-    variables: { brand_name: brand?.brand_name ?? "A brand" },
+    variables: {
+      sender_name: brand?.brand_name ?? "A brand",
+      event_name: listing.name,
+    },
   });
 
   // The match is reviewed by the team before anything is confirmed, so set the

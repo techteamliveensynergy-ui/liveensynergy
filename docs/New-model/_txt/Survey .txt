@@ -1,0 +1,35 @@
+Survey Embed Option: Typeform?
+Initial screening for:
+Bots/fraud (build captcha or is built in typeform?)
+ Eligibility screening questions (plus info from profile)
+Duplicate detection (unique email + phone no. plus matching identifiers)
+Survey quality check: Build a lightweight Response Quality Engine that scores every submission quickly.
+Every submitted survey goes through:
+ Survey submitted
+ ↓
+ Automated quality checks
+ ↓
+ Quality score calculated
+ ↓
+ Pass / Review / Reject
+ ↓
+ Only Pass → ticket benefit/code
+Response Quality Engine
+
+[TABLE]
+Quality signal || What you're checking || Example
+Completion time || Was it suspiciously fast? || 45 sec for a 4-min survey
+Attention checks || Did they follow instructions? || Failed 1 of 2
+Straight-lining || Same answer repeatedly || 4,4,4,4,4...
+Contradictions || Do answers conflict? || Says "never buys" then "bought yesterday"
+Open-text quality || Is answer meaningful? || "asdf", "good", "yes"
+Question coverage || Did they meaningfully answer? || Excessive "prefer not to say"
+Duplicate detection || Same person submitting multiple times || Matching identifiers
+Behaviour || Suspicious response pattern || Extremely rapid clicking
+Fraud signals || Automated/bot-like behaviour || Multiple suspicious submissions
+[/TABLE]
+
+Example scoring:
+80 - 100: Valid (Eligible for promo code / reward)
+60 - 79: Manual Review 
+<60: Low Quality

@@ -149,6 +149,13 @@ export const SPONSORSHIP_STATUSES = [
   "withdrawn",
 ] as const;
 
+/**
+ * Branding-asset upload slots on a sponsored event — was a magic number
+ * duplicated in `sponsored/actions.ts` and `SponsoredEventForm.tsx`,
+ * drifting independently. One source of truth.
+ */
+export const SPONSORED_ASSET_SLOTS = 5;
+
 /** Live-En-Synergy platform fee model (from the concept doc) */
 export const PLATFORM_FEE = {
   minFlatGbp: 315,
@@ -208,4 +215,26 @@ export function netSponsorshipBudget(
   return roundMoney(
     Math.max(0, computePlatformFee(gross).availableForSponsorship),
   );
+}
+
+/**
+ * Same idea as `netSponsorshipBudget()`, but for a campaign that came from a
+ * `campaign_packages` tier: the margin was set (and snapshotted onto the
+ * campaign) by the package, not the global fee formula. Falls back to
+ * `netSponsorshipBudget()` for a campaign with no package — Enterprise
+ * Custom and anything created before packages existed.
+ */
+export function netForCampaign(campaign: {
+  budget_gbp: number | null | undefined;
+  package_platform_margin_gbp?: number | null;
+}): number | null {
+  if (campaign.budget_gbp == null) return null;
+  const gross = Number(campaign.budget_gbp);
+  if (!Number.isFinite(gross)) return null;
+  if (campaign.package_platform_margin_gbp != null) {
+    return roundMoney(
+      Math.max(0, gross - Number(campaign.package_platform_margin_gbp)),
+    );
+  }
+  return netSponsorshipBudget(gross);
 }

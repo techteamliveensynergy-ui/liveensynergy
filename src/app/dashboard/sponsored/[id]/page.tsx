@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
-import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
+import { computePlatformFee, netForCampaign } from "@/lib/constants";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { Field } from "@/components/ui/Field";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
@@ -11,8 +11,12 @@ import type {
   Participation,
   SponsoredEvent,
   SponsoredEventAsset,
+  SponsoredEventChangeRequest,
+  SponsoredEventProof,
+  SponsoredEventRewardTier,
+  TicketSalesReport,
 } from "@/lib/types";
-import { formatEventDateTime } from "@/lib/event-time";
+import { eventStartInstant, formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import {
@@ -22,6 +26,10 @@ import {
   contactSupport,
   updateParticipation,
 } from "../actions";
+import { ProofUploadSection } from "./ProofUploadSection";
+import { RewardEngineDisplay } from "./RewardEngineDisplay";
+import { ChangeRequestSection } from "./ChangeRequestSection";
+import { ArtistPaymentSection } from "./ArtistPaymentSection";
 
 export const metadata = { title: "Sponsored event" };
 
@@ -67,7 +75,17 @@ export default async function SponsoredEventPage({
   if (!ev) notFound();
   const event = ev as SponsoredEvent;
 
-  const [{ data: brand }, { data: listingRow }, { data: assetRows }, { data: parts }] =
+  const [
+    { data: brand },
+    { data: listingRow },
+    { data: assetRows },
+    { data: parts },
+    { data: campaignRow },
+    { data: proofRows },
+    { data: tierRows },
+    { data: changeRows },
+    { data: reportRows },
+  ] =
     await Promise.all([
       supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle(),
       event.listing_id
@@ -89,11 +107,45 @@ export default async function SponsoredEventPage({
         .select("*, profiles(full_name)")
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: true }),
+      // Only readable by the brand (campaigns RLS is brand-owner-or-admin) —
+      // an artist viewer gets null here and the fee display below falls back
+      // to the pre-package global formula, same as before packages existed.
+      event.campaign_id
+        ? supabase
+            .from("campaigns")
+            .select("package_platform_margin_gbp")
+            .eq("id", event.campaign_id)
+            .maybeSingle<{ package_platform_margin_gbp: number | null }>()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("sponsored_event_proofs")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("sponsored_event_reward_tiers")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("rank"),
+      supabase
+        .from("sponsored_event_change_requests")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("ticket_sales_reports")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: false }),
     ]);
 
   const listing = listingRow as EventListing | null;
   const assets = (assetRows ?? []) as SponsoredEventAsset[];
   const participations = (parts ?? []) as ParticipantRow[];
+  const proofs = (proofRows ?? []) as SponsoredEventProof[];
+  const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
+  const changeRequests = (changeRows ?? []) as SponsoredEventChangeRequest[];
+  const salesReports = (reportRows ?? []) as TicketSalesReport[];
 
   const isBrand = !!brand && brand.id === event.brand_id;
   const isArtist = event.artist_profile_id === profile.id;
@@ -114,12 +166,31 @@ export default async function SponsoredEventPage({
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
 
-  // The platform fee comes off the gross budget before anything can be paid
-  // out, so every figure below works from the net amount. `remaining` falls
-  // back to the recomputed net for rows written before that fix.
-  const fee =
-    event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
-  const netBudget = netSponsorshipBudget(event.budget_gbp);
+  const CHANGE_REQUEST_CUTOFF_MS = 2 * 24 * 60 * 60 * 1000;
+  const eventInstant = eventStartInstant({
+    date: event.event_date,
+    time: event.start_time,
+    timeZone: event.timezone,
+  });
+  const withinChangeCutoff = eventInstant
+    ? Date.now() > eventInstant.getTime() - CHANGE_REQUEST_CUTOFF_MS
+    : false;
+
+  // The platform fee (or package margin) comes off the gross budget before
+  // anything can be paid out, so every figure below works from the net
+  // amount. `remaining` falls back to the recomputed net for rows written
+  // before that fix.
+  const packageMargin = campaignRow?.package_platform_margin_gbp ?? null;
+  const feeAmount =
+    event.budget_gbp != null
+      ? packageMargin != null
+        ? packageMargin
+        : computePlatformFee(Number(event.budget_gbp)).feeIncVat
+      : null;
+  const netBudget = netForCampaign({
+    budget_gbp: event.budget_gbp,
+    package_platform_margin_gbp: packageMargin,
+  });
   const remaining = event.remaining_budget_gbp ?? netBudget;
 
   // How far the remaining budget stretches, at the linked event's ticket price.
@@ -190,8 +261,8 @@ export default async function SponsoredEventPage({
           />
           <Stat
             label="Service fee"
-            value={fee ? money(fee.feeIncVat) : "—"}
-            hint="inc. VAT"
+            value={feeAmount != null ? money(feeAmount) : "—"}
+            hint={packageMargin != null ? "package margin" : "inc. VAT"}
           />
           <Stat
             label="Available for rewards"
@@ -491,6 +562,28 @@ export default async function SponsoredEventPage({
           </div>
         )}
       </div>
+
+      {(isBrand || isArtist) && (
+        <ProofUploadSection eventId={event.id} proofs={proofs} />
+      )}
+
+      <RewardEngineDisplay tiers={rewardTiers} />
+
+      {locked && (isBrand || isArtist) && (
+        <ChangeRequestSection
+          eventId={event.id}
+          requests={changeRequests}
+          withinCutoff={withinChangeCutoff}
+        />
+      )}
+
+      {isArtist && (
+        <ArtistPaymentSection
+          eventId={event.id}
+          event={event}
+          reports={salesReports}
+        />
+      )}
 
       {/* Attendance check-in */}
       {(isBrand || isArtist) && checkInQr && (

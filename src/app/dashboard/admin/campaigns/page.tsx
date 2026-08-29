@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import { computePlatformFee } from "@/lib/constants";
+import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { setCampaignStatus } from "../marketplace-actions";
 import { MatchForm } from "./MatchForm";
@@ -26,6 +26,7 @@ interface Row {
   status: string;
   created_at: string;
   matched_listing_id: string | null;
+  package_platform_margin_gbp: number | null;
   brands: { brand_name: string; profile_id: string } | null;
 }
 
@@ -49,7 +50,12 @@ export default async function AdminCampaignsPage({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: campaignRows }, { data: listingRows }, { data: suggestedRows }] =
+  const [
+    { data: campaignRows },
+    { data: listingRows },
+    { data: suggestedRows },
+    { count: pendingIntakeCount },
+  ] =
     await Promise.all([
       supabase
         .from("campaigns")
@@ -69,6 +75,10 @@ export default async function AdminCampaignsPage({
         )
         .not("campaign_id", "is", null)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("campaign_intake_requests")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["submitted", "in_review"]),
     ]);
 
   let campaigns = (campaignRows ?? []) as Row[];
@@ -117,6 +127,14 @@ export default async function AdminCampaignsPage({
       <PageHeader
         title="Campaigns"
         subtitle={`Sponsorship requests from brands. ${unmatched} still need matching.`}
+        action={
+          <Link
+            href="/dashboard/admin/campaigns/intake"
+            className="btn btn-primary"
+          >
+            Review requests{pendingIntakeCount ? ` (${pendingIntakeCount})` : ""}
+          </Link>
+        }
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
@@ -162,7 +180,7 @@ export default async function AdminCampaignsPage({
       ) : (
         <div className="space-y-3">
           {campaigns.map((c) => {
-            const fee = computePlatformFee(Number(c.budget_gbp));
+            const net = netForCampaign(c);
             return (
               <div key={c.id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -187,11 +205,9 @@ export default async function AdminCampaignsPage({
                     </p>
                     <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                       Ref {c.reference} · £
-                      {Number(c.budget_gbp).toLocaleString("en-GB")} gross · £
-                      {Math.round(fee.availableForSponsorship).toLocaleString(
-                        "en-GB",
-                      )}{" "}
-                      net
+                      {Number(c.budget_gbp).toLocaleString("en-GB")} gross
+                      {net != null &&
+                        ` · £${Math.round(net).toLocaleString("en-GB")} net`}
                       {c.category ? ` · ${c.category}` : ""}
                       {c.preferred_location ? ` · ${c.preferred_location}` : ""}
                       {c.preferred_timeline ? ` · ${c.preferred_timeline}` : ""}
@@ -227,26 +243,34 @@ export default async function AdminCampaignsPage({
                     )}
                   </div>
 
-                  <form
-                    action={setCampaignStatus}
-                    className="flex items-center gap-2"
-                  >
-                    <input type="hidden" name="id" value={c.id} />
-                    <select
-                      name="status"
-                      className="select w-auto py-1.5 text-sm"
-                      defaultValue={c.status}
+                  <div className="flex flex-col items-end gap-2">
+                    <Link
+                      href={`/dashboard/admin/campaigns/${c.id}`}
+                      className="btn btn-ghost text-sm"
                     >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="submit" className="btn btn-ghost text-sm">
-                      Update
-                    </button>
-                  </form>
+                      Edit
+                    </Link>
+                    <form
+                      action={setCampaignStatus}
+                      className="flex items-center gap-2"
+                    >
+                      <input type="hidden" name="id" value={c.id} />
+                      <select
+                        name="status"
+                        className="select w-auto py-1.5 text-sm"
+                        defaultValue={c.status}
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="submit" className="btn btn-ghost text-sm">
+                        Update
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 {/* Which events were put forward, and which one won. Editing

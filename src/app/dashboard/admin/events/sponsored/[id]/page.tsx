@@ -7,13 +7,30 @@ import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
-import { adminUpdateParticipation, adminMarkNoShow } from "../../../marketplace-actions";
+import {
+  adminUpdateParticipation,
+  adminMarkNoShow,
+  issueRewardCode,
+} from "../../../marketplace-actions";
 import { formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
 import { EventEditForm } from "./EventEditForm";
 import { SelectionDrawForm } from "./SelectionDrawForm";
+import { ProofsSection } from "./ProofsSection";
+import { RewardEngineSection } from "./RewardEngineSection";
+import { ArtistSplitSection } from "./ArtistSplitSection";
+import { ChangeRequestsSection } from "./ChangeRequestsSection";
+import { InvoiceSection } from "./InvoiceSection";
+import type {
+  Invoice,
+  RewardCode,
+  SponsoredEventChangeRequest,
+  SponsoredEventProof,
+  SponsoredEventRewardTier,
+  TicketSalesReport,
+} from "@/lib/types";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
@@ -74,6 +91,11 @@ export default async function AdminSponsoredDetailPage({
       participation_deadline: string | null;
       artist_profile_id: string | null;
       attendance_qr_token: string;
+      artist_fee_gbp: number | null;
+      artist_upfront_gbp: number | null;
+      artist_upfront_paid_at: string | null;
+      artist_remainder_gbp: number | null;
+      artist_remainder_released_at: string | null;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: { reference: string; description: string } | null;
       event_listings: {
@@ -84,7 +106,15 @@ export default async function AdminSponsoredDetailPage({
     }>();
   if (!event) notFound();
 
-  const [{ data: partRows }, { data: artist }] = await Promise.all([
+  const [
+    { data: partRows },
+    { data: artist },
+    { data: proofRows },
+    { data: tierRows },
+    { data: codeRows },
+    { data: reportRows },
+    { data: changeRows },
+  ] = await Promise.all([
     supabase
       .from("participations")
       .select("*, profiles(full_name, email)")
@@ -97,7 +127,44 @@ export default async function AdminSponsoredDetailPage({
           .eq("id", event.artist_profile_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("sponsored_event_proofs")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("sponsored_event_reward_tiers")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("rank"),
+    supabase
+      .from("reward_codes")
+      .select("*")
+      .eq("sponsored_event_id", id),
+    supabase
+      .from("ticket_sales_reports")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("sponsored_event_change_requests")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  const { data: invoiceRows } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("sponsored_event_id", id)
+    .order("created_at", { ascending: false });
+
+  const proofs = (proofRows ?? []) as SponsoredEventProof[];
+  const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
+  const rewardCodes = (codeRows ?? []) as RewardCode[];
+  const salesReports = (reportRows ?? []) as TicketSalesReport[];
+  const changeRequests = (changeRows ?? []) as SponsoredEventChangeRequest[];
+  const invoices = (invoiceRows ?? []) as Invoice[];
 
   const participantsRaw = (partRows ?? []) as Row[];
   const participants = await Promise.all(
@@ -361,6 +428,24 @@ export default async function AdminSponsoredDetailPage({
         )}
       </div>
 
+      <ProofsSection eventId={event.id} proofs={proofs} />
+
+      <RewardEngineSection
+        eventId={event.id}
+        tiers={rewardTiers}
+        codes={rewardCodes}
+      />
+
+      <ArtistSplitSection
+        eventId={event.id}
+        event={event}
+        reports={salesReports}
+      />
+
+      <ChangeRequestsSection eventId={event.id} requests={changeRequests} />
+
+      <InvoiceSection eventId={event.id} invoices={invoices} />
+
       {/* Admin override of the deal's details. The parties themselves can't
           touch a confirmed sponsorship, so this is the only route to moving a
           deadline that has passed or fixing a budget (3 Aug standup). */}
@@ -590,6 +675,33 @@ export default async function AdminSponsoredDetailPage({
                       </button>
                     </form>
                   )}
+                  {rewardTiers.length > 0 &&
+                    (p.status === "attendance_verified" ||
+                      p.status === "reward_released") &&
+                    !rewardCodes.some((c) => c.participation_id === p.id) && (
+                      <form
+                        action={issueRewardCode}
+                        className="flex items-center gap-1.5"
+                      >
+                        <input type="hidden" name="event_id" value={event.id} />
+                        <input type="hidden" name="participation_id" value={p.id} />
+                        <select
+                          name="tier_id"
+                          className="select w-auto py-1 text-xs"
+                          aria-label="Reward tier"
+                          defaultValue={rewardTiers[0]?.id}
+                        >
+                          {rewardTiers.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="submit" className="btn btn-ghost text-sm">
+                          Issue code
+                        </button>
+                      </form>
+                    )}
                   {!p.selected && p.status !== "rejected" && (
                     <AdminBtn
                       eventId={event.id}

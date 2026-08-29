@@ -55,6 +55,43 @@ export interface Plan {
   updated_at: string;
 }
 
+export interface CampaignPackage {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  participant_count: number | null;
+  price_gbp: number | null;
+  is_custom_price: boolean;
+  min_price_gbp: number | null;
+  price_increment_gbp: number | null;
+  platform_margin_gbp: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+
+export interface Invoice {
+  id: string;
+  reference: string;
+  sponsored_event_id: string | null;
+  campaign_id: string | null;
+  brand_id: string;
+  amount_gbp: number;
+  status: InvoiceStatus;
+  external_invoice_ref: string | null;
+  sent_at: string | null;
+  sent_by: string | null;
+  paid_at: string | null;
+  due_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Brand {
   id: string;
   profile_id: string;
@@ -191,6 +228,47 @@ export interface Campaign {
   manager_phone: string | null;
   matched_listing_id: string | null;
   status: CampaignStatus;
+  campaign_package_id: string | null;
+  /** Snapshotted from campaign_packages at creation — doesn't move if the
+   * package's own margin is edited later. */
+  package_platform_margin_gbp: number | null;
+  package_participant_count: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CampaignIntakeStatus =
+  | "submitted"
+  | "in_review"
+  | "converted"
+  | "declined";
+
+/** A brand's campaign request, before admin turns it into a real Campaign. */
+export interface CampaignIntakeRequest {
+  id: string;
+  reference: string;
+  brand_id: string;
+  description: string;
+  budget_expectation_gbp: number | null;
+  category: string | null;
+  category_other: string | null;
+  preferred_location: string | null;
+  preferred_timeline: string | null;
+  target_name: string | null;
+  reward_rules: string | null;
+  expected_outcomes: string | null;
+  additional_info: string | null;
+  suggested_event_note: string | null;
+  suggested_event_url: string | null;
+  manager_name: string;
+  manager_email: string;
+  manager_phone: string;
+  image_url: string | null;
+  status: CampaignIntakeStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  decline_reason: string | null;
+  converted_campaign_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -291,6 +369,14 @@ export interface SponsoredEvent {
   /** Timestamptz since 0008 — carries a time of day, not just a date. */
   participation_deadline: string | null;
   status: SponsorshipStatus;
+  /** What the platform owes the artist for this event — separate from
+   * remaining_budget_gbp, which is exclusively the audience reward pool. */
+  artist_fee_gbp: number | null;
+  artist_upfront_gbp: number | null;
+  artist_upfront_paid_at: string | null;
+  artist_remainder_gbp: number | null;
+  artist_remainder_released_at: string | null;
+  artist_remainder_released_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -301,6 +387,90 @@ export interface SponsoredEventAsset {
   url: string;
   description: string | null;
   uploaded_by: string | null;
+  created_at: string;
+}
+
+export type SponsoredEventProofType = "social_mention" | "onsite_branding";
+export type SponsoredEventProofStatus = "submitted" | "approved" | "rejected";
+
+export interface SponsoredEventProof {
+  id: string;
+  sponsored_event_id: string;
+  proof_type: SponsoredEventProofType;
+  url: string;
+  description: string | null;
+  uploaded_by: string;
+  status: SponsoredEventProofStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  created_at: string;
+}
+
+export interface SponsoredEventRewardTier {
+  id: string;
+  sponsored_event_id: string;
+  label: string;
+  rank: number;
+  participant_cap: number | null;
+  reward_description: string | null;
+  code_type: "discount" | "merch" | null;
+  value_label: string | null;
+  value_gbp: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RewardCodeType = "discount" | "merch";
+export type RewardCodeStatus = "issued" | "redeemed" | "expired" | "void";
+
+export interface RewardCode {
+  id: string;
+  code: string;
+  sponsored_event_id: string;
+  participation_id: string | null;
+  tier_id: string | null;
+  code_type: RewardCodeType;
+  value_label: string | null;
+  value_gbp: number | null;
+  status: RewardCodeStatus;
+  issued_by: string | null;
+  issued_at: string;
+  redeemed_at: string | null;
+  redeemed_by: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface TicketSalesReport {
+  id: string;
+  sponsored_event_id: string;
+  submitted_by: string;
+  tickets_sold: number | null;
+  gross_revenue_gbp: number | null;
+  report_file_path: string | null;
+  notes: string | null;
+  status: "submitted" | "reviewed";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export type SponsoredEventChangeRequestStatus =
+  | "pending"
+  | "approved"
+  | "declined";
+
+export interface SponsoredEventChangeRequest {
+  id: string;
+  sponsored_event_id: string;
+  requested_by: string;
+  summary: string;
+  requested_changes: Record<string, unknown> | null;
+  status: SponsoredEventChangeRequestStatus;
+  admin_response: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
   created_at: string;
 }
 

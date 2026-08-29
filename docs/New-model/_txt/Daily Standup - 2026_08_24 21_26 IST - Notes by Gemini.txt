@@ -1,0 +1,41 @@
+Aug 24, 2026
+[Heading 2] Daily Standup
+Invited Ketan Khamgaonkar Sakshi Gulati
+Attachments Daily Standup Notes - Daily Standup
+[Heading 3] Summary
+The meeting outlined campaign portal structures and reporting features, while confirming the administrative workflow for brand management.
+
+Campaign and Pricing Structures
+Tiered pricing models and minimum custom package requirements were proposed for the brand portal. Administrative teams retain full control over campaign creation to ensure correct profile linking.
+
+Reporting and Financial Workflows
+A split payment model was decided to incentivize artist performance and engagement. Anonymized performance reporting and survey incentives were prioritized to maintain data quality.
+
+Operational and Technical Requirements
+System flexibility allows event modifications up to 2 days prior. Proprietary survey tools will undergo feasibility reviews for data compliance and quality control.
+[Heading 3] Decisions
+Aligned
+Campaign package pricing structure The campaign pricing structure is established with a 2,500 starter tier, 3,750 and 5,000 mid-tiers, and a minimum 6,000 threshold for custom packages.
+Admin-only campaign creation policy The platform will restrict campaign creation to the admin, who will configure campaign details, packages, and questions rather than allowing sponsors to create them directly.
+Artist payment release condition The remaining artist payment will be released only after the submission of a report verifying ticket sales.
+Event change validity period Sponsors are permitted to change the event associated with a campaign up to a maximum of two days before the event date.
+Internal survey tool development strategy The platform will develop an internal survey system rather than relying on external third-party integrations to manage compliance and data quality.
+We've updated the Decisions section using your feedback.
+Let us know what you think: Helpful or Not Helpful
+[Heading 3] Next steps
+[Ketan Khamgaonkar] Review Survey Document: Evaluate the provided documentation detailing brand portal changes and survey form integration options.
+[Ketan Khamgaonkar] Determine Form Strategy: Assess the feasibility of building custom survey forms compared to using third party services and report the technical findings by tomorrow.
+[Heading 3] Details
+Opening and Arrival: Sakshi Gulati and Ketan Khamgaonkar checked in regarding their schedules and recent travels to start the meeting.
+Campaign Package Structure: Sakshi Gulati outlined a tiered pricing model for the brand portal, proposing a starter package at 2500 for 50 incentivized participants, 3750 for 75, and 5000 for 100 participants. They suggested a minimum custom package price of 6000 to ensure sufficient margins, noting that any package below 2500 would not be viable for the business.
+Campaign Dashboard and Reporting: Sakshi Gulati described the dashboard's functionality, which will allow sponsors to track campaign spending, ticket incentivization, and survey completion rates. They suggested that post-event surveys should be exclusive to premium or growth packages, and that the portal should provide audience insights, measurement metrics, and downloadable performance reports.
+Campaign Creation and Administrative Role: Sakshi Gulati clarified that while brands will submit campaign details—such as budget, objective, and location—via the portal, the administrative team will create the campaigns to ensure proper linking between brand and artist profiles. Sponsors will not have the ability to create these campaigns independently.
+Participant Incentives and Verification: To encourage participation in pre- and post-event surveys, the platform will utilize merchandise discount codes and platform points as incentives. Participant data will be presented to brands in an anonymized format, reflecting verified attendance and completion status. The portal will also support administrative features such as waitlists and newsletter subscriptions.
+Artist Payment and Financial Workflow: Regarding artist compensation, Sakshi Gulati and Ketan Khamgaonkar discussed a split-payment model. They proposed paying a portion of the fee upfront and releasing the remainder only after the artist submits a report verifying the number of tickets sold, thereby ensuring the artist remains motivated to drive engagement.
+Flexibility and Event Modifications: Ketan Khamgaonkar and Sakshi Gulati agreed that the system needs to accommodate changes to events or artists up to two days before an event takes place. Similarly, any requests by brands to change their budget or campaign details will be handled through administrative intervention and direct conversation with the team.
+Operational Timeline and Performance Marketing: Sakshi Gulati explained that configuring a campaign takes several days to a week after payment is received. Once live, the portal will allow sponsors to view data. Ketan Khamgaonkar suggested leveraging past campaign data—such as the number of completed surveys and attendance figures—as marketing material to demonstrate success to potential sponsors.
+Administrative Control Over Packages: Ketan Khamgaonkar stressed that the system should allow administrators to fully configure and manage campaign packages. This would enable the team to add, remove, or modify package tiers and custom options dynamically as requirements evolve, rather than being restricted to a static set of packages.
+Survey Regulation and Quality Control: Sakshi Gulati noted that the platform must adhere to industry standards regarding market research, which are distinct from direct marketing regulations. To ensure high-quality data, they discussed implementing a "quality engine" to detect low-quality responses, such as identifying participants who complete surveys too quickly based on timing checks, or those who provide contradictory answers in open-text fields.
+Technical Implementation of Survey Forms: The pair discussed the technical approach to building surveys, considering whether to embed third-party services like Typeform or Jotform, or to build a proprietary solution. Ketan Khamgaonkar confirmed that the team has the capability to build their own forms, and they will investigate the technical feasibility and data compliance requirements further.
+You should review Gemini's notes to make sure they're accurate. Get tips and learn how Gemini takes notes
+How is the quality of these specific notes? Take a short survey to let us know your feedback, including how helpful the notes were for your needs.
