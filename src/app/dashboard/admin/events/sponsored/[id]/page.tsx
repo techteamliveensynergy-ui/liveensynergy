@@ -20,7 +20,6 @@ import { EventEditForm } from "./EventEditForm";
 import { SelectionDrawForm } from "./SelectionDrawForm";
 import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
-import { ArtistSplitSection } from "./ArtistSplitSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
 import type {
@@ -436,11 +435,8 @@ export default async function AdminSponsoredDetailPage({
         codes={rewardCodes}
       />
 
-      <ArtistSplitSection
-        eventId={event.id}
-        event={event}
-        reports={salesReports}
-      />
+      {/* Artist payment split is built but deliberately not shown yet —
+          money-movement UI held back pending a later go-ahead. */}
 
       <ChangeRequestsSection eventId={event.id} requests={changeRequests} />
 

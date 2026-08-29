@@ -29,7 +29,6 @@ import {
 import { ProofUploadSection } from "./ProofUploadSection";
 import { RewardEngineDisplay } from "./RewardEngineDisplay";
 import { ChangeRequestSection } from "./ChangeRequestSection";
-import { ArtistPaymentSection } from "./ArtistPaymentSection";
 
 export const metadata = { title: "Sponsored event" };
 
@@ -577,13 +576,8 @@ export default async function SponsoredEventPage({
         />
       )}
 
-      {isArtist && (
-        <ArtistPaymentSection
-          eventId={event.id}
-          event={event}
-          reports={salesReports}
-        />
-      )}
+      {/* Artist payment split is built but deliberately not shown yet —
+          money-movement UI held back pending a later go-ahead. */}
 
       {/* Attendance check-in */}
       {(isBrand || isArtist) && checkInQr && (
