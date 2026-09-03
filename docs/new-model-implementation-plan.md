@@ -177,6 +177,21 @@ and nothing in `participations` references a survey step at all.
    remaining" counter and the reward tiers, per the new doc's "Sponsorship
    Overview" and "Reward Engine" sections.
 
+**Built (items 3+4, migration `0036`):** `src/lib/data/reward-gate.ts`
+gates both `issueRewardCode()` and `adminUpdateParticipation()`'s `release`
+case on the relevant survey's `quality_status = 'pass'` — post-event survey
+takes precedence over pre-event when a campaign has both, and a campaign
+with no configured survey at all still issues freely (admin discretion,
+unchanged, for every pre-0032 sponsorship). The admin sponsored-event page
+shows a per-participant survey-gate pill and disables the release/issue
+controls with a reason when blocked; the brand/artist page shows a survey-
+completion count (via the new `sponsored_event_survey_completions` view,
+completion only — no verdict). **Not built:** item 1's automatic
+first-N-completions tiering (tiers stay admin-configured with their own
+`participant_cap`, same as before this session) and a remaining-budget
+guardrail on top of the survey gate (`reward_codes.value_gbp` still doesn't
+draw down `remaining_budget_gbp` — a money-semantics decision, deferred).
+
 ## 6. Phase 5 — Sponsored events screen additions
 
 **Current state:** `sponsored/actions.ts:82-213` (`createSponsoredEvent`)

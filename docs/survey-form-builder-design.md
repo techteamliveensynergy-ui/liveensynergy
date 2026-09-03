@@ -282,7 +282,20 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
    `/dashboard/admin/surveys/responses` review queue (list + 4-block detail
    screen: meta, signal breakdown, full answer transcript, pass/review/reject
    decision) at `src/app/dashboard/admin/surveys/responses/`.
-5. Reward-tier gating hookup (implementation plan Phase 4).
+5. **Done (migration `0036`).** Reward-tier gating hookup (implementation
+   plan Phase 4) — `src/lib/data/reward-gate.ts`'s `decideRewardGate()`
+   derives which survey kind gates a campaign (post-event takes precedence
+   over pre-event when both exist) and maps its `quality_status` straight to
+   a gate verdict; `issueRewardCode()` and `adminUpdateParticipation()`'s
+   `release` case both refuse when the gate disallows, redirecting with
+   `?notice=gate` (the same "form unmounts on success" reasoning as
+   `runSelectionDraw()`'s `?notice=draw`). A campaign with no configured
+   survey gates `open` and issues freely — every pre-0032 sponsorship has no
+   template, so the gate only ever *removes* discretion from campaigns that
+   opted into surveys. No admin override past a refusal was built (the
+   review queue's own verdict flip *is* the override); the remaining-budget
+   guardrail on top of the survey gate is a separate, deferred money-
+   semantics decision.
 
 ## 7. Open questions
 

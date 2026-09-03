@@ -14,6 +14,7 @@ import type {
   SponsoredEventChangeRequest,
   SponsoredEventProof,
   SponsoredEventRewardTier,
+  SponsoredEventSurveyCompletion,
   TicketSalesReport,
 } from "@/lib/types";
 import { eventStartInstant, formatEventDateTime } from "@/lib/event-time";
@@ -112,9 +113,12 @@ export default async function SponsoredEventPage({
       event.campaign_id
         ? supabase
             .from("campaigns")
-            .select("package_platform_margin_gbp")
+            .select("package_platform_margin_gbp, package_participant_count")
             .eq("id", event.campaign_id)
-            .maybeSingle<{ package_platform_margin_gbp: number | null }>()
+            .maybeSingle<{
+              package_platform_margin_gbp: number | null;
+              package_participant_count: number | null;
+            }>()
         : Promise.resolve({ data: null }),
       supabase
         .from("sponsored_event_proofs")
@@ -137,6 +141,13 @@ export default async function SponsoredEventPage({
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: false }),
     ]);
+
+  const { data: completionRows } = await supabase
+    .from("sponsored_event_survey_completions")
+    .select("sponsored_event_id, participation_id, kind, submitted_at")
+    .eq("sponsored_event_id", id);
+  const completions = (completionRows ?? []) as SponsoredEventSurveyCompletion[];
+  const completedParticipations = new Set(completions.map((c) => c.participation_id));
 
   const listing = listingRow as EventListing | null;
   const assets = (assetRows ?? []) as SponsoredEventAsset[];
@@ -618,6 +629,15 @@ export default async function SponsoredEventPage({
         <div className="card p-6">
           <h2 className="text-lg font-semibold">
             Participants ({participations.length})
+            {completions.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-[var(--color-ink-soft)]">
+                · {completedParticipations.size} survey
+                {completedParticipations.size === 1 ? "" : "s"} completed
+                {campaignRow?.package_participant_count != null
+                  ? ` of ${campaignRow.package_participant_count} campaign places`
+                  : ""}
+              </span>
+            )}
           </h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Verify attendance here. Who gets a reward is drawn at random by the
@@ -644,6 +664,11 @@ export default async function SponsoredEventPage({
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       <StatusBadge status={p.status} />
+                      {completedParticipations.has(p.id) && (
+                        <span className="text-xs text-[var(--color-olive-deep)]">
+                          ✓ Survey completed
+                        </span>
+                      )}
                       {p.selected && (
                         <span className="text-xs text-[var(--color-olive-deep)]">selected</span>
                       )}

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { netSponsorshipBudget, netForCampaign, roundMoney } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { rewardGateFor } from "@/lib/data/reward-gate";
 import { requireAdmin } from "@/lib/profile";
 
 export interface MarketplaceState {
@@ -542,6 +543,21 @@ export async function adminUpdateParticipation(formData: FormData) {
   const op = str(formData.get("op"));
   if (!id || !op) return;
 
+  // Same gate as issueRewardCode() — this is the *other* reward-release
+  // path (the pre-event ticket subsidy, admin-typed amount), and it moves
+  // real money out of remaining_budget_gbp below, so it needs the same
+  // check, not just the discount/merch-code path.
+  if (op === "release") {
+    if (!eventId) return;
+    const { data: ev } = await supabase
+      .from("sponsored_events")
+      .select("campaign_id")
+      .eq("id", eventId)
+      .maybeSingle<{ campaign_id: string | null }>();
+    const gate = await rewardGateFor({ campaignId: ev?.campaign_id ?? null, participationId: id });
+    if (!gate.allowed) refuseGate(eventId, gate.code, id);
+  }
+
   const patch: Record<string, unknown> = {};
   switch (op) {
     case "select":
@@ -891,6 +907,17 @@ export async function upsertRewardTiers(
   return {};
 }
 
+/** Refuses issuance/release with a reason the admin page renders as a banner
+ * — the same redirect-with-notice shape as `runSelectionDraw()`, needed for
+ * the same reason (L6): the form that would show a returned error unmounts
+ * on the read that follows a redirect, since these are plain server-component
+ * `<form action={fn}>`s with no client state of their own. */
+function refuseGate(eventId: string, code: string, who: string): never {
+  redirect(
+    `/dashboard/admin/events/sponsored/${eventId}?notice=gate&gate=${encodeURIComponent(code)}&who=${encodeURIComponent(who)}`,
+  );
+}
+
 export async function issueRewardCode(formData: FormData) {
   const { supabase, userId } = await requireAdmin();
   const eventId = str(formData.get("event_id"));
@@ -898,21 +925,63 @@ export async function issueRewardCode(formData: FormData) {
   const tierId = str(formData.get("tier_id"));
   if (!eventId || !participationId) return;
 
-  // TODO(survey-gate): once survey_responses exists
-  // (docs/survey-form-builder-design.md §2/§5), reject issuance unless
-  //   exists(select 1 from survey_responses sr where sr.participation_id = participationId and sr.quality_status = 'pass')
-  // Until then, issuance is pure admin discretion — same trust model as
-  // adminUpdateParticipation's `release` case.
+  // One fetch, widened to cover every check below instead of the narrow
+  // post-insert lookup this used to do — also closes a real ownership gap:
+  // a hand-posted participation_id from another event previously produced a
+  // mismatched-parent reward_codes row (CLAUDE.md's "mutations always
+  // additionally scoped by owner id").
+  const { data: participation } = await supabase
+    .from("participations")
+    .select("id, status, sponsored_event_id, audience_profile_id, sponsored_events(name, campaign_id)")
+    .eq("id", participationId)
+    .maybeSingle<{
+      id: string;
+      status: string;
+      sponsored_event_id: string;
+      audience_profile_id: string;
+      sponsored_events: { name: string; campaign_id: string | null } | null;
+    }>();
+  if (!participation || participation.sponsored_event_id !== eventId) {
+    refuseGate(eventId, "mismatch", participationId);
+  }
+  if (!["attendance_verified", "reward_released"].includes(participation.status)) {
+    refuseGate(eventId, "status", participationId);
+  }
 
-  let tier: { code_type: string; value_label: string | null; value_gbp: number | null } | null = null;
+  let tier: {
+    label: string;
+    participant_cap: number | null;
+    code_type: string;
+    value_label: string | null;
+    value_gbp: number | null;
+  } | null = null;
   if (tierId) {
     const { data } = await supabase
       .from("sponsored_event_reward_tiers")
-      .select("code_type, value_label, value_gbp")
+      .select("label, participant_cap, code_type, value_label, value_gbp")
       .eq("id", tierId)
+      .eq("sponsored_event_id", eventId)
       .maybeSingle();
+    if (!data) refuseGate(eventId, "tier", participationId);
     tier = data;
   }
+
+  if (tier?.participant_cap != null) {
+    // Void doesn't count against the cap — a voided code shouldn't
+    // permanently consume a capped slot.
+    const { count } = await supabase
+      .from("reward_codes")
+      .select("id", { count: "exact", head: true })
+      .eq("tier_id", tierId)
+      .neq("status", "void");
+    if ((count ?? 0) >= tier.participant_cap) refuseGate(eventId, "cap", participationId);
+  }
+
+  const gate = await rewardGateFor({
+    campaignId: participation.sponsored_events?.campaign_id ?? null,
+    participationId,
+  });
+  if (!gate.allowed) refuseGate(eventId, gate.code, participationId);
 
   const { data: created, error } = await supabase
     .from("reward_codes")
@@ -925,28 +994,20 @@ export async function issueRewardCode(formData: FormData) {
       value_gbp: tier?.value_gbp ?? num(formData.get("value_gbp")),
       issued_by: userId,
     })
-    .select("code, sponsored_events(name)")
-    .single<{ code: string; sponsored_events: { name: string } | null }>();
-  if (error) return;
+    .select("code")
+    .single<{ code: string }>();
+  if (error) refuseGate(eventId, "failed", participationId);
 
-  const { data: participation } = await supabase
-    .from("participations")
-    .select("audience_profile_id")
-    .eq("id", participationId)
-    .maybeSingle<{ audience_profile_id: string }>();
-
-  if (participation) {
-    await notify({
-      eventKey: "reward.code_issued",
-      recipientProfileId: participation.audience_profile_id,
-      link: "/dashboard/rewards",
-      variables: {
-        event_name: created.sponsored_events?.name ?? "your event",
-        code: created.code,
-        value_label: tier?.value_label ?? "a reward",
-      },
-    });
-  }
+  await notify({
+    eventKey: "reward.code_issued",
+    recipientProfileId: participation.audience_profile_id,
+    link: "/dashboard/rewards",
+    variables: {
+      event_name: participation.sponsored_events?.name ?? "your event",
+      code: created.code,
+      value_label: tier?.value_label ?? "a reward",
+    },
+  });
 
   revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
 }

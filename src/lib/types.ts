@@ -688,3 +688,12 @@ export interface SurveyQualityWeight {
   updated_by: string | null;
   updated_at: string;
 }
+
+/** Completion only, no verdict — reads `sponsored_event_survey_completions`
+ * (0036), the brand/artist-safe view with no quality columns to leak. */
+export interface SponsoredEventSurveyCompletion {
+  sponsored_event_id: string;
+  participation_id: string;
+  kind: SurveyTemplateKind;
+  submitted_at: string;
+}

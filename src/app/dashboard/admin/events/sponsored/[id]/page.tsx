@@ -12,6 +12,7 @@ import {
   adminMarkNoShow,
   issueRewardCode,
 } from "../../../marketplace-actions";
+import { rewardGatesForEvent, type RewardGate } from "@/lib/data/reward-gate";
 import { formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
@@ -45,6 +46,46 @@ function statusesFrom(current: string) {
   return i === -1 ? [] : SPONSORED_STATUSES.slice(i);
 }
 
+/**
+ * Copy for the `?notice=gate&gate=…` banner — a superset of RewardGateCode:
+ * `mismatch`/`status`/`tier`/`cap`/`failed` are issueRewardCode()'s own
+ * pre-gate refusals (ownership, tier lookup, tier cap, insert failure),
+ * never produced by decideRewardGate() itself.
+ */
+const GATE_NOTICES: Record<string, string> = {
+  missing: "No post-event survey response yet — nothing to check.",
+  pending: "Survey submitted but not scored yet. Try again shortly.",
+  review: "Survey is in the review queue — approve or reject it there first.",
+  reject: "Survey failed the quality check — no reward code.",
+  mismatch: "That participant doesn't belong to this sponsorship.",
+  status: "Verify attendance before issuing or releasing a reward.",
+  tier: "That reward tier no longer exists on this event.",
+  cap: "That tier's participant cap has already been reached.",
+  failed: "Something went wrong issuing the code. Please try again.",
+};
+
+const GATE_TINTS: Record<RewardGate["code"], string> = {
+  open: "",
+  pass: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  missing: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
+  pending: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  review: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  reject: "bg-[var(--color-pink)] text-[var(--color-accent)]",
+};
+
+function SurveyGatePill({ gate }: { gate: RewardGate | undefined }) {
+  if (!gate || gate.code === "open") return null;
+  const label = gate.code === "pass" ? "survey passed" : `survey ${gate.code}`;
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${GATE_TINTS[gate.code]}`}
+      title={gate.note}
+    >
+      {label}
+    </span>
+  );
+}
+
 type Row = Participation & { profiles: { full_name: string | null; email: string | null } | null };
 
 function Money({ value }: { value: number | null | undefined }) {
@@ -56,11 +97,11 @@ export default async function AdminSponsoredDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string; drawn?: string; pool?: string }>;
+  searchParams: Promise<{ notice?: string; drawn?: string; pool?: string; gate?: string; who?: string }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
-  const { notice, drawn, pool } = await searchParams;
+  const { notice, drawn, pool, gate: gateNotice, who } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
@@ -74,6 +115,7 @@ export default async function AdminSponsoredDetailPage({
       reference: string;
       name: string;
       status: string;
+      campaign_id: string | null;
       event_date: string | null;
       start_time: string | null;
       timezone: string;
@@ -175,6 +217,20 @@ export default async function AdminSponsoredDetailPage({
         : null,
     })),
   );
+
+  const { gates } = await rewardGatesForEvent({
+    campaignId: event.campaign_id,
+    participationIds: participants.map((p) => p.id),
+  });
+  // Non-void codes issued per tier, so a capped tier's option can show how
+  // much of it is left and be disabled once full — mirrors the same count
+  // issueRewardCode() itself refuses on server-side.
+  const issuedByTier = new Map<string, number>();
+  for (const c of rewardCodes) {
+    if (c.tier_id && c.status !== "void") {
+      issuedByTier.set(c.tier_id, (issuedByTier.get(c.tier_id) ?? 0) + 1);
+    }
+  }
 
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = await qrCodeDataUrl(checkInUrl);
@@ -543,6 +599,21 @@ export default async function AdminSponsoredDetailPage({
           </p>
         )}
 
+        {/* Same "form unmounts on success, so report through the URL instead"
+            reasoning as the draw notice above — issueRewardCode() and
+            adminUpdateParticipation()'s release case both redirect here on
+            refusal rather than returning an error a vanishing form couldn't
+            show. */}
+        {notice === "gate" && gateNotice && (
+          <p className="mt-4 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+            {(() => {
+              const person = who && participants.find((p) => p.id === who);
+              return person ? `${person.profiles?.full_name ?? "This participant"} — ` : "";
+            })()}
+            {GATE_NOTICES[gateNotice] ?? "That action wasn't allowed."}
+          </p>
+        )}
+
         {/* The draw itself. Hidden once there's nobody left to draw, so a
             finished event doesn't show a dead control. */}
         {waiting > 0 && (
@@ -576,6 +647,7 @@ export default async function AdminSponsoredDetailPage({
                       {p.profiles?.full_name ?? "Unnamed"}
                     </span>
                     <StatusBadge status={p.status} />
+                    <SurveyGatePill gate={gates.get(p.id)} />
                     {p.selected && (
                       <span className="text-xs text-[var(--color-olive-deep)]">
                         selected
@@ -648,56 +720,80 @@ export default async function AdminSponsoredDetailPage({
                         </button>
                       </form>
                     )}
-                  {p.status === "attendance_verified" && (
-                    <form
-                      action={adminUpdateParticipation}
-                      className="flex items-center gap-1.5"
-                    >
-                      <input type="hidden" name="event_id" value={event.id} />
-                      <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="op" value="release" />
-                      <input
-                        name="reward_amount_gbp"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        required
-                        placeholder="£"
-                        className="input w-20 px-2 py-1 text-sm"
-                        aria-label="Reward amount"
-                      />
-                      <button type="submit" className="btn btn-ghost text-sm">
-                        Release
-                      </button>
-                    </form>
-                  )}
+                  {p.status === "attendance_verified" && (() => {
+                    const gate = gates.get(p.id);
+                    const blocked = !!gate && !gate.allowed;
+                    return (
+                      <form
+                        action={adminUpdateParticipation}
+                        className="flex items-center gap-1.5"
+                        title={blocked ? gate!.note : undefined}
+                      >
+                        <input type="hidden" name="event_id" value={event.id} />
+                        <input type="hidden" name="id" value={p.id} />
+                        <input type="hidden" name="op" value="release" />
+                        <input
+                          name="reward_amount_gbp"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          required
+                          disabled={blocked}
+                          placeholder="£"
+                          className="input w-20 px-2 py-1 text-sm"
+                          aria-label="Reward amount"
+                        />
+                        <button type="submit" className="btn btn-ghost text-sm" disabled={blocked}>
+                          Release
+                        </button>
+                        {blocked && (
+                          <span className="text-xs text-[var(--color-accent)]">{gate!.note}</span>
+                        )}
+                      </form>
+                    );
+                  })()}
                   {rewardTiers.length > 0 &&
                     (p.status === "attendance_verified" ||
                       p.status === "reward_released") &&
-                    !rewardCodes.some((c) => c.participation_id === p.id) && (
-                      <form
-                        action={issueRewardCode}
-                        className="flex items-center gap-1.5"
-                      >
-                        <input type="hidden" name="event_id" value={event.id} />
-                        <input type="hidden" name="participation_id" value={p.id} />
-                        <select
-                          name="tier_id"
-                          className="select w-auto py-1 text-xs"
-                          aria-label="Reward tier"
-                          defaultValue={rewardTiers[0]?.id}
+                    !rewardCodes.some((c) => c.participation_id === p.id) &&
+                    (() => {
+                      const gate = gates.get(p.id);
+                      const blocked = !!gate && !gate.allowed;
+                      return (
+                        <form
+                          action={issueRewardCode}
+                          className="flex items-center gap-1.5"
+                          title={blocked ? gate!.note : undefined}
                         >
-                          {rewardTiers.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
-                        <button type="submit" className="btn btn-ghost text-sm">
-                          Issue code
-                        </button>
-                      </form>
-                    )}
+                          <input type="hidden" name="event_id" value={event.id} />
+                          <input type="hidden" name="participation_id" value={p.id} />
+                          <select
+                            name="tier_id"
+                            className="select w-auto py-1 text-xs"
+                            aria-label="Reward tier"
+                            disabled={blocked}
+                            defaultValue={rewardTiers[0]?.id}
+                          >
+                            {rewardTiers.map((t) => {
+                              const issued = issuedByTier.get(t.id) ?? 0;
+                              const full = t.participant_cap != null && issued >= t.participant_cap;
+                              return (
+                                <option key={t.id} value={t.id} disabled={full}>
+                                  {t.label}
+                                  {t.participant_cap != null ? ` · ${issued}/${t.participant_cap}` : ""}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <button type="submit" className="btn btn-ghost text-sm" disabled={blocked}>
+                            Issue code
+                          </button>
+                          {blocked && (
+                            <span className="text-xs text-[var(--color-accent)]">{gate!.note}</span>
+                          )}
+                        </form>
+                      );
+                    })()}
                   {!p.selected && p.status !== "rejected" && (
                     <AdminBtn
                       eventId={event.id}

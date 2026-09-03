@@ -226,7 +226,12 @@ RLS is on every table: owner-only read/write via `profile_id = auth.uid()`,
 signed-in user (audience discovery), `contact_messages` allows public insert.
 Public profile pages read through `public_*_profiles` **views** with explicit
 column lists — adding a profile column that should be public means re-declaring
-the view too (that's what 0016 was).
+the view too (that's what 0016 was). Same technique elsewhere a policy would
+leak a column RLS can't hide: `survey_form_questions` (0033) strips
+`config.expected_answer` from the sanitised participant read;
+`sponsored_event_survey_completions` (0036) lets a brand/artist see a
+survey-completion count without a `survey_responses` read policy that would
+also hand them `quality_score`.
 
 `campaigns`, `event_listings`, `sponsored_events` and `feedback_reports` each
 carry a human-facing sequential `reference` (`CMP-00001`, `EVT-`, `SPE-`,
