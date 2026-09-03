@@ -94,6 +94,18 @@ export async function saveSurveyQuestions(
     return { error: "Unpublish this survey before editing its questions." };
   }
 
+  // survey_answers.question_id is `on delete restrict` (migration 0033) —
+  // an unpublish -> edit -> republish cycle on a survey that already has
+  // responses would otherwise hit a raw foreign-key violation on the delete
+  // below. Refuse in advance with a readable message instead.
+  const { count: responseCount } = await supabase
+    .from("survey_responses")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId);
+  if (responseCount) {
+    return { error: "This survey already has responses — its questions can't be changed." };
+  }
+
   let drafts: SurveyQuestionDraft[];
   try {
     drafts = JSON.parse(String(formData.get("questions") ?? "[]"));

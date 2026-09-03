@@ -211,10 +211,33 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
    `kind`/`status`/`type` (see the migration's own note on why). Deferred:
    `survey_responses`/`survey_answers`, which land with step 2/4 below once
    there's something to write into them.
-2. Participant-facing renderer against a **hand-seeded** template (no
-   builder UI yet) — unblocks quality-engine development in parallel without
-   waiting on drag-and-drop to be finished. **Not started** — built out of
-   order relative to this list; see step 3.
+2. **Done (migration `0033`).** Participant-facing renderer at
+   `src/app/dashboard/surveys/[templateId]/`, against **real published
+   templates** created via the admin builder — the "hand-seeded template"
+   this step originally called for is moot now that step 3 shipped first.
+   Adds `survey_responses`/`survey_answers`, the `survey_participation_for()`
+   eligibility function (campaign → confirmed/completed sponsored event →
+   participation, gating post-event kind on `attendance_verified`/
+   `reward_released`), the sanitised `survey_form_questions` view (strips
+   `config.expected_answer`, excludes `hidden_field` rows), and the
+   `submit_survey_response()` RPC — the same "no client insert policy,
+   security-definer RPC instead" idiom as `redeem_reward_code()`. Per-question
+   `shown_at`/`answered_at` via `IntersectionObserver`, first-write-wins.
+   Bot/fraud screening (stage 1-2 of the build plan's §03) is explicitly
+   **not** included — see the `TODO(survey-stage-1)` in
+   `src/app/dashboard/surveys/[templateId]/actions.ts`.
+   **Found and fixed a real React 19 bug along the way**, worth flagging for
+   any other `<form action={formAction}>` + `useActionState` form in this
+   repo that holds meaningful in-progress state: React resets a form's native
+   controls after an action call resolves — success *or* an app-level
+   validation error alike, since returning `{ error }` doesn't "throw" from
+   React's own perspective. That's harmless for a single edit-in-place form
+   (a remount picks up correct fresh values either way — see the
+   `key={updated_at}` note on `SurveyTemplateForm`), but it silently wiped
+   every radio/checkbox answer on this multi-field participant form the
+   moment one question failed validation. Fixed by calling `formAction()`
+   from a plain `onSubmit` wrapped in `startTransition()`, sidestepping the
+   `<form action>` wiring (and its auto-reset) entirely.
 3. **Done.** Admin builder UI (§3) — palette, canvas, inspector,
    save/publish, at `src/app/dashboard/admin/surveys/`. Built ahead of step 2
    since it was the piece explicitly asked for first; it needed no

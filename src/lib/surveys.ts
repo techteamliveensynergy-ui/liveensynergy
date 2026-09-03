@@ -1,4 +1,6 @@
 import type {
+  SurveyAnswerValue,
+  SurveyQuestion,
   SurveyQuestionConfig,
   SurveyQuestionOption,
   SurveyQuestionType,
@@ -22,6 +24,8 @@ export interface SurveyQuestionSpec {
   /** Whether this type shows a prompt field — false only for hidden_field. */
   hasPrompt: boolean;
   configFields: FieldSpec[];
+  /** The JSON shape a valid answer takes. Mirrored by submit_survey_response() (0033). */
+  answerShape: "string" | "number" | "string[]" | "none";
 }
 
 /**
@@ -48,6 +52,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: true,
     hasPrompt: true,
     configFields: [],
+    answerShape: "string",
   },
   {
     type: "multiple_choice",
@@ -60,6 +65,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
       { name: "min_select", label: "Minimum selections", type: "text" },
       { name: "max_select", label: "Maximum selections", type: "text" },
     ],
+    answerShape: "string[]",
   },
   {
     type: "scale",
@@ -75,6 +81,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
       { name: "min_label", label: "Label at minimum", type: "text" },
       { name: "max_label", label: "Label at maximum", type: "text" },
     ],
+    answerShape: "number",
   },
   {
     type: "yes_no",
@@ -84,6 +91,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: false,
     hasPrompt: true,
     configFields: [],
+    answerShape: "string",
   },
   {
     type: "dropdown",
@@ -93,6 +101,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: true,
     hasPrompt: true,
     configFields: [],
+    answerShape: "string",
   },
   {
     type: "short_text",
@@ -102,6 +111,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: false,
     hasPrompt: true,
     configFields: [{ name: "max_length", label: "Max length", type: "text" }],
+    answerShape: "string",
   },
   {
     type: "long_text",
@@ -111,6 +121,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: false,
     hasPrompt: true,
     configFields: [{ name: "max_length", label: "Max length", type: "text" }],
+    answerShape: "string",
   },
   {
     type: "ranking",
@@ -120,6 +131,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     hasOptions: true,
     hasPrompt: true,
     configFields: [],
+    answerShape: "string[]",
   },
   {
     type: "number",
@@ -133,6 +145,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
       { name: "max", label: "Maximum", type: "text" },
       { name: "step", label: "Step", type: "text" },
     ],
+    answerShape: "number",
   },
   {
     type: "attention_check",
@@ -149,6 +162,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
         hint: "Never shown to the brand; used only to score the response.",
       },
     ],
+    answerShape: "string",
   },
   {
     type: "hidden_field",
@@ -165,6 +179,7 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
         options: HIDDEN_FIELD_SOURCES.map((s) => s.value),
       },
     ],
+    answerShape: "none",
   },
 ] as const;
 
@@ -277,5 +292,94 @@ export function validateQuestions(drafts: SurveyQuestionDraft[]): string | null 
       }
     }
   }
+  return null;
+}
+
+/** The client-side answer shape while a participant is filling in a survey. */
+export interface SurveyAnswerDraft {
+  question_id: string;
+  value: SurveyAnswerValue;
+  shown_at: string | null;
+  answered_at: string | null;
+}
+
+/** A fresh, empty answer value matching the question type's answer shape. */
+export function emptyAnswerFor(type: SurveyQuestionType): SurveyAnswerValue {
+  switch (questionSpec(type).answerShape) {
+    case "string[]":
+      return [];
+    case "number":
+    case "none":
+      return null;
+    default:
+      return "";
+  }
+}
+
+export function isAnswerEmpty(value: SurveyAnswerValue): boolean {
+  if (value == null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "string") return value.trim() === "";
+  return false;
+}
+
+/**
+ * Participant-side twin of `validateQuestions()` — takes `SurveyQuestion`
+ * *rows* (read from the `survey_form_questions` view), not builder drafts.
+ * Runs client-side for inline messages and again in the server action as a
+ * cheap pre-check, but `submit_survey_response()` (migration 0033) is the
+ * authoritative validator, because the browser can be bypassed.
+ */
+export function validateAnswers(
+  questions: SurveyQuestion[],
+  answers: SurveyAnswerDraft[],
+): string | null {
+  const byId = new Map(answers.map((a) => [a.question_id, a]));
+
+  for (const [i, q] of questions.entries()) {
+    const n = i + 1;
+    const spec = questionSpec(q.type);
+    const value = byId.get(q.id)?.value ?? null;
+
+    if (isAnswerEmpty(value)) {
+      if (q.required) return `Question ${n} needs an answer.`;
+      continue;
+    }
+
+    if (spec.answerShape === "string[]") {
+      const values = Array.isArray(value) ? value : [];
+      const validValues = new Set((q.options ?? []).map((o) => o.value));
+      if (values.some((v) => !validValues.has(v))) {
+        return `Question ${n} has an invalid answer.`;
+      }
+      if (new Set(values).size !== values.length) {
+        return `Question ${n} has duplicate selections.`;
+      }
+      if (q.type === "ranking" && values.length !== (q.options ?? []).length) {
+        return `Question ${n} must rank every option exactly once.`;
+      }
+      if (q.config.min_select != null && values.length < q.config.min_select) {
+        return `Question ${n} needs at least ${q.config.min_select} selections.`;
+      }
+      if (q.config.max_select != null && values.length > q.config.max_select) {
+        return `Question ${n} allows at most ${q.config.max_select} selections.`;
+      }
+    } else if (spec.answerShape === "string") {
+      if (typeof value !== "string") return `Question ${n} has an invalid answer.`;
+      if (q.options && q.options.length > 0) {
+        const validValues = new Set(q.options.map((o) => o.value));
+        if (!validValues.has(value)) return `Question ${n} has an invalid answer.`;
+      } else if (q.config.max_length != null && value.length > q.config.max_length) {
+        return `Question ${n} is too long.`;
+      }
+    } else if (spec.answerShape === "number") {
+      if (typeof value !== "number" || Number.isNaN(value)) {
+        return `Question ${n} must be a number.`;
+      }
+      if (q.config.min != null && value < q.config.min) return `Question ${n} is out of range.`;
+      if (q.config.max != null && value > q.config.max) return `Question ${n} is out of range.`;
+    }
+  }
+
   return null;
 }

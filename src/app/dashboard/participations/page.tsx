@@ -10,7 +10,7 @@ import {
 import { signedUrlFor } from "@/lib/storage";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
-import type { Participation, SponsoredEvent } from "@/lib/types";
+import type { Participation, SponsoredEvent, SurveyTemplate } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 import { addDays, formatDateTime } from "@/lib/format";
 import {
@@ -54,6 +54,38 @@ export default async function ParticipationsPage({
   const past = allRows.filter(isPast);
   const tab: "upcoming" | "past" = rawTab === "past" ? "past" : "upcoming";
   const rows = tab === "past" ? past : upcoming;
+
+  // Surveys tied to this audience member's campaigns. RLS (migration 0033)
+  // already scopes survey_templates reads to eligible respondents, so no
+  // extra campaign filter is needed on the query itself.
+  const campaignIds = Array.from(
+    new Set(allRows.map((r) => r.sponsored_events?.campaign_id).filter((id): id is string => Boolean(id))),
+  );
+  const [{ data: surveyTemplateRows }, { data: surveyResponseRows }] = await Promise.all([
+    campaignIds.length > 0
+      ? supabase
+          .from("survey_templates")
+          .select("id, campaign_id, kind, title")
+          .in("campaign_id", campaignIds)
+          .eq("status", "published")
+      : Promise.resolve({ data: [] as SurveyTemplate[] }),
+    allRows.length > 0
+      ? supabase
+          .from("survey_responses")
+          .select("template_id, participation_id")
+          .in(
+            "participation_id",
+            allRows.map((r) => r.id),
+          )
+      : Promise.resolve({ data: [] as { template_id: string; participation_id: string }[] }),
+  ]);
+  const surveyTemplates = (surveyTemplateRows ?? []) as Pick<
+    SurveyTemplate,
+    "id" | "campaign_id" | "kind" | "title"
+  >[];
+  const respondedKeys = new Set(
+    (surveyResponseRows ?? []).map((r) => `${r.template_id}:${r.participation_id}`),
+  );
 
   // Ticket proofs sit in the private bucket — each thumbnail needs its own
   // short-lived signed URL, generated per render.
@@ -105,6 +137,16 @@ export default async function ParticipationsPage({
       {notice === "upload-failed" && (
         <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
           That file couldn&apos;t be uploaded — check it&apos;s under 25 MB and try again.
+        </p>
+      )}
+      {notice === "survey-submitted" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Thanks — your survey response has been recorded.
+        </p>
+      )}
+      {notice === "survey-already-submitted" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          You&apos;d already completed that survey.
         </p>
       )}
 
@@ -212,6 +254,37 @@ export default async function ParticipationsPage({
                     )}
                   </div>
                 )}
+
+                {ev?.campaign_id &&
+                  surveyTemplates
+                    .filter((t) => t.campaign_id === ev.campaign_id)
+                    .filter(
+                      (t) =>
+                        t.kind === "pre_event" ||
+                        p.status === "attendance_verified" ||
+                        p.status === "reward_released",
+                    )
+                    .map((t) => {
+                      const completed = respondedKeys.has(`${t.id}:${p.id}`);
+                      return (
+                        <div key={t.id} className="mt-4">
+                          {completed ? (
+                            <p className="text-sm text-[var(--color-olive-deep)]">
+                              ✓ {t.kind === "pre_event" ? "Pre-event" : "Post-event"} survey
+                              completed — thank you!
+                            </p>
+                          ) : (
+                            <Link
+                              href={`/dashboard/surveys/${t.id}`}
+                              className="btn btn-primary text-sm"
+                            >
+                              Take the {t.kind === "pre_event" ? "pre-event" : "post-event"}{" "}
+                              survey
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
 
                 {/* Not yet selected — nothing to do until the sponsor confirms who's in. */}
                 {p.status === "registered" && !p.selected && (

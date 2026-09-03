@@ -610,3 +610,28 @@ export interface SurveyQuestion {
   required: boolean;
   created_at: string;
 }
+
+export type SurveyQualityStatus = "pending" | "pass" | "review" | "reject";
+
+/** Shape depends on the question type — see `answerShape` in src/lib/surveys.ts. */
+export type SurveyAnswerValue = string | number | string[] | null;
+
+export interface SurveyResponse {
+  id: string;
+  template_id: string;
+  participation_id: string;
+  started_at: string;
+  submitted_at: string;
+  quality_score: number | null;
+  quality_status: SurveyQualityStatus;
+  updated_at: string;
+}
+
+export interface SurveyAnswer {
+  id: string;
+  response_id: string;
+  question_id: string;
+  value: SurveyAnswerValue;
+  shown_at: string | null;
+  answered_at: string | null;
+}

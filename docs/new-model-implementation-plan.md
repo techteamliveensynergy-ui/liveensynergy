@@ -128,13 +128,17 @@ phase adds:
 - The Response Quality Engine (9-signal scoring → pass / manual review /
   reject) that Phase 4's reward gating depends on.
 
-**Built (migration `0032`):** the schema slice (`survey_templates` +
-`survey_questions` only — `survey_responses`/`survey_answers` are still
-pending, see below) and the admin drag-and-drop builder — question-type
-palette, canvas reordering via `@dnd-kit`, per-type inspector, draft/publish/
-archive lifecycle. **Not built yet:** the live preview toggle, the
-participant-facing renderer, and the Response Quality Engine itself — see
-`docs/survey-form-builder-design.md`'s build order for the remaining steps.
+**Built:** the full schema (`survey_templates`/`survey_questions` in
+migration `0032`; `survey_responses`/`survey_answers` in `0033`); the admin
+drag-and-drop builder — question-type palette, canvas reordering via
+`@dnd-kit`, per-type inspector, draft/publish/archive lifecycle; and the
+participant-facing renderer + submission flow (`src/app/dashboard/surveys/
+[templateId]/`) — all 11 question types, per-question timing capture,
+eligibility gated through `survey_participation_for()`, submission through
+the `submit_survey_response()` RPC. **Not built yet:** the live preview
+toggle, the bot/fraud screen (CAPTCHA, honeypot, rate limiting), and the
+Response Quality Engine itself — see `docs/survey-form-builder-design.md`'s
+build order for the remaining steps.
 
 This phase is a **dependency for Phase 4** — reward tiering can't be
 survey-gated until responses and scores exist.
