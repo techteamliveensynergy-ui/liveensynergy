@@ -1,0 +1,267 @@
+LIVE-EN-SYNERGY  ·  BUILD PLAN
+Survey & Response Quality Engine
+How we will build the custom consumer survey in-house: an admin drag-and-drop form builder, the participant-facing survey, and the end-to-end backend logic that decides whether a submission earns a reward — from bot screening through to the quality score.
+
+[TABLE]
+SCOPE | Phase 3 of the new-model plan || STATUS | Designed, not yet built || DEPENDS ON | Package pricing decision || BLOCKS | Survey-gated rewards
+[/TABLE]
+
+[Heading 1] 01   Where this sits today
+The rest of the new model is built. The survey system is the one piece deliberately held back, and it is the last dependency for gating rewards on response quality.
+
+[TABLE]
+AREA || POSITION || DETAIL
+New-model phases || 7 of 8 built || Admin-only campaigns, packages, reward engine, artist split, change requests, invoicing, admin-mediated messaging.
+Survey system || 0% built || No tables, no screens, no code. The full technical design is written and ready to build against.
+Reward gate today || Admin discretion || Reward codes are issued manually. The automatic quality gate is what this build adds.
+[/TABLE]
+
+
+[TABLE]
+DECISION ALREADY TAKEN — 24 AUGUST STANDUP | We build the survey in-house rather than embedding Typeform or Jotform. The deciding factor is the reward gate: the quality score has to read per-question timing, attention-check answers and the respondent's existing profile data, then write a pass/review/reject verdict back onto the participation record that releases a code. A third-party embed gives us a form, but not that loop — we would still be building the quality engine, and doing it across a webhook boundary with data we do not own. Building it inside the platform also keeps survey answers under the same access rules as every other piece of audience data.
+[/TABLE]
+
+[Heading 1] 02   Two screens, two audiences
+The build splits cleanly in half: what the admin uses to compose a survey, and what the audience member fills in. Only the admin side is drag-and-drop.
+[Heading 2] The admin builder — drag and drop
+Admin composes a survey by dragging question blocks into an ordered form. Three panes, the pattern anyone who has used a form builder will recognise immediately:
+
+[TABLE]
+PANE || WHAT IT IS || HOW IT BEHAVES
+Left — Palette || One card per question type || Drag a card onto the form to insert a question at that position, or click it to append to the end — so the builder is fully usable by keyboard, not drag-only.
+Centre — The form || The ordered list of questions || Each question is a summary card with a drag handle; drag to reorder. A preview toggle renders the exact screen the participant will see.
+Right — Settings || Settings for the selected question || Prompt wording, answer options, required toggle, scale range, and the expected answer for attention checks.
+[/TABLE]
+
+Nothing saves until admin presses Save — the whole ordered form is written in one go, which matches how every other admin screen on the platform already behaves. A survey stays a draft until admin publishes it. Once it is published and responses have started arriving, questions can still be added and reordered, but not deleted — removing a question mid-flight would invalidate the quality scores of everyone who already answered it.
+[Heading 2] Question types available at launch
+
+[TABLE]
+TYPE || USED FOR || SETTINGS
+Single choice || Brand awareness, purchase intent || Options list
+Multiple choice || “Which of these…” preference questions || Options, min/max selectable
+Rating scale || Brand perception and favourability || Range, step, end labels (“Not at all” → “Extremely”)
+Yes / No || Eligibility screening || —
+Dropdown || Demographics (age range, region) || Options list
+Short text || Brief open feedback || Max length
+Long text || Open-ended consumer feedback || Max length
+Ranking || Ordering preferences || Options — participant drags to reorder
+Number / slider || Purchase-intent scoring, quantities || Min, max, step
+Attention check || Quality signal — did they read the question? || Expected answer. Scored, never shown in brand reporting
+Hidden field || Duplicate detection and eligibility || Which profile field it carries — never rendered to the respondent
+[/TABLE]
+
+The last two are the ones that do not behave like normal questions. An attention check is scored but excluded from the brand's results — it measures the respondent, not the brand. A hidden field is never shown at all: it carries the respondent's email, phone or role from their existing profile so duplicate detection has something to match on without asking them to retype data we already hold.
+[Heading 2] Do we store a “correct” answer?
+Almost never — and this is worth being precise about, because a survey by definition has no right answer. A respondent can hold any opinion, answer against the brand's interest from top to bottom, and still score full marks. Only two things in the whole system store an expected value, and neither is an ordinary survey question:
+
+[TABLE]
+WHAT IS STORED || WHERE || WHY IT IS NOT AN ANSWER KEY
+Expected answer || Attention-check questions only || An attention check is not a survey question — it is an instruction-following probe (“To confirm you're reading carefully, select ‘Somewhat agree’”). It has a correct answer by design, is scored, and never appears in the brand's results.
+Contradiction rule || Optional, between a pair of questions || Not a correct answer but a conflict rule — “if Q3 is Never, then Q7 cannot be Within the last week”. Admin defines these only where a genuine logical conflict exists, typically none to three per survey.
+Nothing || Every other question || Choice, scale, text, ranking and number questions store the answer and nothing else. They are scored on how someone answered — pace, variation, effort — never on what they answered.
+[/TABLE]
+
+
+[TABLE]
+CONSEQUENCE FOR THE SCORING | Because most surveys will carry no contradiction rules and some will carry no attention check, the score is calculated only across the signals that apply to that survey and rescaled to 100. A survey with neither is marked out of the remaining seven signals — not out of nine with two automatic zeroes, which would fail every honest respondent on a simple form. The builder will prompt admin to include at least one attention check on longer surveys, since it is the single strongest signal, but it will not force one.
+[/TABLE]
+
+[Heading 2] What the participant sees
+An ordinary form, styled like the rest of the platform, rendered from the published survey. The only drag interaction on this side is the ranking question type. While they answer, the app quietly records when each question was shown and when it was answered — that per-question timing is what makes the speed and straight-lining checks in the next section possible. A single start-and-finish timestamp would not be precise enough to tell a fast reader from a bot.
+[Heading 1] 03   What happens when a survey is submitted
+Every submission runs the same six stages. Stages 1 and 2 stop bad submissions before they are stored; stages 3 to 5 grade what is stored; stage 6 decides the reward.
+STAGE 1  Bot & fraud screen   Blocks submission
+Before the form is accepted, the submission has to prove it came from a person. Three layers, none of which a genuine respondent ever notices:
+Invisible CAPTCHA. We recommend Cloudflare Turnstile — free at our volume, no puzzle for the user in the normal case, and privacy-friendly. The browser gets a token; our server re-verifies that token with Cloudflare before accepting anything. A submission that arrives without a valid, unexpired token is rejected outright.
+Honeypot field. A form field hidden from people but visible to simple scripted bots. Anything filled into it is discarded silently.
+Rate limit. A cap on submissions per account and per IP over a rolling window, so a scripted flood is throttled rather than merely scored badly afterwards.
+To answer the question raised in the source brief directly: no CAPTCHA exists on the platform today, so this is genuinely new work — but it is a small, well-understood piece, not a reason on its own to embed a third-party form.
+STAGE 2  Eligibility & duplicate check   Blocks submission
+Only a signed-in audience member with a registered participation in that campaign can open the survey — so the first eligibility question is answered by the account itself, not by asking. On top of that:
+One response per person, per survey — enforced by the database, not by a check in code, so two submissions racing each other cannot both land.
+Screening questions can be placed at the top of any survey and end the form early when someone does not qualify.
+Duplicate identity detection matches on email and phone number across accounts. The platform already has a private way to ask “is this number already in use?” without revealing whose it is — we extend that same approach here. A match does not necessarily reject; it flags the response for the duplicate signal in stage 4.
+STAGE 3  Validate & store   Writes the response
+Every answer is re-validated on the server against that question's own settings — required questions answered, choices from the real options list, numbers inside the allowed range, text within length. The browser's validation is a convenience for the user; the server's is the one that counts, because the browser can be bypassed. Response and answers are written together in one transaction with the timing data, so a half-saved survey is not possible.
+STAGE 4  Quality scoring — nine signals   The engine
+Immediately on submit, a server-side scorer reads the stored answers, the per-question timing and each question's settings, and produces a score out of 100. Nine signals, exactly as specified in the brief:
+
+[TABLE]
+SIGNAL || WHAT WE CHECK || EXAMPLE CATCH
+Completion time || Suspiciously fast overall, and per question || 45 sec on a 4-min survey
+Attention checks || Did they follow the instruction? || Failed 1 of 2
+Straight-lining || Same answer repeated down a scale || 4, 4, 4, 4, 4…
+Contradictions || Answers that conflict with each other || “Never buys” then “bought yesterday”
+Open-text quality || Is the free text meaningful? || “asdf”, “good”, “yes”
+Question coverage || Did they meaningfully answer? || Excessive “prefer not to say”
+Duplicate detection || Same person submitting more than once || Matching email / phone identifiers
+Behaviour || Suspicious interaction pattern || Extremely rapid clicking
+Fraud signals || Automated or bot-like behaviour || Multiple suspicious submissions from one source
+[/TABLE]
+
+The scorer is rules-based and deterministic — no AI judgment in the loop. Every verdict can be explained back to a brand or an audience member in plain terms, and the same submission always scores the same. Signal weights are stored as settings, not hard-coded, so thresholds can be tuned after the first live campaign without a code release.
+STAGE 5  Pass, review, or reject   The verdict
+The score lands in one of three bands, using the thresholds from the brief:
+
+[TABLE]
+UNDER 60 | Low quality. No reward. Recorded, and excluded from the brand's results. || 60 – 79 | Manual review. Queued for an admin to approve or reject, with the failing signals shown. || 80 – 100 | Valid. Eligible for the ticket subsidy, discount or merchandise code.
+[/TABLE]
+
+The middle band is the one that needs a screen: a review queue where an admin sees the response, which signals it failed and by how much, and approves or rejects in one click. Everything else is automatic. Section 04 covers that screen in full.
+STAGE 6  Reward release   Closes the loop
+A pass verdict makes the participation eligible for its reward tier — the pre-event ticket subsidy for the first band of respondents, a discount or merchandise code post-event for verified attendees. The tier and code machinery is already built; this build supplies the condition that unlocks it. Today that decision is made by an admin by hand, and the place in the code where the check belongs is already marked and waiting for it.
+[Heading 1] 04   What admin sees, and what admin decides
+The engine grades every response, but a person makes the final call on the borderline ones. This section is what that person is looking at, and what their decision sets off.
+[Heading 2] Admin only ever works one band
+Bot and fraud submissions are removed in the backend and never become something to review — that would waste the reviewer's attention on exactly the submissions that deserve none of it. Four outcomes, only one of which costs admin any time:
+
+[TABLE]
+OUTCOME || HANDLED BY || WHAT HAPPENS TO IT
+Hard fraud || Backend, final || Missing or invalid CAPTCHA token, honeypot filled, rate limit breached, or an exact duplicate of an identity that already responded. Never reaches a queue. Logged for the audit trail and counted in the campaign's statistics, but no reviewer sees it.
+Under 60 || Automatic || Rejected, no reward. Sits in a “rejected” tab so admin can overturn it if the person gets in touch — but it is not in the working queue.
+60 – 79 || Admin || The review queue. This is the only band that needs a human, and the only screen admin works day to day.
+80 – 100 || Automatic || Eligible for the reward tier. No admin action needed unless they choose to spot check.
+[/TABLE]
+
+The distinction that makes this work: a hard signal is proof of a bot and is terminal on its own; a soft signal (finishing quickly, one attention check missed) only moves the score. Treating a soft signal as terminal would reject real people; treating a hard one as a score deduction would put hundreds of bot submissions in front of a reviewer.
+[Heading 2] The individual response screen
+Opening one response from the queue shows four blocks, in this order:
+
+[TABLE]
+BLOCK || SHOWS
+1. Who this is || Name, contact details, the event and whether this is the pre- or post-event survey, when it was submitted and how long it took. Their participation status — ticket uploaded, attendance verified — plus how many surveys they have completed before and how those scored. Repeat good respondents are visible as such.
+2. The score, with its reasons || The number out of 100, then every signal as its own line: sub-score, weight, contribution, verdict, and the evidence that triggered it.
+3. Their answers || Every answer in form order with the time spent on each, and the flags shown inline against the answers that caused them. Attention checks marked as such, with the expected answer beside the given one.
+4. The decision || Approve or reject, with a reason box — required on a rejection and on any override of the engine. Which reward tier they would receive is shown next to the buttons, so the decision is made knowing what it costs.
+[/TABLE]
+
+Block 2 is the one that determines whether this screen is usable. A bare score of 68 is not something anyone can act on; the same 68 with its reasons attached is a fifteen-second decision:
+
+[TABLE]
+Straight-lining || Failed · −18 || Q4–Q9 all answered “4”. No variation across six scale questions.
+Completion time || Warning · −8 || 51 seconds. Median for this survey is 3m 42s.
+Attention check || Failed · −6 || Q6 expected “Somewhat agree” — answered “Strongly disagree”.
+Open-text quality || Warning · −0 || Q11 “asdf” · Q14 “good” — both under the meaningful-length threshold.
+Duplicate, behaviour, fraud, coverage, contradictions || Clear || 
+Score 68 of 100 — manual review || Score 68 of 100 — manual review || Score 68 of 100 — manual review
+[/TABLE]
+
+The queue itself supports bulk approve and bulk reject for the obvious cases, with the same reason recorded against each.
+[Heading 2] Which scores each person sees
+
+[TABLE]
+SEES || SCORE || SIGNAL BREAKDOWN || EVIDENCE
+Admin || Yes || Yes || Yes — the full readout above
+Respondent || No || No || No
+Brand || Aggregate only || Aggregate only || No
+[/TABLE]
+
+Respondents are told the outcome — reward released, or not eligible — and nothing about how it was reached. That is deliberate: publishing the rubric to respondents is a manual on how to defeat it, and the people most motivated to read it are exactly the ones the engine exists to catch. Brands see the quality mix across a campaign, never a person's score.
+[Heading 2] What the decision sets off
+
+[TABLE]
+NO WEBHOOKS — THIS ALL HAPPENS INSIDE THE PLATFORM | Worth stating plainly, because it is a common assumption: there is no external service and no webhook anywhere in this flow. The only outbound call in the entire pipeline is verifying the CAPTCHA token with Cloudflare. Everything else is the platform's own server-side code, in the same pattern as every other admin action already in the app.
+[/TABLE]
+
+Approving a response runs a chain that is already built, except for its first link:
+The response is marked passed — which makes that participation reward-eligible. This is the new part.
+The reward code is issued — a code row is written against the participation, stamped with which admin issued it and under which reward tier. This code already exists in the platform; the survey result is simply the new condition for reaching it.
+The respondent is notified — an in-app notification and a queued email, and the code appears on their rewards page. Also already built.
+Rejecting sets the opposite verdict, releases no code, and records the reason against the response. One piece of groundwork this needs: the platform only sends notifications for events that exist in its catalogue, and there is no “survey rejected” event in it today — so telling someone their response was not accepted needs that event, its settings and its message template added, not just a line of code. It is small, but it is easy to miss.
+[Heading 2] Guardrails
+Admin can override the engine in both directions — approve something the engine scored below 60, or reject something it passed. A reason is required, and the override is recorded with who did it and when.
+An issued code cannot be un-issued. It can be voided, which is a separate, logged action — because by then the respondent may already have used it.
+Issuance stays inside the tier cap and the event's remaining budget, whether it happened automatically or by hand. The quality verdict decides eligibility; it does not override the campaign's limits.
+Changing the signal weights never silently re-grades old responses. Existing verdicts stand; re-scoring a past survey is an explicit action with its own audit entry.
+[Heading 1] 05   Who can see what
+Survey answers are personal data about audience members collected on a brand's behalf. Access is enforced at the database level, the same as every other table on the platform.
+
+[TABLE]
+ROLE || CAN SEE || CANNOT SEE
+Admin || Everything — builds surveys, works the review queue, issues rewards || —
+Audience member || Their own response, and whether their reward was released || Anyone else's answers; their own quality score or which signals they failed
+Brand || Aggregated results, completion rate, and the participant list as Anonymised name · Survey completed · Verified attendance || Respondent identities, contact details, or raw answers tied to a person
+Artist / organiser || Completion counts for their own event || Answers and identities
+[/TABLE]
+
+The brand-facing view is built as a purpose-made, anonymised view with an explicit list of columns — the same technique already used for public profile pages — rather than by filtering in the application. That way an accidental query cannot leak a column that was never meant to be exposed.
+[Heading 2] Technical appendix — data model
+Four new tables, added without altering anything that exists, so the live database can take the change safely:
+survey_templates — one survey, tied to a campaign, marked pre-event or post-event, in draft / published / archived state.
+survey_questions — the ordered questions, their type, options and per-type settings.
+survey_responses — one row per person per survey, carrying the quality score, the verdict, and any duplicate link. A uniqueness constraint on (survey, participation) is what makes a second submission impossible.
+survey_answers — the answers themselves, each with the moment the question was shown and the moment it was answered.
+Responses link to the existing participation record, which already connects through to the campaign and the brand — so the brand-facing “participants” panel needs no new plumbing, only the anonymised view described above.
+[Heading 1] 06   Results, analytics and export
+Collecting responses is only half the product — the campaign performance report is what the brand actually bought. Results are readable on screen, and everything is extractable as a spreadsheet.
+[Heading 2] On screen — the survey results page
+One page per survey, with the headline numbers first and the per-question detail below. Because a campaign can run a pre-event and a post-event survey, the two sit side by side so the shift in brand perception is readable as a before-and-after rather than two unrelated reports.
+
+[TABLE]
+PANEL || SHOWS
+Completion funnel || Invited → started → submitted → passed quality. Completion rate and drop-off point, which is the number that tells us whether a survey is too long.
+Quality mix || How the submissions split across pass / manual review / rejected, and which signals fired most often.
+Per-question results || A result block per question, drawn to suit the type — bars for choice questions, a distribution for scales, average and spread for numbers, average position for ranking, and a readable list for open text.
+Pre vs post comparison || The same question asked before and after the event, shown as a shift — the measurement the brand is paying for.
+Demographic breakdown || Results split by the demographic questions and by profile data (age band, region), so “who said this” is answerable without exposing who they are.
+[/TABLE]
+
+[Heading 2] Export to spreadsheet
+The platform already does this well in one place: the admin participants list has a CSV export that honours whatever filters are active on the page, and formats dates as DD/MM/YYYY HH:mm so Excel reads them as dates rather than as text. That was a fix from the 3 August standup, and the survey exports copy the same approach rather than inventing a second one. Four exports:
+
+[TABLE]
+EXPORT || ONE ROW PER || COLUMNS
+Survey responses || Respondent || One column per question, in form order — the layout anyone analysing this in Excel expects. Plus submission time, time taken, quality score, verdict, and whether a reward was issued. Multi-select answers are joined in one cell; ranking answers are written in order.
+Answer-level detail || Answer || Respondent reference, question, answer, time shown, time answered. The long format, for anyone loading the data into a proper analysis tool or pivoting it.
+Participants || Participant || The existing export, extended with survey completed, quality verdict, and reward code status — so one file answers “who took part and what did they get”.
+Question summary || Answer option || Counts and percentages per option, already aggregated — the file you paste straight into a client report or chart without touching the raw data.
+[/TABLE]
+
+
+[TABLE]
+WHO GETS WHICH FILE | Exports follow the same rule as the screens in section 05. Admin exports carry identity — name, email, phone — because admin already has that access and needs it to resolve payment and reward queries. Brand exports are anonymised at the point of generation: each respondent appears as a stable reference (RSP-00042) plus their demographic answers, never a name or contact detail. The anonymisation happens when the file is built, not by hiding columns in the interface, so there is no version of the brand's file that contains identity at all. | Rejected and pending-review responses are excluded from the brand's exports by default, with a toggle for admin to include them when auditing.
+[/TABLE]
+
+[Heading 2] Format, and one dependency question
+CSV is the default: it opens in Excel, Google Sheets and Numbers, needs no library, and matches the export the platform already ships. If you want a formatted .xlsx instead — multiple tabs in one workbook, frozen headers, the summary and the raw data side by side — that is a small addition, but it does mean adding a spreadsheet library. Worth deciding before we build the exports rather than after; it is listed in the decisions below.
+Scheduled or emailed reports (“send the brand their campaign report when the survey closes”) are deliberately not in this phase. The platform queues emails but has no email provider connected yet, so anything automatic depends on that being provisioned first. Until then, exports are downloaded on demand from the dashboard.
+[Heading 1] 07   Build order
+Sequenced so the quality engine can be developed in parallel with the drag-and-drop UI rather than queued behind it. Sizes are relative; dates follow once the decisions in the next section are closed.
+
+[TABLE]
+STEP || WHAT IT DELIVERS || SIZE
+1. Database foundation || The four tables, the access rules, and the one-response-per-person constraint. || Small
+2. Participant survey screen || All eleven question types rendering against a hand-built test survey, with the timing capture. Unblocks work on the engine before the builder UI exists. || Medium
+3. Submission pipeline || CAPTCHA, honeypot, rate limiting, eligibility, duplicate matching, server-side validation — stages 1 to 3 of section 03. || Medium
+4. Admin drag-and-drop builder || Palette, form canvas, question settings, live preview, save and publish. The largest single piece, and the most visible one. || Large
+5. Quality engine & review queue || The nine signals, tunable weights, the three-band verdict, and the admin screens from section 04 — the queue and the individual response review. || Large
+6. Reward gating || Switch reward issuance from admin discretion to the pass verdict, and add survey completion figures to the brand dashboard. || Small
+7. Results, analytics & exports || The survey results page, the pre/post comparison, and the four spreadsheet exports — everything in section 06. || Medium
+[/TABLE]
+
+One new open-source library is needed for the drag-and-drop, chosen because it is keyboard-accessible out of the box — an admin using a screen reader can still reorder questions — and because the same library drives the participant-facing ranking question. One dependency covers both sides.
+[Heading 1] 08   Decisions we need before starting
+Seven open points. The first three change what gets built; the rest can be settled while build is underway, but not after launch.
+On a pass, does the reward code issue automatically, or does admin confirm each one?
+Automatic means admin only ever touches the 60–79 band — the only version that holds up at fifty or more responses per campaign. Confirming each release puts a person behind every code, but turns hundreds of clear passes into clicks. Our recommendation: build it automatic with bulk issue, and run the first live campaign on manual confirmation as a calibration check, so you can see how the thresholds behave before codes go out unattended.
+BLOCKS · REWARD GATING
+Does the question limit vary by package?
+The packages document says “up to 15 research questions, depending on package”. If the cap differs per tier, the builder has to enforce it and tell the admin when they hit it. We need the per-package numbers.
+BLOCKS · BUILDER BUILD
+Can a published survey be edited once responses exist?
+Our proposal: reordering and adding are allowed, deleting is not, and changing the wording of a question that already has answers creates a new version rather than silently rewriting history. Confirm that is acceptable, or we build stricter versioning.
+BLOCKS · DATA MODEL
+Where does the attention-check question sit?
+Fixed position for every respondent, or randomised per respondent? Randomising is harder to game and slightly more work to build.
+AFFECTS · QUESTION ORDERING
+Are the score thresholds final?
+We will ship 80 / 60 as specified and make the weights adjustable so they can be tuned after the first live campaign, once we can see what real responses actually score.
+CONFIRM · ENGINE TUNING
+CSV, or formatted Excel workbooks?
+CSV needs nothing new and opens everywhere. A formatted .xlsx — multiple tabs, frozen headers, summary and raw data in one file — looks better in a client report but adds a library. Our recommendation is to ship CSV with this phase and add .xlsx only if the brands ask for it.
+AFFECTS · EXPORT BUILD
+How long do we keep raw survey answers?
+Answers are personal data. We should agree a retention period after which raw responses are deleted and only the aggregate results survive, and reflect it in the privacy policy before the first survey goes live.
+CONFIRM · COMPLIANCE
+Live-En-Synergy — survey and response quality engine, build plan. Prepared from the Survey and Packages Details briefs and the 24 August standup decisions, checked against the current codebase. Figures for what is and is not built reflect the repository as of 1 September 2026.

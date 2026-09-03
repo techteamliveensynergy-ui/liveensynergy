@@ -8,6 +8,17 @@ that plan only summarises. Confirmed net-new: a repo-wide search for
 "survey" across `src/` and `supabase/migrations/` returns zero hits as of
 26 Aug 2026.
 
+**Fuller build plan:** `docs/New-model/Survey Response Quality Engine - Build
+Plan.docx` (`_txt/` companion alongside it) is the complete build plan for
+all 7 stages of this phase — the bot/fraud screen, the nine-signal quality
+engine, the admin review queue, the brand-facing access/export rules — of
+which this doc's §3 (the admin builder) is one section. Its own §08 lists
+seven still-open decisions; the one that bears on the builder specifically
+is **"can a published survey be edited once responses exist?"** — its
+proposal (reorder/add allowed, delete blocked) is unconfirmed, which is why
+the builder currently takes the stricter interim stance of no question edits
+at all while `published` (§3 below) rather than guessing at the answer.
+
 Two audiences, two UIs: **admin** composes a survey by dragging question
 blocks into an ordered form (this doc's main subject); **participants**
 (audience members) fill it in as a normal form — no drag-and-drop on that
@@ -195,11 +206,25 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
 
 ## 6. Build order
 
-1. Schema (§2) + the `survey_questions.type` enum.
+1. **Done (migration `0032`).** Schema for `survey_templates` +
+   `survey_questions` only — a `text` + `check` column, not an enum, for
+   `kind`/`status`/`type` (see the migration's own note on why). Deferred:
+   `survey_responses`/`survey_answers`, which land with step 2/4 below once
+   there's something to write into them.
 2. Participant-facing renderer against a **hand-seeded** template (no
    builder UI yet) — unblocks quality-engine development in parallel without
-   waiting on drag-and-drop to be finished.
-3. Admin builder UI (§3) — palette, canvas, inspector, save/publish.
+   waiting on drag-and-drop to be finished. **Not started** — built out of
+   order relative to this list; see step 3.
+3. **Done.** Admin builder UI (§3) — palette, canvas, inspector,
+   save/publish, at `src/app/dashboard/admin/surveys/`. Built ahead of step 2
+   since it was the piece explicitly asked for first; it needed no
+   participant-side plumbing to be useful on its own. Two deliberate
+   deviations from this doc, both because there are no responses yet to make
+   the stricter rule costly: **no question edits once `published`** (§7 Q1 —
+   unpublish, edit, republish, rather than allowing in-place edits on a live
+   survey) and **archive-only deletion**, matching the rest of the admin
+   dashboard's no-hard-delete convention. The live-preview toggle (§3) is
+   deferred to when the renderer exists to preview.
 4. Quality engine scoring (§5).
 5. Reward-tier gating hookup (implementation plan Phase 4).
 

@@ -3,20 +3,9 @@
 Source: `docs/New-model/*.docx` (Brand Portal, Packages Details, Survey, and the
 24 Aug 2026 standup notes) plus a full-repo gap analysis against them, done
 26 Aug 2026. This is the working plan for closing the gap between what those
-docs describe and what's in the codebase today. Update this file as phases
-land, the way `docs/database-migrations.md` tracks migrations.
-
-**Status (26 Aug 2026): Phases 1–7 and the messaging cross-cut are built**
-(migrations `0024`–`0031`, `typecheck`/`build` clean) — everything in this
-doc except Phase 3/the survey system, which stays out of scope per
-`docs/survey-form-builder-design.md`. Concretely: reward-code issuance ships
-with **no survey-quality gate** (admin discretion only — see the
-`TODO(survey-gate)` in `issueRewardCode()`), and `sendInvoice()` is a stub
-pending a real vendor via the `vercel:marketplace` skill. **Nothing has been
-applied to any Supabase project yet** — the migration files exist in
-`supabase/migrations/` but haven't been run, and no code has been pushed.
-Applying `0025` (the one migration that tightens `campaigns` RLS on a live
-table) still needs the explicit go/no-go this doc always called for.
+docs describe and what's in the codebase today — **nothing below is built
+yet** except where a section says otherwise. Update this file as phases land,
+the way `docs/database-migrations.md` tracks migrations.
 
 Companion doc: `docs/survey-form-builder-design.md` covers the survey/quality-
 engine build in full — this plan only summarises where it sits in the
@@ -129,9 +118,8 @@ produce that tier×benefit grid before the pricing page can render it.
 
 ## 4. Phase 3 — Survey system
 
-Full design in `docs/survey-form-builder-design.md`. Confirmed net-new: a
-repo-wide search for "survey" across `src/` and `supabase/migrations/`
-returns zero hits today. Summary of what this phase adds:
+Full design in `docs/survey-form-builder-design.md`. Summary of what this
+phase adds:
 
 - Schema: `survey_templates`, `survey_questions`, `survey_responses`,
   `survey_answers`.
@@ -139,6 +127,14 @@ returns zero hits today. Summary of what this phase adds:
 - Participant-facing renderer + submission flow.
 - The Response Quality Engine (9-signal scoring → pass / manual review /
   reject) that Phase 4's reward gating depends on.
+
+**Built (migration `0032`):** the schema slice (`survey_templates` +
+`survey_questions` only — `survey_responses`/`survey_answers` are still
+pending, see below) and the admin drag-and-drop builder — question-type
+palette, canvas reordering via `@dnd-kit`, per-type inspector, draft/publish/
+archive lifecycle. **Not built yet:** the live preview toggle, the
+participant-facing renderer, and the Response Quality Engine itself — see
+`docs/survey-form-builder-design.md`'s build order for the remaining steps.
 
 This phase is a **dependency for Phase 4** — reward tiering can't be
 survey-gated until responses and scores exist.

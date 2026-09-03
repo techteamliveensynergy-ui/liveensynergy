@@ -94,6 +94,8 @@ const STATUS_STYLES: Record<string, string> = {
   closed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   withdrawn: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
   draft: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
+  published: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  archived: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
   available: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   matched: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   registered: "bg-[var(--color-gold)] text-[var(--color-ink)]",

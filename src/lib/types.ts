@@ -546,3 +546,67 @@ export interface FeedbackReport {
   created_at: string;
   updated_at: string;
 }
+
+// --- Surveys ---
+
+export type SurveyTemplateKind = "pre_event" | "post_event";
+export type SurveyTemplateStatus = "draft" | "published" | "archived";
+export type SurveyQuestionType =
+  | "single_choice"
+  | "multiple_choice"
+  | "scale"
+  | "yes_no"
+  | "dropdown"
+  | "short_text"
+  | "long_text"
+  | "ranking"
+  | "number"
+  | "attention_check"
+  | "hidden_field";
+
+export interface SurveyQuestionOption {
+  label: string;
+  value: string;
+}
+
+/** Per-type settings; every key optional, only the ones the type declares are read. */
+export interface SurveyQuestionConfig {
+  min?: number;
+  max?: number;
+  step?: number;
+  min_label?: string;
+  max_label?: string;
+  min_select?: number;
+  max_select?: number;
+  max_length?: number;
+  /** attention_check — scored, never shown to the brand. */
+  expected_answer?: string;
+  /** hidden_field — which profile field this question copies at submit time. */
+  profile_field?: string;
+}
+
+export interface SurveyTemplate {
+  id: string;
+  campaign_id: string | null;
+  kind: SurveyTemplateKind;
+  status: SurveyTemplateStatus;
+  title: string;
+  description: string | null;
+  created_by: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  template_id: string;
+  order_index: number;
+  type: SurveyQuestionType;
+  prompt: string | null;
+  help_text: string | null;
+  options: SurveyQuestionOption[] | null;
+  config: SurveyQuestionConfig;
+  required: boolean;
+  created_at: string;
+}

@@ -56,6 +56,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin/campaigns/intake", label: "Campaign requests", icon: "📥" },
     { href: "/dashboard/admin/events", label: "Events", icon: "🎫" },
     { href: "/dashboard/admin/participants", label: "Participants", icon: "🎟️" },
+    { href: "/dashboard/admin/surveys", label: "Surveys", icon: "📝" },
     { href: "/dashboard/admin/enquiries", label: "Enquiries", icon: "📨" },
     { href: "/dashboard/admin/feedback", label: "Feedback", icon: "🐞" },
     // Distinct from the personal inbox in COMMON_BOTTOM — this is the config.
