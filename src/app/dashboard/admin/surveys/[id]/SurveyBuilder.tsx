@@ -22,12 +22,18 @@ import {
 } from "@dnd-kit/sortable";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import type { SurveyQuestionType } from "@/lib/types";
-import { newQuestionDraft, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
+import {
+  newQuestionDraft,
+  questionSpec,
+  type ContradictionRuleDraft,
+  type SurveyQuestionDraft,
+} from "@/lib/surveys";
 import { saveSurveyQuestions, type SurveyState } from "../actions";
 import { QuestionPalette } from "./QuestionPalette";
 import { QuestionCanvas } from "./QuestionCanvas";
 import { QuestionInspector } from "./QuestionInspector";
 import { QuestionCardPreview } from "./SortableQuestionCard";
+import { ContradictionRulesEditor } from "./ContradictionRulesEditor";
 
 function SaveButton({ dirty }: { dirty: boolean }) {
   const { pending } = useFormStatus();
@@ -46,14 +52,17 @@ type ActiveDrag =
 export function SurveyBuilder({
   templateId,
   initialQuestions,
+  initialRules,
   editable,
 }: {
   templateId: string;
   initialQuestions: SurveyQuestionDraft[];
+  initialRules: ContradictionRuleDraft[];
   editable: boolean;
 }) {
   const dndId = useId();
   const [questions, setQuestions] = useState<SurveyQuestionDraft[]>(initialQuestions);
+  const [rules, setRules] = useState<ContradictionRuleDraft[]>(initialRules);
   const [selectedKey, setSelectedKey] = useState<string | null>(
     initialQuestions[0]?.key ?? null,
   );
@@ -101,6 +110,12 @@ export function SurveyBuilder({
   function removeQuestion(key: string) {
     setQuestions((prev) => prev.filter((q) => q.key !== key));
     setSelectedKey((current) => (current === key ? null : current));
+    setRules((prev) => prev.filter((r) => r.questionAKey !== key && r.questionBKey !== key));
+    setDirty(true);
+  }
+
+  function updateRules(next: ContradictionRuleDraft[]) {
+    setRules(next);
     setDirty(true);
   }
 
@@ -195,6 +210,15 @@ export function SurveyBuilder({
         </DragOverlay>
       </DndContext>
 
+      <div className="mt-4">
+        <ContradictionRulesEditor
+          questions={questions}
+          rules={rules}
+          editable={editable}
+          onChange={updateRules}
+        />
+      </div>
+
       {editable && (
         <form action={formAction} className="mt-6 flex items-center justify-end gap-3">
           <input type="hidden" name="template_id" value={templateId} />
@@ -202,6 +226,12 @@ export function SurveyBuilder({
             type="hidden"
             name="questions"
             value={JSON.stringify(questions)}
+            readOnly
+          />
+          <input
+            type="hidden"
+            name="contradiction_rules"
+            value={JSON.stringify(rules)}
             readOnly
           />
           {dirty && <span className="chip">Unsaved changes</span>}

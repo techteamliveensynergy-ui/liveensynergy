@@ -129,17 +129,25 @@ phase adds:
   reject) that Phase 4's reward gating depends on.
 
 **Built:** the full schema (`survey_templates`/`survey_questions` in
-migration `0032`; `survey_responses`/`survey_answers` in `0033`); the admin
+migration `0032`; `survey_responses`/`survey_answers` in `0033`;
+`survey_quality_weights`/`survey_contradiction_rules` in `0035`); the admin
 drag-and-drop builder — question-type palette, canvas reordering via
-`@dnd-kit`, per-type inspector, draft/publish/archive lifecycle; and the
-participant-facing renderer + submission flow (`src/app/dashboard/surveys/
-[templateId]/`) — all 11 question types, per-question timing capture,
-eligibility gated through `survey_participation_for()`, submission through
-the `submit_survey_response()` RPC; and the bot/fraud screen ahead of that
-RPC — honeypot, a Postgres-backed per-account/per-IP rate limiter, and
-Cloudflare Turnstile (migration `0034`). **Not built yet:** the live preview
-toggle and the Response Quality Engine itself — see
-`docs/survey-form-builder-design.md`'s build order for the remaining steps.
+`@dnd-kit`, per-type inspector, draft/publish/archive lifecycle, plus a
+contradiction-rules panel; the participant-facing renderer + submission flow
+(`src/app/dashboard/surveys/[templateId]/`) — all 11 question types,
+per-question timing capture, eligibility gated through
+`survey_participation_for()`, submission through the
+`submit_survey_response()` RPC; the bot/fraud screen ahead of that RPC —
+honeypot, a Postgres-backed per-account/per-IP rate limiter, and Cloudflare
+Turnstile (migration `0034`); and the Response Quality Engine itself —
+`score_survey_response()` (migration `0035`), a security-definer RPC scoring
+all 9 signals and rescaling to only the ones applicable per response, called
+right after submission, plus the admin review queue at
+`/dashboard/admin/surveys/responses` (list + 4-block detail: meta, signal
+breakdown, answer transcript, pass/review/reject decision). **Not built
+yet:** the live preview toggle, and any weight-editing UI for
+`survey_quality_weights` (the table exists and is read by the scorer; there's
+no admin screen writing to it this pass).
 
 This phase is a **dependency for Phase 4** — reward tiering can't be
 survey-gated until responses and scores exist.

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/profile";
-import { validateQuestions, type SurveyQuestionDraft } from "@/lib/surveys";
+import {
+  validateQuestions,
+  validContradictionRules,
+  type ContradictionRuleDraft,
+  type SurveyQuestionDraft,
+} from "@/lib/surveys";
 
 export interface SurveyState {
   error?: string;
@@ -75,6 +80,13 @@ export async function updateSurveyTemplate(
  * Refused while `published`: the Supabase JS client can't wrap delete+insert
  * in one transaction, so a failed reinsert after a successful delete would
  * empty a live survey. Unpublish first, edit, republish.
+ *
+ * Also reinserts `survey_contradiction_rules` (0035). The delete above
+ * cascades to any existing rules (they reference the old question rows), so
+ * there's nothing to explicitly delete — only the reinsert, remapped from
+ * the draft's stable `key` to the freshly-generated question id, since a
+ * fresh insert of N rows in one statement isn't guaranteed to come back in
+ * the same order (`order_index` is what's actually reliable).
  */
 export async function saveSurveyQuestions(
   _prev: SurveyState,
@@ -107,14 +119,19 @@ export async function saveSurveyQuestions(
   }
 
   let drafts: SurveyQuestionDraft[];
+  let ruleDrafts: ContradictionRuleDraft[];
   try {
     drafts = JSON.parse(String(formData.get("questions") ?? "[]"));
+    ruleDrafts = JSON.parse(String(formData.get("contradiction_rules") ?? "[]"));
   } catch {
     return { error: "Could not read the question list." };
   }
 
   const validationError = validateQuestions(drafts);
   if (validationError) return { error: validationError };
+
+  const questionKeys = new Set(drafts.map((d) => d.key));
+  const rules = validContradictionRules(ruleDrafts, questionKeys);
 
   const rows = drafts.map((d, i) => ({
     template_id: templateId,
@@ -133,10 +150,38 @@ export async function saveSurveyQuestions(
     .eq("template_id", templateId);
   if (deleteError) return { error: deleteError.message };
 
-  const { error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await supabase
     .from("survey_questions")
-    .insert(rows);
+    .insert(rows)
+    .select("id, order_index");
   if (insertError) return { error: insertError.message };
+
+  if (rules.length && inserted) {
+    const idByOrderIndex = new Map<number, string>(
+      inserted.map((r: { id: string; order_index: number }) => [r.order_index, r.id]),
+    );
+    const idByKey = new Map(drafts.map((d, i) => [d.key, idByOrderIndex.get(i)]));
+
+    const ruleRows = rules
+      .map((r) => ({
+        template_id: templateId,
+        question_a_id: idByKey.get(r.questionAKey),
+        value_a: r.valueA.trim(),
+        question_b_id: idByKey.get(r.questionBKey),
+        value_b: r.valueB.trim(),
+      }))
+      .filter(
+        (r): r is typeof r & { question_a_id: string; question_b_id: string } =>
+          !!r.question_a_id && !!r.question_b_id,
+      );
+
+    if (ruleRows.length) {
+      const { error: rulesError } = await supabase
+        .from("survey_contradiction_rules")
+        .insert(ruleRows);
+      if (rulesError) return { error: rulesError.message };
+    }
+  }
 
   // Deleting/reinserting children doesn't fire the parent's updated_at trigger.
   await supabase

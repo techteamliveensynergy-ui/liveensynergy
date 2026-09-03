@@ -616,6 +616,35 @@ export type SurveyQualityStatus = "pending" | "pass" | "review" | "reject";
 /** Shape depends on the question type — see `answerShape` in src/lib/surveys.ts. */
 export type SurveyAnswerValue = string | number | string[] | null;
 
+/** The 9 signals `score_survey_response()` (0035) computes, in scoring order. */
+export type SurveyQualitySignalKey =
+  | "completion_time"
+  | "attention_checks"
+  | "straight_lining"
+  | "contradictions"
+  | "open_text_quality"
+  | "question_coverage"
+  | "duplicate_detection"
+  | "behaviour"
+  | "fraud_signals";
+
+export interface SurveyQualitySignalResult {
+  applicable: boolean;
+  weight: number;
+  /** 0 (clean) – 1 (worst). Rescaled across only the applicable signals. */
+  severity: number;
+  /** weight * severity — how many of the 100 points this signal cost. */
+  contribution: number;
+  verdict: "clear" | "warning" | "failed";
+  /** Human-readable detail for the review-queue detail screen. */
+  evidence: string;
+}
+
+export type SurveyQualitySignalBreakdown = Record<
+  SurveyQualitySignalKey,
+  SurveyQualitySignalResult
+>;
+
 export interface SurveyResponse {
   id: string;
   template_id: string;
@@ -624,6 +653,11 @@ export interface SurveyResponse {
   submitted_at: string;
   quality_score: number | null;
   quality_status: SurveyQualityStatus;
+  signal_breakdown: SurveyQualitySignalBreakdown | null;
+  duplicate_of: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_reason: string | null;
   updated_at: string;
 }
 
@@ -634,4 +668,23 @@ export interface SurveyAnswer {
   value: SurveyAnswerValue;
   shown_at: string | null;
   answered_at: string | null;
+}
+
+/** Admin-defined "these two answers can't both be true" rule (0035). */
+export interface SurveyContradictionRule {
+  id: string;
+  template_id: string;
+  question_a_id: string;
+  value_a: string;
+  question_b_id: string;
+  value_b: string;
+  created_at: string;
+}
+
+export interface SurveyQualityWeight {
+  signal_key: SurveyQualitySignalKey;
+  label: string;
+  weight: number;
+  updated_by: string | null;
+  updated_at: string;
 }

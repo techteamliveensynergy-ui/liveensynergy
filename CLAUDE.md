@@ -174,6 +174,7 @@ code edit.
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |
 | `survey_submission_gate()` | Counts and records a submission attempt in one call; a respondent-insert policy on `survey_submission_attempts` would let a client dilute its own rate-limit window by writing rows directly. |
+| `score_survey_response()` | Reads `survey_questions.config.expected_answer` (attention checks) and other respondents' hidden-field answers (duplicate detection) — both stripped from what a respondent's own session can see — then writes `quality_score`/`quality_status`/`signal_breakdown` in one call. Respondents have no UPDATE grant on `survey_responses` at all. |
 | `survey_participation_for()`, `is_admin()`, `is_sponsored_event_party()`, `is_my_event_participant()`, `is_my_conversation_peer()` | Policy helpers. `security definer` so a policy on a table doesn't recurse through that table's own RLS. |
 
 ### Notifications

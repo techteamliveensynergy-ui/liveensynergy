@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
-import { questionRowToDraft } from "@/lib/surveys";
+import type { SurveyContradictionRule, SurveyQuestion, SurveyTemplate } from "@/lib/types";
+import { contradictionRuleRowToDraft, questionRowToDraft } from "@/lib/surveys";
 import {
   publishSurveyTemplate,
   unpublishSurveyTemplate,
@@ -25,7 +25,7 @@ export default async function EditSurveyPage({
   await requireRole(["admin"]);
   const supabase = await createClient();
 
-  const [{ data: template }, { data: questionRows }, { data: campaignRows }] =
+  const [{ data: template }, { data: questionRows }, { data: campaignRows }, { data: ruleRows }] =
     await Promise.all([
       supabase.from("survey_templates").select("*").eq("id", id).maybeSingle(),
       supabase
@@ -37,11 +37,13 @@ export default async function EditSurveyPage({
         .from("campaigns")
         .select("id, reference, brands(brand_name)")
         .order("created_at", { ascending: false }),
+      supabase.from("survey_contradiction_rules").select("*").eq("template_id", id),
     ]);
   if (!template) notFound();
 
   const tpl = template as SurveyTemplate;
   const questions = (questionRows ?? []) as SurveyQuestion[];
+  const rules = (ruleRows ?? []) as SurveyContradictionRule[];
   const campaigns = (campaignRows ?? []) as unknown as {
     id: string;
     reference: string;
@@ -129,6 +131,7 @@ export default async function EditSurveyPage({
       <SurveyBuilder
         templateId={tpl.id}
         initialQuestions={questions.map(questionRowToDraft)}
+        initialRules={rules.map(contradictionRuleRowToDraft)}
         editable={tpl.status !== "published"}
       />
     </div>

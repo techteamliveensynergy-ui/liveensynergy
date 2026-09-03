@@ -134,8 +134,17 @@ export async function submitSurveyResponse(
   }
 
   // outcome.outcome === "submitted"
-  // TODO(survey-quality): step 5 scores the response here using
-  // outcome.response_id, writing quality_score/quality_status.
+  // Score immediately so the review queue and any reward gate see a
+  // decided status right away. Never block the redirect on this — the
+  // submission itself already succeeded, and a response stuck on `pending`
+  // (a scoring failure here, or a request that never reached this line) can
+  // still be scored later from the review queue's "Score now" action.
+  if (outcome.response_id) {
+    const { error: scoreError } = await supabase.rpc("score_survey_response", {
+      p_response_id: outcome.response_id,
+    });
+    if (scoreError) console.error("score_survey_response failed:", scoreError.message);
+  }
 
   revalidatePath("/dashboard/participations");
   redirect("/dashboard/participations?notice=survey-submitted");

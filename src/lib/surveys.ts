@@ -1,5 +1,7 @@
 import type {
   SurveyAnswerValue,
+  SurveyContradictionRule,
+  SurveyQualitySignalKey,
   SurveyQuestion,
   SurveyQuestionConfig,
   SurveyQuestionOption,
@@ -382,4 +384,144 @@ export function validateAnswers(
   }
 
   return null;
+}
+
+// --- Quality engine (0035) ---
+
+/** score_survey_response()'s pass/review/reject cut points. Kept out of
+ * survey_quality_weights on purpose — see that table's migration comment. */
+export const QUALITY_PASS_THRESHOLD = 80;
+export const QUALITY_REVIEW_THRESHOLD = 60;
+
+export interface SurveyQualitySignalSpec {
+  key: SurveyQualitySignalKey;
+  label: string;
+  hint: string;
+}
+
+/** Display order + copy for the review queue's per-signal breakdown. Keep in
+ * step with the jsonb_build_object() key list in score_survey_response(). */
+export const SURVEY_QUALITY_SIGNALS: readonly SurveyQualitySignalSpec[] = [
+  {
+    key: "completion_time",
+    label: "Completion time",
+    hint: "Flags a response finished suspiciously fast against the survey's own median.",
+  },
+  {
+    key: "attention_checks",
+    label: "Attention checks",
+    hint: "Did the respondent answer attention-check questions as instructed?",
+  },
+  {
+    key: "straight_lining",
+    label: "Straight-lining",
+    hint: "The same rating repeated across every scale/number question.",
+  },
+  {
+    key: "contradictions",
+    label: "Contradictions",
+    hint: "Answer pairs an admin has marked as mutually inconsistent.",
+  },
+  {
+    key: "open_text_quality",
+    label: "Open-text quality",
+    hint: "Low-effort or junk answers to short/long-text questions.",
+  },
+  {
+    key: "question_coverage",
+    label: "Question coverage",
+    hint: "Leaning on 'prefer not to say' / 'none of the above' style opt-outs.",
+  },
+  {
+    key: "duplicate_detection",
+    label: "Duplicate detection",
+    hint: "Same email/phone as an earlier response to this survey.",
+  },
+  {
+    key: "behaviour",
+    label: "Behaviour",
+    hint: "Interaction telemetry — blocked on Step 3, not yet built.",
+  },
+  {
+    key: "fraud_signals",
+    label: "Fraud signals",
+    hint: "Turnstile/rate-limit telemetry — blocked on Step 3, not yet built.",
+  },
+];
+
+/**
+ * Substrings (case-insensitive) that mark an option as an "opt-out" choice
+ * for the question_coverage signal. Keep in step with the regex literal in
+ * score_survey_response() (migration 0035).
+ */
+export const OPT_OUT_LABEL_PATTERNS: readonly string[] = [
+  "prefer not",
+  "n/a",
+  "not applicable",
+  "none of the above",
+  "don't know",
+  "dont know",
+  "unsure",
+  "skip",
+];
+
+export function optionLooksLikeOptOut(label: string): boolean {
+  const lower = label.toLowerCase();
+  return OPT_OUT_LABEL_PATTERNS.some((p) => lower.includes(p));
+}
+
+/** The client-side draft shape while contradiction rules are being edited. */
+export interface ContradictionRuleDraft {
+  /** Stable identity for React keys: the row id, or a client uuid for new rows. */
+  key: string;
+  id: string | null;
+  questionAKey: string;
+  valueA: string;
+  questionBKey: string;
+  valueB: string;
+}
+
+function newRuleKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `r-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function newContradictionRuleDraft(): ContradictionRuleDraft {
+  return { key: newRuleKey(), id: null, questionAKey: "", valueA: "", questionBKey: "", valueB: "" };
+}
+
+/** Saved rules reference questions by db id, which `questionRowToDraft()`
+ * also uses as the draft's `key` — so this needs no remapping to line up. */
+export function contradictionRuleRowToDraft(r: SurveyContradictionRule): ContradictionRuleDraft {
+  return {
+    key: r.id,
+    id: r.id,
+    questionAKey: r.question_a_id,
+    valueA: r.value_a,
+    questionBKey: r.question_b_id,
+    valueB: r.value_b,
+  };
+}
+
+/**
+ * Drops rules that don't reference two distinct, still-present questions —
+ * mirrors validateQuestions()'s "best-effort, skip the invalid rather than
+ * block the save" stance, since a stale rule after a question is deleted is
+ * expected, not an error.
+ */
+export function validContradictionRules(
+  rules: ContradictionRuleDraft[],
+  questionKeys: ReadonlySet<string>,
+): ContradictionRuleDraft[] {
+  return rules.filter(
+    (r) =>
+      r.questionAKey &&
+      r.questionBKey &&
+      r.questionAKey !== r.questionBKey &&
+      r.valueA.trim() &&
+      r.valueB.trim() &&
+      questionKeys.has(r.questionAKey) &&
+      questionKeys.has(r.questionBKey),
+  );
 }

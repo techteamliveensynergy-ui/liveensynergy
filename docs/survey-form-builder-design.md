@@ -266,7 +266,22 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
    tips off the bot operator; a rate-limit or Turnstile failure is a visible,
    actionable error, since both have real false-positive paths (a confused
    human, shared venue wifi, a browser extension) a honeypot doesn't.
-4. Quality engine scoring (§5).
+4. **Done (migration `0035`).** Quality engine scoring (§5) —
+   `score_survey_response()`, called from `submitSurveyResponse()` right
+   after a successful `submit_survey_response()`, best-effort (never blocks
+   the redirect; a `pending` response can be re-scored later from the review
+   queue). All 9 signals from the standup follow-up memo are implemented,
+   rescaled to only the ones applicable to a given template/response —
+   `behaviour` and `fraud_signals` stay permanently not-applicable this pass,
+   both needing interaction/Turnstile telemetry at a granularity step 3a
+   doesn't capture. Contradiction rules (§2's schema sketch) turned out to be
+   genuinely missing from 0032/0033, so this migration adds
+   `survey_contradiction_rules` and the admin builder grew a small
+   "Contradiction rules" panel (`ContradictionRulesEditor.tsx`) to define
+   them — otherwise that signal could never fire. New:
+   `/dashboard/admin/surveys/responses` review queue (list + 4-block detail
+   screen: meta, signal breakdown, full answer transcript, pass/review/reject
+   decision) at `src/app/dashboard/admin/surveys/responses/`.
 5. Reward-tier gating hookup (implementation plan Phase 4).
 
 ## 7. Open questions

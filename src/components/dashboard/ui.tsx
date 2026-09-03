@@ -103,6 +103,11 @@ const STATUS_STYLES: Record<string, string> = {
   attendance_verified: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   reward_released: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   rejected: "bg-[var(--color-pink)] text-[var(--color-accent)]",
+  // Survey response quality (migration 0035)
+  pass: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  review: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  reject: "bg-[var(--color-pink)] text-[var(--color-accent)]",
+  pending: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {
