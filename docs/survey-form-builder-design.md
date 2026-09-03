@@ -223,9 +223,8 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
    `submit_survey_response()` RPC — the same "no client insert policy,
    security-definer RPC instead" idiom as `redeem_reward_code()`. Per-question
    `shown_at`/`answered_at` via `IntersectionObserver`, first-write-wins.
-   Bot/fraud screening (stage 1-2 of the build plan's §03) is explicitly
-   **not** included — see the `TODO(survey-stage-1)` in
-   `src/app/dashboard/surveys/[templateId]/actions.ts`.
+   Bot/fraud screening (stage 1-2 of the build plan's §03) was deliberately
+   deferred here — see item 3a below, now done.
    **Found and fixed a real React 19 bug along the way**, worth flagging for
    any other `<form action={formAction}>` + `useActionState` form in this
    repo that holds meaningful in-progress state: React resets a form's native
@@ -248,6 +247,25 @@ release (Phase 4 of the implementation plan) reads `quality_status = 'pass'`
    survey) and **archive-only deletion**, matching the rest of the admin
    dashboard's no-hard-delete convention. The live-preview toggle (§3) is
    deferred to when the renderer exists to preview.
+3a. **Done (migration `0034`).** Bot/fraud screening (build plan §03 stages
+   1-2) ahead of `submit_survey_response()` — a honeypot field, a Postgres-
+   backed rate limiter (`survey_submission_gate()`, per-account and per-IP,
+   short-burst + rolling-24h windows — a new `survey_submission_attempts`
+   table doubles as both the limiter's storage and the fraud audit log the
+   build plan's §04 asks for), and Cloudflare Turnstile token verification
+   (`src/lib/turnstile.ts`). Turnstile was chosen over Vercel BotID: its free
+   tier is the real managed challenge (BotID's free tier is challenge-
+   integrity-only, real detection is billed), and its deterministic dummy
+   keys (site `1x00000000000000000000BB` / secret
+   `1x0000000000000000000000000000000AA`) work cleanly against this repo's
+   Playwright-driven release gate, which BotID's docs don't address for a
+   local `next start`. The provider sits behind one function
+   (`screenSurveySubmission()` in `src/lib/survey-abuse.ts`) so swapping it
+   later doesn't touch the gate ordering or the rate limiter. A filled
+   honeypot returns the same success redirect as a real submission — nothing
+   tips off the bot operator; a rate-limit or Turnstile failure is a visible,
+   actionable error, since both have real false-positive paths (a confused
+   human, shared venue wifi, a browser extension) a honeypot doesn't.
 4. Quality engine scoring (§5).
 5. Reward-tier gating hookup (implementation plan Phase 4).
 

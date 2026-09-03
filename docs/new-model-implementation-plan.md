@@ -135,10 +135,11 @@ drag-and-drop builder — question-type palette, canvas reordering via
 participant-facing renderer + submission flow (`src/app/dashboard/surveys/
 [templateId]/`) — all 11 question types, per-question timing capture,
 eligibility gated through `survey_participation_for()`, submission through
-the `submit_survey_response()` RPC. **Not built yet:** the live preview
-toggle, the bot/fraud screen (CAPTCHA, honeypot, rate limiting), and the
-Response Quality Engine itself — see `docs/survey-form-builder-design.md`'s
-build order for the remaining steps.
+the `submit_survey_response()` RPC; and the bot/fraud screen ahead of that
+RPC — honeypot, a Postgres-backed per-account/per-IP rate limiter, and
+Cloudflare Turnstile (migration `0034`). **Not built yet:** the live preview
+toggle and the Response Quality Engine itself — see
+`docs/survey-form-builder-design.md`'s build order for the remaining steps.
 
 This phase is a **dependency for Phase 4** — reward tiering can't be
 survey-gated until responses and scores exist.

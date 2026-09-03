@@ -5,8 +5,10 @@ import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
 import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
+import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import { submitSurveyResponse, type SurveyResponseState } from "./actions";
 import { QuestionField } from "./fields";
+import { TurnstileWidget } from "./TurnstileWidget";
 
 interface Timing {
   shown_at: string | null;
@@ -46,6 +48,16 @@ export function SurveyForm({
     submitSurveyResponse,
     {},
   );
+  const [botToken, setBotToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+
+  // A Turnstile token is single-use and the server has now spent it. The
+  // form deliberately survives a validation error with its answers intact
+  // (see the comment above), so a retry needs a fresh token or it fails with
+  // timeout-or-duplicate instead of the real problem.
+  useEffect(() => {
+    if (state.error) setTurnstileResetKey((k) => k + 1);
+  }, [state.error]);
 
   // Per-question shown_at via IntersectionObserver — a single page-load
   // timestamp for every question would collapse the straight-lining and
@@ -142,6 +154,28 @@ export function SurveyForm({
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
       <input type="hidden" name="answers" value={JSON.stringify(payload)} readOnly />
+
+      {/* Honeypot (build plan §03 stage 1). Deliberately NOT display:none —
+          an unsophisticated bot that skips CSS should still see and fill
+          it. Kept out of the a11y tree and out of tab order so no genuine
+          user, sighted or not, can reach it. */}
+      <div
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", top: "auto", width: 1, height: 1, overflow: "hidden" }}
+      >
+        <label htmlFor="contact_reason">Contact reason</label>
+        <input
+          id="contact_reason"
+          type="text"
+          name={SURVEY_HONEYPOT_FIELD}
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
+
+      <input type="hidden" name="cf-turnstile-response" value={botToken ?? ""} readOnly />
+      <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
 
       {questions.map((q) => {
         const spec = questionSpec(q.type);
