@@ -65,6 +65,9 @@ export default async function EditSurveyPage({
       </Link>
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
+        <Link href={`/dashboard/admin/surveys/${tpl.id}/preview`} className="btn btn-ghost text-sm">
+          Preview
+        </Link>
         {tpl.status === "draft" && (
           <>
             <form action={publishSurveyTemplate}>

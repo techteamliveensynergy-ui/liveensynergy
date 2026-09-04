@@ -83,6 +83,12 @@ export default async function AdminSurveysPage() {
                   >
                     Edit
                   </Link>
+                  <Link
+                    href={`/dashboard/admin/surveys/${t.id}/preview`}
+                    className="btn btn-ghost text-sm"
+                  >
+                    Preview
+                  </Link>
                   {t.status === "draft" && (
                     <>
                       <form action={publishSurveyTemplate}>
