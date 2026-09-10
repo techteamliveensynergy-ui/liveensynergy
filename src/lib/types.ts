@@ -583,6 +583,10 @@ export interface SurveyQuestionConfig {
   expected_answer?: string;
   /** hidden_field — which profile field this question copies at submit time. */
   profile_field?: string;
+  /** Universal, any question type — an image (uploaded to the media bucket)
+   *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt. */
+  media_url?: string;
+  media_type?: "image" | "video";
 }
 
 export interface SurveyTemplate {
@@ -592,6 +596,12 @@ export interface SurveyTemplate {
   status: SurveyTemplateStatus;
   title: string;
   description: string | null;
+  /** Public/link-shareable pre-event survey — no account required to answer. */
+  is_public: boolean;
+  /** Shown on the public page before the questions start. */
+  intro_message: string | null;
+  /** Shown on the public page's CTA screen after submission. */
+  thank_you_message: string | null;
   created_by: string | null;
   published_at: string | null;
   created_at: string;
@@ -648,7 +658,8 @@ export type SurveyQualitySignalBreakdown = Record<
 export interface SurveyResponse {
   id: string;
   template_id: string;
-  participation_id: string;
+  /** Null for a public/anonymous response — see respondent_* below instead. */
+  participation_id: string | null;
   started_at: string;
   submitted_at: string;
   quality_score: number | null;
@@ -658,6 +669,16 @@ export interface SurveyResponse {
   decided_by: string | null;
   decided_at: string | null;
   decision_reason: string | null;
+  /** Captured identity for a public/anonymous respondent (0037) — null when
+   *  participation_id is set, since that path reads the respondent's profile
+   *  instead. */
+  respondent_first_name: string | null;
+  respondent_last_name: string | null;
+  respondent_email: string | null;
+  respondent_phone: string | null;
+  age_range: string | null;
+  residency_confirmed: boolean | null;
+  consent_accepted_at: string | null;
   updated_at: string;
 }
 

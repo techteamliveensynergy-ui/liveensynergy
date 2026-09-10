@@ -7,9 +7,9 @@ export const metadata = { title: "Create your account" };
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; event?: string }>;
 }) {
-  const { role } = await searchParams;
+  const { role, event } = await searchParams;
 
   return (
     <AuthShell
@@ -27,7 +27,7 @@ export default async function SignUpPage({
         </>
       }
     >
-      <SignUpForm initialRole={role} />
+      <SignUpForm initialRole={role} event={event} />
     </AuthShell>
   );
 }

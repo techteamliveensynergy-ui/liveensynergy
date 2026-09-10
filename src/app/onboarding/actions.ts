@@ -251,6 +251,64 @@ async function getUserId() {
   return user?.id ?? null;
 }
 
+/**
+ * If this account was created via a public survey's "join & register" CTA
+ * (signUp()'s pending_event_reference — src/app/auth/actions.ts, carried in
+ * raw_user_meta_data so it survives the email-confirmation round trip),
+ * registers them for that event now that onboarding is complete. Same insert
+ * shape as confirmRegistration() (src/app/dashboard/discover/actions.ts),
+ * minus the details form since onboarding just collected that. Best-effort —
+ * a stale or already-closed event reference must never block onboarding
+ * itself from completing.
+ */
+async function registerPendingEvent(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const reference = (user?.user_metadata as Record<string, unknown> | undefined)
+    ?.pending_event_reference as string | undefined;
+  if (!reference) return null;
+
+  const { data: event } = await supabase
+    .from("sponsored_events")
+    .select("id, name, artist_profile_id")
+    .eq("reference", reference)
+    .in("status", ["confirmed", "completed"])
+    .maybeSingle();
+  if (!event) return null;
+
+  const { error } = await supabase.from("participations").insert({
+    sponsored_event_id: event.id,
+    audience_profile_id: userId,
+    status: "registered",
+    terms_accepted_at: new Date().toISOString(),
+  });
+  // 23505 = already registered (e.g. a retried onboarding submit) — fine,
+  // just nothing new to notify.
+  if (error) {
+    if (error.code !== "23505") console.error("[registerPendingEvent] insert failed", error);
+    return error.code === "23505" ? event.id : null;
+  }
+
+  await notify({
+    eventKey: "participation.registered",
+    recipientProfileId: userId,
+    link: "/dashboard/participations",
+    variables: { event_name: event.name },
+  });
+  if (event.artist_profile_id) {
+    await notify({
+      eventKey: "participant.registered",
+      recipientProfileId: event.artist_profile_id,
+      link: `/dashboard/sponsored/${event.id}`,
+      variables: { event_name: event.name },
+    });
+  }
+
+  return event.id;
+}
+
 export async function saveBrand(
   _prev: OnboardingState,
   formData: FormData,
@@ -545,6 +603,11 @@ export async function saveAudience(
   }
 
   await completeOnboarding(userId);
+  const registeredEventId = await registerPendingEvent(userId);
   revalidatePath("/dashboard");
+  if (registeredEventId) {
+    revalidatePath("/dashboard/participations");
+    redirect("/dashboard/participations?notice=registered");
+  }
   redirect("/dashboard");
 }

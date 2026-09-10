@@ -24,6 +24,13 @@ export async function signUp(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "") as SignupRole;
+  // Carried from a public survey's "join & register" CTA
+  // (src/app/survey/[templateId]/PublicSurveyForm.tsx) — a sponsored_events
+  // reference, not a URL, so it survives the email-confirmation round trip
+  // via raw_user_meta_data rather than a query param. Resolved and consumed
+  // by saveAudience() (src/app/onboarding/actions.ts) once onboarding
+  // completes.
+  const pendingEventReference = String(formData.get("event") ?? "").trim() || null;
 
   if (!fullName || !email || !password) {
     return { error: "Please fill in your name, email and password." };
@@ -58,6 +65,7 @@ export async function signUp(
         role,
         terms_accepted_at: new Date().toISOString(),
         terms_version: TERMS_VERSION,
+        ...(pendingEventReference ? { pending_event_reference: pendingEventReference } : {}),
       },
     },
   });

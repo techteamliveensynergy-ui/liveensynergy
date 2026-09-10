@@ -108,6 +108,24 @@ export default defineConfig({
       },
     },
     {
+      // Walkthrough recording of the public pre-event survey feature
+      // (migration 0037) — not deployed yet, so unlike the other video
+      // projects this one always points at a local build, never the
+      // deployed site. Run `npm run build && npm run start` (or start on a
+      // free port and pass WALKTHROUGH_URL) before recording.
+      name: "public-survey-video",
+      testMatch: /public-survey-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "http://localhost:3000",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 250 },
+      },
+    },
+    {
       // Walkthrough recording of the audience journey. Deliberately signed out
       // — the whole point is to start from account creation — so no
       // storageState, and no dependency on the setup project.

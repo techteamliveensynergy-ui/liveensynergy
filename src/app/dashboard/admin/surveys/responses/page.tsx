@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
 import type { SurveyQualityStatus } from "@/lib/types";
+import { respondentName } from "@/lib/surveys";
 import { BulkDecideForm } from "./BulkDecideForm";
 
 export const metadata = { title: "Survey responses · Admin" };
@@ -16,6 +17,8 @@ interface Row {
   quality_status: SurveyQualityStatus;
   submitted_at: string;
   duplicate_of: string | null;
+  respondent_first_name: string | null;
+  respondent_last_name: string | null;
   survey_templates: { title: string; kind: string } | null;
   participations: {
     audience_profile_id: string;
@@ -42,6 +45,7 @@ export default async function SurveyResponsesPage({
     .from("survey_responses")
     .select(
       "id, quality_score, quality_status, submitted_at, duplicate_of, " +
+        "respondent_first_name, respondent_last_name, " +
         "survey_templates(title, kind), " +
         "participations(audience_profile_id, profiles(full_name), sponsored_events(name))",
     )
@@ -101,14 +105,17 @@ export default async function SurveyResponsesPage({
                       href={`/dashboard/admin/surveys/responses/${r.id}`}
                       className="font-semibold text-[var(--color-ink)] hover:text-[var(--color-brand-dark)]"
                     >
-                      {r.participations?.profiles?.full_name ?? "Unnamed"}
+                      {respondentName(r)}
                     </Link>
                     <StatusBadge status={r.quality_status} />
                     {r.duplicate_of && <span className="chip">possible duplicate</span>}
+                    {!r.participations && <span className="chip">public</span>}
                   </div>
                   <p className="truncate text-sm text-[var(--color-ink-soft)]">
-                    {r.survey_templates?.title ?? "Survey"} ·{" "}
-                    {r.participations?.sponsored_events?.name ?? "Event"}
+                    {r.survey_templates?.title ?? "Survey"}
+                    {r.participations?.sponsored_events?.name
+                      ? ` · ${r.participations.sponsored_events.name}`
+                      : ""}
                   </p>
                 </div>
 

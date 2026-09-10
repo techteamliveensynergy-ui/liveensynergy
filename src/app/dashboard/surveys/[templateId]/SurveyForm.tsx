@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
+import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
 import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
@@ -188,6 +189,7 @@ export function SurveyForm({
             data-question-id={q.id}
             className="card p-5"
           >
+            <QuestionMedia config={q.config} />
             <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
               <QuestionField
                 question={q}

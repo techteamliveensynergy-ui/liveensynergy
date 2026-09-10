@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
-import { SURVEY_QUALITY_SIGNALS } from "@/lib/surveys";
+import { SURVEY_QUALITY_SIGNALS, respondentEmail, respondentName } from "@/lib/surveys";
 import type {
   SurveyAnswer,
   SurveyQualityStatus,
@@ -31,6 +31,12 @@ interface ResponseRow {
   decided_by: string | null;
   decided_at: string | null;
   decision_reason: string | null;
+  respondent_first_name: string | null;
+  respondent_last_name: string | null;
+  respondent_email: string | null;
+  respondent_phone: string | null;
+  age_range: string | null;
+  residency_confirmed: boolean | null;
   survey_templates: { title: string; kind: string } | null;
   participations: {
     audience_profile_id: string;
@@ -86,7 +92,7 @@ export default async function SurveyResponseDetailPage({
       response.duplicate_of
         ? supabase
             .from("survey_responses")
-            .select("id, participations(profiles(full_name))")
+            .select("id, respondent_first_name, respondent_last_name, participations(profiles(full_name))")
             .eq("id", response.duplicate_of)
             .maybeSingle()
         : Promise.resolve({ data: null }),
@@ -102,8 +108,12 @@ export default async function SurveyResponseDetailPage({
   return (
     <div>
       <PageHeader
-        title={response.participations?.profiles?.full_name ?? "Survey response"}
-        subtitle={`${response.survey_templates?.title ?? "Survey"} · ${response.participations?.sponsored_events?.name ?? "Event"}`}
+        title={respondentName(response)}
+        subtitle={
+          response.participations?.sponsored_events?.name
+            ? `${response.survey_templates?.title ?? "Survey"} · ${response.participations.sponsored_events.name}`
+            : `${response.survey_templates?.title ?? "Survey"} · Public response`
+        }
         action={<StatusBadge status={response.quality_status} />}
       />
       <Link
@@ -117,7 +127,7 @@ export default async function SurveyResponseDetailPage({
       <div className="card mb-4 grid gap-3 p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-xs text-[var(--color-ink-soft)]">Respondent</p>
-          <p className="font-medium">{response.participations?.profiles?.email ?? "—"}</p>
+          <p className="font-medium">{respondentEmail(response)}</p>
         </div>
         <div>
           <p className="text-xs text-[var(--color-ink-soft)]">Submitted</p>
@@ -131,6 +141,22 @@ export default async function SurveyResponseDetailPage({
           <p className="text-xs text-[var(--color-ink-soft)]">Quality score</p>
           <p className="font-medium">{response.quality_score ?? "not yet scored"}</p>
         </div>
+        {!response.participations && (
+          <>
+            <div>
+              <p className="text-xs text-[var(--color-ink-soft)]">Phone</p>
+              <p className="font-medium">{response.respondent_phone ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--color-ink-soft)]">Age range</p>
+              <p className="font-medium">{response.age_range ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--color-ink-soft)]">Residency confirmed</p>
+              <p className="font-medium">{response.residency_confirmed ? "Yes" : "—"}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {response.duplicate_of && (
@@ -140,8 +166,15 @@ export default async function SurveyResponseDetailPage({
             href={`/dashboard/admin/surveys/responses/${response.duplicate_of}`}
             className="font-semibold text-[var(--color-brand-dark)] hover:underline"
           >
-            {(duplicateOf as { participations?: { profiles?: { full_name: string | null } | null } } | null)
-              ?.participations?.profiles?.full_name ?? "another response"}
+            {duplicateOf
+              ? respondentName(
+                  duplicateOf as {
+                    respondent_first_name: string | null;
+                    respondent_last_name: string | null;
+                    participations?: { profiles?: { full_name: string | null } | null } | null;
+                  },
+                )
+              : "another response"}
           </Link>{" "}
           to this same survey.
         </div>

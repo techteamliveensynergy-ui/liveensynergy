@@ -22,7 +22,15 @@ function SubmitButton() {
   );
 }
 
-export function SignUpForm({ initialRole }: { initialRole?: string }) {
+export function SignUpForm({
+  initialRole,
+  event,
+}: {
+  initialRole?: string;
+  /** A sponsored_events reference from a public survey's CTA — see signUp()'s
+   *  pending_event_reference for where this ends up. */
+  event?: string;
+}) {
   const [state, formAction] = useActionState<AuthState, FormData>(signUp, {});
   const preset = isRole(initialRole) ? initialRole : "";
   const [role, setRole] = useState<Role | "">(preset);
@@ -87,6 +95,7 @@ export function SignUpForm({ initialRole }: { initialRole?: string }) {
   return (
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="role" value={role} />
+      {event && <input type="hidden" name="event" value={event} />}
 
       <div className="flex items-center justify-between rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm">
         <span>

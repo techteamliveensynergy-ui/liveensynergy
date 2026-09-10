@@ -16,6 +16,7 @@ interface Row {
   title: string;
   kind: string;
   status: string;
+  is_public: boolean;
   created_at: string;
   campaigns: { reference: string; brands: { brand_name: string } | null } | null;
 }
@@ -27,7 +28,7 @@ export default async function AdminSurveysPage() {
   const [{ data: templateRows }, { data: questionRows }] = await Promise.all([
     supabase
       .from("survey_templates")
-      .select("id, title, kind, status, created_at, campaigns(reference, brands(brand_name))")
+      .select("id, title, kind, status, is_public, created_at, campaigns(reference, brands(brand_name))")
       .order("created_at", { ascending: false }),
     supabase.from("survey_questions").select("template_id"),
   ]);
@@ -65,7 +66,14 @@ export default async function AdminSurveysPage() {
               <div key={t.id} className="card flex flex-col p-5">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-semibold">{t.title}</h3>
-                  <StatusBadge status={t.status} />
+                  <div className="flex items-center gap-1.5">
+                    {t.is_public && (
+                      <span className="chip bg-[var(--color-sage)] text-[var(--color-olive-deep)]">
+                        Public
+                      </span>
+                    )}
+                    <StatusBadge status={t.status} />
+                  </div>
                 </div>
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                   {t.kind === "pre_event" ? "Pre-event" : "Post-event"} · {count}{" "}

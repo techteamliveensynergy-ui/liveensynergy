@@ -43,6 +43,22 @@ export const HIDDEN_FIELD_SOURCES: { value: string; label: string }[] = [
   { value: "audience_members.phone", label: "Phone" },
   { value: "audience_members.country_of_residence", label: "Country of residence" },
   { value: "audience_members.gender", label: "Gender" },
+  { value: "audience_members.date_of_birth", label: "Date of birth" },
+];
+
+/**
+ * Coarse age bucket collected from a public/anonymous survey respondent —
+ * "rough age range", not a birth date (the client's own distinction between
+ * a stranger and a known account, 7 Sep standup). No under-18 option is
+ * offered on purpose: picking any bucket here doubles as the age gate.
+ */
+export const AGE_RANGE_OPTIONS: readonly string[] = [
+  "18-24",
+  "25-34",
+  "35-44",
+  "45-54",
+  "55-64",
+  "65+",
 ];
 
 export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
@@ -184,6 +200,35 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     answerShape: "none",
   },
 ] as const;
+
+/**
+ * A response's respondent is either an authenticated participation (the
+ * pre-0037 shape, joined through participations.profiles) or a captured
+ * public/anonymous identity (0037's respondent_* columns) — never both,
+ * never neither (the DB check constraint guarantees that). Shared by the
+ * admin review queue's list and detail screens so "Unnamed"/"—" never
+ * shows for a real public respondent just because the old join found
+ * nothing.
+ */
+export interface RespondentIdentity {
+  participations?: {
+    profiles?: { full_name?: string | null; email?: string | null } | null;
+  } | null;
+  respondent_first_name?: string | null;
+  respondent_last_name?: string | null;
+  respondent_email?: string | null;
+}
+
+export function respondentName(r: RespondentIdentity): string {
+  const authName = r.participations?.profiles?.full_name;
+  if (authName) return authName;
+  const full = [r.respondent_first_name, r.respondent_last_name].filter(Boolean).join(" ").trim();
+  return full || "Unnamed";
+}
+
+export function respondentEmail(r: RespondentIdentity): string {
+  return r.participations?.profiles?.email ?? r.respondent_email ?? "—";
+}
 
 export function questionSpec(type: SurveyQuestionType): SurveyQuestionSpec {
   const spec = SURVEY_QUESTION_TYPES.find((s) => s.type === type);

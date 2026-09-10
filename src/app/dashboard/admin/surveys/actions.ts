@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/profile";
+import { uploadImage } from "@/lib/storage";
 import {
   validateQuestions,
   validContradictionRules,
@@ -27,14 +28,22 @@ export async function createSurveyTemplate(
   const { supabase, userId } = await requireAdmin();
   const title = str(formData.get("title"));
   if (!title) return { error: "Title is required." };
+  const kind = str(formData.get("kind")) ?? "pre_event";
+  const isPublic = formData.get("is_public") === "on";
+  if (isPublic && kind !== "pre_event") {
+    return { error: "Only pre-event surveys can be made public." };
+  }
 
   const { data: created, error } = await supabase
     .from("survey_templates")
     .insert({
       title,
-      kind: str(formData.get("kind")) ?? "pre_event",
+      kind,
       campaign_id: str(formData.get("campaign_id")),
       description: str(formData.get("description")),
+      is_public: isPublic,
+      intro_message: str(formData.get("intro_message")),
+      thank_you_message: str(formData.get("thank_you_message")),
       created_by: userId,
     })
     .select("id")
@@ -53,14 +62,22 @@ export async function updateSurveyTemplate(
   const id = str(formData.get("id"));
   const title = str(formData.get("title"));
   if (!id || !title) return { error: "Title is required." };
+  const kind = str(formData.get("kind")) ?? "pre_event";
+  const isPublic = formData.get("is_public") === "on";
+  if (isPublic && kind !== "pre_event") {
+    return { error: "Only pre-event surveys can be made public." };
+  }
 
   const { error } = await supabase
     .from("survey_templates")
     .update({
       title,
-      kind: str(formData.get("kind")) ?? "pre_event",
+      kind,
       campaign_id: str(formData.get("campaign_id")),
       description: str(formData.get("description")),
+      is_public: isPublic,
+      intro_message: str(formData.get("intro_message")),
+      thank_you_message: str(formData.get("thank_you_message")),
     })
     .eq("id", id);
   if (error) return { error: error.message };
@@ -191,6 +208,28 @@ export async function saveSurveyQuestions(
 
   revalidatePath(`/dashboard/admin/surveys/${templateId}`);
   return { success: true };
+}
+
+export interface UploadState {
+  url?: string;
+  error?: string;
+}
+
+/**
+ * Called directly (not via <form action>) from QuestionInspector's file
+ * input — the builder's own "Save" is a single JSON-serialised question
+ * list (saveSurveyQuestions above), which can't carry a File. An image
+ * uploads immediately on selection instead, into the same `media` bucket
+ * onboarding/profile pickers use, and the returned URL is written straight
+ * into that question's draft.config.media_url in the builder's client state.
+ * Video stays a plain link field (4 Sep standup) — no upload path for it.
+ */
+export async function uploadQuestionMedia(formData: FormData): Promise<UploadState> {
+  await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-question");
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
 }
 
 export async function publishSurveyTemplate(formData: FormData) {
