@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
+import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
 import { emptyAnswerFor, questionSpec, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
@@ -84,6 +85,7 @@ export function PreviewSurveyForm({ questions }: { questions: SurveyQuestion[] }
         const spec = questionSpec(q.type);
         return (
           <div key={q.id} className="card p-5">
+            <QuestionMedia config={q.config} />
             <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
               <QuestionField
                 question={q}
