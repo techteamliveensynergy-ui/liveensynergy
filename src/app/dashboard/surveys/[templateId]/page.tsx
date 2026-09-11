@@ -91,7 +91,18 @@ export default async function TakeSurveyPage({
   return (
     <div>
       <PageHeader title={tpl.title} subtitle={tpl.description ?? undefined} />
-      <SurveyForm templateId={tpl.id} questions={questions} />
+      <SurveyForm
+        templateId={tpl.id}
+        questions={questions}
+        layoutMode={tpl.layout_mode}
+        coverMediaUrl={tpl.cover_media_url}
+        coverMediaType={tpl.cover_media_type}
+        footerBrandName={tpl.footer_brand_name}
+        footerTagline={tpl.footer_tagline}
+        footerLogoUrl={tpl.footer_logo_url}
+        accentColor={tpl.accent_color}
+        backgroundImageUrl={tpl.background_image_url}
+      />
     </div>
   );
 }

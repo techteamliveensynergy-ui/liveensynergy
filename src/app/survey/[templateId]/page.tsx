@@ -125,7 +125,18 @@ export default async function PublicSurveyPage({
               <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{tpl.description}</p>
             )}
           </div>
-          <SurveyForm templateId={tpl.id} questions={questions} />
+          <SurveyForm
+            templateId={tpl.id}
+            questions={questions}
+            layoutMode={tpl.layout_mode}
+            coverMediaUrl={tpl.cover_media_url}
+            coverMediaType={tpl.cover_media_type}
+            footerBrandName={tpl.footer_brand_name}
+            footerTagline={tpl.footer_tagline}
+            footerLogoUrl={tpl.footer_logo_url}
+            accentColor={tpl.accent_color}
+            backgroundImageUrl={tpl.background_image_url}
+          />
         </Shell>
       );
     }
@@ -165,6 +176,14 @@ export default async function PublicSurveyPage({
         thankYouMessage={tpl.thank_you_message}
         event={event}
         isAuthenticated={Boolean(user)}
+        layoutMode={tpl.layout_mode}
+        coverMediaUrl={tpl.cover_media_url}
+        coverMediaType={tpl.cover_media_type}
+        footerBrandName={tpl.footer_brand_name}
+        footerTagline={tpl.footer_tagline}
+        footerLogoUrl={tpl.footer_logo_url}
+        accentColor={tpl.accent_color}
+        backgroundImageUrl={tpl.background_image_url}
       />
     </Shell>
   );

@@ -77,7 +77,7 @@ export default async function SurveyPreviewPage({
           Add at least one question in the editor to preview it.
         </div>
       ) : (
-        <PreviewSurveyForm questions={questions} />
+        <PreviewSurveyForm questions={questions} template={tpl} />
       )}
     </div>
   );

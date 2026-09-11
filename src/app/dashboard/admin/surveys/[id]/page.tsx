@@ -208,6 +208,7 @@ export default async function EditSurveyPage({
         initialQuestions={questions.map(questionRowToDraft)}
         initialRules={rules.map(contradictionRuleRowToDraft)}
         editable={tpl.status !== "published"}
+        layoutMode={tpl.layout_mode}
       />
     </div>
   );

@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { ErrorBanner } from "@/components/onboarding/parts";
-import type { SurveyQuestionType } from "@/lib/types";
+import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
   newQuestionDraft,
   questionSpec,
@@ -54,11 +54,13 @@ export function SurveyBuilder({
   initialQuestions,
   initialRules,
   editable,
+  layoutMode,
 }: {
   templateId: string;
   initialQuestions: SurveyQuestionDraft[];
   initialRules: ContradictionRuleDraft[];
   editable: boolean;
+  layoutMode: SurveyTemplateLayoutMode;
 }) {
   const dndId = useId();
   const [questions, setQuestions] = useState<SurveyQuestionDraft[]>(initialQuestions);
@@ -195,6 +197,7 @@ export function SurveyBuilder({
           <QuestionInspector
             question={selected}
             editable={editable}
+            layoutMode={layoutMode}
             onChange={(patch) => selected && updateQuestion(selected.key, patch)}
           />
         </div>

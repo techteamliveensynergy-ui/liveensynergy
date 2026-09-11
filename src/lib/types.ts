@@ -551,6 +551,8 @@ export interface FeedbackReport {
 
 export type SurveyTemplateKind = "pre_event" | "post_event";
 export type SurveyTemplateStatus = "draft" | "published" | "archived";
+export type SurveyTemplateLayoutMode = "single_page" | "stepped";
+export type SurveyMediaType = "image" | "video";
 export type SurveyQuestionType =
   | "single_choice"
   | "multiple_choice"
@@ -584,9 +586,19 @@ export interface SurveyQuestionConfig {
   /** hidden_field — which profile field this question copies at submit time. */
   profile_field?: string;
   /** Universal, any question type — an image (uploaded to the media bucket)
-   *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt. */
+   *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt.
+   *  Always renders when set; the *builder* only offers this field in
+   *  `stepped` layout mode though — a single-page survey is meant to use
+   *  the template's own cover_media_* once at the top instead (see
+   *  SurveyTemplate), since a different image per question reads as noise
+   *  when every question is on screen at once. */
   media_url?: string;
-  media_type?: "image" | "video";
+  media_type?: SurveyMediaType;
+  /** stepped layout only — a decorative background image behind this one
+   *  step, distinct from media_url above (which renders as inline content
+   *  above the prompt, not a backdrop). A single-page survey uses the
+   *  template's own background_image_url instead — see SurveyTemplate. */
+  background_image_url?: string;
 }
 
 export interface SurveyTemplate {
@@ -602,6 +614,28 @@ export interface SurveyTemplate {
   intro_message: string | null;
   /** Shown on the public page's CTA screen after submission. */
   thank_you_message: string | null;
+  /** All questions on one scrolling page (default), or one at a time with
+   *  Back/Next navigation, Typeform-style. */
+  layout_mode: SurveyTemplateLayoutMode;
+  /** A single hero image/video for a single-page survey — see the note on
+   *  SurveyQuestionConfig.media_url for why this is separate from
+   *  per-question media. */
+  cover_media_url: string | null;
+  cover_media_type: SurveyMediaType | null;
+  /** Shown at the bottom of every page (single-page) or every step
+   *  (stepped). Either may be set alone. */
+  footer_brand_name: string | null;
+  footer_tagline: string | null;
+  /** Shown next to the footer text, both layout modes. */
+  footer_logo_url: string | null;
+  /** Hex colour overriding the default brand-orange on the Next/Submit
+   *  buttons a respondent clicks. Null keeps the platform default. */
+  accent_color: string | null;
+  /** A single decorative background for a single-page survey — the
+   *  cover_media_url/per-question-media split above applies here too: a
+   *  stepped survey uses config.background_image_url per question instead
+   *  (see SurveyQuestionConfig). Images only, no video option. */
+  background_image_url: string | null;
   created_by: string | null;
   published_at: string | null;
   created_at: string;

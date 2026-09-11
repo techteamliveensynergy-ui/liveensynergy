@@ -4,7 +4,10 @@ import { startTransition, useActionState, useEffect, useMemo, useRef, useState }
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
-import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
+import { SurveyFooter } from "@/components/surveys/SurveyFooter";
+import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
+import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
+import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import { submitSurveyResponse, type SurveyResponseState } from "./actions";
@@ -19,9 +22,25 @@ interface Timing {
 export function SurveyForm({
   templateId,
   questions,
+  layoutMode = "single_page",
+  coverMediaUrl,
+  coverMediaType,
+  footerBrandName,
+  footerTagline,
+  footerLogoUrl,
+  accentColor,
+  backgroundImageUrl,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
+  layoutMode?: SurveyTemplateLayoutMode;
+  coverMediaUrl?: string | null;
+  coverMediaType?: SurveyMediaType | null;
+  footerBrandName?: string | null;
+  footerTagline?: string | null;
+  footerLogoUrl?: string | null;
+  accentColor?: string | null;
+  backgroundImageUrl?: string | null;
 }) {
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
@@ -63,8 +82,11 @@ export function SurveyForm({
   // Per-question shown_at via IntersectionObserver — a single page-load
   // timestamp for every question would collapse the straight-lining and
   // completion-time signals the quality engine needs later. First write
-  // wins; scrolling a question back into view never resets it.
+  // wins; scrolling a question back into view never resets it. Only wired
+  // up for single-page — stepped mode marks shown_at itself as each
+  // question becomes the active step (see markShown below).
   useEffect(() => {
+    if (layoutMode !== "single_page") return;
     if (typeof IntersectionObserver === "undefined") {
       const fallback = mountedAt.current;
       setTimings((prev) => {
@@ -103,7 +125,7 @@ export function SurveyForm({
     // Registered once against the refs captured at mount — re-subscribing
     // on every keystroke would defeat the point of the observer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [layoutMode]);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -114,6 +136,14 @@ export function SurveyForm({
         answered_at: new Date().toISOString(),
       },
     }));
+  }
+
+  function markShown(questionId: string) {
+    setTimings((prev) =>
+      prev[questionId]?.shown_at
+        ? prev
+        : { ...prev, [questionId]: { shown_at: new Date().toISOString(), answered_at: prev[questionId]?.answered_at ?? null } },
+    );
   }
 
   const startedAt = useMemo(() => {
@@ -130,6 +160,11 @@ export function SurveyForm({
     shown_at: timings[q.id]?.shown_at ?? null,
     answered_at: timings[q.id]?.answered_at ?? null,
   }));
+
+  const footer = (
+    <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
+  );
+  const singlePageBackground = backgroundImageStyle(backgroundImageUrl);
 
   return (
     <form
@@ -178,34 +213,54 @@ export function SurveyForm({
       <input type="hidden" name="cf-turnstile-response" value={botToken ?? ""} readOnly />
       <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
 
-      {questions.map((q) => {
-        const spec = questionSpec(q.type);
-        return (
-          <div
-            key={q.id}
-            ref={(el) => {
-              refs.current[q.id] = el;
-            }}
-            data-question-id={q.id}
-            className="card p-5"
-          >
-            <QuestionMedia config={q.config} />
-            <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-              <QuestionField
-                question={q}
-                value={values[q.id] ?? null}
-                onChange={(v) => handleChange(q.id, v)}
-              />
-            </Field>
-          </div>
-        );
-      })}
+      {layoutMode === "stepped" ? (
+        <SteppedQuestions
+          questions={questions}
+          values={values}
+          onChange={handleChange}
+          onShown={markShown}
+          isPending={isPending}
+          footer={footer}
+          accentColor={accentColor}
+        />
+      ) : (
+        <div className={`space-y-4 ${singlePageBackground ? "p-4" : ""}`} style={singlePageBackground}>
+          {coverMediaUrl && (
+            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
+          )}
 
-      <div className="flex justify-end">
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
-          {isPending ? "Submitting…" : "Submit survey"}
-        </button>
-      </div>
+          {questions.map((q) => {
+            const spec = questionSpec(q.type);
+            return (
+              <div
+                key={q.id}
+                ref={(el) => {
+                  refs.current[q.id] = el;
+                }}
+                data-question-id={q.id}
+                className="card p-5"
+              >
+                <QuestionMedia config={q.config} />
+                <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+                  <QuestionField
+                    question={q}
+                    value={values[q.id] ?? null}
+                    onChange={(v) => handleChange(q.id, v)}
+                  />
+                </Field>
+              </div>
+            );
+          })}
+
+          {footer}
+
+          <div className="flex justify-end" style={accentColorVars(accentColor)}>
+            <button type="submit" className="btn btn-primary" disabled={isPending}>
+              {isPending ? "Submitting…" : "Submit survey"}
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

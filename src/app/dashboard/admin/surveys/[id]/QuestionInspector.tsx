@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { HIDDEN_FIELD_SOURCES, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
-import type { SurveyQuestionConfig } from "@/lib/types";
+import type { SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
-import { uploadQuestionMedia } from "../actions";
+import { uploadQuestionBackground, uploadQuestionMedia } from "../actions";
 
 const NUMERIC_CONFIG_KEYS = new Set([
   "min",
@@ -19,14 +19,18 @@ const NUMERIC_CONFIG_KEYS = new Set([
 export function QuestionInspector({
   question,
   editable,
+  layoutMode,
   onChange,
 }: {
   question: SurveyQuestionDraft | null;
   editable: boolean;
+  layoutMode: SurveyTemplateLayoutMode;
   onChange: (patch: Partial<SurveyQuestionDraft>) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [bgUploading, setBgUploading] = useState(false);
+  const [bgUploadError, setBgUploadError] = useState<string | null>(null);
 
   if (!question) {
     return (
@@ -51,6 +55,21 @@ export function QuestionInspector({
       return;
     }
     onChange({ config: { ...question!.config, media_type: "image", media_url: result.url } });
+  }
+
+  async function handleBackgroundSelect(file: File | undefined) {
+    if (!file) return;
+    setBgUploading(true);
+    setBgUploadError(null);
+    const form = new FormData();
+    form.set("file", file);
+    const result = await uploadQuestionBackground(form);
+    setBgUploading(false);
+    if (result.error) {
+      setBgUploadError(result.error);
+      return;
+    }
+    onChange({ config: { ...question!.config, background_image_url: result.url } });
   }
 
   function setConfig(name: string, value: string) {
@@ -108,7 +127,15 @@ export function QuestionInspector({
         </label>
       )}
 
-      {question.type !== "hidden_field" && (
+      {question.type !== "hidden_field" && layoutMode === "single_page" && (
+        <p className="field-hint">
+          Per-question media is only available in step-by-step layout — this survey shows one
+          cover image/video for the whole page instead (set it under "Layout &amp; branding"
+          above).
+        </p>
+      )}
+
+      {question.type !== "hidden_field" && layoutMode === "stepped" && (
         <Field label="Media (optional)" htmlFor="q-media-type">
           <div className="space-y-2">
             <select
@@ -164,6 +191,49 @@ export function QuestionInspector({
                 value={question.config.media_url ?? ""}
                 onChange={(e) => onChange({ config: { ...question!.config, media_url: e.target.value } })}
               />
+            )}
+          </div>
+        </Field>
+      )}
+
+      {question.type !== "hidden_field" && layoutMode === "stepped" && (
+        <Field
+          label="Step background image (optional)"
+          htmlFor="q-background-file"
+          hint="A decorative image behind just this step — separate from the media above, which renders as content, not a backdrop."
+        >
+          <div className="space-y-2">
+            {question.config.background_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={question.config.background_image_url}
+                alt=""
+                className="h-20 w-full rounded-lg object-cover"
+              />
+            )}
+            <input
+              id="q-background-file"
+              type="file"
+              accept="image/*"
+              disabled={!editable || bgUploading}
+              onChange={(e) => handleBackgroundSelect(e.target.files?.[0])}
+              className="text-sm"
+            />
+            {bgUploading && <p className="field-hint">Uploading…</p>}
+            {bgUploadError && <p className="text-sm text-[var(--color-accent)]">{bgUploadError}</p>}
+            {question.config.background_image_url && (
+              <button
+                type="button"
+                className="btn btn-ghost text-xs"
+                disabled={!editable}
+                onClick={() => {
+                  const next = { ...question!.config } as Record<string, unknown>;
+                  delete next.background_image_url;
+                  onChange({ config: next as SurveyQuestionConfig });
+                }}
+              >
+                Remove background image
+              </button>
             )}
           </div>
         </Field>

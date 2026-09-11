@@ -108,6 +108,42 @@ export default defineConfig({
       },
     },
     {
+      // Full walkthrough: pre-event (public) + post-event (attendee-only)
+      // surveys, the admin builder's full customization surface, and a tour
+      // of the rest of the admin console. Not deployed yet — local build
+      // only, same as public-survey-video below.
+      name: "full-survey-video",
+      testMatch: /full-survey-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "http://localhost:3000",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 150 },
+      },
+    },
+    {
+      // Survey-admin-only walkthrough of migration 0038's layout/branding
+      // customization: single-page vs step-by-step, template cover media vs
+      // per-question media, footer branding, accent colour. Deliberately
+      // scoped to just the survey admin screens — full-survey-video above
+      // already covers the wider admin console and the participant-facing
+      // pre/post-event flows, so this one doesn't repeat them.
+      name: "survey-admin-video",
+      testMatch: /survey-admin-layout-branding\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "http://localhost:3000",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 200 },
+      },
+    },
+    {
       // Walkthrough recording of the public pre-event survey feature
       // (migration 0037) — not deployed yet, so unlike the other video
       // projects this one always points at a local build, never the

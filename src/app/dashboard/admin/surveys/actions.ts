@@ -21,6 +21,29 @@ function str(v: FormDataEntryValue | null): string | null {
   return s || null;
 }
 
+// layout_mode gates which branding fields are meaningful: cover media and
+// the shared background image only render in single_page mode
+// (SurveyForm.tsx/PublicSurveyForm.tsx only read them there — a stepped
+// survey uses per-question config.media_url/background_image_url instead),
+// so a switch to 'stepped' clears both rather than leaving an orphaned
+// upload nothing will ever show. Footer (name/tagline/logo) and accent
+// color apply to both modes and are never cleared.
+function brandingFields(formData: FormData) {
+  const layoutMode = str(formData.get("layout_mode")) ?? "single_page";
+  const coverMediaType = str(formData.get("cover_media_type"));
+  return {
+    layout_mode: layoutMode,
+    cover_media_url: layoutMode === "single_page" ? str(formData.get("cover_media_url")) : null,
+    cover_media_type: layoutMode === "single_page" ? coverMediaType : null,
+    background_image_url:
+      layoutMode === "single_page" ? str(formData.get("background_image_url")) : null,
+    footer_brand_name: str(formData.get("footer_brand_name")),
+    footer_tagline: str(formData.get("footer_tagline")),
+    footer_logo_url: str(formData.get("footer_logo_url")),
+    accent_color: str(formData.get("accent_color")),
+  };
+}
+
 export async function createSurveyTemplate(
   _prev: SurveyState,
   formData: FormData,
@@ -45,6 +68,7 @@ export async function createSurveyTemplate(
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
       created_by: userId,
+      ...brandingFields(formData),
     })
     .select("id")
     .single();
@@ -78,6 +102,7 @@ export async function updateSurveyTemplate(
       is_public: isPublic,
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
+      ...brandingFields(formData),
     })
     .eq("id", id);
   if (error) return { error: error.message };
@@ -227,6 +252,49 @@ export interface UploadState {
 export async function uploadQuestionMedia(formData: FormData): Promise<UploadState> {
   await requireAdmin();
   const { url, error } = await uploadImage(formData.get("file"), "survey-question");
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
+}
+
+/**
+ * Same shape as uploadQuestionMedia above, for a template's single
+ * single_page-mode cover image instead of a per-question one — kept as its
+ * own action (rather than reused) so the storage path segment
+ * ("survey-cover") tells the two kinds of upload apart in the bucket.
+ */
+export async function uploadSurveyCoverMedia(formData: FormData): Promise<UploadState> {
+  await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-cover");
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
+}
+
+/** Footer logo — shown next to the brand name/tagline, both layout modes. */
+export async function uploadSurveyLogo(formData: FormData): Promise<UploadState> {
+  await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-logo");
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
+}
+
+/** Template-wide decorative background — single_page layout only, same
+ *  "one for the whole survey" scope as uploadSurveyCoverMedia. */
+export async function uploadSurveyBackground(formData: FormData): Promise<UploadState> {
+  await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-background");
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
+}
+
+/** Per-question decorative background — stepped layout only, one per step
+ *  instead of the template-wide one uploadSurveyBackground sets. */
+export async function uploadQuestionBackground(formData: FormData): Promise<UploadState> {
+  await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-question-background");
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };

@@ -6,9 +6,12 @@ import { Field } from "@/components/ui/Field";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
+import { SurveyFooter } from "@/components/surveys/SurveyFooter";
+import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
+import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
 import { AGE_RANGE_OPTIONS, emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
-import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
+import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
 import {
@@ -94,6 +97,14 @@ export function PublicSurveyForm({
   thankYouMessage,
   event,
   isAuthenticated,
+  layoutMode = "single_page",
+  coverMediaUrl,
+  coverMediaType,
+  footerBrandName,
+  footerTagline,
+  footerLogoUrl,
+  accentColor,
+  backgroundImageUrl,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -101,6 +112,14 @@ export function PublicSurveyForm({
   thankYouMessage: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
+  layoutMode?: SurveyTemplateLayoutMode;
+  coverMediaUrl?: string | null;
+  coverMediaType?: SurveyMediaType | null;
+  footerBrandName?: string | null;
+  footerTagline?: string | null;
+  footerLogoUrl?: string | null;
+  accentColor?: string | null;
+  backgroundImageUrl?: string | null;
 }) {
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
@@ -126,6 +145,7 @@ export function PublicSurveyForm({
   }, [state.error]);
 
   useEffect(() => {
+    if (layoutMode !== "single_page") return;
     if (typeof IntersectionObserver === "undefined") {
       const fallback = mountedAt.current;
       setTimings((prev) => {
@@ -162,7 +182,7 @@ export function PublicSurveyForm({
     }
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [layoutMode]);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -173,6 +193,14 @@ export function PublicSurveyForm({
         answered_at: new Date().toISOString(),
       },
     }));
+  }
+
+  function markShown(questionId: string) {
+    setTimings((prev) =>
+      prev[questionId]?.shown_at
+        ? prev
+        : { ...prev, [questionId]: { shown_at: new Date().toISOString(), answered_at: prev[questionId]?.answered_at ?? null } },
+    );
   }
 
   const startedAt = useMemo(() => {
@@ -301,34 +329,59 @@ export function PublicSurveyForm({
       <input type="hidden" name="cf-turnstile-response" value={botToken ?? ""} readOnly />
       <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
 
-      {questions.map((q) => {
-        const spec = questionSpec(q.type);
-        return (
-          <div
-            key={q.id}
-            ref={(el) => {
-              refs.current[q.id] = el;
-            }}
-            data-question-id={q.id}
-            className="card p-5"
-          >
-            <QuestionMedia config={q.config} />
-            <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-              <QuestionField
-                question={q}
-                value={values[q.id] ?? null}
-                onChange={(v) => handleChange(q.id, v)}
-              />
-            </Field>
-          </div>
-        );
-      })}
+      {layoutMode === "stepped" ? (
+        <SteppedQuestions
+          questions={questions}
+          values={values}
+          onChange={handleChange}
+          onShown={markShown}
+          isPending={isPending}
+          footer={
+            <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
+          }
+          accentColor={accentColor}
+        />
+      ) : (
+        <div
+          className={`space-y-4 ${backgroundImageStyle(backgroundImageUrl) ? "p-4" : ""}`}
+          style={backgroundImageStyle(backgroundImageUrl)}
+        >
+          {coverMediaUrl && (
+            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
+          )}
 
-      <div className="flex justify-end">
-        <button type="submit" className="btn btn-primary" disabled={isPending}>
-          {isPending ? "Submitting…" : "Submit survey"}
-        </button>
-      </div>
+          {questions.map((q) => {
+            const spec = questionSpec(q.type);
+            return (
+              <div
+                key={q.id}
+                ref={(el) => {
+                  refs.current[q.id] = el;
+                }}
+                data-question-id={q.id}
+                className="card p-5"
+              >
+                <QuestionMedia config={q.config} />
+                <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+                  <QuestionField
+                    question={q}
+                    value={values[q.id] ?? null}
+                    onChange={(v) => handleChange(q.id, v)}
+                  />
+                </Field>
+              </div>
+            );
+          })}
+
+          <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
+
+          <div className="flex justify-end" style={accentColorVars(accentColor)}>
+            <button type="submit" className="btn btn-primary" disabled={isPending}>
+              {isPending ? "Submitting…" : "Submit survey"}
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

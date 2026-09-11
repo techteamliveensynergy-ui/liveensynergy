@@ -4,7 +4,10 @@ import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
-import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
+import { SurveyFooter } from "@/components/surveys/SurveyFooter";
+import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
+import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
+import type { SurveyAnswerValue, SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { emptyAnswerFor, questionSpec, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
 
@@ -15,7 +18,17 @@ import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
  * only runs the same client-side validateAnswers() check and never reaches
  * the server, so nothing is written and no quality scoring runs.
  */
-export function PreviewSurveyForm({ questions }: { questions: SurveyQuestion[] }) {
+export function PreviewSurveyForm({ questions, template }: { questions: SurveyQuestion[]; template: SurveyTemplate }) {
+  const {
+    layout_mode: layoutMode,
+    cover_media_url: coverMediaUrl,
+    cover_media_type: coverMediaType,
+    footer_brand_name: footerBrandName,
+    footer_tagline: footerTagline,
+    footer_logo_url: footerLogoUrl,
+    accent_color: accentColor,
+    background_image_url: backgroundImageUrl,
+  } = template;
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
     for (const q of questions) {
@@ -81,27 +94,53 @@ export function PreviewSurveyForm({ questions }: { questions: SurveyQuestion[] }
       </p>
       <ErrorBanner error={error} />
 
-      {questions.map((q) => {
-        const spec = questionSpec(q.type);
-        return (
-          <div key={q.id} className="card p-5">
-            <QuestionMedia config={q.config} />
-            <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-              <QuestionField
-                question={q}
-                value={values[q.id] ?? null}
-                onChange={(v) => handleChange(q.id, v)}
-              />
-            </Field>
-          </div>
-        );
-      })}
+      {layoutMode === "stepped" ? (
+        <SteppedQuestions
+          questions={questions}
+          values={values}
+          onChange={handleChange}
+          onShown={() => {}}
+          isPending={false}
+          footer={
+            <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
+          }
+          accentColor={accentColor}
+          submitLabel="Finish preview"
+        />
+      ) : (
+        <div
+          className={`space-y-4 ${backgroundImageStyle(backgroundImageUrl) ? "p-4" : ""}`}
+          style={backgroundImageStyle(backgroundImageUrl)}
+        >
+          {coverMediaUrl && (
+            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
+          )}
 
-      <div className="flex justify-end">
-        <button type="submit" className="btn btn-primary">
-          Finish preview
-        </button>
-      </div>
+          {questions.map((q) => {
+            const spec = questionSpec(q.type);
+            return (
+              <div key={q.id} className="card p-5">
+                <QuestionMedia config={q.config} />
+                <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+                  <QuestionField
+                    question={q}
+                    value={values[q.id] ?? null}
+                    onChange={(v) => handleChange(q.id, v)}
+                  />
+                </Field>
+              </div>
+            );
+          })}
+
+          <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
+
+          <div className="flex justify-end" style={accentColorVars(accentColor)}>
+            <button type="submit" className="btn btn-primary">
+              Finish preview
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
