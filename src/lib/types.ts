@@ -553,6 +553,7 @@ export type SurveyTemplateKind = "pre_event" | "post_event";
 export type SurveyTemplateStatus = "draft" | "published" | "archived";
 export type SurveyTemplateLayoutMode = "single_page" | "stepped";
 export type SurveyMediaType = "image" | "video";
+export type SurveyMediaPosition = "top" | "bottom" | "left" | "right";
 export type SurveyQuestionType =
   | "single_choice"
   | "multiple_choice"
@@ -581,6 +582,10 @@ export interface SurveyQuestionConfig {
   min_select?: number;
   max_select?: number;
   max_length?: number;
+  /** single_choice created from the "Likert (5-point)" palette preset —
+   *  renders as five fixed face-icon tiles (by position) instead of plain
+   *  radios. Only the option labels are meant to be edited after insertion. */
+  display_style?: "likert";
   /** attention_check — scored, never shown to the brand. */
   expected_answer?: string;
   /** hidden_field — which profile field this question copies at submit time. */
@@ -594,6 +599,9 @@ export interface SurveyQuestionConfig {
    *  when every question is on screen at once. */
   media_url?: string;
   media_type?: SurveyMediaType;
+  /** Where media_url renders relative to the prompt/answer. Defaults to
+   *  "top" when unset. */
+  media_position?: SurveyMediaPosition;
   /** stepped layout only — a decorative background image behind this one
    *  step, distinct from media_url above (which renders as inline content
    *  above the prompt, not a backdrop). A single-page survey uses the

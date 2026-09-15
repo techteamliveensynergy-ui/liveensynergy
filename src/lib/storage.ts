@@ -25,6 +25,14 @@ export interface UploadResult {
   error?: string;
 }
 
+/** An already-authenticated caller (e.g. from `requireAdmin()`/`requireProfile()`)
+ *  can pass its own client + user id so an upload doesn't re-check auth with a
+ *  second, independent `auth.getUser()` call. */
+interface AuthedCaller {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+}
+
 function extensionFor(file: File) {
   const fromName = file.name.includes(".")
     ? file.name.split(".").pop()!.toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -42,6 +50,7 @@ function extensionFor(file: File) {
 export async function uploadImage(
   file: FormDataEntryValue | null,
   purpose: string,
+  authed?: AuthedCaller,
 ): Promise<UploadResult> {
   if (!(file instanceof File) || file.size === 0) return {};
 
@@ -51,13 +60,18 @@ export async function uploadImage(
   });
   if (problem) return { error: problem };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "You need to be signed in to upload." };
+  let supabase = authed?.supabase;
+  let userId = authed?.userId;
+  if (!supabase || !userId) {
+    supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "You need to be signed in to upload." };
+    userId = user.id;
+  }
 
-  const path = `${user.id}/${purpose}/${crypto.randomUUID()}.${extensionFor(file)}`;
+  const path = `${userId}/${purpose}/${crypto.randomUUID()}.${extensionFor(file)}`;
   const { error } = await supabase.storage
     .from(MEDIA_BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
@@ -75,6 +89,7 @@ export async function uploadImage(
 export async function uploadPrivateFile(
   file: FormDataEntryValue | null,
   purpose: string,
+  authed?: AuthedCaller,
 ): Promise<UploadResult> {
   if (!(file instanceof File) || file.size === 0) return {};
 
@@ -84,13 +99,18 @@ export async function uploadPrivateFile(
   });
   if (problem) return { error: problem };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "You need to be signed in to upload." };
+  let supabase = authed?.supabase;
+  let userId = authed?.userId;
+  if (!supabase || !userId) {
+    supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "You need to be signed in to upload." };
+    userId = user.id;
+  }
 
-  const path = `${user.id}/${purpose}/${crypto.randomUUID()}.${extensionFor(file)}`;
+  const path = `${userId}/${purpose}/${crypto.randomUUID()}.${extensionFor(file)}`;
   const { error } = await supabase.storage
     .from(PRIVATE_BUCKET)
     .upload(path, file, {

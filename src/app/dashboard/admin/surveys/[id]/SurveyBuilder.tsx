@@ -23,6 +23,7 @@ import {
 import { ErrorBanner } from "@/components/onboarding/parts";
 import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
+  newLikertQuestionDraft,
   newQuestionDraft,
   questionSpec,
   type ContradictionRuleDraft,
@@ -86,8 +87,7 @@ export function SurveyBuilder({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  function addQuestion(type: SurveyQuestionType, beforeKey?: string) {
-    const created = newQuestionDraft(type);
+  function insertQuestion(created: SurveyQuestionDraft, beforeKey?: string) {
     setQuestions((prev) => {
       const index = beforeKey ? prev.findIndex((q) => q.key === beforeKey) : -1;
       const insertAt = index === -1 ? prev.length : index;
@@ -97,6 +97,14 @@ export function SurveyBuilder({
     });
     setSelectedKey(created.key);
     setDirty(true);
+  }
+
+  function addQuestion(type: SurveyQuestionType, beforeKey?: string) {
+    insertQuestion(newQuestionDraft(type), beforeKey);
+  }
+
+  function addLikertQuestion() {
+    insertQuestion(newLikertQuestionDraft());
   }
 
   function moveQuestion(key: string, direction: -1 | 1) {
@@ -178,7 +186,11 @@ export function SurveyBuilder({
         onDragCancel={() => setActiveDrag(null)}
       >
         <div className="grid gap-4 lg:grid-cols-[14rem_1fr_20rem]">
-          <QuestionPalette onAdd={(type) => addQuestion(type)} disabled={!editable} />
+          <QuestionPalette
+            onAdd={(type) => addQuestion(type)}
+            onAddLikert={addLikertQuestion}
+            disabled={!editable}
+          />
 
           <SortableContext
             items={questions.map((q) => q.key)}

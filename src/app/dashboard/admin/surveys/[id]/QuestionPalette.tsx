@@ -43,9 +43,11 @@ function PaletteCard({
 
 export function QuestionPalette({
   onAdd,
+  onAddLikert,
   disabled,
 }: {
   onAdd: (type: SurveyQuestionType) => void;
+  onAddLikert: () => void;
   disabled: boolean;
 }) {
   return (
@@ -57,6 +59,24 @@ export function QuestionPalette({
           <PaletteCard key={s.type} type={s.type} disabled={disabled} onAdd={onAdd} />
         ))}
       </div>
+
+      <h3 className="field-label pt-2">Presets</h3>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onAddLikert}
+        className="card flex w-full items-start gap-2 p-3 text-left text-sm"
+      >
+        <span className="text-lg" aria-hidden>
+          🙂
+        </span>
+        <span>
+          <span className="block font-medium">Likert (5-point)</span>
+          <span className="block text-xs text-[var(--color-ink-soft)]">
+            Strongly disagree → Strongly agree, with face icons.
+          </span>
+        </span>
+      </button>
     </div>
   );
 }

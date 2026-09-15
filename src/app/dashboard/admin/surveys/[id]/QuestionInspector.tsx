@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { HIDDEN_FIELD_SOURCES, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
-import type { SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
+import type { SurveyMediaPosition, SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
 import { uploadQuestionBackground, uploadQuestionMedia } from "../actions";
 
@@ -191,6 +191,25 @@ export function QuestionInspector({
                 value={question.config.media_url ?? ""}
                 onChange={(e) => onChange({ config: { ...question!.config, media_url: e.target.value } })}
               />
+            )}
+
+            {question.config.media_type && (
+              <select
+                aria-label="Media position"
+                className="select"
+                disabled={!editable}
+                value={question.config.media_position ?? "top"}
+                onChange={(e) =>
+                  onChange({
+                    config: { ...question!.config, media_position: e.target.value as SurveyMediaPosition },
+                  })
+                }
+              >
+                <option value="top">Above the question</option>
+                <option value="bottom">Below the question</option>
+                <option value="left">Left of the question</option>
+                <option value="right">Right of the question</option>
+              </select>
             )}
           </div>
         </Field>

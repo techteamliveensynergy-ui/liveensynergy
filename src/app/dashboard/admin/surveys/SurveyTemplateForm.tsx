@@ -168,47 +168,45 @@ export function SurveyTemplateForm({
         </Field>
 
         {kind === "pre_event" && (
-          <>
-            <label className="flex items-start gap-2.5 text-sm font-medium text-[var(--color-ink)]">
-              <input
-                type="checkbox"
-                name="is_public"
-                defaultChecked={template?.is_public ?? false}
-                className="mt-0.5 h-4 w-4 shrink-0"
-              />
-              <span>
-                Public &amp; link-shareable — anyone with the link can answer, no account
-                required.
-              </span>
-            </label>
-
-            <Field
-              label="Intro message"
-              htmlFor="intro_message"
-              hint="Shown above the questions on the public page."
-            >
-              <textarea
-                id="intro_message"
-                name="intro_message"
-                className="textarea"
-                defaultValue={template?.intro_message ?? ""}
-              />
-            </Field>
-
-            <Field
-              label="Thank-you message"
-              htmlFor="thank_you_message"
-              hint="Shown on the CTA screen after someone submits."
-            >
-              <textarea
-                id="thank_you_message"
-                name="thank_you_message"
-                className="textarea"
-                defaultValue={template?.thank_you_message ?? ""}
-              />
-            </Field>
-          </>
+          <label className="flex items-start gap-2.5 text-sm font-medium text-[var(--color-ink)]">
+            <input
+              type="checkbox"
+              name="is_public"
+              defaultChecked={template?.is_public ?? false}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <span>
+              Public &amp; link-shareable — anyone with the link can answer, no account
+              required.
+            </span>
+          </label>
         )}
+
+        <Field
+          label="Intro message"
+          htmlFor="intro_message"
+          hint="Shown above the questions before someone starts — on the public page, in-app, and in preview."
+        >
+          <textarea
+            id="intro_message"
+            name="intro_message"
+            className="textarea"
+            defaultValue={template?.intro_message ?? ""}
+          />
+        </Field>
+
+        <Field
+          label="Thank-you message"
+          htmlFor="thank_you_message"
+          hint="Shown on the CTA screen after someone submits — on the public page, in-app, and in preview."
+        >
+          <textarea
+            id="thank_you_message"
+            name="thank_you_message"
+            className="textarea"
+            defaultValue={template?.thank_you_message ?? ""}
+          />
+        </Field>
       </FormSection>
 
       <FormSection title="Layout & branding">

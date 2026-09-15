@@ -240,14 +240,15 @@ export function SurveyForm({
                 data-question-id={q.id}
                 className="card p-5"
               >
-                <QuestionMedia config={q.config} />
-                <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-                  <QuestionField
-                    question={q}
-                    value={values[q.id] ?? null}
-                    onChange={(v) => handleChange(q.id, v)}
-                  />
-                </Field>
+                <QuestionMedia config={q.config}>
+                  <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+                    <QuestionField
+                      question={q}
+                      value={values[q.id] ?? null}
+                      onChange={(v) => handleChange(q.id, v)}
+                    />
+                  </Field>
+                </QuestionMedia>
               </div>
             );
           })}

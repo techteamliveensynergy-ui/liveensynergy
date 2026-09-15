@@ -15,7 +15,7 @@ export function SurveyFooter({
     <div className="flex items-center justify-center gap-2 pt-2 text-center text-xs text-[var(--color-ink-soft)]">
       {logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-6 w-6 shrink-0 rounded object-contain" />
+        <img src={logoUrl} alt="" className="h-12 w-12 shrink-0 rounded object-contain" />
       )}
       {(brandName || tagline) && (
         <span>

@@ -95,7 +95,12 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
     configFields: [
       { name: "min", label: "Minimum", type: "text" },
       { name: "max", label: "Maximum", type: "text" },
-      { name: "step", label: "Step", type: "text" },
+      {
+        name: "step",
+        label: "Step",
+        type: "text",
+        hint: "The gap between points, not how many points to show — e.g. min 1, max 10, step 1 gives 10 points. A step that doesn't divide evenly into the range is ignored.",
+      },
       { name: "min_label", label: "Label at minimum", type: "text" },
       { name: "max_label", label: "Label at maximum", type: "text" },
     ],
@@ -276,7 +281,7 @@ export function newQuestionDraft(type: SurveyQuestionType): SurveyQuestionDraft 
   };
 
   if (type === "scale") {
-    base.config = { min: 1, max: 5, min_label: "Not at all", max_label: "Extremely" };
+    base.config = { min: 1, max: 5, step: 1, min_label: "Not at all", max_label: "Extremely" };
   } else if (type === "number") {
     base.config = { min: 0, max: 10, step: 1 };
   } else if (type === "yes_no") {
@@ -286,6 +291,23 @@ export function newQuestionDraft(type: SurveyQuestionType): SurveyQuestionDraft 
     ];
   }
 
+  return base;
+}
+
+/** Quick-insert preset: a single_choice question pre-filled with the
+ *  standard 5-point Likert labels and the face-icon rendering flag
+ *  (ChoiceField.tsx keys the icons to position, not to these values, so
+ *  editing the labels afterwards doesn't disturb them). */
+export function newLikertQuestionDraft(): SurveyQuestionDraft {
+  const base = newQuestionDraft("single_choice");
+  base.options = [
+    { label: "Strongly disagree", value: "strongly_disagree" },
+    { label: "Disagree", value: "disagree" },
+    { label: "Neutral", value: "neutral" },
+    { label: "Agree", value: "agree" },
+    { label: "Strongly agree", value: "strongly_agree" },
+  ];
+  base.config = { display_style: "likert" };
   return base;
 }
 
@@ -331,6 +353,17 @@ export function validateQuestions(drafts: SurveyQuestionDraft[]): string | null 
     }
     if (d.type === "attention_check" && !d.config.expected_answer) {
       return `Question ${n}: set the expected answer for the attention check.`;
+    }
+    if (d.type === "scale" || d.type === "number") {
+      const min = d.config.min ?? (d.type === "scale" ? 1 : 0);
+      const max = d.config.max ?? (d.type === "scale" ? 5 : 10);
+      const step = d.config.step ?? 1;
+      if (max <= min) {
+        return `Question ${n}: maximum must be greater than minimum.`;
+      }
+      if (step <= 0 || (max - min) % step !== 0) {
+        return `Question ${n}: step must divide evenly into the range (e.g. min 1, max 10, step 1).`;
+      }
     }
     if (d.type === "hidden_field") {
       const source = d.config.profile_field;

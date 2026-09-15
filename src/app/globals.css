@@ -164,6 +164,57 @@ h4,
     min-height: 6rem;
     resize: vertical;
   }
+
+  /* A survey "number" question's slider. The filled portion left of the
+     handle is drawn via the `--range-progress` custom property (set inline
+     per-instance, since it depends on the current value) rather than the
+     browser's own default track fill, which Chrome/Firefox/Safari don't
+     render consistently. Firefox composes its track from separate
+     ::-moz-range-track/-progress pseudo-elements that ignore the input's own
+     `background`, so it needs its own progress-color rule below. */
+  .range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      var(--color-brand) var(--range-progress, 0%),
+      rgba(44, 36, 34, 0.14) var(--range-progress, 0%)
+    );
+    cursor: pointer;
+  }
+  .range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 9999px;
+    background: var(--color-brand);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(44, 36, 34, 0.35);
+    cursor: pointer;
+  }
+  .range-slider::-moz-range-thumb {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 9999px;
+    background: var(--color-brand);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(44, 36, 34, 0.35);
+    cursor: pointer;
+  }
+  .range-slider::-moz-range-track {
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: rgba(44, 36, 34, 0.14);
+  }
+  .range-slider::-moz-range-progress {
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-brand);
+  }
 }
 
 .card {

@@ -90,17 +90,18 @@ export function SteppedQuestions({
       </div>
 
       <div className="card p-5" data-question-id={q.id}>
-        <QuestionMedia config={q.config} />
-        <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-          <QuestionField
-            question={q}
-            value={values[q.id] ?? null}
-            onChange={(v) => {
-              setBlockedMessage(null);
-              onChange(q.id, v);
-            }}
-          />
-        </Field>
+        <QuestionMedia config={q.config}>
+          <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+            <QuestionField
+              question={q}
+              value={values[q.id] ?? null}
+              onChange={(v) => {
+                setBlockedMessage(null);
+                onChange(q.id, v);
+              }}
+            />
+          </Field>
+        </QuestionMedia>
         {blockedMessage && (
           <p className="mt-2 text-sm text-[var(--color-accent)]">{blockedMessage}</p>
         )}

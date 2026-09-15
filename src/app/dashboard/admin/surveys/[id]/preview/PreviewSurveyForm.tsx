@@ -28,6 +28,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     footer_logo_url: footerLogoUrl,
     accent_color: accentColor,
     background_image_url: backgroundImageUrl,
+    intro_message: introMessage,
+    thank_you_message: thankYouMessage,
   } = template;
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
@@ -57,12 +59,21 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
 
   if (finished) {
     return (
-      <div className="card p-8 text-center">
-        <p className="text-lg font-semibold">✓ Preview complete</p>
-        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Nothing was saved — this was a preview only.
+      <div className="card space-y-4 p-8 text-center">
+        <div className="text-4xl" aria-hidden>
+          🎉
+        </div>
+        <h2 className="font-display text-xl font-semibold text-[var(--color-ink)]">
+          Thanks for taking part!
+        </h2>
+        <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+          {thankYouMessage ??
+            "Your answers have been recorded. Join the Live·En·Synergy community to unlock rewards and exclusive offers."}
         </p>
-        <button type="button" className="btn btn-primary mt-4" onClick={reset}>
+        <p className="rounded-lg bg-[var(--color-mist)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+          Preview mode — nothing was saved, and no reward or quality scoring ran.
+        </p>
+        <button type="button" className="btn btn-primary mt-2 w-full" onClick={reset}>
           Try again
         </button>
       </div>
@@ -94,6 +105,10 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
       </p>
       <ErrorBanner error={error} />
 
+      {introMessage && (
+        <div className="card p-5 text-sm text-[var(--color-ink-soft)]">{introMessage}</div>
+      )}
+
       {layoutMode === "stepped" ? (
         <SteppedQuestions
           questions={questions}
@@ -120,14 +135,15 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
             const spec = questionSpec(q.type);
             return (
               <div key={q.id} className="card p-5">
-                <QuestionMedia config={q.config} />
-                <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-                  <QuestionField
-                    question={q}
-                    value={values[q.id] ?? null}
-                    onChange={(v) => handleChange(q.id, v)}
-                  />
-                </Field>
+                <QuestionMedia config={q.config}>
+                  <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
+                    <QuestionField
+                      question={q}
+                      value={values[q.id] ?? null}
+                      onChange={(v) => handleChange(q.id, v)}
+                    />
+                  </Field>
+                </QuestionMedia>
               </div>
             );
           })}

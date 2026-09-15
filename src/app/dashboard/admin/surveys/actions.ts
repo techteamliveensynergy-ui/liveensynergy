@@ -250,8 +250,8 @@ export interface UploadState {
  * Video stays a plain link field (4 Sep standup) — no upload path for it.
  */
 export async function uploadQuestionMedia(formData: FormData): Promise<UploadState> {
-  await requireAdmin();
-  const { url, error } = await uploadImage(formData.get("file"), "survey-question");
+  const authed = await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-question", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
@@ -264,8 +264,8 @@ export async function uploadQuestionMedia(formData: FormData): Promise<UploadSta
  * ("survey-cover") tells the two kinds of upload apart in the bucket.
  */
 export async function uploadSurveyCoverMedia(formData: FormData): Promise<UploadState> {
-  await requireAdmin();
-  const { url, error } = await uploadImage(formData.get("file"), "survey-cover");
+  const authed = await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-cover", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
@@ -273,8 +273,8 @@ export async function uploadSurveyCoverMedia(formData: FormData): Promise<Upload
 
 /** Footer logo — shown next to the brand name/tagline, both layout modes. */
 export async function uploadSurveyLogo(formData: FormData): Promise<UploadState> {
-  await requireAdmin();
-  const { url, error } = await uploadImage(formData.get("file"), "survey-logo");
+  const authed = await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-logo", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
@@ -283,8 +283,8 @@ export async function uploadSurveyLogo(formData: FormData): Promise<UploadState>
 /** Template-wide decorative background — single_page layout only, same
  *  "one for the whole survey" scope as uploadSurveyCoverMedia. */
 export async function uploadSurveyBackground(formData: FormData): Promise<UploadState> {
-  await requireAdmin();
-  const { url, error } = await uploadImage(formData.get("file"), "survey-background");
+  const authed = await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-background", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
@@ -293,8 +293,8 @@ export async function uploadSurveyBackground(formData: FormData): Promise<Upload
 /** Per-question decorative background — stepped layout only, one per step
  *  instead of the template-wide one uploadSurveyBackground sets. */
 export async function uploadQuestionBackground(formData: FormData): Promise<UploadState> {
-  await requireAdmin();
-  const { url, error } = await uploadImage(formData.get("file"), "survey-question-background");
+  const authed = await requireAdmin();
+  const { url, error } = await uploadImage(formData.get("file"), "survey-question-background", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
