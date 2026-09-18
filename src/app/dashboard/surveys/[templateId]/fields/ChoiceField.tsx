@@ -18,6 +18,48 @@ const LIKERT_STYLE: readonly { emoji: string; bg: string }[] = [
  *  face-icon tiles instead. */
 export function ChoiceField({ question, value, onChange }: FieldProps) {
   const options = question.options ?? [];
+  const hasImages = options.some((o) => o.image_url);
+
+  if (hasImages) {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {options.map((o) => {
+          const selected = value === o.value;
+          return (
+            <label key={o.value} className="flex flex-col gap-1.5">
+              <input
+                type="radio"
+                name={question.id}
+                className="sr-only"
+                checked={selected}
+                onChange={() => onChange(o.value)}
+              />
+              {o.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={o.image_url}
+                  alt=""
+                  className={`aspect-square w-full rounded-xl object-cover transition-transform ${
+                    selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
+                  }`}
+                />
+              ) : (
+                <div
+                  className={`flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--color-mist)] text-[0.75em] text-[var(--color-ink-soft)] transition-transform ${
+                    selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
+                  }`}
+                  aria-hidden
+                >
+                  No image
+                </div>
+              )}
+              <span className="text-center leading-tight">{o.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (question.config.display_style === "likert" && options.length === LIKERT_STYLE.length) {
     return (
@@ -26,7 +68,7 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
           const style = LIKERT_STYLE[i];
           const selected = value === o.value;
           return (
-            <label key={o.value} className="flex flex-col items-center gap-1.5 text-xs">
+            <label key={o.value} className="flex flex-col items-center gap-1.5 text-[0.75em]">
               <input
                 type="radio"
                 name={question.id}
@@ -35,7 +77,7 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
                 onChange={() => onChange(o.value)}
               />
               <span
-                className={`flex h-14 w-14 items-center justify-center rounded-xl text-2xl transition-transform ${
+                className={`flex h-14 w-14 items-center justify-center rounded-xl text-[1.5em] transition-transform ${
                   selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                 }`}
                 style={{ background: style.bg }}

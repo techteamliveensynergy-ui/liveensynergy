@@ -33,7 +33,7 @@ function RankingRow({ id, label, index }: { id: string; label: string; index: nu
     <div ref={setNodeRef} style={style} className="card flex items-center gap-3 p-3">
       <button
         type="button"
-        className="cursor-grab touch-none px-1 text-lg text-[var(--color-ink-soft)]"
+        className="cursor-grab touch-none px-1 text-[1.125em] text-[var(--color-ink-soft)]"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}

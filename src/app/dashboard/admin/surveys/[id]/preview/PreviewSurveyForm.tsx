@@ -6,7 +6,8 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
-import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
+import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
+import { accentColorVars, backgroundImageStyle, typographyVars } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { emptyAnswerFor, questionSpec, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
@@ -30,6 +31,10 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     background_image_url: backgroundImageUrl,
     intro_message: introMessage,
     thank_you_message: thankYouMessage,
+    font_scale: fontScale,
+    question_text_color: questionTextColor,
+    body_text_color: bodyTextColor,
+    show_intro_gate: showIntroGate,
   } = template;
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
@@ -41,6 +46,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
   });
   const [error, setError] = useState<string | undefined>();
   const [finished, setFinished] = useState(false);
+  const [gateCleared, setGateCleared] = useState(!showIntroGate);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -80,6 +86,21 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     );
   }
 
+  if (!gateCleared) {
+    return (
+      <SurveyIntroGate
+        introMessage={introMessage}
+        coverMediaUrl={coverMediaUrl}
+        coverMediaType={coverMediaType}
+        accentColor={accentColor}
+        requireResidency={true}
+        footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
+        typography={{ fontScale, questionTextColor, bodyTextColor }}
+        onStart={() => setGateCleared(true)}
+      />
+    );
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -98,7 +119,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         setError(undefined);
         setFinished(true);
       }}
-      className="space-y-4"
+      className="survey-scope space-y-4"
+      style={typographyVars({ fontScale, questionTextColor, bodyTextColor })}
     >
       <p className="rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm text-[var(--color-ink-soft)]">
         Preview mode — answers here are not saved, and no reward or quality scoring runs.

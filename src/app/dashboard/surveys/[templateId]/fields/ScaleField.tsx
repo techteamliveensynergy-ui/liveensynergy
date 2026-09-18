@@ -1,5 +1,6 @@
 "use client";
 
+import { SCALE_NA_VALUE } from "@/lib/surveys";
 import type { FieldProps } from "./types";
 
 export function ScaleField({ question, value, onChange }: FieldProps) {
@@ -21,7 +22,7 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
         const isLast = i === points.length - 1;
         const label = isFirst ? question.config.min_label : isLast ? question.config.max_label : undefined;
         return (
-          <label key={pt} className="flex w-14 flex-col items-center gap-1 text-sm">
+          <label key={pt} className="flex w-14 flex-col items-center gap-1 text-[0.875em]">
             <input
               type="radio"
               name={question.id}
@@ -43,13 +44,33 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
                 sits next to the value it describes even once the points
                 wrap onto a second line on a narrow screen. */}
             {label && (
-              <span className="text-center text-[11px] leading-tight text-[var(--color-ink-soft)]">
+              <span className="text-center text-[0.7em] leading-tight text-[var(--color-ink-soft)]">
                 {label}
               </span>
             )}
           </label>
         );
       })}
+      {question.config.na_label && (
+        <label className="ml-2 flex w-20 flex-col items-center gap-1 border-l border-black/10 pl-3 text-[0.875em]">
+          <input
+            type="radio"
+            name={question.id}
+            className="sr-only"
+            checked={value === SCALE_NA_VALUE}
+            onChange={() => onChange(SCALE_NA_VALUE)}
+          />
+          <span
+            className={`flex h-10 w-full items-center justify-center rounded-lg px-1 text-center text-[0.8em] font-semibold leading-tight transition-colors ${
+              value === SCALE_NA_VALUE
+                ? "bg-[var(--color-brand)] text-white"
+                : "bg-[var(--color-mist)] text-[var(--color-ink)] hover:bg-[var(--color-mist)]/70"
+            }`}
+          >
+            {question.config.na_label}
+          </span>
+        </label>
+      )}
     </div>
   );
 }

@@ -3,10 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notifications";
+import { TERMS_VERSION } from "@/lib/terms";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD, SURVEY_RATE_LIMITS } from "@/lib/survey-abuse-constants";
 import { callerIpHash, screenSurveySubmission } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
+
+function siteUrl() {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+}
 
 export interface PublicSurveyResponseState {
   error?: string;
@@ -145,6 +152,27 @@ export async function submitPublicSurveyResponse(
       p_response_id: outcome.response_id,
     });
     if (scoreError) console.error("score_survey_response failed:", scoreError.message);
+
+    // Best-effort in-app nudge for a signed-in respondent (0043) — never
+    // blocks the CTA. Writes email_outbox only (never drained, per
+    // CLAUDE.md); the actually-delivered "set your password" email, if any,
+    // is sent separately by startSurveyAccount() below.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: tpl } = await supabase
+        .from("survey_templates")
+        .select("title")
+        .eq("id", templateId)
+        .maybeSingle();
+      await notify({
+        eventKey: "survey.completed",
+        recipientProfileId: user.id,
+        link: "/onboarding/audience",
+        variables: { survey_title: tpl?.title ?? "the survey" },
+      });
+    }
   }
 
   return { success: true };
@@ -177,7 +205,7 @@ export async function registerForEventAfterSurvey(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, onboarding_completed")
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "audience") {
@@ -196,5 +224,141 @@ export async function registerForEventAfterSurvey(
   }
 
   revalidatePath("/dashboard/participations");
-  redirect("/dashboard/participations?notice=registered");
+  // A freshly-created (0043) or otherwise not-yet-onboarded account would
+  // have this redirect silently swallowed by dashboard/layout.tsx's own
+  // onboarding_completed guard, which redirects to /onboarding/[role]
+  // first and drops the ?notice= query string — send them there directly
+  // instead so the notice survives.
+  redirect(
+    profile.onboarding_completed
+      ? "/dashboard/participations?notice=registered"
+      : "/onboarding/audience?notice=registered",
+  );
+}
+
+export interface SurveyAccountState {
+  error?: string;
+  /** Set when the email already has an account — we can't auto-sign them in
+   *  (their real password is unknown to us), so a real password-reset email
+   *  has been sent instead and the UI should offer to continue without an
+   *  account rather than block. A successful new-account call never reaches
+   *  this — it redirect()s straight back into the authenticated survey. */
+  alreadyRegistered?: boolean;
+}
+
+/**
+ * The "different approach for new users" half of the 17 Sep standup ask.
+ * Creates a real, pre-confirmed account for a brand-new respondent the
+ * instant they give their name + email (no waiting on an email click to
+ * keep answering), signs them in immediately in this same request, and
+ * separately emails them a real password-reset link for setting a
+ * memorable password later. Reuses signUp()'s exact metadata contract
+ * (src/app/auth/actions.ts) — role/terms/pending_event_reference — so
+ * handle_new_user() and registerPendingEvent() need no changes.
+ */
+export async function startSurveyAccount(
+  _prev: SurveyAccountState,
+  formData: FormData,
+): Promise<SurveyAccountState> {
+  const supabase = await createClient();
+
+  const templateId = String(formData.get("template_id") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const eventReference = String(formData.get("event_reference") ?? "").trim() || null;
+  const consentAccepted = formData.get("consent_accepted") === "on";
+  const residencyConfirmed = formData.get("residency_confirmed") === "on";
+
+  if (!templateId || !firstName || !lastName || !email) {
+    return { error: "Please fill in your name and email." };
+  }
+  if (!consentAccepted || !residencyConfirmed) {
+    return { error: "Please confirm residency and accept the Terms & Conditions first." };
+  }
+  // A controlled, readable failure instead of a raw crash deep inside
+  // @supabase/supabase-js's createClient() guard — see src/lib/supabase/admin.ts.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[startSurveyAccount] SUPABASE_SERVICE_ROLE_KEY is not configured");
+    return { error: "Account creation isn't available right now. Please try again shortly." };
+  }
+
+  // Same rate-limit gate submitPublicSurveyResponse uses — this action calls
+  // the Admin API, which bypasses Supabase's own sign-up throttling, so
+  // without this it would be an unrated account-creation mailer.
+  const ipHash = await callerIpHash();
+  const { data: gateData, error: gateError } = await supabase.rpc("survey_submission_gate", {
+    p_template_id: templateId,
+    p_ip_hash: ipHash,
+    p_account_short_minutes: SURVEY_RATE_LIMITS.accountShortMinutes,
+    p_account_short_max: SURVEY_RATE_LIMITS.accountShortMax,
+    p_account_long_max: SURVEY_RATE_LIMITS.accountLongMax,
+    p_ip_short_minutes: SURVEY_RATE_LIMITS.ipShortMinutes,
+    p_ip_short_max: SURVEY_RATE_LIMITS.ipShortMax,
+    p_ip_long_max: SURVEY_RATE_LIMITS.ipLongMax,
+  });
+  if (gateError) return { error: gateError.message };
+  if (!(gateData as { allowed: boolean }).allowed) {
+    return { error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
+  // Never returned to the client, never logged — spent immediately below to
+  // mint a session, then never needed again (the respondent sets their own
+  // password from the emailed reset link).
+  const password = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+
+  const admin = createAdminClient();
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: `${firstName} ${lastName}`.trim(),
+      role: "audience",
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: TERMS_VERSION,
+      survey_account: true,
+      ...(eventReference ? { pending_event_reference: eventReference } : {}),
+    },
+  });
+
+  if (createError) {
+    // Duplicate email — we don't know their existing password, so we can't
+    // sign them in. Send a real reset-password email (same call shape as
+    // requestPasswordReset()) whose link also lands them back on this
+    // survey, authenticated, instead of just erroring out.
+    const code = (createError as { code?: string }).code;
+    const alreadyRegistered =
+      code === "email_exists" || /already.*registered/i.test(createError.message);
+    if (alreadyRegistered) {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${siteUrl()}/auth/callback?next=/survey/${templateId}`,
+      });
+      return { alreadyRegistered: true };
+    }
+    return { error: createError.message };
+  }
+  if (!created.user) {
+    return { error: "Something went wrong creating your account. Please try again." };
+  }
+
+  // Sign in immediately with the password we just set — works because
+  // email_confirm: true bypassed the project's own confirmation requirement.
+  // This is what lets the respondent keep answering with no wait at all.
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) {
+    return { error: "Your account was created, but we couldn't sign you in. Please try signing in manually." };
+  }
+
+  // Fire-and-forget — the real, delivered "set your password" email. Never
+  // fails the flow: they're already signed in and can finish the survey
+  // regardless of whether this send succeeds.
+  await supabase.auth
+    .resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl()}/auth/callback?next=/auth/reset-password`,
+    })
+    .catch((err) => console.error("[startSurveyAccount] reset email failed", err));
+
+  revalidatePath(`/survey/${templateId}`);
+  redirect(`/survey/${templateId}`);
 }

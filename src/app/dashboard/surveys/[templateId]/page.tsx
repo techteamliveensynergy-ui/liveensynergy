@@ -94,6 +94,8 @@ export default async function TakeSurveyPage({
       <SurveyForm
         templateId={tpl.id}
         questions={questions}
+        introMessage={tpl.intro_message}
+        showIntroGate={tpl.show_intro_gate}
         layoutMode={tpl.layout_mode}
         coverMediaUrl={tpl.cover_media_url}
         coverMediaType={tpl.cover_media_type}
@@ -102,6 +104,11 @@ export default async function TakeSurveyPage({
         footerLogoUrl={tpl.footer_logo_url}
         accentColor={tpl.accent_color}
         backgroundImageUrl={tpl.background_image_url}
+        typography={{
+          fontScale: tpl.font_scale,
+          questionTextColor: tpl.question_text_color,
+          bodyTextColor: tpl.body_text_color,
+        }}
       />
     </div>
   );

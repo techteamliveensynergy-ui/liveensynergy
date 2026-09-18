@@ -77,7 +77,7 @@ export function SteppedQuestions({
 
   return (
     <div className={`space-y-4 ${stepBackground ? "p-4" : ""}`} style={stepBackground}>
-      <div className="flex items-center gap-3 text-xs text-[var(--color-ink-soft)]">
+      <div className="flex items-center gap-3 text-[0.75em] text-[var(--color-ink-soft)]">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
           <div
             className="h-full rounded-full bg-[var(--color-brand)] transition-all duration-300"
@@ -103,7 +103,7 @@ export function SteppedQuestions({
           </Field>
         </QuestionMedia>
         {blockedMessage && (
-          <p className="mt-2 text-sm text-[var(--color-accent)]">{blockedMessage}</p>
+          <p className="mt-2 text-[0.875em] text-[var(--color-accent)]">{blockedMessage}</p>
         )}
       </div>
 

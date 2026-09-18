@@ -54,6 +54,9 @@ export function SurveyTemplateForm({
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
   const [accentColor, setAccentColor] = useState(template?.accent_color ?? "");
+  const [fontScale, setFontScale] = useState(String(template?.font_scale ?? 1));
+  const [questionTextColor, setQuestionTextColor] = useState(template?.question_text_color ?? "");
+  const [bodyTextColor, setBodyTextColor] = useState(template?.body_text_color ?? "");
   const [footerLogoUrl, setFooterLogoUrl] = useState(template?.footer_logo_url ?? "");
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
@@ -181,6 +184,19 @@ export function SurveyTemplateForm({
             </span>
           </label>
         )}
+
+        <label className="flex items-start gap-2.5 text-sm font-medium text-[var(--color-ink)]">
+          <input
+            type="checkbox"
+            name="show_intro_gate"
+            defaultChecked={template?.show_intro_gate ?? true}
+            className="mt-0.5 h-4 w-4 shrink-0"
+          />
+          <span>
+            Show a welcome &amp; terms screen before the questions — off if consent was
+            already taken elsewhere (e.g. an internal or post-event survey).
+          </span>
+        </label>
 
         <Field
           label="Intro message"
@@ -411,6 +427,94 @@ export function SurveyTemplateForm({
             />
             {accentColor && (
               <button type="button" className="btn btn-ghost shrink-0 text-xs" onClick={() => setAccentColor("")}>
+                Reset
+              </button>
+            )}
+          </div>
+        </Field>
+
+        <Field
+          label="Text size"
+          htmlFor="font_scale"
+          hint="Scales every question, option and label together — button size is unaffected."
+        >
+          <select
+            id="font_scale"
+            name="font_scale"
+            className="select"
+            value={fontScale}
+            onChange={(e) => setFontScale(e.target.value)}
+          >
+            <option value="0.9">Compact</option>
+            <option value="1">Default</option>
+            <option value="1.15">Large</option>
+            <option value="1.3">Extra large</option>
+            <option value="1.5">Maximum</option>
+          </select>
+        </Field>
+
+        <Field
+          label="Question text colour (optional)"
+          htmlFor="question_text_color"
+          hint="Applied to question prompts and field labels. Leave blank to use the platform default."
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              aria-label="Pick a question text colour"
+              value={questionTextColor || "#2c2422"}
+              onChange={(e) => setQuestionTextColor(e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+            />
+            <input
+              id="question_text_color"
+              name="question_text_color"
+              type="text"
+              className="input"
+              placeholder="#2c2422"
+              value={questionTextColor}
+              onChange={(e) => setQuestionTextColor(e.target.value)}
+            />
+            {questionTextColor && (
+              <button
+                type="button"
+                className="btn btn-ghost shrink-0 text-xs"
+                onClick={() => setQuestionTextColor("")}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </Field>
+
+        <Field
+          label="Body text colour (optional)"
+          htmlFor="body_text_color"
+          hint="Applied to options, help text, intro copy and the footer. Leave blank to use the platform default."
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              aria-label="Pick a body text colour"
+              value={bodyTextColor || "#6f6360"}
+              onChange={(e) => setBodyTextColor(e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+            />
+            <input
+              id="body_text_color"
+              name="body_text_color"
+              type="text"
+              className="input"
+              placeholder="#6f6360"
+              value={bodyTextColor}
+              onChange={(e) => setBodyTextColor(e.target.value)}
+            />
+            {bodyTextColor && (
+              <button
+                type="button"
+                className="btn btn-ghost shrink-0 text-xs"
+                onClick={() => setBodyTextColor("")}
+              >
                 Reset
               </button>
             )}

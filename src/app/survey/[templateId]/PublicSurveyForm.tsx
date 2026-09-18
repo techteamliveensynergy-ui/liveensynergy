@@ -3,22 +3,25 @@
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Field } from "@/components/ui/Field";
-import { PhoneInput } from "@/components/ui/PhoneInput";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
-import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
-import { AGE_RANGE_OPTIONS, emptyAnswerFor, questionSpec } from "@/lib/surveys";
+import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
+import { accentColorVars, backgroundImageStyle, typographyVars, type SurveyTypography } from "@/lib/survey-media";
+import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
+import { ResetPasswordForm } from "@/app/auth/reset-password/ResetPasswordForm";
 import {
   registerForEventAfterSurvey,
+  startSurveyAccount,
   submitPublicSurveyResponse,
   type PublicSurveyResponseState,
   type RegisterAfterSurveyState,
+  type SurveyAccountState,
 } from "./actions";
 
 interface Timing {
@@ -30,6 +33,18 @@ export interface PublicSurveyEvent {
   id: string;
   reference: string;
   name: string;
+}
+
+/** Server-resolved identity for a signed-in visitor with no participation
+ *  yet (either a pre-existing account or one startSurveyAccount() just
+ *  created) — src/app/survey/[templateId]/page.tsx. When present, the
+ *  contact step is skipped entirely: this is the "Implement Pre-fill"
+ *  action item. */
+export interface SurveyPrefill {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
 }
 
 function RegisterButton({ event }: { event: PublicSurveyEvent }) {
@@ -52,10 +67,16 @@ function ThankYouScreen({
   message,
   event,
   isAuthenticated,
+  needsPassword,
 }: {
   message: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
+  /** True for an account startSurveyAccount() just created — it has a
+   *  random password the respondent never saw, so they need to set a real
+   *  one before the "register" step (or later, from the emailed reset
+   *  link). */
+  needsPassword: boolean;
 }) {
   return (
     <div className="card space-y-4 p-8 text-center">
@@ -71,7 +92,14 @@ function ThankYouScreen({
       </p>
 
       {isAuthenticated ? (
-        event ? (
+        needsPassword ? (
+          <div className="space-y-3 text-left">
+            <p className="text-center text-sm text-[var(--color-ink-soft)]">
+              We&apos;ve created your account — set a password now, or use the link we emailed you later.
+            </p>
+            <ResetPasswordForm />
+          </div>
+        ) : event ? (
           <RegisterButton event={event} />
         ) : (
           <Link href="/dashboard" className="btn btn-primary mt-2 w-full">
@@ -90,6 +118,8 @@ function ThankYouScreen({
   );
 }
 
+type Stage = "gate" | "contact" | "questions";
+
 export function PublicSurveyForm({
   templateId,
   questions,
@@ -97,6 +127,9 @@ export function PublicSurveyForm({
   thankYouMessage,
   event,
   isAuthenticated,
+  needsPassword = false,
+  prefill = null,
+  showIntroGate = true,
   layoutMode = "single_page",
   coverMediaUrl,
   coverMediaType,
@@ -105,6 +138,7 @@ export function PublicSurveyForm({
   footerLogoUrl,
   accentColor,
   backgroundImageUrl,
+  typography,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -112,6 +146,9 @@ export function PublicSurveyForm({
   thankYouMessage: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
+  needsPassword?: boolean;
+  prefill?: SurveyPrefill | null;
+  showIntroGate?: boolean;
   layoutMode?: SurveyTemplateLayoutMode;
   coverMediaUrl?: string | null;
   coverMediaType?: SurveyMediaType | null;
@@ -120,7 +157,58 @@ export function PublicSurveyForm({
   footerLogoUrl?: string | null;
   accentColor?: string | null;
   backgroundImageUrl?: string | null;
+  typography?: SurveyTypography;
 }) {
+  const [stage, setStage] = useState<Stage>(() => {
+    if (showIntroGate) return "gate";
+    return prefill ? "questions" : "contact";
+  });
+  const [consent, setConsent] = useState<SurveyConsent>({
+    consentAccepted: false,
+    residencyConfirmed: false,
+  });
+
+  const [contactFirstName, setContactFirstName] = useState(prefill?.firstName ?? "");
+  const [contactLastName, setContactLastName] = useState(prefill?.lastName ?? "");
+  const [contactEmail, setContactEmail] = useState(prefill?.email ?? "");
+  const [accountState, setAccountState] = useState<SurveyAccountState>({});
+  const [accountPending, setAccountPending] = useState(false);
+
+  async function handleCreateAccount() {
+    if (!contactFirstName.trim() || !contactLastName.trim() || !contactEmail.trim()) {
+      setAccountState({ error: "Please fill in your name and email." });
+      return;
+    }
+    setAccountPending(true);
+    setAccountState({});
+    const form = new FormData();
+    form.set("template_id", templateId);
+    form.set("first_name", contactFirstName);
+    form.set("last_name", contactLastName);
+    form.set("email", contactEmail);
+    form.set("consent_accepted", consent.consentAccepted ? "on" : "");
+    form.set("residency_confirmed", consent.residencyConfirmed ? "on" : "");
+    if (event) form.set("event_reference", event.reference);
+    try {
+      // A successful call redirect()s — Next re-throws that internally as a
+      // special digest-tagged error rather than resolving normally, so it
+      // must be re-thrown here rather than swallowed as a real failure (see
+      // the catch below). Only the "already registered" / validation-error
+      // branches actually return a state to show.
+      const result = await startSurveyAccount({}, form);
+      setAccountPending(false);
+      setAccountState(result);
+    } catch (err) {
+      if (typeof (err as { digest?: string })?.digest === "string" && (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")) {
+        throw err;
+      }
+      setAccountPending(false);
+      setAccountState({
+        error: "Something went wrong creating your account. Please try again in a moment.",
+      });
+    }
+  }
+
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
     for (const q of questions) {
@@ -145,7 +233,7 @@ export function PublicSurveyForm({
   }, [state.error]);
 
   useEffect(() => {
-    if (layoutMode !== "single_page") return;
+    if (stage !== "questions" || layoutMode !== "single_page") return;
     if (typeof IntersectionObserver === "undefined") {
       const fallback = mountedAt.current;
       setTimings((prev) => {
@@ -182,7 +270,7 @@ export function PublicSurveyForm({
     }
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutMode]);
+  }, [stage, layoutMode]);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -219,7 +307,114 @@ export function PublicSurveyForm({
   }));
 
   if (state.success) {
-    return <ThankYouScreen message={thankYouMessage} event={event} isAuthenticated={isAuthenticated} />;
+    return (
+      <ThankYouScreen
+        message={thankYouMessage}
+        event={event}
+        isAuthenticated={isAuthenticated}
+        needsPassword={needsPassword}
+      />
+    );
+  }
+
+  if (stage === "gate") {
+    return (
+      <SurveyIntroGate
+        introMessage={introMessage}
+        coverMediaUrl={coverMediaUrl}
+        coverMediaType={coverMediaType}
+        accentColor={accentColor}
+        requireResidency={!prefill}
+        footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
+        typography={typography}
+        onStart={(c) => {
+          setConsent(c);
+          setStage(prefill ? "questions" : "contact");
+        }}
+      />
+    );
+  }
+
+  if (stage === "contact") {
+    return (
+      <div className="survey-scope space-y-4" style={typographyVars(typography ?? {})}>
+        <div className="card space-y-4 p-5">
+          <h2 className="text-sm font-semibold text-[var(--color-ink)]">About you</h2>
+          <ErrorBanner error={accountState.error} />
+
+          {accountState.alreadyRegistered ? (
+            <div className="space-y-3">
+              <p className="text-sm text-[var(--color-ink-soft)]">
+                We&apos;ve emailed <strong>{contactEmail}</strong> a link to continue as yourself — or keep
+                going below and we&apos;ll save your answers without an account.
+              </p>
+              <button
+                type="button"
+                className="btn btn-ghost w-full"
+                onClick={() => setStage("questions")}
+              >
+                Continue without an account
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="First name" htmlFor="first_name" required>
+                  <input
+                    id="first_name"
+                    className="input"
+                    required
+                    value={contactFirstName}
+                    onChange={(e) => setContactFirstName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Last name" htmlFor="last_name" required>
+                  <input
+                    id="last_name"
+                    className="input"
+                    required
+                    value={contactLastName}
+                    onChange={(e) => setContactLastName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Email" htmlFor="email" required>
+                  <input
+                    id="email"
+                    type="email"
+                    className="input"
+                    required
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary w-full"
+                disabled={accountPending}
+                onClick={handleCreateAccount}
+              >
+                {accountPending ? "Creating your account…" : "Create my account & continue"}
+              </button>
+              {/* Resilience, not the primary path: if account creation ever
+                  fails outright (a config problem, a network blip), this
+                  keeps the survey completable rather than a hard dead end —
+                  same reasoning as the "already registered" branch above. */}
+              {accountState.error && (
+                <button
+                  type="button"
+                  className="btn btn-ghost w-full"
+                  disabled={accountPending}
+                  onClick={() => setStage("questions")}
+                >
+                  Continue without an account
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -233,83 +428,29 @@ export function PublicSurveyForm({
           formAction(formData);
         });
       }}
-      className="space-y-4"
+      className="survey-scope space-y-4"
+      style={typographyVars(typography ?? {})}
     >
       <ErrorBanner error={state.error} />
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
       <input type="hidden" name="answers" value={JSON.stringify(payload)} readOnly />
-
-      {introMessage && (
-        <div className="card p-5 text-sm text-[var(--color-ink-soft)]">{introMessage}</div>
-      )}
-
-      {/* Always shown here, signed in or not — reaching this component at
-          all means submit_public_survey_response() found no existing
-          eligible participation to attach the response to (that case
-          renders the authenticated SurveyForm instead, see page.tsx), so
-          the RPC always requires this captured identity regardless of
-          whether the visitor happens to have an unrelated session. */}
-      <div className="card space-y-4 p-5">
-        <h2 className="text-sm font-semibold text-[var(--color-ink)]">About you</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="First name" htmlFor="first_name" required>
-              <input id="first_name" name="first_name" className="input" required />
-            </Field>
-            <Field label="Last name" htmlFor="last_name" required>
-              <input id="last_name" name="last_name" className="input" required />
-            </Field>
-            <Field label="Email" htmlFor="email" required>
-              <input id="email" name="email" type="email" className="input" required />
-            </Field>
-            <Field label="Phone number" htmlFor="phone" required>
-              <PhoneInput required />
-            </Field>
-            <Field label="Age range" htmlFor="age_range" required>
-              <select id="age_range" name="age_range" className="select" required defaultValue="">
-                <option value="" disabled>
-                  Choose…
-                </option>
-                {AGE_RANGE_OPTIONS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-
-          <label className="flex items-start gap-2.5 text-sm text-[var(--color-ink)]">
-            <input
-              type="checkbox"
-              name="residency_confirmed"
-              required
-              className="mt-0.5 h-4 w-4 shrink-0"
-            />
-            <span>I confirm I&apos;m 18 or over and a UK resident.</span>
-          </label>
-
-          <label className="flex items-start gap-2.5 text-sm text-[var(--color-ink)]">
-            <input
-              type="checkbox"
-              name="consent_accepted"
-              required
-              className="mt-0.5 h-4 w-4 shrink-0"
-            />
-            <span>
-              I agree to the{" "}
-              <Link href="/terms" target="_blank" className="font-semibold text-[var(--color-brand-dark)] underline">
-                Terms &amp; Conditions
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" target="_blank" className="font-semibold text-[var(--color-brand-dark)] underline">
-                Privacy Policy
-              </Link>
-              . My contact details are used only to prevent duplicate entries and won&apos;t be
-              retained longer than necessary.
-            </span>
-          </label>
-      </div>
+      <input type="hidden" name="first_name" value={contactFirstName} readOnly />
+      <input type="hidden" name="last_name" value={contactLastName} readOnly />
+      <input type="hidden" name="email" value={contactEmail} readOnly />
+      {prefill?.phone && <input type="hidden" name="phone" value={prefill.phone} readOnly />}
+      <input
+        type="hidden"
+        name="consent_accepted"
+        value={consent.consentAccepted ? "on" : ""}
+        readOnly
+      />
+      <input
+        type="hidden"
+        name="residency_confirmed"
+        value={consent.residencyConfirmed ? "on" : ""}
+        readOnly
+      />
 
       <div
         aria-hidden="true"

@@ -570,6 +570,13 @@ export type SurveyQuestionType =
 export interface SurveyQuestionOption {
   label: string;
   value: string;
+  /** Optional per-option image (media bucket, uploaded via
+   *  uploadQuestionOptionImage). When ANY option on a question carries one,
+   *  ChoiceField/MultiChoiceField switch from a radio/checkbox list to a
+   *  picture-tile grid — no separate question type and no display_style
+   *  flag, so the DB's type check constraint (0032) is untouched. Ignored
+   *  by DropdownField (a <select> can't render one) and RankingField. */
+  image_url?: string;
 }
 
 /** Per-type settings; every key optional, only the ones the type declares are read. */
@@ -579,6 +586,11 @@ export interface SurveyQuestionConfig {
   step?: number;
   min_label?: string;
   max_label?: string;
+  /** scale only — when set, an extra opt-out tile is rendered at the end of
+   *  the scale with this as its label, emitting SCALE_NA_VALUE
+   *  ("__na__", src/lib/surveys.ts). Absent/empty hides it entirely, so
+   *  every existing scale question is unchanged. */
+  na_label?: string;
   min_select?: number;
   max_select?: number;
   max_length?: number;
@@ -622,6 +634,11 @@ export interface SurveyTemplate {
   intro_message: string | null;
   /** Shown on the public page's CTA screen after submission. */
   thank_you_message: string | null;
+  /** Shows a dedicated welcome + terms-agreement screen before any
+   *  contact-capture fields or questions, with its own "Start survey"
+   *  button — instead of the inline intro_message card + inline T&Cs
+   *  checkboxes. Defaults true for every template. */
+  show_intro_gate: boolean;
   /** All questions on one scrolling page (default), or one at a time with
    *  Back/Next navigation, Typeform-style. */
   layout_mode: SurveyTemplateLayoutMode;
@@ -644,6 +661,15 @@ export interface SurveyTemplate {
    *  stepped survey uses config.background_image_url per question instead
    *  (see SurveyQuestionConfig). Images only, no video option. */
   background_image_url: string | null;
+  /** Multiplier (0.8-1.6) applied to every text size inside the survey
+   *  renderer, via the .survey-scope font-size cascade in globals.css — not
+   *  an absolute px size, so the prompt/hint/option size hierarchy is
+   *  preserved at every scale. 1 = today's default sizes. */
+  font_scale: number;
+  /** Overrides --color-ink on question prompts/labels. Null = platform default. */
+  question_text_color: string | null;
+  /** Overrides --color-ink-soft on options, help text, intro copy, footer. */
+  body_text_color: string | null;
   created_by: string | null;
   published_at: string | null;
   created_at: string;
@@ -718,6 +744,10 @@ export interface SurveyResponse {
   respondent_last_name: string | null;
   respondent_email: string | null;
   respondent_phone: string | null;
+  /** Set when the respondent is a real (signed-in) account — 0043 — without
+   *  claiming they've registered for the event (see the migration comment
+   *  for why that's deliberately a separate thing from participation_id). */
+  respondent_profile_id: string | null;
   age_range: string | null;
   residency_confirmed: boolean | null;
   consent_accepted_at: string | null;

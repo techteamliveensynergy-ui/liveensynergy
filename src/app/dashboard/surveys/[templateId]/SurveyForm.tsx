@@ -6,7 +6,8 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
-import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
+import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
+import { accentColorVars, backgroundImageStyle, typographyVars, type SurveyTypography } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
@@ -22,6 +23,8 @@ interface Timing {
 export function SurveyForm({
   templateId,
   questions,
+  introMessage = null,
+  showIntroGate = true,
   layoutMode = "single_page",
   coverMediaUrl,
   coverMediaType,
@@ -30,9 +33,12 @@ export function SurveyForm({
   footerLogoUrl,
   accentColor,
   backgroundImageUrl,
+  typography,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
+  introMessage?: string | null;
+  showIntroGate?: boolean;
   layoutMode?: SurveyTemplateLayoutMode;
   coverMediaUrl?: string | null;
   coverMediaType?: SurveyMediaType | null;
@@ -41,7 +47,16 @@ export function SurveyForm({
   footerLogoUrl?: string | null;
   accentColor?: string | null;
   backgroundImageUrl?: string | null;
+  typography?: SurveyTypography;
 }) {
+  // A registered participant already agreed to the platform's own T&Cs at
+  // sign-up (participations.terms_accepted_at/profiles.terms_accepted_at) —
+  // this gate is UI-only re-confirmation for THIS survey (requirement 5,
+  // 17 Sep standup), not a new consent record. submit_survey_response()
+  // takes no consent parameter; adding one would create a Postgres function
+  // overload for a UI-only requirement, which isn't worth the weight.
+  const [gateCleared, setGateCleared] = useState(!showIntroGate);
+
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
     for (const q of questions) {
@@ -166,6 +181,21 @@ export function SurveyForm({
   );
   const singlePageBackground = backgroundImageStyle(backgroundImageUrl);
 
+  if (!gateCleared) {
+    return (
+      <SurveyIntroGate
+        introMessage={introMessage}
+        coverMediaUrl={coverMediaUrl}
+        coverMediaType={coverMediaType}
+        accentColor={accentColor}
+        requireResidency={false}
+        footer={footer}
+        typography={typography}
+        onStart={() => setGateCleared(true)}
+      />
+    );
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -184,7 +214,8 @@ export function SurveyForm({
           formAction(formData);
         });
       }}
-      className="space-y-4"
+      className="survey-scope space-y-4"
+      style={typographyVars(typography ?? {})}
     >
       <ErrorBanner error={state.error} />
       <input type="hidden" name="template_id" value={templateId} />

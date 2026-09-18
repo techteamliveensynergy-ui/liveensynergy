@@ -12,7 +12,7 @@ export function SurveyFooter({
 }) {
   if (!brandName && !tagline && !logoUrl) return null;
   return (
-    <div className="flex items-center justify-center gap-2 pt-2 text-center text-xs text-[var(--color-ink-soft)]">
+    <div className="flex items-center justify-center gap-2 pt-2 text-center text-[0.75em] text-[var(--color-ink-soft)]">
       {logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt="" className="h-12 w-12 shrink-0 rounded object-contain" />

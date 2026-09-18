@@ -33,6 +33,31 @@ export function accentColorVars(color: string | null | undefined): CSSProperties
   } as CSSProperties;
 }
 
+export interface SurveyTypography {
+  fontScale?: number | null;
+  questionTextColor?: string | null;
+  bodyTextColor?: string | null;
+}
+
+/**
+ * Scoped typography overrides for a survey renderer — applied to the
+ * outermost <form className="survey-scope">, never globally. font-size is
+ * set as a CSS length (not a bare inline fontSize on a Tailwind-sized
+ * element) so the .survey-scope em-based rules in globals.css cascade from
+ * it; the two colour variables are read by those same rules, falling back to
+ * --color-ink/--color-ink-soft when unset. Returns undefined when nothing is
+ * customized, matching accentColorVars()'s "no override" contract.
+ */
+export function typographyVars(t: SurveyTypography): CSSProperties | undefined {
+  const scale = t.fontScale != null ? Math.min(1.6, Math.max(0.8, t.fontScale)) : 1;
+  if (scale === 1 && !t.questionTextColor && !t.bodyTextColor) return undefined;
+  return {
+    fontSize: `calc(1rem * ${scale})`,
+    ["--survey-question-color" as string]: t.questionTextColor ?? undefined,
+    ["--survey-body-color" as string]: t.bodyTextColor ?? undefined,
+  } as CSSProperties;
+}
+
 /**
  * Page-level decorative background for a survey — a single-page survey's
  * template-wide background_image_url, or a stepped survey's current

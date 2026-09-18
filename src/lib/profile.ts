@@ -65,6 +65,31 @@ export async function requireAdmin() {
 }
 
 /**
+ * requireAdmin() without the redirect — for an action called directly (not
+ * via <form action>) from a screen holding unsaved client state (e.g. the
+ * survey builder's question canvas), where redirect()ing on an expired
+ * session silently discards that state instead of leaving the screen where
+ * the caller can show a readable, in-place error. Returns null on no
+ * session or a non-admin caller; the caller decides what to show.
+ */
+export async function adminOrNull(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; userId: string } | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") return null;
+
+  return { supabase, userId: user.id };
+}
+
+/**
  * Scores the caller's role-specific profile row. Used both for the "complete
  * your profile" badge and for the gate on creating events / campaigns.
  */

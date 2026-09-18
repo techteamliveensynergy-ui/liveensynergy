@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/profile";
+import { adminOrNull, requireAdmin } from "@/lib/profile";
 import { uploadImage } from "@/lib/storage";
 import {
   validateQuestions,
@@ -15,6 +15,14 @@ export interface SurveyState {
   error?: string;
   success?: boolean;
 }
+
+// The upload actions below are called directly from client state (not via
+// <form action>), from a screen (the builder canvas) that can hold unsaved
+// questions — requireAdmin()'s redirect() on an expired session would throw
+// that state away with a bare navigation. adminOrNull() + this message lets
+// the screen show a readable, in-place error and keep the canvas intact.
+const SESSION_EXPIRED_MESSAGE =
+  "Your session has expired. Sign in again in another tab, then retry — your unsaved questions are still here.";
 
 function str(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "").trim();
@@ -31,6 +39,11 @@ function str(v: FormDataEntryValue | null): string | null {
 function brandingFields(formData: FormData) {
   const layoutMode = str(formData.get("layout_mode")) ?? "single_page";
   const coverMediaType = str(formData.get("cover_media_type"));
+  // font_scale/question_text_color/body_text_color apply in BOTH layout
+  // modes (unlike cover media/background above) — never cleared on a
+  // layout switch.
+  const rawScale = Number(str(formData.get("font_scale")) ?? "1");
+  const fontScale = Number.isFinite(rawScale) ? Math.min(1.6, Math.max(0.8, rawScale)) : 1;
   return {
     layout_mode: layoutMode,
     cover_media_url: layoutMode === "single_page" ? str(formData.get("cover_media_url")) : null,
@@ -41,6 +54,9 @@ function brandingFields(formData: FormData) {
     footer_tagline: str(formData.get("footer_tagline")),
     footer_logo_url: str(formData.get("footer_logo_url")),
     accent_color: str(formData.get("accent_color")),
+    font_scale: fontScale,
+    question_text_color: str(formData.get("question_text_color")),
+    body_text_color: str(formData.get("body_text_color")),
   };
 }
 
@@ -65,6 +81,7 @@ export async function createSurveyTemplate(
       campaign_id: str(formData.get("campaign_id")),
       description: str(formData.get("description")),
       is_public: isPublic,
+      show_intro_gate: formData.get("show_intro_gate") === "on",
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
       created_by: userId,
@@ -100,6 +117,7 @@ export async function updateSurveyTemplate(
       campaign_id: str(formData.get("campaign_id")),
       description: str(formData.get("description")),
       is_public: isPublic,
+      show_intro_gate: formData.get("show_intro_gate") === "on",
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
       ...brandingFields(formData),
@@ -250,8 +268,24 @@ export interface UploadState {
  * Video stays a plain link field (4 Sep standup) — no upload path for it.
  */
 export async function uploadQuestionMedia(formData: FormData): Promise<UploadState> {
-  const authed = await requireAdmin();
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-question", authed);
+  if (error) return { error };
+  if (!url) return { error: "Choose an image to upload." };
+  return { url };
+}
+
+/**
+ * Same shape as uploadQuestionMedia above, for a single_choice/
+ * multiple_choice option's picture-choice thumbnail instead of the
+ * question's own media — its own storage path segment ("survey-option") so
+ * the two kinds of upload are tellable apart in the bucket.
+ */
+export async function uploadQuestionOptionImage(formData: FormData): Promise<UploadState> {
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
+  const { url, error } = await uploadImage(formData.get("file"), "survey-option", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };
@@ -264,7 +298,8 @@ export async function uploadQuestionMedia(formData: FormData): Promise<UploadSta
  * ("survey-cover") tells the two kinds of upload apart in the bucket.
  */
 export async function uploadSurveyCoverMedia(formData: FormData): Promise<UploadState> {
-  const authed = await requireAdmin();
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-cover", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
@@ -273,7 +308,8 @@ export async function uploadSurveyCoverMedia(formData: FormData): Promise<Upload
 
 /** Footer logo — shown next to the brand name/tagline, both layout modes. */
 export async function uploadSurveyLogo(formData: FormData): Promise<UploadState> {
-  const authed = await requireAdmin();
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-logo", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
@@ -283,7 +319,8 @@ export async function uploadSurveyLogo(formData: FormData): Promise<UploadState>
 /** Template-wide decorative background — single_page layout only, same
  *  "one for the whole survey" scope as uploadSurveyCoverMedia. */
 export async function uploadSurveyBackground(formData: FormData): Promise<UploadState> {
-  const authed = await requireAdmin();
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-background", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
@@ -293,7 +330,8 @@ export async function uploadSurveyBackground(formData: FormData): Promise<Upload
 /** Per-question decorative background — stepped layout only, one per step
  *  instead of the template-wide one uploadSurveyBackground sets. */
 export async function uploadQuestionBackground(formData: FormData): Promise<UploadState> {
-  const authed = await requireAdmin();
+  const authed = await adminOrNull();
+  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-question-background", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };

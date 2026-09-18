@@ -133,6 +133,33 @@ h4,
   color: var(--color-ink-soft);
   margin-top: 0.3rem;
 }
+
+/* Survey-scoped typography overrides (font_scale/question_text_color/
+   body_text_color on survey_templates, 0040). Deliberately unlayered and
+   em-based: the survey renderer's sizes must cascade from the wrapping
+   .survey-scope element's own font-size (set inline via typographyVars()),
+   which the rem-based rules above/below can't do. Unlayered so it beats both
+   the unlayered .field-label/.field-hint above AND the @layer'd
+   .input/.select/.textarea below regardless of source order. Only font-size
+   and color — never width; see L3 in lessons.md for what happened last time
+   an unlayered rule in this file touched width. */
+.survey-scope .field-label {
+  font-size: 0.85em;
+  color: var(--survey-question-color, var(--color-ink-soft));
+}
+.survey-scope .field-hint {
+  font-size: 0.78em;
+  color: var(--survey-body-color, var(--color-ink-soft));
+}
+.survey-scope .input,
+.survey-scope .textarea,
+.survey-scope .select {
+  font-size: 1em;
+}
+.survey-scope {
+  color: var(--survey-body-color, inherit);
+}
+
 /* Layered so Tailwind utilities can override these defaults. Unlayered CSS beats
    anything in @layer regardless of specificity, so while these lived outside a
    layer `width: 100%` silently defeated every `w-*`/`flex-1` utility written

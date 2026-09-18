@@ -103,6 +103,12 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
       },
       { name: "min_label", label: "Label at minimum", type: "text" },
       { name: "max_label", label: "Label at maximum", type: "text" },
+      {
+        name: "na_label",
+        label: '"Not applicable" option label',
+        type: "text",
+        hint: "Leave blank to hide it. Shown as an extra tile at the end of the scale; counts toward the response's question-coverage quality signal, the same as a 'prefer not to say' choice option.",
+      },
     ],
     answerShape: "number",
   },
@@ -453,6 +459,7 @@ export function validateAnswers(
         return `Question ${n} is too long.`;
       }
     } else if (spec.answerShape === "number") {
+      if (q.type === "scale" && q.config.na_label && value === SCALE_NA_VALUE) continue;
       if (typeof value !== "number" || Number.isNaN(value)) {
         return `Question ${n} must be a number.`;
       }
@@ -526,6 +533,19 @@ export const SURVEY_QUALITY_SIGNALS: readonly SurveyQualitySignalSpec[] = [
     hint: "Turnstile/rate-limit telemetry — blocked on Step 3, not yet built.",
   },
 ];
+
+/**
+ * Value written for a scale question's "not applicable" tile
+ * (config.na_label). A string, not a number, so it can never collide with a
+ * real point on any admin-chosen range — the cost is one exemption in the
+ * numeric branch of validateAnswers() above and one in
+ * validate_survey_answer_types()'s scale branch (migration 0041). Kept in
+ * step with the literal in both places and in score_survey_response().
+ * Separate mechanism from OPT_OUT_LABEL_PATTERNS below — scale N/A is
+ * config-driven, not a label match, since a scale question has no options
+ * array to match a label against.
+ */
+export const SCALE_NA_VALUE = "__na__";
 
 /**
  * Substrings (case-insensitive) that mark an option as an "opt-out" choice

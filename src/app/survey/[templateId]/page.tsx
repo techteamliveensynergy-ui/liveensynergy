@@ -5,7 +5,7 @@ import { Logo } from "@/components/ui/Logo";
 import { formatDateTime } from "@/lib/format";
 import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { SurveyForm } from "@/app/dashboard/surveys/[templateId]/SurveyForm";
-import { PublicSurveyForm, type PublicSurveyEvent } from "./PublicSurveyForm";
+import { PublicSurveyForm, type PublicSurveyEvent, type SurveyPrefill } from "./PublicSurveyForm";
 
 export const metadata = { title: "Survey" };
 
@@ -128,6 +128,8 @@ export default async function PublicSurveyPage({
           <SurveyForm
             templateId={tpl.id}
             questions={questions}
+            introMessage={tpl.intro_message}
+            showIntroGate={tpl.show_intro_gate}
             layoutMode={tpl.layout_mode}
             coverMediaUrl={tpl.cover_media_url}
             coverMediaType={tpl.cover_media_type}
@@ -136,6 +138,11 @@ export default async function PublicSurveyPage({
             footerLogoUrl={tpl.footer_logo_url}
             accentColor={tpl.accent_color}
             backgroundImageUrl={tpl.background_image_url}
+            typography={{
+              fontScale: tpl.font_scale,
+              questionTextColor: tpl.question_text_color,
+              bodyTextColor: tpl.body_text_color,
+            }}
           />
         </Shell>
       );
@@ -149,6 +156,36 @@ export default async function PublicSurveyPage({
     .eq("template_id", templateId)
     .order("order_index");
   const publicQuestions = (publicQuestionRows ?? []) as SurveyQuestion[];
+
+  // Signed in but no participation yet — either a pre-existing account
+  // taking a different campaign's survey, or one startSurveyAccount() just
+  // created and redirected straight back here. Either way, pre-fill from
+  // their own profile rather than asking again (owner-read RLS already
+  // allows both selects — no policy change) — the "Implement Pre-fill"
+  // action item.
+  let prefill: SurveyPrefill | null = null;
+  if (user) {
+    const [{ data: profile }, { data: member }] = await Promise.all([
+      supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("audience_members")
+        .select("phone, phone_country_code")
+        .eq("profile_id", user.id)
+        .maybeSingle(),
+    ]);
+    const name = (profile?.full_name ?? "").trim();
+    const cut = name.lastIndexOf(" ");
+    prefill = {
+      firstName: cut > 0 ? name.slice(0, cut) : name,
+      lastName: cut > 0 ? name.slice(cut + 1) : "",
+      email: profile?.email ?? user.email ?? "",
+      phone: member ? `${member.phone_country_code ?? ""}${member.phone ?? ""}`.trim() || null : null,
+    };
+  }
+  // Set by startSurveyAccount() (src/app/survey/[templateId]/actions.ts) at
+  // account-creation time — this account has a random password the
+  // respondent never saw, so the thank-you screen offers to set a real one.
+  const needsPassword = Boolean((user?.user_metadata as Record<string, unknown> | undefined)?.survey_account);
 
   if (publicQuestions.length === 0) {
     return (
@@ -176,6 +213,9 @@ export default async function PublicSurveyPage({
         thankYouMessage={tpl.thank_you_message}
         event={event}
         isAuthenticated={Boolean(user)}
+        needsPassword={needsPassword}
+        prefill={prefill}
+        showIntroGate={tpl.show_intro_gate}
         layoutMode={tpl.layout_mode}
         coverMediaUrl={tpl.cover_media_url}
         coverMediaType={tpl.cover_media_type}
@@ -184,6 +224,11 @@ export default async function PublicSurveyPage({
         footerLogoUrl={tpl.footer_logo_url}
         accentColor={tpl.accent_color}
         backgroundImageUrl={tpl.background_image_url}
+        typography={{
+          fontScale: tpl.font_scale,
+          questionTextColor: tpl.question_text_color,
+          bodyTextColor: tpl.body_text_color,
+        }}
       />
     </Shell>
   );
