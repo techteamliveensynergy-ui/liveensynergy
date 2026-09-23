@@ -6,6 +6,7 @@ import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import type { SurveyMediaType, SurveyTemplate, SurveyTemplateKind, SurveyTemplateLayoutMode } from "@/lib/types";
+import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
 import {
   createSurveyTemplate,
   updateSurveyTemplate,
@@ -55,6 +56,7 @@ export function SurveyTemplateForm({
   const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
   const [accentColor, setAccentColor] = useState(template?.accent_color ?? "");
   const [fontScale, setFontScale] = useState(String(template?.font_scale ?? 1));
+  const [fontFamily, setFontFamily] = useState(template?.font_family ?? SURVEY_FONT_OPTIONS[0].key);
   const [questionTextColor, setQuestionTextColor] = useState(template?.question_text_color ?? "");
   const [bodyTextColor, setBodyTextColor] = useState(template?.body_text_color ?? "");
   const [footerLogoUrl, setFooterLogoUrl] = useState(template?.footer_logo_url ?? "");
@@ -450,6 +452,26 @@ export function SurveyTemplateForm({
             <option value="1.15">Large</option>
             <option value="1.3">Extra large</option>
             <option value="1.5">Maximum</option>
+          </select>
+        </Field>
+
+        <Field
+          label="Font"
+          htmlFor="font_family"
+          hint="Applied to every question, option and label. A question can override this for itself in the builder."
+        >
+          <select
+            id="font_family"
+            name="font_family"
+            className="select"
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
+          >
+            {SURVEY_FONT_OPTIONS.map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.label}
+              </option>
+            ))}
           </select>
         </Field>
 

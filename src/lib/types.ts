@@ -553,7 +553,10 @@ export type SurveyTemplateKind = "pre_event" | "post_event";
 export type SurveyTemplateStatus = "draft" | "published" | "archived";
 export type SurveyTemplateLayoutMode = "single_page" | "stepped";
 export type SurveyMediaType = "image" | "video";
-export type SurveyMediaPosition = "top" | "bottom" | "left" | "right";
+/** "background" renders media_url as a decorative backdrop behind the whole
+ *  step (stepped layout only) instead of inline content — see the note on
+ *  SurveyQuestionConfig.background_image_url below. */
+export type SurveyMediaPosition = "top" | "bottom" | "left" | "right" | "background";
 export type SurveyQuestionType =
   | "single_choice"
   | "multiple_choice"
@@ -603,22 +606,38 @@ export interface SurveyQuestionConfig {
   /** hidden_field — which profile field this question copies at submit time. */
   profile_field?: string;
   /** Universal, any question type — an image (uploaded to the media bucket)
-   *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt.
-   *  Always renders when set; the *builder* only offers this field in
-   *  `stepped` layout mode though — a single-page survey is meant to use
-   *  the template's own cover_media_* once at the top instead (see
-   *  SurveyTemplate), since a different image per question reads as noise
-   *  when every question is on screen at once. */
+   *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt
+   *  by default (see media_position). Always renders when set; the
+   *  *builder* only offers this field in `stepped` layout mode though — a
+   *  single-page survey is meant to use the template's own cover_media_*
+   *  once at the top instead (see SurveyTemplate), since a different image
+   *  per question reads as noise when every question is on screen at once. */
   media_url?: string;
   media_type?: SurveyMediaType;
   /** Where media_url renders relative to the prompt/answer. Defaults to
-   *  "top" when unset. */
+   *  "top" when unset. "background" (stepped layout only, image type only —
+   *  a video URL can't be a CSS background-image) renders it as a backdrop
+   *  behind the whole step instead of inline content; see
+   *  background_image_url below for the legacy path this superseded. */
   media_position?: SurveyMediaPosition;
-  /** stepped layout only — a decorative background image behind this one
-   *  step, distinct from media_url above (which renders as inline content
-   *  above the prompt, not a backdrop). A single-page survey uses the
-   *  template's own background_image_url instead — see SurveyTemplate. */
+  /** @deprecated Superseded by media_url + media_position: "background" (23
+   *  Sep client meeting — the two separate image controls read as one image
+   *  always rendering in the background no matter which "position" was
+   *  picked, since position only ever touched media_url). The builder no
+   *  longer writes this field; still read as a fallback by SteppedQuestions
+   *  for any question that already had one set before the merge. */
   background_image_url?: string;
+  /** Question-level override of the template's font choice (a key from
+   *  SURVEY_FONT_OPTIONS, src/lib/survey-fonts.ts) — unset inherits the
+   *  template's SurveyTemplate.font_family. 23 Sep client meeting. */
+  font_family?: string;
+  /** Question-level override of SurveyTemplate.question_text_color, scoped
+   *  to just this question's prompt/label. 23 Sep client meeting —
+   *  supersedes 0040's "template-level only" decision. */
+  question_text_color?: string;
+  /** Question-level override of SurveyTemplate.body_text_color, scoped to
+   *  just this question's help text/options. 23 Sep client meeting. */
+  body_text_color?: string;
 }
 
 export interface SurveyTemplate {
@@ -666,9 +685,18 @@ export interface SurveyTemplate {
    *  an absolute px size, so the prompt/hint/option size hierarchy is
    *  preserved at every scale. 1 = today's default sizes. */
   font_scale: number;
-  /** Overrides --color-ink on question prompts/labels. Null = platform default. */
+  /** A key from SURVEY_FONT_OPTIONS (src/lib/survey-fonts.ts), applied to the
+   *  whole survey via the .survey-scope font-family. Null = platform default
+   *  (--font-sans/Albert Sans). A question can override this for itself via
+   *  SurveyQuestionConfig.font_family. */
+  font_family: string | null;
+  /** Overrides --color-ink on question prompts/labels. Null = platform
+   *  default. A question can override this for itself via
+   *  SurveyQuestionConfig.question_text_color. */
   question_text_color: string | null;
-  /** Overrides --color-ink-soft on options, help text, intro copy, footer. */
+  /** Overrides --color-ink-soft on options, help text, intro copy, footer. A
+   *  question can override this for itself via
+   *  SurveyQuestionConfig.body_text_color. */
   body_text_color: string | null;
   created_by: string | null;
   published_at: string | null;

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { surveyFontStack } from "@/lib/survey-fonts";
 
 /** Darkens a #rrggbb hex colour by a fraction (0-1) — used for a custom
  *  accent colour's hover state, mirroring --color-brand-dark's relationship
@@ -35,6 +36,7 @@ export function accentColorVars(color: string | null | undefined): CSSProperties
 
 export interface SurveyTypography {
   fontScale?: number | null;
+  fontFamily?: string | null;
   questionTextColor?: string | null;
   bodyTextColor?: string | null;
 }
@@ -45,16 +47,46 @@ export interface SurveyTypography {
  * set as a CSS length (not a bare inline fontSize on a Tailwind-sized
  * element) so the .survey-scope em-based rules in globals.css cascade from
  * it; the two colour variables are read by those same rules, falling back to
- * --color-ink/--color-ink-soft when unset. Returns undefined when nothing is
+ * --color-ink/--color-ink-soft when unset; font-family cascades to every
+ * descendant the normal CSS way. Returns undefined when nothing is
  * customized, matching accentColorVars()'s "no override" contract.
  */
 export function typographyVars(t: SurveyTypography): CSSProperties | undefined {
   const scale = t.fontScale != null ? Math.min(1.6, Math.max(0.8, t.fontScale)) : 1;
-  if (scale === 1 && !t.questionTextColor && !t.bodyTextColor) return undefined;
+  const fontFamily = surveyFontStack(t.fontFamily);
+  if (scale === 1 && !fontFamily && !t.questionTextColor && !t.bodyTextColor) return undefined;
   return {
     fontSize: `calc(1rem * ${scale})`,
+    fontFamily,
     ["--survey-question-color" as string]: t.questionTextColor ?? undefined,
     ["--survey-body-color" as string]: t.bodyTextColor ?? undefined,
+  } as CSSProperties;
+}
+
+export interface SurveyQuestionTypography {
+  font_family?: string;
+  question_text_color?: string;
+  body_text_color?: string;
+}
+
+/**
+ * Per-question override of typographyVars() above (23 Sep client meeting),
+ * applied to that question's own wrapper (the `.card` div), never the whole
+ * form. Takes SurveyQuestionConfig's own field names (a caller just passes
+ * `q.config`) rather than mirroring typographyVars()'s camelCase shape.
+ * Relies on plain CSS inheritance/custom-property shadowing to win over the
+ * template-level style on the outer .survey-scope — no !important, no extra
+ * selectors needed. Returns undefined (no style at all) when the question
+ * doesn't override anything, so it inherits the template's choices exactly
+ * as before this existed.
+ */
+export function questionTypographyStyle(t: SurveyQuestionTypography): CSSProperties | undefined {
+  const fontFamily = surveyFontStack(t.font_family);
+  if (!fontFamily && !t.question_text_color && !t.body_text_color) return undefined;
+  return {
+    fontFamily,
+    ["--survey-question-color" as string]: t.question_text_color ?? undefined,
+    ["--survey-body-color" as string]: t.body_text_color ?? undefined,
   } as CSSProperties;
 }
 

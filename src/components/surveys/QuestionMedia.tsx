@@ -35,6 +35,11 @@ export function QuestionMedia({ config, children }: { config: SurveyQuestionConf
 
   const position = config.media_position ?? "top";
 
+  // Rendered as a CSS backdrop by the caller (SteppedQuestions, via
+  // backgroundImageStyle on the step's own wrapper) instead of inline
+  // content here — there's nothing for this component to render itself.
+  if (position === "background") return <>{children}</>;
+
   if (position === "left" || position === "right") {
     return (
       <div className={`flex flex-col gap-4 sm:flex-row ${position === "right" ? "sm:flex-row-reverse" : ""}`}>

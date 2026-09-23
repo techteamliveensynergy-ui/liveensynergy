@@ -106,6 +106,7 @@ export default async function TakeSurveyPage({
         backgroundImageUrl={tpl.background_image_url}
         typography={{
           fontScale: tpl.font_scale,
+          fontFamily: tpl.font_family,
           questionTextColor: tpl.question_text_color,
           bodyTextColor: tpl.body_text_color,
         }}

@@ -39,9 +39,9 @@ function str(v: FormDataEntryValue | null): string | null {
 function brandingFields(formData: FormData) {
   const layoutMode = str(formData.get("layout_mode")) ?? "single_page";
   const coverMediaType = str(formData.get("cover_media_type"));
-  // font_scale/question_text_color/body_text_color apply in BOTH layout
-  // modes (unlike cover media/background above) — never cleared on a
-  // layout switch.
+  // font_scale/font_family/question_text_color/body_text_color apply in
+  // BOTH layout modes (unlike cover media/background above) — never cleared
+  // on a layout switch.
   const rawScale = Number(str(formData.get("font_scale")) ?? "1");
   const fontScale = Number.isFinite(rawScale) ? Math.min(1.6, Math.max(0.8, rawScale)) : 1;
   return {
@@ -55,6 +55,7 @@ function brandingFields(formData: FormData) {
     footer_logo_url: str(formData.get("footer_logo_url")),
     accent_color: str(formData.get("accent_color")),
     font_scale: fontScale,
+    font_family: str(formData.get("font_family")),
     question_text_color: str(formData.get("question_text_color")),
     body_text_color: str(formData.get("body_text_color")),
   };
@@ -322,17 +323,6 @@ export async function uploadSurveyBackground(formData: FormData): Promise<Upload
   const authed = await adminOrNull();
   if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
   const { url, error } = await uploadImage(formData.get("file"), "survey-background", authed);
-  if (error) return { error };
-  if (!url) return { error: "Choose an image to upload." };
-  return { url };
-}
-
-/** Per-question decorative background — stepped layout only, one per step
- *  instead of the template-wide one uploadSurveyBackground sets. */
-export async function uploadQuestionBackground(formData: FormData): Promise<UploadState> {
-  const authed = await adminOrNull();
-  if (!authed) return { error: SESSION_EXPIRED_MESSAGE };
-  const { url, error } = await uploadImage(formData.get("file"), "survey-question-background", authed);
   if (error) return { error };
   if (!url) return { error: "Choose an image to upload." };
   return { url };

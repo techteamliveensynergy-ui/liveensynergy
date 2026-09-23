@@ -5,7 +5,7 @@ import { Field } from "@/components/ui/Field";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
 import { isAnswerEmpty, questionSpec } from "@/lib/surveys";
-import { accentColorVars, backgroundImageStyle } from "@/lib/survey-media";
+import { accentColorVars, backgroundImageStyle, questionTypographyStyle } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
 
 /**
@@ -73,7 +73,14 @@ export function SteppedQuestions({
     setIndex((i) => Math.min(questions.length - 1, i + 1));
   }
 
-  const stepBackground = backgroundImageStyle(q.config.background_image_url);
+  // media_position: "background" is the current, unified way to set a
+  // step's backdrop (via the same media_url the direction options use);
+  // background_image_url is the older, separately-uploaded field it
+  // replaced — still honoured here for any question that already had one
+  // set before the merge (see the note on it in SurveyQuestionConfig).
+  const backgroundUrl =
+    q.config.media_position === "background" ? q.config.media_url : q.config.background_image_url;
+  const stepBackground = backgroundImageStyle(backgroundUrl);
 
   return (
     <div className={`space-y-4 ${stepBackground ? "p-4" : ""}`} style={stepBackground}>
@@ -89,7 +96,7 @@ export function SteppedQuestions({
         </span>
       </div>
 
-      <div className="card p-5" data-question-id={q.id}>
+      <div className="card p-5" data-question-id={q.id} style={questionTypographyStyle(q.config)}>
         <QuestionMedia config={q.config}>
           <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
             <QuestionField

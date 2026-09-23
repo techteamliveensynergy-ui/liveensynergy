@@ -8,7 +8,13 @@ import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
-import { accentColorVars, backgroundImageStyle, typographyVars, type SurveyTypography } from "@/lib/survey-media";
+import {
+  accentColorVars,
+  backgroundImageStyle,
+  questionTypographyStyle,
+  typographyVars,
+  type SurveyTypography,
+} from "@/lib/survey-media";
 import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
@@ -501,6 +507,7 @@ export function PublicSurveyForm({
                 }}
                 data-question-id={q.id}
                 className="card p-5"
+                style={questionTypographyStyle(q.config)}
               >
                 <QuestionMedia config={q.config}>
                   <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>

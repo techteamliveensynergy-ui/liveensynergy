@@ -7,7 +7,7 @@ import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
-import { accentColorVars, backgroundImageStyle, typographyVars } from "@/lib/survey-media";
+import { accentColorVars, backgroundImageStyle, questionTypographyStyle, typographyVars } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { emptyAnswerFor, questionSpec, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
@@ -32,6 +32,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     intro_message: introMessage,
     thank_you_message: thankYouMessage,
     font_scale: fontScale,
+    font_family: fontFamily,
     question_text_color: questionTextColor,
     body_text_color: bodyTextColor,
     show_intro_gate: showIntroGate,
@@ -95,7 +96,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         accentColor={accentColor}
         requireResidency={true}
         footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
-        typography={{ fontScale, questionTextColor, bodyTextColor }}
+        typography={{ fontScale, fontFamily, questionTextColor, bodyTextColor }}
         onStart={() => setGateCleared(true)}
       />
     );
@@ -120,7 +121,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         setFinished(true);
       }}
       className="survey-scope space-y-4"
-      style={typographyVars({ fontScale, questionTextColor, bodyTextColor })}
+      style={typographyVars({ fontScale, fontFamily, questionTextColor, bodyTextColor })}
     >
       <p className="rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm text-[var(--color-ink-soft)]">
         Preview mode — answers here are not saved, and no reward or quality scoring runs.
@@ -156,7 +157,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
           {questions.map((q) => {
             const spec = questionSpec(q.type);
             return (
-              <div key={q.id} className="card p-5">
+              <div key={q.id} className="card p-5" style={questionTypographyStyle(q.config)}>
                 <QuestionMedia config={q.config}>
                   <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
                     <QuestionField

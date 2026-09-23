@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { HIDDEN_FIELD_SOURCES, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
+import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
 import type { SurveyMediaPosition, SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
-import { uploadQuestionBackground, uploadQuestionMedia } from "../actions";
+import { uploadQuestionMedia } from "../actions";
 
 const NUMERIC_CONFIG_KEYS = new Set([
   "min",
@@ -29,8 +30,6 @@ export function QuestionInspector({
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [bgUploading, setBgUploading] = useState(false);
-  const [bgUploadError, setBgUploadError] = useState<string | null>(null);
 
   if (!question) {
     return (
@@ -41,6 +40,24 @@ export function QuestionInspector({
   }
 
   const spec = questionSpec(question.type);
+
+  // config.background_image_url is the older, separately-uploaded "step
+  // background" field the unified 5-option placement control below
+  // replaced (23 Sep client meeting — two separate image controls read as
+  // "the image always renders in the background no matter which position
+  // I pick", since position only ever touched media_url). Any question that
+  // already had one set (and nothing in media_url) is treated here as if it
+  // had picked media_position "background" for the same image, so it still
+  // shows up — and the moment the admin touches type/position/upload again,
+  // it migrates onto media_url and the legacy field is dropped.
+  const legacyBackground = !question.config.media_url && Boolean(question.config.background_image_url);
+  const mediaType: "" | "image" | "video" = legacyBackground
+    ? "image"
+    : question.config.media_type ?? "";
+  const mediaUrl = legacyBackground ? question.config.background_image_url : question.config.media_url;
+  const mediaPosition: SurveyMediaPosition = legacyBackground
+    ? "background"
+    : question.config.media_position ?? "top";
 
   async function handleImageSelect(file: File | undefined) {
     if (!file) return;
@@ -54,22 +71,12 @@ export function QuestionInspector({
       setUploadError(result.error);
       return;
     }
-    onChange({ config: { ...question!.config, media_type: "image", media_url: result.url } });
-  }
-
-  async function handleBackgroundSelect(file: File | undefined) {
-    if (!file) return;
-    setBgUploading(true);
-    setBgUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadQuestionBackground(form);
-    setBgUploading(false);
-    if (result.error) {
-      setBgUploadError(result.error);
-      return;
-    }
-    onChange({ config: { ...question!.config, background_image_url: result.url } });
+    const next = { ...question!.config } as Record<string, unknown>;
+    delete next.background_image_url;
+    next.media_type = "image";
+    next.media_url = result.url;
+    next.media_position = mediaPosition;
+    onChange({ config: next as SurveyQuestionConfig });
   }
 
   function setConfig(name: string, value: string) {
@@ -127,6 +134,94 @@ export function QuestionInspector({
         </label>
       )}
 
+      {question.type !== "hidden_field" && (
+        <div className="space-y-3 rounded-lg border border-black/10 p-3">
+          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">
+            Font &amp; colour (optional) — overrides the survey&apos;s own defaults for just this
+            question.
+          </p>
+
+          <Field label="Font" htmlFor="q-font-family">
+            <select
+              id="q-font-family"
+              className="select"
+              disabled={!editable}
+              value={question.config.font_family ?? ""}
+              onChange={(e) => setConfig("font_family", e.target.value)}
+            >
+              <option value="">Survey default</option>
+              {SURVEY_FONT_OPTIONS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Question text colour" htmlFor="q-question-text-color">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Pick a question text colour"
+                disabled={!editable}
+                value={question.config.question_text_color || "#2c2422"}
+                onChange={(e) => setConfig("question_text_color", e.target.value)}
+                className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+              />
+              <input
+                id="q-question-text-color"
+                className="input"
+                disabled={!editable}
+                placeholder="Survey default"
+                value={question.config.question_text_color ?? ""}
+                onChange={(e) => setConfig("question_text_color", e.target.value)}
+              />
+              {question.config.question_text_color && (
+                <button
+                  type="button"
+                  className="btn btn-ghost shrink-0 text-xs"
+                  disabled={!editable}
+                  onClick={() => setConfig("question_text_color", "")}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Body text colour" htmlFor="q-body-text-color">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Pick a body text colour"
+                disabled={!editable}
+                value={question.config.body_text_color || "#6f6360"}
+                onChange={(e) => setConfig("body_text_color", e.target.value)}
+                className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+              />
+              <input
+                id="q-body-text-color"
+                className="input"
+                disabled={!editable}
+                placeholder="Survey default"
+                value={question.config.body_text_color ?? ""}
+                onChange={(e) => setConfig("body_text_color", e.target.value)}
+              />
+              {question.config.body_text_color && (
+                <button
+                  type="button"
+                  className="btn btn-ghost shrink-0 text-xs"
+                  disabled={!editable}
+                  onClick={() => setConfig("body_text_color", "")}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </Field>
+        </div>
+      )}
+
       {question.type !== "hidden_field" && layoutMode === "single_page" && (
         <p className="field-hint">
           Per-question media is only available in step-by-step layout — this survey shows one
@@ -136,23 +231,31 @@ export function QuestionInspector({
       )}
 
       {question.type !== "hidden_field" && layoutMode === "stepped" && (
-        <Field label="Media (optional)" htmlFor="q-media-type">
+        <Field label="Image / video (optional)" htmlFor="q-media-type">
           <div className="space-y-2">
             <select
               id="q-media-type"
               className="select"
               disabled={!editable}
-              value={question.config.media_type ?? ""}
+              value={mediaType}
               onChange={(e) => {
                 const media_type = e.target.value as "" | "image" | "video";
+                const next = { ...question!.config } as Record<string, unknown>;
+                delete next.background_image_url;
                 if (!media_type) {
-                  const next = { ...question!.config } as Record<string, unknown>;
                   delete next.media_type;
                   delete next.media_url;
-                  onChange({ config: next as SurveyQuestionConfig });
+                  delete next.media_position;
                 } else {
-                  onChange({ config: { ...question!.config, media_type } });
+                  next.media_type = media_type;
+                  // A video can't be a CSS background-image — drop that
+                  // choice rather than carry forward a position it can't
+                  // render.
+                  if (media_type === "video" && next.media_position === "background") {
+                    next.media_position = "top";
+                  }
                 }
+                onChange({ config: next as SurveyQuestionConfig });
               }}
             >
               <option value="">None</option>
@@ -160,15 +263,11 @@ export function QuestionInspector({
               <option value="video">Video (embed link)</option>
             </select>
 
-            {question.config.media_type === "image" && (
+            {mediaType === "image" && (
               <div className="space-y-2">
-                {question.config.media_url && (
+                {mediaUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={question.config.media_url}
-                    alt=""
-                    className="h-24 w-full rounded-lg object-cover"
-                  />
+                  <img src={mediaUrl} alt="" className="h-24 w-full rounded-lg object-cover" />
                 )}
                 <input
                   type="file"
@@ -182,77 +281,42 @@ export function QuestionInspector({
               </div>
             )}
 
-            {question.config.media_type === "video" && (
+            {mediaType === "video" && (
               <input
                 type="url"
                 className="input"
                 disabled={!editable}
                 placeholder="https://youtube.com/watch?v=…"
-                value={question.config.media_url ?? ""}
+                value={mediaUrl ?? ""}
                 onChange={(e) => onChange({ config: { ...question!.config, media_url: e.target.value } })}
               />
             )}
 
-            {question.config.media_type && (
-              <select
-                aria-label="Media position"
-                className="select"
-                disabled={!editable}
-                value={question.config.media_position ?? "top"}
-                onChange={(e) =>
-                  onChange({
-                    config: { ...question!.config, media_position: e.target.value as SurveyMediaPosition },
-                  })
-                }
-              >
-                <option value="top">Above the question</option>
-                <option value="bottom">Below the question</option>
-                <option value="left">Left of the question</option>
-                <option value="right">Right of the question</option>
-              </select>
-            )}
-          </div>
-        </Field>
-      )}
-
-      {question.type !== "hidden_field" && layoutMode === "stepped" && (
-        <Field
-          label="Step background image (optional)"
-          htmlFor="q-background-file"
-          hint="A decorative image behind just this step — separate from the media above, which renders as content, not a backdrop."
-        >
-          <div className="space-y-2">
-            {question.config.background_image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={question.config.background_image_url}
-                alt=""
-                className="h-20 w-full rounded-lg object-cover"
-              />
-            )}
-            <input
-              id="q-background-file"
-              type="file"
-              accept="image/*"
-              disabled={!editable || bgUploading}
-              onChange={(e) => handleBackgroundSelect(e.target.files?.[0])}
-              className="text-sm"
-            />
-            {bgUploading && <p className="field-hint">Uploading…</p>}
-            {bgUploadError && <p className="text-sm text-[var(--color-accent)]">{bgUploadError}</p>}
-            {question.config.background_image_url && (
-              <button
-                type="button"
-                className="btn btn-ghost text-xs"
-                disabled={!editable}
-                onClick={() => {
-                  const next = { ...question!.config } as Record<string, unknown>;
-                  delete next.background_image_url;
-                  onChange({ config: next as SurveyQuestionConfig });
-                }}
-              >
-                Remove background image
-              </button>
+            {mediaType && (
+              <Field label="Placement" htmlFor="q-media-position">
+                <select
+                  id="q-media-position"
+                  className="select"
+                  disabled={!editable}
+                  value={mediaPosition}
+                  onChange={(e) => {
+                    const next = { ...question!.config } as Record<string, unknown>;
+                    delete next.background_image_url;
+                    next.media_type = mediaType;
+                    next.media_url = mediaUrl;
+                    next.media_position = e.target.value as SurveyMediaPosition;
+                    onChange({ config: next as SurveyQuestionConfig });
+                  }}
+                >
+                  <option value="top">Above the question</option>
+                  <option value="bottom">Below the question</option>
+                  <option value="left">Left of the question</option>
+                  <option value="right">Right of the question</option>
+                  {mediaType === "image" && (
+                    <option value="background">Background (behind the question)</option>
+                  )}
+                </select>
+              </Field>
             )}
           </div>
         </Field>
