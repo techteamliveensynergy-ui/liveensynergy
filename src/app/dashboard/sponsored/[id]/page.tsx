@@ -14,6 +14,8 @@ import type {
   SponsoredEventChangeRequest,
   SponsoredEventProof,
   SponsoredEventRewardTier,
+  RewardCode,
+  RewardCodePoolEntry,
   SponsoredEventSurveyCompletion,
   TicketSalesReport,
 } from "@/lib/types";
@@ -141,6 +143,19 @@ export default async function SponsoredEventPage({
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: false }),
     ]);
+
+  // Discount codes (0045) — both parties read the pool and issued codes under
+  // RLS; neither carries participant names.
+  const [{ data: poolRows }, { data: rewardCodeRows }] = await Promise.all([
+    supabase
+      .from("reward_code_pool")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: true }),
+    supabase.from("reward_codes").select("*").eq("sponsored_event_id", id),
+  ]);
+  const rewardPool = (poolRows ?? []) as RewardCodePoolEntry[];
+  const rewardCodes = (rewardCodeRows ?? []) as RewardCode[];
 
   const { data: completionRows } = await supabase
     .from("sponsored_event_survey_completions")
@@ -577,7 +592,17 @@ export default async function SponsoredEventPage({
         <ProofUploadSection eventId={event.id} proofs={proofs} />
       )}
 
-      <RewardEngineDisplay tiers={rewardTiers} />
+      <RewardEngineDisplay
+        eventId={event.id}
+        eventReference={event.reference}
+        tiers={rewardTiers}
+        pool={rewardPool}
+        codes={rewardCodes}
+        isArtist={isArtist}
+        confirmedAt={event.reward_codes_confirmed_at}
+        ticketPrice={ticketPrice}
+        viewerId={profile.id}
+      />
 
       {locked && (isBrand || isArtist) && (
         <ChangeRequestSection

@@ -377,6 +377,9 @@ export interface SponsoredEvent {
   artist_remainder_gbp: number | null;
   artist_remainder_released_at: string | null;
   artist_remainder_released_by: string | null;
+  /** 0045 — the artist's consent to the discount-code setup; freezes it. */
+  reward_codes_confirmed_at: string | null;
+  reward_codes_confirmed_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -417,8 +420,44 @@ export interface SponsoredEventRewardTier {
   code_type: "discount" | "merch" | null;
   value_label: string | null;
   value_gbp: number | null;
+  /** 0045 — pattern A/B ('shared', cap = participant_cap) or C ('unique'). */
+  distribution_model: RewardDistributionModel;
+  code_prefix: string | null;
+  code_random_length: number;
+  shared_code: string | null;
+  discount_percent: number | null;
+  redemption_platform: RedemptionPlatform | null;
+  redemption_url: string | null;
+  redemption_instructions: string | null;
+  valid_until: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type RewardDistributionModel = "shared" | "unique";
+export type RedemptionPlatform =
+  | "eventbrite"
+  | "ticketmaster"
+  | "stubhub"
+  | "shopify"
+  | "dice"
+  | "see_tickets"
+  | "skiddle"
+  | "brand_site"
+  | "other";
+
+/** A pattern-C code that exists before anyone has earned it (0045). */
+export interface RewardCodePoolEntry {
+  id: string;
+  sponsored_event_id: string;
+  tier_id: string;
+  code: string;
+  source: "generated" | "uploaded";
+  external_ref: string | null;
+  assigned_code_id: string | null;
+  assigned_at: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export type RewardCodeType = "discount" | "merch";
@@ -439,6 +478,12 @@ export interface RewardCode {
   redeemed_at: string | null;
   redeemed_by: string | null;
   expires_at: string | null;
+  /** 0045 — snapshotted from the tier at issuance. */
+  is_shared: boolean;
+  external_ref: string | null;
+  redemption_platform: RedemptionPlatform | null;
+  redemption_url: string | null;
+  redemption_instructions: string | null;
   created_at: string;
 }
 

@@ -5,8 +5,25 @@ import { redirect } from "next/navigation";
 import { netSponsorshipBudget, netForCampaign, roundMoney } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
-import { rewardGateFor } from "@/lib/data/reward-gate";
+import { rewardGateFor, rewardGatesForEvent } from "@/lib/data/reward-gate";
+import {
+  codeBatchText,
+  friendlyDbError,
+  generatePoolBatch,
+  insertPoolCodes,
+  invalidCodesMessage,
+  issueCodeFromTier,
+} from "@/lib/data/reward-codes";
+import {
+  CODE_PATTERN,
+  MAX_CODES_PER_BATCH,
+  normalisePrefix,
+  parseCodeBatch,
+  REDEMPTION_PLATFORMS,
+} from "@/lib/discount-codes";
 import { requireAdmin } from "@/lib/profile";
+import { normaliseUrl } from "@/lib/urls";
+import type { SponsoredEventRewardTier } from "@/lib/types";
 
 export interface MarketplaceState {
   error?: string;
@@ -859,13 +876,46 @@ export async function reviewEventProof(formData: FormData) {
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
 }
 
-// --- Reward engine -----------------------------------------------------------
+// --- Reward engine / discount codes ----------------------------------------
+//
+// Tiers carry the discount-code setup (0045): which of the three patterns
+// (shared uncapped / shared capped / unique per person), the value, and where
+// the code is redeemed. Pattern C's codes live in reward_code_pool. The whole
+// setup is editable until the artist confirms it, then frozen (a DB trigger
+// enforces that too) until an admin reopens it. See docs/discount-codes.md.
+
+type AdminClient = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+
+async function rewardConfigFrozen(supabase: AdminClient, eventId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("sponsored_events")
+    .select("reward_codes_confirmed_at")
+    .eq("id", eventId)
+    .maybeSingle<{ reward_codes_confirmed_at: string | null }>();
+  return !!data?.reward_codes_confirmed_at;
+}
+
+function revalidateRewardPages(eventId: string) {
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+async function tierFor(supabase: AdminClient, eventId: string, tierId: string) {
+  const { data } = await supabase
+    .from("sponsored_event_reward_tiers")
+    .select("*")
+    .eq("id", tierId)
+    .eq("sponsored_event_id", eventId)
+    .maybeSingle<SponsoredEventRewardTier>();
+  return data;
+}
 
 /**
- * Replaces a sponsorship's reward tiers wholesale — the same delete-and-
- * reinsert shape the survey-builder design recommends for its own question
- * list, since no participation references a tier's row identity directly
- * (reward_codes snapshots the tier's values at issuance instead).
+ * Saves a sponsorship's tiers. Updates rows in place by id rather than the
+ * old delete-and-reinsert, because pattern C's pool hangs off the tier id —
+ * reinserting would cascade-delete every uploaded code. Removed tiers are
+ * deleted (taking their pool with them); issued codes keep their snapshot and
+ * just lose the tier link.
  */
 export async function upsertRewardTiers(
   _prev: MarketplaceState,
@@ -874,37 +924,223 @@ export async function upsertRewardTiers(
   const { supabase } = await requireAdmin();
   const eventId = str(formData.get("event_id"));
   if (!eventId) return { error: "Missing sponsorship." };
+  if (await rewardConfigFrozen(supabase, eventId)) {
+    return { error: "The artist has already confirmed these discount codes — reopen them before editing." };
+  }
 
-  const labels = formData.getAll("tier_label").map((v) => String(v).trim());
-  const caps = formData.getAll("tier_cap").map((v) => str(v as FormDataEntryValue));
-  const codeTypes = formData.getAll("tier_code_type").map((v) => String(v));
-  const valueLabels = formData.getAll("tier_value_label").map((v) => str(v as FormDataEntryValue));
+  const all = (k: string) => formData.getAll(k).map((v) => str(v as FormDataEntryValue));
+  const ids = all("tier_id");
+  const labels = all("tier_label");
+  const caps = all("tier_cap");
+  const codeTypes = all("tier_code_type");
+  const valueLabels = all("tier_value_label");
+  const models = all("tier_model");
+  const prefixes = all("tier_prefix");
+  const lengths = all("tier_random_length");
+  const sharedCodes = all("tier_shared_code");
+  const percents = all("tier_discount_percent");
+  const pounds = all("tier_value_gbp");
+  const platforms = all("tier_platform");
+  const urls = all("tier_url");
+  const instructions = all("tier_instructions");
+  const validUntil = all("tier_valid_until");
 
-  const rows = labels
-    .map((label, i) => ({
+  const rows: (Record<string, unknown> & { id: string | null })[] = [];
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    if (!label) continue;
+    const model = models[i] === "shared" ? "shared" : "unique";
+    const cap = caps[i] != null ? Number(caps[i]) : null;
+    if (cap != null && !(Number.isInteger(cap) && cap >= 1)) {
+      return { error: `“${label}”: the cap must be a whole number of at least 1, or blank.` };
+    }
+    const percent = percents[i] != null ? Number(percents[i]) : null;
+    if (percent != null && !(percent > 0 && percent <= 100)) {
+      return { error: `“${label}”: a percentage discount must be between 0 and 100.` };
+    }
+    const gbp = pounds[i] != null ? Number(pounds[i]) : null;
+    if (gbp != null && !(gbp > 0)) return { error: `“${label}”: the £ value must be more than 0.` };
+    if (percent != null && gbp != null) {
+      return { error: `“${label}”: give either a percentage or a £ amount, not both.` };
+    }
+    const shared = model === "shared" ? sharedCodes[i] : null;
+    if (shared && !CODE_PATTERN.test(shared)) {
+      return { error: `“${label}”: a code can only use letters, numbers, - and _ (3–40 characters).` };
+    }
+    const len = lengths[i] != null ? Math.floor(Number(lengths[i])) : 8;
+    const platform = platforms[i];
+    const url = normaliseUrl(urls[i], `“${label}”: the redemption link`);
+    if (url.error) return { error: url.error };
+    rows.push({
+      id: ids[i],
       sponsored_event_id: eventId,
       label,
-      rank: i,
-      participant_cap: caps[i] ? Number(caps[i]) : null,
-      code_type: codeTypes[i] || null,
-      value_label: valueLabels[i] ?? null,
-    }))
-    .filter((r) => r.label);
-
+      rank: rows.length,
+      participant_cap: cap,
+      code_type: codeTypes[i] === "merch" ? "merch" : "discount",
+      value_label: valueLabels[i],
+      distribution_model: model,
+      code_prefix: normalisePrefix(prefixes[i]),
+      code_random_length: Math.min(16, Math.max(6, Number.isFinite(len) ? len : 8)),
+      shared_code: shared,
+      discount_percent: percent,
+      value_gbp: gbp != null ? roundMoney(gbp) : null,
+      redemption_platform: REDEMPTION_PLATFORMS.some((p) => p.value === platform) ? platform : null,
+      redemption_url: url.url,
+      redemption_instructions: instructions[i],
+      valid_until: validUntil[i],
+    });
+  }
   if (rows.length === 0) return { error: "Add at least one tier." };
 
-  const { error: deleteError } = await supabase
+  const { data: existingRows } = await supabase
     .from("sponsored_event_reward_tiers")
-    .delete()
+    .select("id")
     .eq("sponsored_event_id", eventId);
-  if (deleteError) return { error: deleteError.message };
+  const existing = new Set((existingRows ?? []).map((r: { id: string }) => r.id));
+  const kept = new Set(rows.map((r) => r.id).filter((id): id is string => !!id && existing.has(id)));
 
-  const { error } = await supabase.from("sponsored_event_reward_tiers").insert(rows);
-  if (error) return { error: error.message };
+  const removed = [...existing].filter((id) => !kept.has(id));
+  if (removed.length > 0) {
+    const { error } = await supabase
+      .from("sponsored_event_reward_tiers")
+      .delete()
+      .eq("sponsored_event_id", eventId)
+      .in("id", removed);
+    if (error) return { error: friendlyDbError(error.message) };
+  }
 
-  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
-  revalidatePath(`/dashboard/sponsored/${eventId}`);
-  return {};
+  // Ascending rank order: tiers only ever shift down (removals) or append,
+  // so no update ever lands on a rank another row still holds.
+  for (const { id, ...row } of rows) {
+    const { error } =
+      id && kept.has(id)
+        ? await supabase
+            .from("sponsored_event_reward_tiers")
+            .update(row)
+            .eq("id", id)
+            .eq("sponsored_event_id", eventId)
+        : await supabase.from("sponsored_event_reward_tiers").insert(row);
+    if (error) return { error: friendlyDbError(error.message) };
+  }
+
+  revalidateRewardPages(eventId);
+  return { success: true };
+}
+
+/** Pattern C: the platform generates PREFIX-XXXX-XXXX codes for the artist to
+ * download and load into their ticketing platform. */
+export async function generatePoolCodes(
+  _prev: MarketplaceState,
+  formData: FormData,
+): Promise<MarketplaceState> {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const tierId = str(formData.get("tier_id"));
+  const count = num(formData.get("count")) ?? 0;
+  if (!eventId || !tierId) return { error: "Missing tier." };
+  if (!Number.isInteger(count) || count < 1 || count > MAX_CODES_PER_BATCH) {
+    return { error: `Generate between 1 and ${MAX_CODES_PER_BATCH} codes at a time.` };
+  }
+  const tier = await tierFor(supabase, eventId, tierId);
+  if (!tier) return { error: "That tier no longer exists — save the tiers first." };
+  if (tier.distribution_model !== "unique") {
+    return { error: "Only a “unique code per person” tier has a code pool." };
+  }
+
+  const batch = await generatePoolBatch(supabase, { eventId, tier, count });
+  const res = await insertPoolCodes(supabase, {
+    eventId,
+    tierId,
+    source: "generated",
+    rows: batch,
+    createdBy: userId,
+  });
+  if (res.error) return { error: res.error };
+  revalidateRewardPages(eventId);
+  return { success: true };
+}
+
+/** Pattern C, Phase 1: the admin pastes (or uploads a CSV of) the codes they
+ * created on the brand's own platform. */
+export async function uploadPoolCodes(
+  _prev: MarketplaceState,
+  formData: FormData,
+): Promise<MarketplaceState> {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const tierId = str(formData.get("tier_id"));
+  if (!eventId || !tierId) return { error: "Missing tier." };
+  const tier = await tierFor(supabase, eventId, tierId);
+  if (!tier) return { error: "That tier no longer exists — save the tiers first." };
+  if (tier.distribution_model !== "unique") {
+    return { error: "Only a “unique code per person” tier has a code pool." };
+  }
+
+  const parsed = parseCodeBatch(await codeBatchText(formData));
+  if (parsed.invalid.length > 0) return { error: invalidCodesMessage(parsed.invalid) };
+  if (parsed.codes.length === 0) return { error: "Paste at least one code, or choose a CSV file." };
+
+  const res = await insertPoolCodes(supabase, {
+    eventId,
+    tierId,
+    source: "uploaded",
+    rows: parsed.codes,
+    createdBy: userId,
+  });
+  if (res.error) return { error: res.error };
+  revalidateRewardPages(eventId);
+  return { success: true };
+}
+
+export async function removePoolCode(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  const id = str(formData.get("id"));
+  if (!eventId || !id) return;
+  await supabase
+    .from("reward_code_pool")
+    .delete()
+    .eq("id", id)
+    .eq("sponsored_event_id", eventId)
+    .is("assigned_at", null);
+  revalidateRewardPages(eventId);
+}
+
+/** Asks the artist to review and consent — the setup stays editable until
+ * they do. */
+export async function sendRewardCodesForReview(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+  const { data: ev } = await supabase
+    .from("sponsored_events")
+    .select("name, reference, artist_profile_id")
+    .eq("id", eventId)
+    .maybeSingle<{ name: string; reference: string; artist_profile_id: string | null }>();
+  if (ev?.artist_profile_id) {
+    await notify({
+      eventKey: "reward.codes_ready_for_review",
+      recipientProfileId: ev.artist_profile_id,
+      link: `/dashboard/sponsored/${eventId}#discount-codes`,
+      variables: { event_name: ev.name, reference: ev.reference },
+    });
+  }
+  revalidateRewardPages(eventId);
+  redirect(`/dashboard/admin/events/sponsored/${eventId}?notice=codes_sent#discount-codes`);
+}
+
+/** Withdraws the artist's consent so the setup can be edited again. */
+export async function reopenRewardCodes(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+  await supabase
+    .from("sponsored_events")
+    .update({ reward_codes_confirmed_at: null, reward_codes_confirmed_by: null })
+    .eq("id", eventId);
+  revalidateRewardPages(eventId);
+  redirect(`/dashboard/admin/events/sponsored/${eventId}?notice=codes_reopened#discount-codes`);
 }
 
 /** Refuses issuance/release with a reason the admin page renders as a banner
@@ -918,6 +1154,30 @@ function refuseGate(eventId: string, code: string, who: string): never {
   );
 }
 
+interface IssueEventRow {
+  id: string;
+  name: string;
+  campaign_id: string | null;
+  artist_profile_id: string | null;
+  reward_codes_confirmed_at: string | null;
+}
+
+async function loadIssueEvent(supabase: AdminClient, eventId: string) {
+  const { data } = await supabase
+    .from("sponsored_events")
+    .select("id, name, campaign_id, artist_profile_id, reward_codes_confirmed_at")
+    .eq("id", eventId)
+    .maybeSingle<IssueEventRow>();
+  return data;
+}
+
+/** Codes only go out once the artist — who absorbs the discount — has
+ * consented to the setup (25 Sep standup). A sponsorship with no artist
+ * attached has nobody to consent, so it isn't held up. */
+function needsConsent(ev: IssueEventRow) {
+  return !!ev.artist_profile_id && !ev.reward_codes_confirmed_at;
+}
+
 export async function issueRewardCode(formData: FormData) {
   const { supabase, userId } = await requireAdmin();
   const eventId = str(formData.get("event_id"));
@@ -925,21 +1185,18 @@ export async function issueRewardCode(formData: FormData) {
   const tierId = str(formData.get("tier_id"));
   if (!eventId || !participationId) return;
 
-  // One fetch, widened to cover every check below instead of the narrow
-  // post-insert lookup this used to do — also closes a real ownership gap:
-  // a hand-posted participation_id from another event previously produced a
-  // mismatched-parent reward_codes row (CLAUDE.md's "mutations always
-  // additionally scoped by owner id").
+  // Scoped to this event — a hand-posted participation_id from another event
+  // must not produce a mismatched-parent reward_codes row (CLAUDE.md's
+  // "mutations always additionally scoped by owner id").
   const { data: participation } = await supabase
     .from("participations")
-    .select("id, status, sponsored_event_id, audience_profile_id, sponsored_events(name, campaign_id)")
+    .select("id, status, sponsored_event_id, audience_profile_id")
     .eq("id", participationId)
     .maybeSingle<{
       id: string;
       status: string;
       sponsored_event_id: string;
       audience_profile_id: string;
-      sponsored_events: { name: string; campaign_id: string | null } | null;
     }>();
   if (!participation || participation.sponsored_event_id !== eventId) {
     refuseGate(eventId, "mismatch", participationId);
@@ -948,80 +1205,144 @@ export async function issueRewardCode(formData: FormData) {
     refuseGate(eventId, "status", participationId);
   }
 
-  let tier: {
-    label: string;
-    participant_cap: number | null;
-    code_type: string;
-    value_label: string | null;
-    value_gbp: number | null;
-  } | null = null;
-  if (tierId) {
-    const { data } = await supabase
-      .from("sponsored_event_reward_tiers")
-      .select("label, participant_cap, code_type, value_label, value_gbp")
-      .eq("id", tierId)
-      .eq("sponsored_event_id", eventId)
-      .maybeSingle();
-    if (!data) refuseGate(eventId, "tier", participationId);
-    tier = data;
-  }
+  const ev = await loadIssueEvent(supabase, eventId);
+  if (!ev) refuseGate(eventId, "mismatch", participationId);
+  if (needsConsent(ev)) refuseGate(eventId, "not_confirmed", participationId);
 
-  if (tier?.participant_cap != null) {
-    // Void doesn't count against the cap — a voided code shouldn't
-    // permanently consume a capped slot.
-    const { count } = await supabase
-      .from("reward_codes")
-      .select("id", { count: "exact", head: true })
-      .eq("tier_id", tierId)
-      .neq("status", "void");
-    if ((count ?? 0) >= tier.participant_cap) refuseGate(eventId, "cap", participationId);
-  }
+  const tier = tierId ? await tierFor(supabase, eventId, tierId) : null;
+  if (!tier) refuseGate(eventId, "tier", participationId);
 
-  const gate = await rewardGateFor({
-    campaignId: participation.sponsored_events?.campaign_id ?? null,
-    participationId,
-  });
+  const gate = await rewardGateFor({ campaignId: ev.campaign_id, participationId });
   if (!gate.allowed) refuseGate(eventId, gate.code, participationId);
 
-  const { data: created, error } = await supabase
-    .from("reward_codes")
-    .insert({
-      sponsored_event_id: eventId,
-      participation_id: participationId,
-      tier_id: tierId || null,
-      code_type: tier?.code_type ?? "discount",
-      value_label: tier?.value_label ?? str(formData.get("value_label")),
-      value_gbp: tier?.value_gbp ?? num(formData.get("value_gbp")),
-      issued_by: userId,
-    })
-    .select("code")
-    .single<{ code: string }>();
-  if (error) refuseGate(eventId, "failed", participationId);
-
-  await notify({
-    eventKey: "reward.code_issued",
+  const result = await issueCodeFromTier(supabase, {
+    eventId,
+    eventName: ev.name,
+    participationId,
     recipientProfileId: participation.audience_profile_id,
-    link: "/dashboard/rewards",
-    variables: {
-      event_name: participation.sponsored_events?.name ?? "your event",
-      code: created.code,
-      value_label: tier?.value_label ?? "a reward",
-    },
+    tier,
+    issuedBy: userId,
   });
+  if (!result.ok) refuseGate(eventId, result.reason, participationId);
 
-  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  revalidateRewardPages(eventId);
 }
 
+/**
+ * Issues a code to everyone eligible who hasn't got one yet, in registration
+ * order, filling tiers in rank order ("first 50 get X, everyone after gets
+ * Y"). Skips anyone the survey gate holds back. Saves the admin 50 clicks;
+ * every result still shows per person on the page.
+ */
+export async function issueRewardCodesToEligible(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+
+  const ev = await loadIssueEvent(supabase, eventId);
+  if (!ev) return;
+  if (needsConsent(ev)) refuseGate(eventId, "not_confirmed", "");
+
+  const [{ data: tierRows }, { data: partRows }, { data: codeRows }] = await Promise.all([
+    supabase
+      .from("sponsored_event_reward_tiers")
+      .select("*")
+      .eq("sponsored_event_id", eventId)
+      .order("rank"),
+    supabase
+      .from("participations")
+      .select("id, audience_profile_id")
+      .eq("sponsored_event_id", eventId)
+      .in("status", ["attendance_verified", "reward_released"])
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("reward_codes")
+      .select("participation_id")
+      .eq("sponsored_event_id", eventId)
+      .neq("status", "void"),
+  ]);
+  const tiers = (tierRows ?? []) as SponsoredEventRewardTier[];
+  if (tiers.length === 0) refuseGate(eventId, "tier", "");
+
+  const haveCode = new Set(
+    (codeRows ?? []).map((c: { participation_id: string | null }) => c.participation_id),
+  );
+  const pending = ((partRows ?? []) as { id: string; audience_profile_id: string }[]).filter(
+    (p) => !haveCode.has(p.id),
+  );
+  const { gates } = await rewardGatesForEvent({
+    campaignId: ev.campaign_id,
+    participationIds: pending.map((p) => p.id),
+  });
+
+  let issued = 0;
+  let held = 0;
+  let unplaced = 0;
+  // A tier that refuses (cap reached / pool empty / no shared code) is
+  // skipped for the rest of the run rather than retried per person.
+  const exhausted = new Set<string>();
+  for (const p of pending) {
+    const gate = gates.get(p.id);
+    if (gate && !gate.allowed) {
+      held++;
+      continue;
+    }
+    let placed = false;
+    for (const tier of tiers) {
+      if (exhausted.has(tier.id)) continue;
+      const res = await issueCodeFromTier(supabase, {
+        eventId,
+        eventName: ev.name,
+        participationId: p.id,
+        recipientProfileId: p.audience_profile_id,
+        tier,
+        issuedBy: userId,
+      });
+      if (res.ok || res.reason === "already") {
+        if (res.ok) issued++;
+        placed = true;
+        break;
+      }
+      exhausted.add(tier.id);
+    }
+    if (!placed) unplaced++;
+  }
+
+  revalidateRewardPages(eventId);
+  redirect(
+    `/dashboard/admin/events/sponsored/${eventId}?notice=bulk&issued=${issued}&held=${held}&unplaced=${unplaced}#discount-codes`,
+  );
+}
+
+/** Admin records a redemption the brand reported from their own platform. */
 export async function markRewardCodeRedeemed(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const eventId = str(formData.get("event_id"));
+  if (!id || !eventId) return;
+  await supabase
+    .from("reward_codes")
+    .update({ status: "redeemed", redeemed_at: new Date().toISOString(), redeemed_by: userId })
+    .eq("id", id)
+    .eq("sponsored_event_id", eventId)
+    .eq("status", "issued");
+  revalidateRewardPages(eventId);
+}
+
+/** Voids an issued code. The pool code is *not* returned for reuse — the
+ * participant has already been shown it and could still use it. */
+export async function voidRewardCode(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
   const eventId = str(formData.get("event_id"));
-  if (!id) return;
+  if (!id || !eventId) return;
   await supabase
     .from("reward_codes")
-    .update({ status: "redeemed", redeemed_at: new Date().toISOString() })
-    .eq("id", id);
-  if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+    .update({ status: "void" })
+    .eq("id", id)
+    .eq("sponsored_event_id", eventId)
+    .eq("status", "issued");
+  revalidateRewardPages(eventId);
 }
 
 // --- Artist payment split ----------------------------------------------------

@@ -13,6 +13,7 @@ import {
   issueRewardCode,
 } from "../../../marketplace-actions";
 import { rewardGatesForEvent, type RewardGate } from "@/lib/data/reward-gate";
+import { ISSUE_REFUSALS } from "@/lib/discount-codes";
 import { formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
@@ -26,6 +27,7 @@ import { InvoiceSection } from "./InvoiceSection";
 import type {
   Invoice,
   RewardCode,
+  RewardCodePoolEntry,
   SponsoredEventChangeRequest,
   SponsoredEventProof,
   SponsoredEventRewardTier,
@@ -62,6 +64,7 @@ const GATE_NOTICES: Record<string, string> = {
   tier: "That reward tier no longer exists on this event.",
   cap: "That tier's participant cap has already been reached.",
   failed: "Something went wrong issuing the code. Please try again.",
+  ...ISSUE_REFUSALS,
 };
 
 const GATE_TINTS: Record<RewardGate["code"], string> = {
@@ -97,11 +100,20 @@ export default async function AdminSponsoredDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string; drawn?: string; pool?: string; gate?: string; who?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    drawn?: string;
+    pool?: string;
+    gate?: string;
+    who?: string;
+    issued?: string;
+    held?: string;
+    unplaced?: string;
+  }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
-  const { notice, drawn, pool, gate: gateNotice, who } = await searchParams;
+  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
@@ -137,6 +149,7 @@ export default async function AdminSponsoredDetailPage({
       artist_upfront_paid_at: string | null;
       artist_remainder_gbp: number | null;
       artist_remainder_released_at: string | null;
+      reward_codes_confirmed_at: string | null;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: { reference: string; description: string } | null;
       event_listings: {
@@ -155,6 +168,7 @@ export default async function AdminSponsoredDetailPage({
     { data: codeRows },
     { data: reportRows },
     { data: changeRows },
+    { data: poolRows },
   ] = await Promise.all([
     supabase
       .from("participations")
@@ -192,6 +206,11 @@ export default async function AdminSponsoredDetailPage({
       .select("*")
       .eq("sponsored_event_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("reward_code_pool")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: true }),
   ]);
 
   const { data: invoiceRows } = await supabase
@@ -203,6 +222,7 @@ export default async function AdminSponsoredDetailPage({
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
   const rewardCodes = (codeRows ?? []) as RewardCode[];
+  const rewardPool = (poolRows ?? []) as RewardCodePoolEntry[];
   const salesReports = (reportRows ?? []) as TicketSalesReport[];
   const changeRequests = (changeRows ?? []) as SponsoredEventChangeRequest[];
   const invoices = (invoiceRows ?? []) as Invoice[];
@@ -485,10 +505,37 @@ export default async function AdminSponsoredDetailPage({
 
       <ProofsSection eventId={event.id} proofs={proofs} />
 
+      {notice === "codes_sent" && (
+        <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Sent to the artist — they&apos;ll review the discount codes and confirm them.
+        </p>
+      )}
+      {notice === "codes_reopened" && (
+        <p className="rounded-lg bg-[var(--color-gold)]/50 px-4 py-3 text-sm">
+          Discount codes reopened for editing. The artist will need to confirm them again.
+        </p>
+      )}
+      {notice === "bulk" && (
+        <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Issued {issued ?? 0} code{issued === "1" ? "" : "s"}.
+          {Number(held) > 0 && ` ${held} held back by the survey check.`}
+          {Number(unplaced) > 0 && ` ${unplaced} couldn't be placed — every tier is full or out of codes.`}
+        </p>
+      )}
+
       <RewardEngineSection
         eventId={event.id}
+        eventReference={event.reference}
         tiers={rewardTiers}
         codes={rewardCodes}
+        pool={rewardPool}
+        confirmedAt={event.reward_codes_confirmed_at}
+        hasArtist={!!event.artist_profile_id}
+        brandName={event.brands?.brand_name ?? null}
+        ticketPrice={event.event_listings?.ticket_price_gbp ?? null}
+        participantNames={Object.fromEntries(
+          participants.map((p) => [p.id, p.profiles?.full_name ?? p.profiles?.email ?? "Participant"]),
+        )}
       />
 
       {/* Artist payment split is built but deliberately not shown yet —
@@ -777,10 +824,16 @@ export default async function AdminSponsoredDetailPage({
                             {rewardTiers.map((t) => {
                               const issued = issuedByTier.get(t.id) ?? 0;
                               const full = t.participant_cap != null && issued >= t.participant_cap;
+                              // Pattern C hands out pooled codes only — an
+                              // empty pool can't issue anything.
+                              const noCodes =
+                                t.distribution_model === "unique" &&
+                                !rewardPool.some((c) => c.tier_id === t.id && !c.assigned_at);
                               return (
-                                <option key={t.id} value={t.id} disabled={full}>
+                                <option key={t.id} value={t.id} disabled={full || noCodes}>
                                   {t.label}
                                   {t.participant_cap != null ? ` · ${issued}/${t.participant_cap}` : ""}
+                                  {noCodes ? " · no codes left" : ""}
                                 </option>
                               );
                             })}

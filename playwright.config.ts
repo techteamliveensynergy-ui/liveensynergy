@@ -65,6 +65,15 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], storageState: "tests/.auth/audience.json" },
     },
     {
+      // Discount codes (0045) across admin → artist → admin → audience →
+      // brand, each in its own context. Writes to the seeded QA event
+      // (SPE-00017); reset it first — docs/discount-codes.md.
+      name: "discount-codes",
+      testMatch: /discount-codes\.spec\.ts/,
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       // Walkthrough recording of everything the 3 Aug standup changed, across
       // all four roles. One context start to finish so it comes out as a
       // single continuous video — signing in and out happens on camera.

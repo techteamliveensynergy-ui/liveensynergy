@@ -8,6 +8,8 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage, uploadPrivateFile } from "@/lib/storage";
 import { DEFAULT_TIMEZONE, eventStartInstant } from "@/lib/event-time";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { codeBatchText, insertPoolCodes, invalidCodesMessage } from "@/lib/data/reward-codes";
+import { parseCodeBatch } from "@/lib/discount-codes";
 
 export interface SponsoredState {
   error?: string;
@@ -675,4 +677,135 @@ export async function selfReportRewardCodeRedeemed(formData: FormData) {
   }
 
   revalidatePath("/dashboard/rewards");
+}
+
+// --- Discount codes (0045): artist review, own codes, consent ---------------
+
+export interface DiscountCodeState {
+  error?: string;
+  message?: string;
+}
+
+/** The artist on this sponsorship, or null. The brand only ever reads. */
+async function requireEventArtist(eventId: string) {
+  const { supabase, userId } = await requireUser();
+  const { data } = await supabase
+    .from("sponsored_events")
+    .select("id, name, reference, artist_profile_id, reward_codes_confirmed_at")
+    .eq("id", eventId)
+    .maybeSingle<{
+      id: string;
+      name: string;
+      reference: string;
+      artist_profile_id: string | null;
+      reward_codes_confirmed_at: string | null;
+    }>();
+  if (!data || data.artist_profile_id !== userId) return null;
+  return { supabase, userId, event: data };
+}
+
+/** The artist hands over their own codes (and optional ID numbers) for a
+ * unique-per-person tier — the meeting's second phase of code supply. */
+export async function artistUploadPoolCodes(
+  _prev: DiscountCodeState,
+  formData: FormData,
+): Promise<DiscountCodeState> {
+  const eventId = str(formData.get("event_id"));
+  const tierId = str(formData.get("tier_id"));
+  if (!eventId || !tierId) return { error: "Missing tier." };
+  const ctx = await requireEventArtist(eventId);
+  if (!ctx) return { error: "Only the artist on this sponsorship can add codes." };
+  if (ctx.event.reward_codes_confirmed_at) {
+    return { error: "You've already confirmed these codes — ask the team to reopen them to make changes." };
+  }
+
+  const { data: tier } = await ctx.supabase
+    .from("sponsored_event_reward_tiers")
+    .select("id, distribution_model")
+    .eq("id", tierId)
+    .eq("sponsored_event_id", eventId)
+    .maybeSingle<{ id: string; distribution_model: string }>();
+  if (!tier || tier.distribution_model !== "unique") {
+    return { error: "Codes can only be added to a “unique code per person” tier." };
+  }
+
+  const parsed = parseCodeBatch(await codeBatchText(formData));
+  if (parsed.invalid.length > 0) return { error: invalidCodesMessage(parsed.invalid) };
+  if (parsed.codes.length === 0) return { error: "Paste at least one code, or choose a CSV file." };
+
+  const res = await insertPoolCodes(ctx.supabase, {
+    eventId,
+    tierId,
+    source: "uploaded",
+    rows: parsed.codes,
+    createdBy: ctx.userId,
+  });
+  if (res.error) return { error: res.error };
+
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  return {
+    message: `Added ${res.added} code${res.added === 1 ? "" : "s"}${
+      res.skipped > 0 ? ` (${res.skipped} already on this event, skipped)` : ""
+    }.`,
+  };
+}
+
+/** Removes one of the artist's own, not-yet-assigned codes. RLS limits the
+ * delete to exactly that; the freeze trigger stops it after consent. */
+export async function artistRemovePoolCode(formData: FormData) {
+  const eventId = str(formData.get("event_id"));
+  const id = str(formData.get("id"));
+  if (!eventId || !id) return;
+  const ctx = await requireEventArtist(eventId);
+  if (!ctx) return;
+  await ctx.supabase
+    .from("reward_code_pool")
+    .delete()
+    .eq("id", id)
+    .eq("sponsored_event_id", eventId)
+    .eq("created_by", ctx.userId)
+    .is("assigned_at", null);
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+}
+
+const CONFIRM_REFUSALS: Record<string, string> = {
+  forbidden: "Only the artist on this sponsorship can confirm its discount codes.",
+  already_confirmed: "You've already confirmed these codes.",
+  no_tiers: "The team hasn't set up any discount codes for this event yet.",
+  shared_code_missing: "A shared-code tier has no code yet — the team needs to add it before you confirm.",
+  pool_empty: "A unique-code tier has no codes yet — add your codes (or ask the team to generate them) first.",
+};
+
+/** The artist's formal consent. After this the setup is frozen and codes can
+ * be issued; only an admin can reopen it (25 Sep standup). */
+export async function confirmRewardCodes(
+  _prev: DiscountCodeState,
+  formData: FormData,
+): Promise<DiscountCodeState> {
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return { error: "Missing sponsorship." };
+  if (formData.get("consent") !== "on") {
+    return { error: "Tick the box to confirm you agree to these discount codes." };
+  }
+  const ctx = await requireEventArtist(eventId);
+  if (!ctx) return { error: CONFIRM_REFUSALS.forbidden };
+
+  const { data: outcome, error } = await ctx.supabase.rpc("confirm_reward_codes", {
+    p_event_id: eventId,
+  });
+  if (error) return { error: error.message };
+  if (outcome !== "confirmed") {
+    return { error: CONFIRM_REFUSALS[outcome as string] ?? "Couldn't confirm the codes." };
+  }
+
+  await notifyAdmins({
+    eventKey: "admin.reward_codes_confirmed",
+    link: `/dashboard/admin/events/sponsored/${eventId}#discount-codes`,
+    variables: { event_name: ctx.event.name, reference: ctx.event.reference },
+  });
+
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  return { message: "Confirmed — the team can now issue these codes to qualifying participants." };
 }

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { Participation, RewardCode, SponsoredEvent } from "@/lib/types";
 import { selfReportRewardCodeRedeemed } from "../sponsored/actions";
+import { platformLabel, PLATFORM_HOW_TO } from "@/lib/discount-codes";
 
 export const metadata = { title: "My rewards" };
 
@@ -106,25 +107,58 @@ export default async function RewardsPage() {
             Discount &amp; merch codes
           </h2>
           <div className="space-y-3">
-            {codes.map((c) => (
+            {codes.map((c) => {
+              // The code is redeemed on the brand's own platform — we can't
+              // see that happen, so "expired" is derived from the date rather
+              // than written back.
+              const expired =
+                c.status === "issued" && !!c.expires_at && new Date(c.expires_at) < new Date();
+              const platform = platformLabel(c.redemption_platform);
+              const howTo =
+                c.redemption_instructions ??
+                (c.redemption_platform ? PLATFORM_HOW_TO[c.redemption_platform] : undefined);
+              return (
               <div
                 key={c.id}
-                className="card flex flex-wrap items-center justify-between gap-3 p-5"
+                className="card flex flex-wrap items-start justify-between gap-3 p-5"
+                data-testid="reward-code"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">
                       {c.sponsored_events?.name ?? "Event"}
                     </h3>
-                    <StatusBadge status={c.status} />
+                    <StatusBadge status={expired ? "expired" : c.status} />
                   </div>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                     {c.value_label ?? (c.code_type === "merch" ? "Merch" : "Discount")}
-                    {" · "}
-                    <span className="font-mono">{c.code}</span>
+                    {platform ? ` · redeem on ${platform}` : ""}
+                  </p>
+                  <p className="mt-2 inline-block rounded-lg bg-[var(--color-mist)] px-3 py-1.5 font-mono text-lg tracking-wide">
+                    {c.code}
+                  </p>
+                  {howTo && c.status === "issued" && !expired && (
+                    <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{howTo}</p>
+                  )}
+                  <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                    {c.expires_at &&
+                      `${expired ? "Expired" : "Use by"} ${new Date(c.expires_at).toLocaleDateString("en-GB")}`}
+                    {c.redemption_url && c.status === "issued" && !expired && (
+                      <>
+                        {c.expires_at ? " · " : ""}
+                        <a
+                          href={c.redemption_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          Go to {platform ?? "the ticket page"}
+                        </a>
+                      </>
+                    )}
                   </p>
                 </div>
-                {c.status === "issued" && (
+                {c.status === "issued" && !expired && (
                   <form action={selfReportRewardCodeRedeemed}>
                     <input type="hidden" name="code_id" value={c.id} />
                     <button type="submit" className="btn btn-ghost text-sm">
@@ -133,7 +167,8 @@ export default async function RewardsPage() {
                   </form>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
