@@ -172,12 +172,12 @@ test("A4 selection runs as a random draw", async ({ page }) => {
   if (!found) {
     if (firstEmpty) await page.goto(firstEmpty);
     await shot(page, "A4a-no-one-waiting", "Draw hidden when nobody is waiting", {
-      selector: ".card:has-text('Participants')",
+      selector: ".card:has-text('Selection is a random draw')",
     });
     test.skip(true, "no event has anyone waiting in the draw");
   }
 
-  const panel = page.locator(".card:has-text('Participants')");
+  const panel = page.locator(".card:has-text('Selection is a random draw')");
   await panel.scrollIntoViewIfNeeded();
 
   // The intro copy is the contract: the draw is here, not on the brand's page.
@@ -187,7 +187,7 @@ test("A4 selection runs as a random draw", async ({ page }) => {
   const draw = page.locator("#draw-places");
 
   await shot(page, "A4a-panel", "The random selection draw panel", {
-    selector: ".card:has-text('Participants')",
+    selector: ".card:has-text('Selection is a random draw')",
   });
 
   // Blank is refused twice over. First the browser: the field is `required`,
@@ -222,7 +222,7 @@ test("A4 selection runs as a random draw", async ({ page }) => {
   });
   await expect(page).toHaveURL(/notice=draw/);
   await shot(page, "A4d-drawn", "Draw result, reported on the page", {
-    selector: ".card:has-text('Participants')",
+    selector: ".card:has-text('Selection is a random draw')",
   });
 });
 
