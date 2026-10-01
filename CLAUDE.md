@@ -82,7 +82,9 @@ supabase db push
 
 Env vars go in `.env.local` (copy from `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only),
-`NEXT_PUBLIC_SITE_URL`, and optionally `GITHUB_FEEDBACK_REPO` / `GITHUB_TOKEN` /
+`NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` / `EMAIL_FROM` / `RESEND_WEBHOOK_SECRET` /
+`CRON_SECRET` (email delivery; `EMAIL_REDIRECT_TO` outside production — see
+`.env.example`), and optionally `GITHUB_FEEDBACK_REPO` / `GITHUB_TOKEN` /
 `GITHUB_FEEDBACK_LABELS` for the feedback→GitHub mirror, plus
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` / `SURVEY_IP_SALT` for
 the survey bot/fraud screen (unset in dev, the screen is skipped with a warning;
@@ -134,11 +136,12 @@ Two things about the enum that the code does not make obvious:
   nav identical to `artist`. Don't remove it; don't add new user-facing paths to it.
 - **`admin` is assigned manually**, never chosen at sign-up.
 
-### Supabase client pattern (3 entry points)
+### Supabase client pattern (3 entry points, plus a service-role helper)
 
 - `src/lib/supabase/client.ts` — browser client, for Client Components.
 - `src/lib/supabase/server.ts` — server client for Server Components/Route Handlers/Server Actions; reads/writes cookies via `next/headers`.
-- `src/lib/supabase/middleware.ts` (`updateSession`) — wired into `src/middleware.ts`. Refreshes the session, redirects unauthenticated users away from `/dashboard` and `/onboarding` (and signed-in users away from `/auth/sign-in|sign-up`), throttles a `touch_last_seen` write to once per 5 minutes via a cookie, and is the **single gate for account blocking**: an `is_active = false` profile is signed out and sent to `/auth/blocked` from wherever it is in the app. An automatic no-show suspension (`suspended_until` in the past) lifts itself here; a manual admin block does not.
+- `src/lib/supabase/service.ts` — service-role client (`null` when the key is unset) for machine callers with no user: the outbox drain, `/api/cron/*` and `/api/webhooks/*`. Bypasses RLS; never import it from a page or ordinary server action.
+- `src/lib/supabase/middleware.ts` (`updateSession`) — wired into `src/middleware.ts`, whose matcher **excludes `/api/*`**: cron and webhook routes authenticate themselves and must never be redirected to sign-in. Refreshes the session, redirects unauthenticated users away from `/dashboard` and `/onboarding` (and signed-in users away from `/auth/sign-in|sign-up`), throttles a `touch_last_seen` write to once per 5 minutes via a cookie, and is the **single gate for account blocking**: an `is_active = false` profile is signed out and sent to `/auth/blocked` from wherever it is in the app. An automatic no-show suspension (`suspended_until` in the past) lifts itself here; a manual admin block does not.
 
 `src/lib/profile.ts` layers on top of the server client:
 - `requireProfile()` — auth user + `profiles` row, redirecting to sign-in if unauthenticated. The `profiles` row is created by the `handle_new_user` Postgres trigger, not application code — which is also how sign-up-time terms acceptance travels in (via `auth.users.raw_user_meta_data`).
@@ -184,8 +187,19 @@ point, used from ~14 call sites. Two rules:
 
 1. **It never throws.** A notification failing must not fail the sponsorship,
    registration or sign-up that triggered it — errors are logged and swallowed.
-2. **There is no email provider yet.** Email is queued into `email_outbox`;
-   draining it is unbuilt work. The outbox doubles as the audit log admins preview.
+2. **Email goes through `email_outbox`, then Resend.** `notify()` queues the
+   row, then `after()` runs `drainOutbox()` (`src/lib/email/drain.ts`) so mail
+   leaves within seconds; `/api/cron/drain-outbox` (Bearer `CRON_SECRET`,
+   scheduled every 5 min by Supabase `pg_cron` — Vercel Hobby has no sub-daily
+   cron) retries failures with backoff (5 attempts). Rows are claimed with
+   `claim_outbox_batch()` (`skip locked`) and the row id is the Resend
+   Idempotency-Key, so a retry can't double-send. Bounces/complaints arrive at
+   `/api/webhooks/resend` (Svix-verified) and land in `email_suppressions`.
+   **Outside production nothing reaches real addresses**: mail goes to
+   `EMAIL_REDIRECT_TO` or isn't sent at all. A no-user caller (webhook/cron)
+   passes `{ client: createServiceClient() }` as `notify()`'s second argument.
+   The outbox also doubles as the audit log admins preview. Setup:
+   `docs/email-setup.md`.
 
 Behaviour is data, not code: `notification_events` (catalogue, keyed by a stable
 string), `notification_settings` (per-event in-app/email toggles + CC/BCC) and

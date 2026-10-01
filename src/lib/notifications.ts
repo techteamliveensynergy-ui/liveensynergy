@@ -1,4 +1,7 @@
+import { after } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { drainOutbox } from "@/lib/email/drain";
 
 /**
  * Notification dispatch.
@@ -10,9 +13,13 @@ import { createClient } from "@/lib/supabase/server";
  * Two rules matter here:
  *  1. **Never throw.** A notification failing must not fail the sponsorship,
  *     registration or sign-up that triggered it. Everything is best-effort.
- *  2. **No provider yet.** Email is queued to the outbox; draining it is a
- *     separate worker we'll add when a provider is wired. The outbox doubles
- *     as the audit log admin previews.
+ *  2. **Email goes via the outbox.** An email row is queued, then sent by
+ *     `drainOutbox()` (src/lib/email/drain.ts) — straight after the request
+ *     via `after()`, with a 5-minute cron (/api/cron/drain-outbox) as the
+ *     retry sweeper. The outbox doubles as the audit log admin previews.
+ *
+ * `opts.client` lets a caller with no signed-in user (a webhook or cron
+ * route) pass a service-role client; everything else uses the cookie client.
  */
 
 export type NotificationEventKey = string;
@@ -50,9 +57,16 @@ export function renderTemplate(
   });
 }
 
-export async function notify(input: NotifyInput): Promise<void> {
+export interface NotifyOptions {
+  client?: SupabaseClient;
+}
+
+export async function notify(
+  input: NotifyInput,
+  opts: NotifyOptions = {},
+): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = opts.client ?? (await createClient());
     const { eventKey, recipientProfileId, variables = {}, link } = input;
 
     const [{ data: settings }, { data: templateRows }, { data: profile }] =
@@ -92,7 +106,7 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     if (!wantsInApp && !wantsEmail) return;
 
-    await supabase.rpc("enqueue_notification", {
+    const { error: enqueueError } = await supabase.rpc("enqueue_notification", {
       p_event_key: eventKey,
       p_recipient: recipientProfileId,
       p_in_app_title: wantsInApp
@@ -106,6 +120,28 @@ export async function notify(input: NotifyInput): Promise<void> {
       p_email_subject: wantsEmail ? renderTemplate(email!.subject, vars) : null,
       p_email_body: wantsEmail ? renderTemplate(email!.body, vars) : null,
     });
+    if (enqueueError) {
+      console.error("[notify] enqueue failed", eventKey, enqueueError.message);
+      return;
+    }
+
+    // Send right after the response goes out, without slowing the user's
+    // action. Its own try/catch keeps rule 1 (never throw). Concurrent drains
+    // are safe — claims use `skip locked`.
+    if (wantsEmail) {
+      try {
+        after(async () => {
+          try {
+            await drainOutbox({ limit: 10 });
+          } catch (err) {
+            console.error("[notify] drain failed", err);
+          }
+        });
+      } catch {
+        // `after()` throws outside a request scope (e.g. a script); the cron
+        // sweeper will pick the row up instead.
+      }
+    }
   } catch (err) {
     // Deliberately swallowed — see rule 1 above.
     console.error("[notify] failed", input.eventKey, err);
@@ -115,9 +151,10 @@ export async function notify(input: NotifyInput): Promise<void> {
 /** Fans an event out to every admin (e.g. "a new campaign needs matching"). */
 export async function notifyAdmins(
   input: Omit<NotifyInput, "recipientProfileId">,
+  opts: NotifyOptions = {},
 ): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = opts.client ?? (await createClient());
     const { data } = await supabase
       .from("profiles")
       .select("id")
@@ -125,7 +162,7 @@ export async function notifyAdmins(
       .eq("is_active", true);
 
     for (const admin of (data ?? []) as { id: string }[]) {
-      await notify({ ...input, recipientProfileId: admin.id });
+      await notify({ ...input, recipientProfileId: admin.id }, opts);
     }
   } catch (err) {
     console.error("[notifyAdmins] failed", input.eventKey, err);

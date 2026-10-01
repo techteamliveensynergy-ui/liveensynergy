@@ -192,5 +192,6 @@ and what's still stubbed (survey-quality gating, real invoice sending).
 stub), Wise payouts and Stripe Identity verification (`docs/payments-kyc-
 strategy.md` — none of the money-movement itself is built yet, only the
 `invoices`/tracking layer around it), realtime chat updates, QR/box-office
-attendance capture, transactional email templates, and analytics dashboards
+attendance capture, branded email templates (delivery itself is shipped —
+`docs/email-setup.md`), and analytics dashboards
 (funnel, participation, audience insights).

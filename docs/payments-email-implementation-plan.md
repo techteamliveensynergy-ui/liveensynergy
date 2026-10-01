@@ -247,7 +247,7 @@ This follows `docs/email-branding-research.md`, Phase 0.
 
 ## 5. Implementation phases and files
 
-**Phase A: email infrastructure.** Ships on its own and is a prerequisite for payments.
+**Phase A: email infrastructure — BUILT (migration 0046, `src/lib/email/*`, `docs/email-setup.md`).** Ships on its own and is a prerequisite for payments. Deviations from the sketch below: Resend is called with plain `fetch` (no SDK, so we control the `Idempotency-Key`), the Svix signature is checked with `node:crypto`, and the HTML layout is a small string renderer rather than React Email (bodies are admin-edited plain text) — so no `resend`/`@react-email/components`/`svix` packages, only `server-only`. The project is on **Vercel Hobby**, so the sweeper is Supabase `pg_cron` + `pg_net` calling the route, not `vercel.json`. The pre-provider backlog is marked `skipped`, not sent.
 - **Migration `0046_email_delivery.sql`:**
   - `email_outbox` gains `attempts`, `next_attempt_at` and `last_error_at`
   - new `email_suppressions` table

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/profile";
+import { createServiceClient } from "@/lib/supabase/service";
+import { drainOutbox } from "@/lib/email/drain";
 
 export interface NotificationAdminState {
   error?: string;
@@ -87,4 +89,62 @@ export async function saveNotification(
   revalidatePath("/dashboard/admin/notifications");
   revalidatePath(`/dashboard/admin/notifications/${eventKey}`);
   return { success: true };
+}
+
+const OUTBOX_PAGE = "/dashboard/admin/notifications/outbox";
+
+/**
+ * Puts a failed/skipped email back in the queue and sends it now. The outbox
+ * has no admin write policy (admins only read it), so the reset goes through
+ * the service client — after requireAdmin() has vouched for the caller.
+ * A suppressed (bounced/complained) address stays blocked until it is removed
+ * from the suppression list.
+ */
+export async function retryOutboxEmail(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return;
+
+  const service = createServiceClient();
+  if (!service) return;
+
+  const { data: row } = await supabase
+    .from("email_outbox")
+    .select("to_email, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row || !["failed", "skipped"].includes(row.status)) return;
+
+  const { data: blocked } = await supabase
+    .from("email_suppressions")
+    .select("email")
+    .eq("email", String(row.to_email).toLowerCase())
+    .maybeSingle();
+  if (blocked) {
+    revalidatePath(OUTBOX_PAGE);
+    return;
+  }
+
+  await service
+    .from("email_outbox")
+    .update({
+      status: "queued",
+      attempts: 0,
+      next_attempt_at: new Date().toISOString(),
+      error: null,
+    })
+    .eq("id", id)
+    .in("status", ["failed", "skipped"]);
+
+  await drainOutbox({ limit: 5 });
+  revalidatePath(OUTBOX_PAGE);
+}
+
+/** Removes an address from the suppression list so it can be mailed again. */
+export async function unsuppressEmail(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const email = str(formData.get("email"));
+  if (!email) return;
+  await supabase.from("email_suppressions").delete().eq("email", email.toLowerCase());
+  revalidatePath(OUTBOX_PAGE);
 }
