@@ -74,6 +74,30 @@ export interface CampaignPackage {
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
+/** One line of an itemised invoice — amounts in GBP, `net_gbp` is ex-VAT. */
+export interface InvoiceLine {
+  kind: "package" | "platform_fee" | "sponsorship_pool";
+  description: string;
+  net_gbp: number;
+  vat_rate: number;
+  vat_gbp: number;
+  total_gbp: number;
+}
+
+/** The brand's billing details frozen onto an invoice when it is sent. */
+export interface BillingSnapshot {
+  legal_name: string | null;
+  email: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  postcode: string | null;
+  country: string | null;
+  vat_number: string | null;
+}
+
+export type InvoiceKind = "manual" | "campaign_package";
+
 export interface Invoice {
   id: string;
   reference: string;
@@ -88,6 +112,11 @@ export interface Invoice {
   paid_at: string | null;
   due_date: string | null;
   notes: string | null;
+  kind: InvoiceKind;
+  lines: InvoiceLine[] | null;
+  subtotal_gbp: number | null;
+  vat_gbp: number | null;
+  billing_snapshot: BillingSnapshot | null;
   created_at: string;
   updated_at: string;
 }
@@ -116,6 +145,14 @@ export interface Brand {
   manager_email: string | null;
   manager_phone: string | null;
   company_address: string | null;
+  billing_legal_name: string | null;
+  billing_email: string | null;
+  billing_address_line1: string | null;
+  billing_address_line2: string | null;
+  billing_city: string | null;
+  billing_postcode: string | null;
+  billing_country: string | null;
+  vat_number: string | null;
   created_at: string;
   updated_at: string;
 }

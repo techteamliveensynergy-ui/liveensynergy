@@ -193,6 +193,29 @@ export function computePlatformFee(grossBudgetGbp: number) {
   };
 }
 
+/**
+ * How an auto-drafted invoice treats VAT (src/lib/billing.ts).
+ *
+ * - `on_top_of_package` — the package price is ex-VAT and VAT is added on the
+ *   whole amount (Starter £2,500 → £3,000 payable). Follows the Brand Portal
+ *   brief ("all pricing exclusive of VAT"). The chosen default.
+ * - `inside_platform_fee` — the package price is what the brand pays and VAT
+ *   applies to the platform fee only; the sponsorship pool is a no-VAT
+ *   pass-through (the 10 Aug strategy doc's model).
+ *
+ * Which is right is an accountant decision (docs/payments-email-
+ * implementation-plan.md §6) — flipping this one value switches the invoice
+ * maths without touching anything else.
+ */
+export type InvoiceVatMode = "on_top_of_package" | "inside_platform_fee";
+
+export const INVOICE = {
+  vatRate: PLATFORM_FEE.vatRate,
+  vatMode: "on_top_of_package" as InvoiceVatMode,
+  /** Days from sending to the due date, when an admin doesn't set one. */
+  paymentTermsDays: 14,
+};
+
 /** Rounds to whole pence, so repeated arithmetic can't drift into 0.1 + 0.2. */
 export function roundMoney(n: number) {
   return Math.round(n * 100) / 100;

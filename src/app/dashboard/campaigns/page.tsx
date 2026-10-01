@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
+import { formatDate } from "@/lib/format";
 import type { Campaign, CampaignIntakeRequest, Invoice } from "@/lib/types";
+import { formatGbp, isBillingComplete, type BillingFields } from "@/lib/billing";
 import { withdrawCampaignIntake } from "./actions";
 
 export const metadata = { title: "Campaigns" };
@@ -15,9 +17,11 @@ export default async function CampaignsPage() {
 
   const { data: brand } = await supabase
     .from("brands")
-    .select("id")
+    .select(
+      "id, billing_legal_name, billing_email, billing_address_line1, billing_city, billing_postcode, billing_country",
+    )
     .eq("profile_id", profile.id)
-    .maybeSingle();
+    .maybeSingle<{ id: string } & Partial<BillingFields>>();
 
   const [{ data: intakeData }, { data: campaignData }, { data: invoiceData }] = brand
     ? await Promise.all([
@@ -31,10 +35,13 @@ export default async function CampaignsPage() {
           .select("*")
           .eq("brand_id", brand.id)
           .order("created_at", { ascending: false }),
+        // Drafts are an admin's working copy — a brand only ever sees an
+        // invoice once it has been sent. (RLS enforces this too, since 0047.)
         supabase
           .from("invoices")
           .select("*, campaigns(reference)")
           .eq("brand_id", brand.id)
+          .neq("status", "draft")
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }];
@@ -42,6 +49,9 @@ export default async function CampaignsPage() {
   const requests = (intakeData ?? []) as CampaignIntakeRequest[];
   const campaigns = (campaignData ?? []) as Campaign[];
   const invoices = (invoiceData ?? []) as InvoiceRow[];
+  // A campaign means an invoice is coming; it can't be sent without these.
+  const needsBilling =
+    !!brand && campaigns.length > 0 && !isBillingComplete(brand);
 
   return (
     <div>
@@ -54,6 +64,24 @@ export default async function CampaignsPage() {
           </Link>
         }
       />
+
+      {needsBilling && (
+        <div className="mb-6 rounded-2xl bg-[var(--color-gold)]/40 px-5 py-4 text-sm text-[var(--color-ink)]">
+          <p className="font-semibold">Add your billing details</p>
+          <p className="mt-1">
+            When we invoice you we&apos;ll need your company&apos;s legal name,
+            billing email and address. Adding them now means your invoice can
+            go out without delay.{" "}
+            <Link
+              href="/dashboard/profile"
+              className="font-semibold text-[var(--color-brand-dark)] underline"
+            >
+              Add them in your profile
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       <h2 className="mb-3 font-display text-lg font-semibold">
         Your requests
@@ -169,20 +197,21 @@ export default async function CampaignsPage() {
           </p>
           <div className="space-y-2">
             {invoices.map((inv) => (
-              <div
+              <Link
                 key={inv.id}
-                className="card flex flex-wrap items-center justify-between gap-3 p-4"
+                href={`/dashboard/campaigns/invoices/${inv.id}`}
+                className="card flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-[var(--color-mist)]"
               >
                 <div>
                   <p className="text-sm font-semibold">{inv.reference}</p>
                   <p className="text-xs text-[var(--color-ink-soft)]">
-                    {inv.campaigns?.reference ?? "—"} · £
-                    {Number(inv.amount_gbp).toLocaleString("en-GB")}
-                    {inv.due_date ? ` · due ${inv.due_date}` : ""}
+                    {inv.campaigns?.reference ?? "—"} · {formatGbp(inv.amount_gbp)}
+                    {inv.vat_gbp != null ? " inc. VAT" : ""}
+                    {inv.due_date ? ` · due ${formatDate(inv.due_date)}` : ""}
                   </p>
                 </div>
                 <StatusBadge status={inv.status} />
-              </div>
+              </Link>
             ))}
           </div>
         </>

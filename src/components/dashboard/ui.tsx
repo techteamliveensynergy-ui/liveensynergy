@@ -108,6 +108,10 @@ const STATUS_STYLES: Record<string, string> = {
   review: "bg-[var(--color-gold)] text-[var(--color-ink)]",
   reject: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   pending: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
+  // Invoices (migrations 0031 / 0047)
+  sent: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  paid: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  overdue: "bg-[var(--color-pink)] text-[var(--color-accent)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {

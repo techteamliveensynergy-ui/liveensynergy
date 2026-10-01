@@ -14,6 +14,8 @@ import {
 import { FileDrop } from "@/components/ui/FileDrop";
 import { AVATAR_HINT, BANNER_HINT, MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { BRAND_CATEGORIES } from "@/lib/constants";
+import { COUNTRIES } from "@/lib/countries";
+import { UK_COUNTRY } from "@/lib/billing";
 import type { Brand } from "@/lib/types";
 import { saveBrand, type OnboardingState } from "../actions";
 
@@ -245,6 +247,100 @@ export function BrandForm({
             defaultValue={d.company_address ?? ""}
           />
         </Field>
+      </FormSection>
+
+      <FormSection
+        title="Billing details (for invoices)"
+        description="We invoice the company named here. You can skip this for now, but we can't send your first invoice until the required fields are filled in."
+      >
+        <Field label="Legal company name" htmlFor="billing_legal_name">
+          <input
+            id="billing_legal_name"
+            name="billing_legal_name"
+            className="input"
+            autoComplete="organization"
+            placeholder="e.g. Fire Away Beverages Ltd"
+            defaultValue={d.billing_legal_name ?? ""}
+          />
+        </Field>
+        <Field
+          label="Billing email"
+          htmlFor="billing_email"
+          hint="Where invoices are sent — often your accounts team."
+        >
+          <input
+            id="billing_email"
+            name="billing_email"
+            type="email"
+            className="input"
+            defaultValue={d.billing_email ?? ""}
+          />
+        </Field>
+        <Field label="Address line 1" htmlFor="billing_address_line1">
+          <input
+            id="billing_address_line1"
+            name="billing_address_line1"
+            className="input"
+            autoComplete="address-line1"
+            defaultValue={d.billing_address_line1 ?? ""}
+          />
+        </Field>
+        <Field label="Address line 2" htmlFor="billing_address_line2">
+          <input
+            id="billing_address_line2"
+            name="billing_address_line2"
+            className="input"
+            autoComplete="address-line2"
+            defaultValue={d.billing_address_line2 ?? ""}
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="City" htmlFor="billing_city">
+            <input
+              id="billing_city"
+              name="billing_city"
+              className="input"
+              autoComplete="address-level2"
+              defaultValue={d.billing_city ?? ""}
+            />
+          </Field>
+          <Field label="Postcode" htmlFor="billing_postcode">
+            <input
+              id="billing_postcode"
+              name="billing_postcode"
+              className="input"
+              autoComplete="postal-code"
+              defaultValue={d.billing_postcode ?? ""}
+            />
+          </Field>
+          <Field label="Country" htmlFor="billing_country">
+            <select
+              id="billing_country"
+              name="billing_country"
+              className="select"
+              defaultValue={d.billing_country ?? UK_COUNTRY}
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label="VAT number"
+            htmlFor="vat_number"
+            hint="If you're VAT registered — it appears on your invoices."
+          >
+            <input
+              id="vat_number"
+              name="vat_number"
+              className="input"
+              placeholder="e.g. GB123456789"
+              defaultValue={d.vat_number ?? ""}
+            />
+          </Field>
+        </div>
       </FormSection>
 
       <OnboardingSubmit

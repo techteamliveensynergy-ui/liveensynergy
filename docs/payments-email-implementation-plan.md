@@ -14,7 +14,7 @@ Brands pay for the sponsorship packages admins assign them. Today:
 - **Stripe Invoicing.** This is not Stripe Connect. Brands pay by card or UK bank transfer, using a virtual account number per brand that Stripe matches automatically.
 - **Invoice creation:** the invoice is drafted automatically when the campaign is created, and an admin reviews it and clicks Send.
 - **Payment gate:** the campaign stays hidden from artists until it is paid.
-- **VAT status is unconfirmed.** We build proper VAT invoices anyway and keep the VAT settings configurable.
+- **VAT status is unconfirmed.** We build proper VAT invoices anyway and keep the VAT settings configurable. **Chosen default (1 Oct): VAT on top of the package price** — Starter £2,500 → £3,000 payable — following the Brand Portal brief ("all pricing exclusive of VAT"); `INVOICE.vatMode` in `src/lib/constants.ts` switches to the alternative (VAT inside the platform fee only). **Open for the accountant:** the seeded package margins (e.g. Starter £378) were computed as £315 + 20% VAT, so under VAT-on-top the VAT embedded in them may be overstated (£63 on Starter); margins and `netForCampaign()` are deliberately untouched until that is answered. VAT on the whole price also assumes the platform supplies the package as principal rather than passing the pool through as agent.
 
 **Outcome:**
 - Admin converts the intake. A draft invoice is created automatically. The admin sends it.
@@ -264,7 +264,7 @@ This follows `docs/email-branding-research.md`, Phase 0.
   - the admin outbox page: show attempts and delivery status
 - **Packages:** `resend`, `@react-email/components`, `svix`
 
-**Phase B: billing data and invoice creation.**
+**Phase B: billing data and invoice creation.** *First slice BUILT (migration 0047, `src/lib/billing.ts`, `billing-server.ts`): brand billing details, auto-drafted VAT-itemised invoices, billing-gated Send, brand invoice view. Deviations from the sketch: line items are a `lines jsonb` column on `invoices` (atomic with the row), not an `invoice_lines` table; Send requires complete billing details for every invoice (no `manager_email` fallback). Still to build: the `awaiting_payment` gate, Stripe, webhooks, admin-managed credentials, waive/refund.*
 - **Migration `0047_campaign_awaiting_payment.sql`:** only `alter type campaign_status add value 'awaiting_payment'`. It must be its own migration, because a new enum value can't be used in the same transaction that adds it.
 - **Migration `0048_stripe_invoicing.sql`:**
   - **`brands`** gains: `billing_legal_name`, `billing_email`, `billing_address_line1` and `billing_address_line2`, `billing_city`, `billing_postcode`, `billing_country` (default `'GB'`), `vat_number`.

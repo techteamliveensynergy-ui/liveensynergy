@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-user-fields";
 import { notify } from "@/lib/notifications";
 import { requireAdmin } from "@/lib/profile";
+import { isValidEmail, validateVatNumber } from "@/lib/billing";
 
 export interface AdminState {
   error?: string;
@@ -184,6 +185,21 @@ export async function updateUserRoleProfile(
     return { error: `${label} is required.` };
   }
 
+  // Same guard as the brand's own form: whatever is printed on a legal invoice
+  // is checked, whoever typed it.
+  if (spec.table === "brands") {
+    const billingEmail = payload.billing_email as string | null;
+    if (billingEmail && !isValidEmail(billingEmail)) {
+      return { error: "That billing email doesn't look right." };
+    }
+    const vat = validateVatNumber(
+      payload.vat_number as string | null,
+      payload.billing_country as string | null,
+    );
+    if (vat.error) return { error: vat.error };
+    payload.vat_number = vat.value;
+  }
+
   if (spec.hasSocials) {
     const links: Record<string, string> = {};
     for (const key of SOCIAL_FIELD_KEYS) {
@@ -200,6 +216,10 @@ export async function updateUserRoleProfile(
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/admin/users/${userId}`);
+  if (spec.table === "brands") {
+    revalidatePath("/dashboard/campaigns");
+    revalidatePath("/dashboard/admin/invoices");
+  }
   return { success: true };
 }
 
