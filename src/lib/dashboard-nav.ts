@@ -65,6 +65,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin/plans", label: "Plans", icon: "💳" },
     { href: "/dashboard/admin/packages", label: "Packages", icon: "📦" },
     { href: "/dashboard/admin/invoices", label: "Invoices", icon: "🧾" },
+    { href: "/dashboard/admin/settings/payments", label: "Payment settings", icon: "🔐" },
   ],
 };
 

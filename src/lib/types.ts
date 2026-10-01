@@ -121,6 +121,12 @@ export interface Invoice {
   subtotal_gbp: number | null;
   vat_gbp: number | null;
   billing_snapshot: BillingSnapshot | null;
+  resend_count: number;
+  last_resent_at: string | null;
+  last_resent_by: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
   created_at: string;
   updated_at: string;
 }

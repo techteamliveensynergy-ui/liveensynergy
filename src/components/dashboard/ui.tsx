@@ -111,6 +111,7 @@ const STATUS_STYLES: Record<string, string> = {
   pending: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
   // Invoices (migrations 0031 / 0047)
   sent: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  unpaid: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   paid: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   overdue: "bg-[var(--color-pink)] text-[var(--color-accent)]",
 };
