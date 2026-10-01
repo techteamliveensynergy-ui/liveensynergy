@@ -136,6 +136,24 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
           },
         ],
       },
+      {
+        title: "Billing details (invoices)",
+        fields: [
+          { name: "billing_legal_name", label: "Legal company name", type: "text" },
+          { name: "billing_email", label: "Billing email", type: "email" },
+          { name: "billing_address_line1", label: "Address line 1", type: "text" },
+          { name: "billing_address_line2", label: "Address line 2", type: "text" },
+          { name: "billing_city", label: "City", type: "text" },
+          { name: "billing_postcode", label: "Postcode", type: "text" },
+          {
+            name: "billing_country",
+            label: "Country",
+            type: "select",
+            options: COUNTRIES,
+          },
+          { name: "vat_number", label: "VAT number", type: "text" },
+        ],
+      },
     ],
   },
 

@@ -23,6 +23,8 @@ import {
 } from "@/lib/discount-codes";
 import { requireAdmin } from "@/lib/profile";
 import { normaliseUrl } from "@/lib/urls";
+import { isBillingComplete, type BillingFields } from "@/lib/billing";
+import { draftCampaignInvoice, redraftCampaignInvoice } from "@/lib/billing-server";
 import type { SponsoredEventRewardTier } from "@/lib/types";
 
 export interface MarketplaceState {
@@ -494,6 +496,32 @@ export async function createCampaignFromAdmin(
     .single();
   if (error) return { error: error.message };
 
+  // Draft the invoice for an admin to review and send. A failure here must not
+  // fail the campaign (it exists now); it is logged, and the campaign list
+  // shows "No invoice" with a Draft invoice button — see draftCampaignInvoice.
+  const drafted = await draftCampaignInvoice(supabase, created.id);
+  if (!drafted.ok) {
+    console.error("[campaign] invoice draft failed", created.reference, drafted.error);
+  } else {
+    // Tell the brand now if we can't invoice them yet, rather than discovering
+    // it when an admin tries to send.
+    const { data: billing } = await supabase
+      .from("brands")
+      .select(
+        "profile_id, billing_legal_name, billing_email, billing_address_line1, billing_city, billing_postcode, billing_country",
+      )
+      .eq("id", brandId)
+      .maybeSingle<{ profile_id: string } & Partial<BillingFields>>();
+    if (billing && !isBillingComplete(billing)) {
+      await notify({
+        eventKey: "brand.billing_details_needed",
+        recipientProfileId: billing.profile_id,
+        link: "/dashboard/profile",
+        variables: { campaign_reference: created.reference },
+      });
+    }
+  }
+
   if (fromIntakeId) {
     const { data: intake } = await supabase
       .from("campaign_intake_requests")
@@ -514,6 +542,7 @@ export async function createCampaignFromAdmin(
 
   revalidatePath("/dashboard/admin/campaigns");
   revalidatePath("/dashboard/admin/campaigns/intake");
+  revalidatePath("/dashboard/admin/invoices");
   redirect("/dashboard/admin/campaigns");
 }
 
@@ -536,13 +565,64 @@ export async function updateCampaignAdmin(
   );
   if ("error" in money) return { error: money.error };
 
+  // Money fields are locked once an invoice has been issued: the brand holds a
+  // document for the old figures, so the campaign must not drift away from it.
+  // (Cancel the invoice first, then edit and re-draft.) A DRAFT is rebuilt below.
+  const { data: current } = await supabase
+    .from("campaigns")
+    .select("budget_gbp, campaign_package_id, package_platform_margin_gbp")
+    .eq("id", id)
+    .maybeSingle<{
+      budget_gbp: number;
+      campaign_package_id: string | null;
+      package_platform_margin_gbp: number | null;
+    }>();
+  const asNum = (v: number | string | null | undefined) =>
+    v == null ? null : Number(v);
+  const moneyChanged =
+    !!current &&
+    (asNum(current.budget_gbp) !== asNum(money.budget_gbp) ||
+      (current.campaign_package_id ?? null) !== (money.campaign_package_id ?? null) ||
+      asNum(current.package_platform_margin_gbp) !==
+        asNum(money.package_platform_margin_gbp));
+
+  if (moneyChanged) {
+    const { data: issued } = await supabase
+      .from("invoices")
+      .select("reference, status")
+      .eq("campaign_id", id)
+      .eq("kind", "campaign_package")
+      .in("status", ["sent", "overdue", "paid"])
+      .limit(1)
+      .maybeSingle<{ reference: string; status: string }>();
+    if (issued) {
+      return {
+        error:
+          issued.status === "paid"
+            ? `Invoice ${issued.reference} has been paid, so the budget and package are locked.`
+            : `Invoice ${issued.reference} has already been sent. Cancel it before changing the budget or package, then draft a new one.`,
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("campaigns")
     .update({ ...p, ...money })
     .eq("id", id);
   if (error) return { error: error.message };
 
+  if (moneyChanged) {
+    const redrafted = await redraftCampaignInvoice(supabase, id);
+    if (!redrafted.ok) {
+      return {
+        error: `Campaign saved, but its draft invoice couldn't be rebuilt (${redrafted.error}). Cancel the draft and press Draft invoice.`,
+      };
+    }
+  }
+
   revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/admin/invoices");
+  revalidatePath("/dashboard/campaigns");
   redirect("/dashboard/admin/campaigns");
 }
 

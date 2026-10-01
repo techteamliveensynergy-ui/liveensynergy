@@ -5,6 +5,7 @@ import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { setCampaignStatus } from "../marketplace-actions";
+import { draftInvoiceForCampaign } from "../invoices/actions";
 import { MatchForm } from "./MatchForm";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -30,6 +31,14 @@ interface Row {
   brands: { brand_name: string; profile_id: string } | null;
 }
 
+/** A campaign's live (non-cancelled) package invoice, for the status chip. */
+interface InvoiceChip {
+  id: string;
+  campaign_id: string;
+  status: string;
+  reference: string;
+}
+
 /** A sponsored event standing against a campaign — one of possibly several. */
 interface Suggestion {
   id: string;
@@ -44,7 +53,11 @@ interface Suggestion {
 export default async function AdminCampaignsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; matched?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    matched?: string;
+    invoice_error?: string;
+  }>;
 }) {
   await requireRole(["admin"]);
   const sp = await searchParams;
@@ -55,6 +68,7 @@ export default async function AdminCampaignsPage({
     { data: listingRows },
     { data: suggestedRows },
     { count: pendingIntakeCount },
+    { data: invoiceRows },
   ] =
     await Promise.all([
       supabase
@@ -79,6 +93,13 @@ export default async function AdminCampaignsPage({
         .from("campaign_intake_requests")
         .select("id", { count: "exact", head: true })
         .in("status", ["submitted", "in_review"]),
+      // Cancelled invoices don't count: cancelling is how a campaign is freed
+      // to be re-drafted, so it reads as "No invoice" again.
+      supabase
+        .from("invoices")
+        .select("id, campaign_id, status, reference")
+        .eq("kind", "campaign_package")
+        .neq("status", "cancelled"),
     ]);
 
   let campaigns = (campaignRows ?? []) as Row[];
@@ -96,6 +117,9 @@ export default async function AdminCampaignsPage({
       .filter(Boolean)
       .join(" · "),
   }));
+
+  const invoiceFor = (campaignId: string) =>
+    ((invoiceRows ?? []) as InvoiceChip[]).find((i) => i.campaign_id === campaignId);
 
   const suggestions = (suggestedRows ?? []) as Suggestion[];
   const suggestionsFor = (campaignId: string) =>
@@ -136,6 +160,12 @@ export default async function AdminCampaignsPage({
           </Link>
         }
       />
+
+      {sp.invoice_error && (
+        <p className="mb-5 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Couldn&apos;t draft the invoice: {sp.invoice_error}
+        </p>
+      )}
 
       <div className="mb-5 flex flex-wrap gap-2">
         <Link
@@ -199,6 +229,22 @@ export default async function AdminCampaignsPage({
                           Needs matching
                         </span>
                       )}
+                      {invoiceFor(c.id) ? (
+                        <Link
+                          href={`/dashboard/admin/invoices/${invoiceFor(c.id)!.id}`}
+                          className="inline-flex items-center gap-1"
+                          title={`Invoice ${invoiceFor(c.id)!.reference}`}
+                        >
+                          <span className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
+                            Invoice
+                          </span>
+                          <StatusBadge status={invoiceFor(c.id)!.status} />
+                        </Link>
+                      ) : (
+                        <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
+                          No invoice
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {c.description}
@@ -250,6 +296,14 @@ export default async function AdminCampaignsPage({
                     >
                       Edit
                     </Link>
+                    {!invoiceFor(c.id) && (
+                      <form action={draftInvoiceForCampaign}>
+                        <input type="hidden" name="campaign_id" value={c.id} />
+                        <button type="submit" className="btn btn-ghost text-sm">
+                          Draft invoice
+                        </button>
+                      </form>
+                    )}
                     <form
                       action={setCampaignStatus}
                       className="flex items-center gap-2"

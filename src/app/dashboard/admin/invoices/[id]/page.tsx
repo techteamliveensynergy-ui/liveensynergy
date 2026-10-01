@@ -3,9 +3,59 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
+import { InvoiceBreakdown } from "@/components/dashboard/InvoiceBreakdown";
+import {
+  formatGbp,
+  isUkCountry,
+  missingBillingFields,
+  type BillingFields,
+} from "@/lib/billing";
+import { formatDate } from "@/lib/format";
+import type { BillingSnapshot, InvoiceKind, InvoiceLine } from "@/lib/types";
 import { sendInvoiceAction, markInvoicePaid, cancelInvoice } from "../actions";
 
 export const metadata = { title: "Invoice · Admin" };
+
+interface Row {
+  id: string;
+  reference: string;
+  kind: InvoiceKind;
+  amount_gbp: number;
+  status: string;
+  external_invoice_ref: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  due_date: string | null;
+  notes: string | null;
+  lines: InvoiceLine[] | null;
+  subtotal_gbp: number | null;
+  vat_gbp: number | null;
+  billing_snapshot: BillingSnapshot | null;
+  brands: ({ id: string; brand_name: string; profile_id: string } & BillingFields) | null;
+  sponsored_events: { name: string } | null;
+  campaigns: { reference: string } | null;
+}
+
+function AddressBlock({ b }: { b: BillingSnapshot }) {
+  const parts = [
+    b.legal_name,
+    b.address_line1,
+    b.address_line2,
+    [b.city, b.postcode].filter(Boolean).join(" "),
+    b.country,
+  ].filter(Boolean);
+  return (
+    <div className="text-sm">
+      {parts.map((p, i) => (
+        <div key={i}>{p}</div>
+      ))}
+      {b.email && <div className="mt-1 text-[var(--color-ink-soft)]">{b.email}</div>}
+      {b.vat_number && (
+        <div className="text-[var(--color-ink-soft)]">VAT {b.vat_number}</div>
+      )}
+    </div>
+  );
+}
 
 export default async function InvoiceDetailPage({
   params,
@@ -18,23 +68,20 @@ export default async function InvoiceDetailPage({
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("*, brands(brand_name), sponsored_events(name), campaigns(reference)")
+    .select(
+      "*, brands(id, brand_name, profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number), sponsored_events(name), campaigns(reference)",
+    )
     .eq("id", id)
-    .maybeSingle<{
-      id: string;
-      reference: string;
-      amount_gbp: number;
-      status: string;
-      external_invoice_ref: string | null;
-      sent_at: string | null;
-      paid_at: string | null;
-      due_date: string | null;
-      notes: string | null;
-      brands: { brand_name: string } | null;
-      sponsored_events: { name: string } | null;
-      campaigns: { reference: string } | null;
-    }>();
+    .maybeSingle<Row>();
   if (!invoice) notFound();
+
+  const missing = missingBillingFields(invoice.brands);
+  const canSend = invoice.status === "draft" && missing.length === 0;
+  const nonUk =
+    invoice.brands?.billing_country && !isUkCountry(invoice.brands.billing_country);
+  // Once sent, the invoice shows the details it was sent with, not the brand's
+  // current (possibly since-edited) ones.
+  const snapshot = invoice.billing_snapshot;
 
   return (
     <div>
@@ -49,6 +96,44 @@ export default async function InvoiceDetailPage({
         ← Back to invoices
       </Link>
 
+      {invoice.status === "draft" && invoice.kind === "campaign_package" && (
+        <p className="mb-4 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+          This draft was created automatically from the campaign. The brand
+          can&apos;t see it until you send it — check the lines and totals first.
+        </p>
+      )}
+
+      {invoice.status === "draft" && missing.length > 0 && (
+        <div className="mb-4 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          <p className="font-semibold">
+            Billing details incomplete — this can&apos;t be sent yet.
+          </p>
+          <p className="mt-1">
+            Missing: {missing.join(", ")}. Ask the brand to add them in their
+            profile
+            {invoice.brands && (
+              <>
+                , or{" "}
+                <Link
+                  href={`/dashboard/admin/users/${invoice.brands.profile_id}`}
+                  className="font-semibold underline"
+                >
+                  fill them in for them
+                </Link>
+              </>
+            )}
+            .
+          </p>
+        </div>
+      )}
+
+      {nonUk && invoice.status === "draft" && (
+        <p className="mb-4 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+          This brand is based outside the UK ({invoice.brands?.billing_country}).
+          The VAT treatment on this invoice needs review before it is sent.
+        </p>
+      )}
+
       <div className="card p-6">
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -56,8 +141,8 @@ export default async function InvoiceDetailPage({
             <dd className="text-sm">{invoice.brands?.brand_name ?? "—"}</dd>
           </div>
           <div>
-            <dt className="field-label">Amount</dt>
-            <dd className="text-sm">£{Number(invoice.amount_gbp).toLocaleString("en-GB")}</dd>
+            <dt className="field-label">Total payable</dt>
+            <dd className="text-sm">{formatGbp(invoice.amount_gbp)}</dd>
           </div>
           <div>
             <dt className="field-label">Sponsored event</dt>
@@ -69,13 +154,52 @@ export default async function InvoiceDetailPage({
           </div>
           <div>
             <dt className="field-label">Due date</dt>
-            <dd className="text-sm">{invoice.due_date ?? "—"}</dd>
+            <dd className="text-sm">
+              {invoice.due_date
+                ? formatDate(invoice.due_date)
+                : "Set when sent (14 days)"}
+            </dd>
           </div>
           <div>
             <dt className="field-label">External reference</dt>
             <dd className="text-sm">{invoice.external_invoice_ref ?? "—"}</dd>
           </div>
         </dl>
+
+        <div className="mt-6 border-t border-black/10 pt-4">
+          <p className="field-label mb-2">Items</p>
+          <InvoiceBreakdown
+            lines={invoice.lines}
+            subtotalGbp={invoice.subtotal_gbp != null ? Number(invoice.subtotal_gbp) : null}
+            vatGbp={invoice.vat_gbp != null ? Number(invoice.vat_gbp) : null}
+            totalGbp={Number(invoice.amount_gbp)}
+          />
+        </div>
+
+        <div className="mt-6 border-t border-black/10 pt-4">
+          <p className="field-label mb-2">
+            {snapshot ? "Billed to (as sent)" : "Bill to"}
+          </p>
+          {snapshot ? (
+            <AddressBlock b={snapshot} />
+          ) : missing.length === 0 && invoice.brands ? (
+            <AddressBlock
+              b={{
+                legal_name: invoice.brands.billing_legal_name,
+                email: invoice.brands.billing_email,
+                address_line1: invoice.brands.billing_address_line1,
+                address_line2: invoice.brands.billing_address_line2,
+                city: invoice.brands.billing_city,
+                postcode: invoice.brands.billing_postcode,
+                country: invoice.brands.billing_country,
+                vat_number: invoice.brands.vat_number,
+              }}
+            />
+          ) : (
+            <p className="text-sm text-[var(--color-ink-soft)]">Not provided yet.</p>
+          )}
+        </div>
+
         {invoice.notes && (
           <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
             {invoice.notes}
@@ -86,12 +210,17 @@ export default async function InvoiceDetailPage({
           {invoice.status === "draft" && (
             <form action={sendInvoiceAction}>
               <input type="hidden" name="id" value={invoice.id} />
-              <button type="submit" className="btn btn-primary text-sm">
+              <button
+                type="submit"
+                className="btn btn-primary text-sm"
+                disabled={!canSend}
+                title={canSend ? undefined : "Billing details are incomplete"}
+              >
                 Send invoice
               </button>
             </form>
           )}
-          {invoice.status === "sent" && (
+          {(invoice.status === "sent" || invoice.status === "overdue") && (
             <form action={markInvoicePaid}>
               <input type="hidden" name="id" value={invoice.id} />
               <button type="submit" className="btn btn-ghost text-sm">
@@ -99,7 +228,7 @@ export default async function InvoiceDetailPage({
               </button>
             </form>
           )}
-          {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+          {["draft", "sent", "overdue"].includes(invoice.status) && (
             <form action={cancelInvoice}>
               <input type="hidden" name="id" value={invoice.id} />
               <button

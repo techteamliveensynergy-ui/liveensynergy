@@ -271,6 +271,7 @@ backfill `update` too (L4).
 - `MIN_SPONSORSHIP_BUDGET_GBP` (£378) — below this the fee consumes the whole budget and `availableForSponsorship` goes negative, so campaigns are rejected at that floor.
 - `netSponsorshipBudget(gross)` — gross minus fee inc. VAT. **This, not the gross figure, is what `sponsored_events.remaining_budget_gbp` starts at** and what every "remaining budget" / "people this can sponsor" number derives from.
 - `roundMoney()` — use it for repeated arithmetic so pence don't drift.
+- `INVOICE` / `buildInvoiceLines()` (`constants.ts`, `src/lib/billing.ts`) — what an auto-drafted campaign invoice charges. `INVOICE.vatMode` is `on_top_of_package` (package price ex-VAT, 20% VAT added: Starter £2,500 → £3,000 payable) or `inside_platform_fee` (the older model: price is the total, VAT on the fee only). It is an unconfirmed accountant decision, so flip the one constant rather than editing line maths. All invoice arithmetic is integer pence. Lines are frozen into `invoices.lines`; a brand never sees a `draft` invoice (RLS, 0047).
 
 ### Event dates and times
 

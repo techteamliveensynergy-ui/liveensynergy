@@ -125,7 +125,7 @@ complements the concept doc and the 26 Jun 2026 scoping call.
 | Area | Integration | Purpose |
 | --- | --- | --- |
 | **Auth** | Supabase Auth | Email/password now; OAuth (Google) later |
-| **Payments (in)** | Direct bank transfer against an invoice — no on-platform collection | Brands fund sponsorship budgets. Superseded 10 Aug (`docs/payments-kyc-strategy.md`) — Stripe/Connect was evaluated and explicitly rejected (account-freezing risk on sponsorship-sized payments, no escrow product). `invoices` table + `sendInvoice()` stub landed 26 Aug; real invoice-sending vendor still to be provisioned via the `vercel:marketplace` skill. |
+| **Payments (in)** | Direct bank transfer against an invoice — no on-platform collection | Brands fund sponsorship budgets. Superseded 10 Aug (`docs/payments-kyc-strategy.md`) — Stripe/Connect was evaluated and explicitly rejected (account-freezing risk on sponsorship-sized payments, no escrow product). `invoices` table + `sendInvoice()` stub landed 26 Aug; 1 Oct: campaigns auto-draft a VAT-itemised invoice (brand billing details, admin reviews and sends, brand sees it only once sent) — see `docs/payments-email-implementation-plan.md`. The real sending/collection vendor is still to come. |
 | **Payments (out)** | Wise | Reimburse artists and selected audience members — a transfer rail, not a balance the platform holds. |
 | **Identity verification** | Stripe Identity (verification only — no funds flow through it) | Verify recipients (artists, organisers, reward-claiming audience members) at payout time, not every sign-up. |
 | **Attendance** | QR code generation + box-office data | Physical attendance verification at venue |

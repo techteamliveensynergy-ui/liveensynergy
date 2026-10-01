@@ -7,6 +7,7 @@ import { notify } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
+import { isValidEmail, validateVatNumber } from "@/lib/billing";
 import { GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
 
 export interface OnboardingState {
@@ -345,6 +346,17 @@ export async function saveBrand(
   );
   if (imageError) return { error: imageError };
 
+  // Billing details are optional here (nothing new is mandatory at sign-up);
+  // the admin "Send invoice" step is what insists on the required ones. What IS
+  // checked is anything that ends up printed on a legal invoice.
+  const billingEmail = str(formData.get("billing_email"));
+  if (billingEmail && !isValidEmail(billingEmail)) {
+    return { error: "That billing email doesn't look right." };
+  }
+  const billingCountry = str(formData.get("billing_country"));
+  const vat = validateVatNumber(str(formData.get("vat_number")), billingCountry);
+  if (vat.error) return { error: vat.error };
+
   const supabase = await createClient();
   const { error } = await supabase.from("brands").upsert(
     {
@@ -368,6 +380,14 @@ export async function saveBrand(
       manager_email: str(formData.get("manager_email")),
       manager_phone: str(formData.get("manager_phone")),
       company_address: str(formData.get("company_address")),
+      billing_legal_name: str(formData.get("billing_legal_name")),
+      billing_email: billingEmail,
+      billing_address_line1: str(formData.get("billing_address_line1")),
+      billing_address_line2: str(formData.get("billing_address_line2")),
+      billing_city: str(formData.get("billing_city")),
+      billing_postcode: str(formData.get("billing_postcode")),
+      billing_country: billingCountry,
+      vat_number: vat.value,
     },
     { onConflict: "profile_id" },
   );
@@ -376,6 +396,9 @@ export async function saveBrand(
 
   if (isProfileMode(formData)) {
     revalidatePath("/dashboard/profile");
+    // The "add your billing details" banner and the invoice screens read these.
+    revalidatePath("/dashboard/campaigns");
+    revalidatePath("/dashboard/admin/invoices");
     return { success: true };
   }
 

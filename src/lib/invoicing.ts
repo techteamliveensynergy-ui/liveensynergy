@@ -10,13 +10,23 @@
  * sends the invoice, it never collects a payment itself.
  */
 
+import type { BillingSnapshot, InvoiceLine } from "./types";
+
 export interface SendInvoiceInput {
   invoiceId: string;
+  /** The brand's billing email (required for an invoice to be sent). */
   brandEmail: string;
+  /** Legal company name from the billing snapshot. */
   brandName: string;
+  /** Gross total, including VAT. */
   amountGbp: number;
   reference: string;
   dueDate: string | null;
+  billing: BillingSnapshot;
+  /** Null for a manual invoice with a typed amount. */
+  lines: InvoiceLine[] | null;
+  subtotalGbp: number | null;
+  vatGbp: number | null;
 }
 
 export interface SendInvoiceResult {

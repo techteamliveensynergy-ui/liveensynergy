@@ -5,6 +5,16 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/profile";
 import { notify } from "@/lib/notifications";
 import { sendInvoice } from "@/lib/invoicing";
+import { INVOICE } from "@/lib/constants";
+import { formatDate } from "@/lib/format";
+import { draftCampaignInvoice } from "@/lib/billing-server";
+import {
+  formatGbp,
+  isBillingComplete,
+  snapshotBilling,
+  type BillingFields,
+} from "@/lib/billing";
+import type { InvoiceLine } from "@/lib/types";
 
 export interface InvoiceState {
   error?: string;
@@ -50,6 +60,21 @@ export async function createInvoice(
   redirect(`/dashboard/admin/invoices/${created.id}`);
 }
 
+/** Routes an invoice change touches — brands see these too (L6: revalidate what was mutated). */
+function revalidateInvoiceViews(id: string) {
+  revalidatePath("/dashboard/admin/invoices");
+  revalidatePath(`/dashboard/admin/invoices/${id}`);
+  revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/campaigns");
+  revalidatePath(`/dashboard/campaigns/invoices/${id}`);
+}
+
+function plusDays(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export async function sendInvoiceAction(formData: FormData) {
   const { supabase, userId } = await requireAdmin();
   const id = str(formData.get("id"));
@@ -57,59 +82,101 @@ export async function sendInvoiceAction(formData: FormData) {
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("reference, amount_gbp, due_date, brands(brand_name, manager_email, profile_id)")
+    .select(
+      "reference, status, amount_gbp, due_date, lines, subtotal_gbp, vat_gbp, brands(profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number)",
+    )
     .eq("id", id)
     .maybeSingle<{
       reference: string;
+      status: string;
       amount_gbp: number;
       due_date: string | null;
-      brands: { brand_name: string; manager_email: string | null; profile_id: string } | null;
+      lines: InvoiceLine[] | null;
+      subtotal_gbp: number | null;
+      vat_gbp: number | null;
+      brands: ({ profile_id: string } & BillingFields) | null;
     }>();
-  if (!invoice?.brands) return;
+  if (!invoice?.brands || invoice.status !== "draft") return;
 
-  let brandEmail = invoice.brands.manager_email;
-  if (!brandEmail) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", invoice.brands.profile_id)
-      .maybeSingle<{ email: string | null }>();
-    brandEmail = profile?.email ?? null;
-  }
-  if (!brandEmail) return;
+  // An invoice is a legal document: it goes to a named company at an address.
+  // The detail page disables Send and lists what's missing; this is the backstop.
+  if (!isBillingComplete(invoice.brands)) return;
+  const billing = snapshotBilling(invoice.brands);
+
+  const dueDate = invoice.due_date ?? plusDays(INVOICE.paymentTermsDays);
 
   const result = await sendInvoice({
     invoiceId: id,
-    brandEmail,
-    brandName: invoice.brands.brand_name,
+    brandEmail: billing.email as string,
+    brandName: billing.legal_name as string,
     amountGbp: Number(invoice.amount_gbp),
     reference: invoice.reference,
-    dueDate: invoice.due_date,
+    dueDate,
+    billing,
+    lines: invoice.lines,
+    subtotalGbp: invoice.subtotal_gbp != null ? Number(invoice.subtotal_gbp) : null,
+    vatGbp: invoice.vat_gbp != null ? Number(invoice.vat_gbp) : null,
   });
   if (!result.ok) return;
 
-  await supabase
+  // Conditional on still being a draft, so a double-click can't send (and
+  // notify) twice; the billing details are frozen onto the invoice here.
+  const { data: sent } = await supabase
     .from("invoices")
     .update({
       status: "sent",
       sent_at: result.result.sentAt,
       sent_by: userId,
       external_invoice_ref: result.result.externalInvoiceRef,
+      billing_snapshot: billing,
+      due_date: dueDate,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
+  if (!sent) return;
 
+  const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   await notify({
     eventKey: "invoice.sent",
     recipientProfileId: invoice.brands.profile_id,
-    link: "/dashboard/campaigns",
+    link: `/dashboard/campaigns/invoices/${id}`,
+    // Reaches an email, so it must be an absolute URL — and the template has
+    // no other fallback for an unresolved token.
     variables: {
       reference: invoice.reference,
-      amount: `£${Number(invoice.amount_gbp).toLocaleString("en-GB")}`,
+      amount: formatGbp(invoice.amount_gbp),
+      due_date: formatDate(dueDate),
+      invoice_link: origin
+        ? `${origin}/dashboard/campaigns/invoices/${id}`
+        : "your Live·En·Synergy dashboard, under Campaigns",
     },
   });
 
+  revalidateInvoiceViews(id);
+}
+
+/**
+ * Drafts (or re-drafts after a cancel) a campaign's package invoice. Also the
+ * repair path when drafting failed at campaign creation. Idempotent.
+ */
+export async function draftInvoiceForCampaign(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const campaignId = str(formData.get("campaign_id"));
+  if (!campaignId) return;
+
+  const drafted = await draftCampaignInvoice(supabase, campaignId);
+  revalidatePath("/dashboard/admin/campaigns");
   revalidatePath("/dashboard/admin/invoices");
-  revalidatePath(`/dashboard/admin/invoices/${id}`);
+
+  if (!drafted.ok) {
+    redirect(
+      `/dashboard/admin/campaigns?invoice_error=${encodeURIComponent(drafted.error.slice(0, 200))}`,
+    );
+  }
+  if (drafted.invoiceId) redirect(`/dashboard/admin/invoices/${drafted.invoiceId}`);
+  redirect("/dashboard/admin/campaigns");
 }
 
 export async function markInvoicePaid(formData: FormData) {
@@ -121,6 +188,7 @@ export async function markInvoicePaid(formData: FormData) {
     .from("invoices")
     .update({ status: "paid", paid_at: new Date().toISOString() })
     .eq("id", id)
+    .in("status", ["sent", "overdue"])
     .select("reference, amount_gbp, brands(profile_id)")
     .maybeSingle<{
       reference: string;
@@ -135,20 +203,24 @@ export async function markInvoicePaid(formData: FormData) {
       link: "/dashboard/campaigns",
       variables: {
         reference: updated.reference,
-        amount: `£${Number(updated.amount_gbp).toLocaleString("en-GB")}`,
+        amount: formatGbp(updated.amount_gbp),
       },
     });
   }
 
-  revalidatePath("/dashboard/admin/invoices");
-  revalidatePath(`/dashboard/admin/invoices/${id}`);
+  revalidateInvoiceViews(id);
 }
 
 export async function cancelInvoice(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
   if (!id) return;
-  await supabase.from("invoices").update({ status: "cancelled" }).eq("id", id);
-  revalidatePath("/dashboard/admin/invoices");
-  revalidatePath(`/dashboard/admin/invoices/${id}`);
+  // A paid invoice can't be cancelled (that would be a refund, not a cancel),
+  // and cancelling is what frees the campaign to be re-drafted.
+  await supabase
+    .from("invoices")
+    .update({ status: "cancelled" })
+    .eq("id", id)
+    .in("status", ["draft", "sent", "overdue"]);
+  revalidateInvoiceViews(id);
 }
