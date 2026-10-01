@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
+import { retryOutboxEmail, unsuppressEmail } from "../actions";
 
 export const metadata = { title: "Email outbox · Admin" };
 
@@ -17,10 +18,21 @@ interface OutboxRow {
   error: string | null;
   created_at: string;
   sent_at: string | null;
+  attempts: number;
+  next_attempt_at: string | null;
+  delivery_status: string | null;
+  provider_message_id: string | null;
+}
+
+interface SuppressionRow {
+  email: string;
+  reason: string;
+  created_at: string;
 }
 
 const STATUS_TINTS: Record<string, string> = {
   queued: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  sending: "bg-[var(--color-lavender)] text-[var(--color-ink)]",
   sent: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   failed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   skipped: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
@@ -45,6 +57,12 @@ export default async function OutboxPage({
   const { data } = await query;
   const rows = (data ?? []) as OutboxRow[];
 
+  const { data: suppressionData } = await supabase
+    .from("email_suppressions")
+    .select("email, reason, created_at")
+    .order("created_at", { ascending: false });
+  const suppressions = (suppressionData ?? []) as SuppressionRow[];
+
   const { data: allRows } = await supabase.from("email_outbox").select("status");
   const counts = ((allRows ?? []) as { status: string }[]).reduce<
     Record<string, number>
@@ -64,7 +82,7 @@ export default async function OutboxPage({
 
       <PageHeader
         title="Email outbox"
-        subtitle="Every email the platform has queued. No provider is wired yet, so these sit as 'queued' — this is the audit trail of exactly what would be sent."
+        subtitle="Every email the platform has queued. They are sent within seconds, failures are retried automatically (up to 5 attempts), and delivery, bounce and spam-complaint results come back from the email provider."
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -78,7 +96,7 @@ export default async function OutboxPage({
         >
           All ({Object.values(counts).reduce((a, b) => a + b, 0)})
         </Link>
-        {["queued", "sent", "failed", "skipped"].map((s) =>
+        {["queued", "sending", "sent", "failed", "skipped"].map((s) =>
           counts[s] ? (
             <Link
               key={s}
@@ -117,6 +135,11 @@ export default async function OutboxPage({
                 >
                   {r.status}
                 </span>
+                {r.delivery_status && (
+                  <span className="rounded-full bg-[var(--color-mist)] px-2.5 py-1 text-xs font-semibold capitalize text-[var(--color-ink-soft)]">
+                    {r.delivery_status}
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-[var(--color-ink)]">
                     {r.subject ?? "(no subject)"}
@@ -140,15 +163,65 @@ export default async function OutboxPage({
                 <div className="whitespace-pre-wrap rounded-xl bg-[var(--color-mist)] p-4 text-sm leading-relaxed text-[var(--color-ink)]">
                   {r.body}
                 </div>
+                <p className="mb-2 text-xs text-[var(--color-ink-soft)]">
+                  Attempts: {r.attempts}
+                  {r.status === "queued" && r.next_attempt_at
+                    ? ` · next try ${formatDateTime(r.next_attempt_at)}`
+                    : ""}
+                  {r.provider_message_id ? ` · provider id ${r.provider_message_id}` : ""}
+                </p>
                 {r.error && (
                   <p className="mt-3 rounded-xl bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
                     {r.error}
                   </p>
                 )}
+                {(r.status === "failed" || r.status === "skipped") && (
+                  <form action={retryOutboxEmail} className="mt-3">
+                    <input type="hidden" name="id" value={r.id} />
+                    <button type="submit" className="btn btn-ghost text-sm">
+                      Retry sending
+                    </button>
+                  </form>
+                )}
               </div>
             </details>
           ))}
         </div>
+      )}
+
+      {suppressions.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
+            Suppressed addresses
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            These addresses bounced or reported us as spam, so nothing is sent
+            to them. Remove one only if you know the address is now valid.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {suppressions.map((s) => (
+              <li
+                key={s.email}
+                className="card flex flex-wrap items-center justify-between gap-3 p-4"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-[var(--color-ink)]">
+                    {s.email}
+                  </span>
+                  <span className="text-xs capitalize text-[var(--color-ink-soft)]">
+                    {s.reason} · {formatDateTime(s.created_at)}
+                  </span>
+                </span>
+                <form action={unsuppressEmail}>
+                  <input type="hidden" name="email" value={s.email} />
+                  <button type="submit" className="btn btn-ghost text-sm">
+                    Remove
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );
