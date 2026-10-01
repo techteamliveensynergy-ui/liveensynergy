@@ -215,3 +215,52 @@ export function validateVatNumber(
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export const isValidEmail = (s: string) => EMAIL_RE.test(s);
+
+// --- Invoice status as people see it ----------------------------------------
+
+/**
+ * What an invoice's status means to a person, derived from the stored one:
+ * a `sent` invoice is "unpaid" until its due date, then "overdue". Derived
+ * rather than stored (0051), so it is never stale and needs no scheduled job;
+ * the stored status stays `sent`, which mark_invoice_paid() accepts.
+ */
+export type InvoiceDisplayStatus = "draft" | "unpaid" | "overdue" | "paid" | "cancelled";
+
+/** Today's date in the UK, as YYYY-MM-DD (due dates are UK calendar dates). */
+export function ukToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+export function invoiceDisplayStatus(
+  inv: { status: string; due_date: string | null },
+  today: string = ukToday(),
+): InvoiceDisplayStatus {
+  switch (inv.status) {
+    case "draft":
+      return "draft";
+    case "paid":
+      return "paid";
+    case "cancelled":
+      return "cancelled";
+    case "overdue":
+      return "overdue";
+    default:
+      // sent
+      return inv.due_date && inv.due_date < today ? "overdue" : "unpaid";
+  }
+}
+
+/** Whole days past the due date (0 when not overdue or no due date). */
+export function daysOverdue(dueDate: string | null, today: string = ukToday()): number {
+  if (!dueDate || dueDate >= today) return 0;
+  const ms = Date.parse(`${today}T00:00:00Z`) - Date.parse(`${dueDate}T00:00:00Z`);
+  return Math.max(0, Math.round(ms / 86_400_000));
+}
+
+/** Statuses that still expect money, i.e. can be resent, marked paid or cancelled. */
+export const isUnpaidStatus = (s: string) => s === "sent" || s === "overdue";

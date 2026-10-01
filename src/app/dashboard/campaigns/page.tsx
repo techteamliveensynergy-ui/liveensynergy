@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import type { Campaign, CampaignIntakeRequest, Invoice } from "@/lib/types";
-import { formatGbp, isBillingComplete, type BillingFields } from "@/lib/billing";
+import {
+  formatGbp,
+  invoiceDisplayStatus,
+  isBillingComplete,
+  type BillingFields,
+} from "@/lib/billing";
 import { withdrawCampaignIntake } from "./actions";
 
 export const metadata = { title: "Campaigns" };
@@ -233,7 +238,7 @@ export default async function CampaignsPage() {
                     {inv.due_date ? ` · due ${formatDate(inv.due_date)}` : ""}
                   </p>
                 </div>
-                <StatusBadge status={inv.status} />
+                <StatusBadge status={invoiceDisplayStatus(inv)} />
               </Link>
             ))}
           </div>

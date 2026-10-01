@@ -5,19 +5,33 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { InvoiceBreakdown } from "@/components/dashboard/InvoiceBreakdown";
 import {
+  daysOverdue,
   formatGbp,
+  invoiceDisplayStatus,
   isUkCountry,
+  isUnpaidStatus,
   missingBillingFields,
   type BillingFields,
 } from "@/lib/billing";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import type { BillingSnapshot, InvoiceKind, InvoiceLine } from "@/lib/types";
-import { sendInvoiceAction, markInvoicePaid, cancelInvoice } from "../actions";
+import {
+  sendInvoiceAction,
+  markInvoicePaid,
+  cancelInvoice,
+  resendInvoice,
+  draftInvoiceForCampaign,
+} from "../actions";
 
 export const metadata = { title: "Invoice · Admin" };
 
 interface Row {
   id: string;
+  campaign_id: string | null;
+  resend_count: number;
+  last_resent_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
   reference: string;
   kind: InvoiceKind;
   amount_gbp: number;
@@ -59,10 +73,13 @@ function AddressBlock({ b }: { b: BillingSnapshot }) {
 
 export default async function InvoiceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; resent?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   await requireRole(["admin"]);
   const supabase = await createClient();
 
@@ -82,12 +99,26 @@ export default async function InvoiceDetailPage({
   // Once sent, the invoice shows the details it was sent with, not the brand's
   // current (possibly since-edited) ones.
   const snapshot = invoice.billing_snapshot;
+  const shown = invoiceDisplayStatus(invoice);
+  const late = shown === "overdue" ? daysOverdue(invoice.due_date) : 0;
+  const unpaid = isUnpaidStatus(invoice.status);
+  // Resend goes to the brand's CURRENT billing email (they may have fixed it).
+  const resendTo = invoice.brands?.billing_email ?? snapshot?.email ?? null;
 
   return (
     <div>
       <PageHeader
         title={`Invoice ${invoice.reference}`}
-        action={<StatusBadge status={invoice.status} />}
+        action={
+          <span className="flex items-center gap-2">
+            <StatusBadge status={shown} />
+            {late > 0 && (
+              <span className="text-sm font-semibold text-[var(--color-accent)]">
+                {late} day{late === 1 ? "" : "s"} overdue
+              </span>
+            )}
+          </span>
+        }
       />
       <Link
         href="/dashboard/admin/invoices"
@@ -95,6 +126,41 @@ export default async function InvoiceDetailPage({
       >
         ← Back to invoices
       </Link>
+
+      {sp.error && (
+        <p role="alert" className="mb-4 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          {sp.error}
+        </p>
+      )}
+      {sp.resent && (
+        <p role="status" className="mb-4 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          Invoice resent{resendTo ? ` to ${resendTo}` : ""}.
+        </p>
+      )}
+
+      {invoice.status === "cancelled" && (
+        <div className="mb-4 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink)]">
+          <p>
+            <span className="font-semibold">Cancelled</span>
+            {invoice.cancelled_at ? ` ${formatDateTime(invoice.cancelled_at)}` : ""}
+            {invoice.cancel_reason ? ` — ${invoice.cancel_reason}` : ""}
+          </p>
+          <div className="mt-2">
+            {invoice.kind === "campaign_package" && invoice.campaign_id ? (
+              <form action={draftInvoiceForCampaign}>
+                <input type="hidden" name="campaign_id" value={invoice.campaign_id} />
+                <button type="submit" className="btn btn-ghost text-sm">
+                  Draft a replacement
+                </button>
+              </form>
+            ) : (
+              <Link href="/dashboard/admin/invoices/new" className="btn btn-ghost text-sm">
+                Create a new invoice
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {invoice.status === "draft" && invoice.kind === "campaign_package" && (
         <p className="mb-4 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
@@ -237,17 +303,53 @@ export default async function InvoiceDetailPage({
             </form>
           )}
           {["draft", "sent", "overdue"].includes(invoice.status) && (
-            <form action={cancelInvoice}>
-              <input type="hidden" name="id" value={invoice.id} />
-              <button
-                type="submit"
-                className="btn btn-ghost text-sm text-[var(--color-accent)]"
-              >
-                Cancel
-              </button>
-            </form>
+            <details className="w-full sm:w-auto">
+              <summary className="btn btn-ghost cursor-pointer text-sm text-[var(--color-accent)]">
+                Cancel invoice…
+              </summary>
+              <form action={cancelInvoice} className="mt-2 space-y-2 rounded-xl border border-black/10 p-3">
+                <input type="hidden" name="id" value={invoice.id} />
+                <textarea
+                  name="reason"
+                  rows={2}
+                  className="textarea text-sm"
+                  placeholder="Reason (optional — shown to the brand if they already received it)"
+                />
+                <button type="submit" className="btn btn-ghost text-sm text-[var(--color-accent)]">
+                  Cancel this invoice
+                </button>
+              </form>
+            </details>
           )}
         </div>
+
+        {unpaid && (
+          <div className="mt-4 border-t border-black/10 pt-4">
+            <p className="field-label">Resend to the brand</p>
+            <p className="mb-2 text-sm text-[var(--color-ink-soft)]">
+              {resendTo ? (
+                <>
+                  Will send to <span className="font-semibold text-[var(--color-ink)]">{resendTo}</span>
+                  {snapshot?.email && resendTo !== snapshot.email
+                    ? ` (originally sent to ${snapshot.email})`
+                    : ""}
+                  .
+                </>
+              ) : (
+                "The brand has no billing email to send to."
+              )}
+              {invoice.resend_count > 0 && invoice.last_resent_at
+                ? ` Resent ${invoice.resend_count}× — last ${formatDateTime(invoice.last_resent_at)}.`
+                : ""}
+            </p>
+            <form action={resendInvoice}>
+              <input type="hidden" name="id" value={invoice.id} />
+              <button type="submit" className="btn btn-ghost text-sm" disabled={!resendTo}>
+                Resend invoice
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

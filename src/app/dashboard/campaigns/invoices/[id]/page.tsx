@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { InvoiceBreakdown } from "@/components/dashboard/InvoiceBreakdown";
-import { formatGbp } from "@/lib/billing";
+import { daysOverdue, formatGbp, invoiceDisplayStatus } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import type { Invoice } from "@/lib/types";
 
@@ -58,7 +58,7 @@ export default async function BrandInvoicePage({
     <div>
       <PageHeader
         title={`Invoice ${invoice.reference}`}
-        action={<StatusBadge status={invoice.status} />}
+        action={<StatusBadge status={invoiceDisplayStatus(invoice)} />}
       />
       <Link
         href="/dashboard/campaigns"
@@ -108,13 +108,26 @@ export default async function BrandInvoicePage({
           />
         </div>
 
-        {invoice.status === "paid" ? (
+        {invoice.status === "cancelled" ? (
+          <p className="mt-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+            This invoice was cancelled
+            {invoice.cancelled_at ? ` on ${formatDate(invoice.cancelled_at)}` : ""}, so
+            there is nothing to pay against it.
+            {invoice.cancel_reason ? ` Reason: ${invoice.cancel_reason}` : ""}
+          </p>
+        ) : invoice.status === "paid" ? (
           <p className="mt-6 rounded-xl bg-[var(--color-sage)]/50 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
             Paid{invoice.paid_at ? ` on ${formatDate(invoice.paid_at)}` : ""} —
             thank you.
           </p>
         ) : (
           <p className="mt-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+            {daysOverdue(invoice.due_date) > 0 && (
+              <span className="mb-1 block font-semibold text-[var(--color-accent)]">
+                This invoice is {daysOverdue(invoice.due_date)} day
+                {daysOverdue(invoice.due_date) === 1 ? "" : "s"} overdue.
+              </span>
+            )}
             Please pay {formatGbp(invoice.amount_gbp)} by bank transfer, quoting{" "}
             <span className="font-semibold text-[var(--color-ink)]">
               {invoice.reference}

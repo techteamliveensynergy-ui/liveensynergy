@@ -84,7 +84,9 @@ Env vars go in `.env.local` (copy from `.env.example`): `NEXT_PUBLIC_SUPABASE_UR
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only),
 `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` / `EMAIL_FROM` / `RESEND_WEBHOOK_SECRET` /
 `CRON_SECRET` (email delivery; `EMAIL_REDIRECT_TO` outside production — see
-`.env.example`), and optionally `GITHUB_FEEDBACK_REPO` / `GITHUB_TOKEN` /
+`.env.example`), `PAYMENT_CREDS_ENCRYPTION_KEY` (master key for the Stripe
+credentials; the Stripe keys themselves are entered on Admin → Payment
+settings, never in env), and optionally `GITHUB_FEEDBACK_REPO` / `GITHUB_TOKEN` /
 `GITHUB_FEEDBACK_LABELS` for the feedback→GitHub mirror, plus
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` / `SURVEY_IP_SALT` for
 the survey bot/fraud screen (unset in dev, the screen is skipped with a warning;
@@ -140,7 +142,7 @@ Two things about the enum that the code does not make obvious:
 
 - `src/lib/supabase/client.ts` — browser client, for Client Components.
 - `src/lib/supabase/server.ts` — server client for Server Components/Route Handlers/Server Actions; reads/writes cookies via `next/headers`.
-- `src/lib/supabase/service.ts` — service-role client (`null` when the key is unset) for machine callers with no user: the outbox drain, `/api/cron/*` and `/api/webhooks/*`. Bypasses RLS; never import it from a page or ordinary server action.
+- `src/lib/supabase/service.ts` — service-role client (`null` when the key is unset) for machine callers with no user: the outbox drain, `/api/cron/*` and `/api/webhooks/*` — plus `src/lib/payment-credentials.ts`, the one place encrypted Stripe keys are read back (those tables have no policies at all). Bypasses RLS; never import it from a page or ordinary server action.
 - `src/lib/supabase/middleware.ts` (`updateSession`) — wired into `src/middleware.ts`, whose matcher **excludes `/api/*`**: cron and webhook routes authenticate themselves and must never be redirected to sign-in. Refreshes the session, redirects unauthenticated users away from `/dashboard` and `/onboarding` (and signed-in users away from `/auth/sign-in|sign-up`), throttles a `touch_last_seen` write to once per 5 minutes via a cookie, and is the **single gate for account blocking**: an `is_active = false` profile is signed out and sent to `/auth/blocked` from wherever it is in the app. An automatic no-show suspension (`suspended_until` in the past) lifts itself here; a manual admin block does not.
 
 `src/lib/profile.ts` layers on top of the server client:
@@ -174,6 +176,8 @@ code edit.
 | `agree_to_sponsorship()` | Accepting a sponsorship takes a row lock and re-checks conflicts inside the transaction. Doing it in app code with a read-then-write let two people confirm sibling proposals against one campaign budget. Two partial unique indexes back it up (one settled sponsorship per campaign, one per listing). Returns the withdrawn siblings' references so the caller can notify their owners — which it can't look up itself under RLS. |
 | `enqueue_notification()` | Writes the in-app row and the `email_outbox` row together. |
 | `mark_invoice_paid()`, `waive_campaign_payment()` | The only two ways an `awaiting_payment` campaign reaches artists. Admin-only (checked inside), atomic: marking a package invoice paid opens its campaign in the same transaction; a waiver needs a written reason and is recorded on the campaign. The app never sets a campaign's status out of `awaiting_payment` itself (`setCampaignStatus` refuses; it can only close one). Backed by a `sponsored_events` insert trigger that refuses a sponsorship against an unpaid campaign, and by `campaigns` being admin-update-only under RLS (a brand could otherwise write its own `status`). |
+| `save_payment_secret_key()`, `save_payment_webhook_secret()`, `record_payment_verification()`, `set_payment_mode()`, `payment_credentials_status()`, `payment_settings_status()` | Stripe credentials (0050). The key tables have no RLS policies and no grants, so admins write and read only through these admin-checked functions — each write records its `payment_settings_audit` row in the same transaction, the status functions return masks and never ciphertext, and `set_payment_mode` refuses Live without a verified live key. Encryption happens in the app (`src/lib/payment-credentials.ts`); the database only ever sees ciphertext. |
+| `rate_limit_hit()` | Generic per-user throttle (0050), keyed on the caller's own `auth.uid()` so calling it directly can only throttle yourself. Used by the payment-settings and invoice-resend actions. |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |

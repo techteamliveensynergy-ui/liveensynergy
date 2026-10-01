@@ -25,6 +25,10 @@ Brands pay for the sponsorship packages admins assign them. Today:
 
 > ⚠️ This reverses the 10 Aug standup decision ("bank transfer only, Stripe rejected", `docs/payments-kyc-strategy.md`). That decision rejected **Connect** because of escrow and holding client money. Invoicing does not need Connect, and **bank transfers can't be charged back**. Even so, the client must sign off. Stripe must also be told about the expected large, irregular payments (for example £5,000 one-offs) when the account is set up, to reduce the risk of a freeze.
 
+**Stripe credentials screen — BUILT (migration 0050, `src/lib/payment-credentials.ts`, `/dashboard/admin/settings/payments`).** Deviations from §1b below: **no 2FA step-up yet** (the app has no two-factor login; the user chose to defer it — every change is still verified with Stripe, rate-limited, audited and announced to all admins; **2FA is required before real money flows**); no publishable key (the hosted invoice page doesn't need one); no "remove key" (replace covers rotation); no decrypt cache (decrypting is cheap); verification fails closed — only a real 200 from Stripe counts, because a 403 can come from a proxy (it did in testing). `brand_stripe_customers`, `invoices.stripe_mode` and the "open test invoices block the Live switch" check arrive with Stripe invoicing.
+
+**Invoice statuses + resend — BUILT (migration 0051).** Admin list filters (All / Draft / Unpaid / Overdue / Paid / Cancelled), overdue derived from the due date (`invoiceDisplayStatus()`), resend to the brand's current billing email (throttled per invoice), cancel with a reason (brand told if they had received it), and "Draft a replacement". Sending now emails the billing address rather than the brand's login email.
+
 **Stripe keys are managed from the admin panel**, not from environment variables. Each mode (test and live) has its own set of keys, and an admin chooses which mode is active. Keys are encrypted and can be written but never read back (see §1b).
 
 ---

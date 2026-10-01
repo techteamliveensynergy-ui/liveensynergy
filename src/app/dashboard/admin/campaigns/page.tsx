@@ -6,6 +6,7 @@ import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { setCampaignStatus, waiveCampaignPayment } from "../marketplace-actions";
 import { draftInvoiceForCampaign } from "../invoices/actions";
+import { invoiceDisplayStatus } from "@/lib/billing";
 import { MatchForm } from "./MatchForm";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -42,6 +43,7 @@ interface InvoiceChip {
   campaign_id: string;
   status: string;
   reference: string;
+  due_date: string | null;
 }
 
 /** A sponsored event standing against a campaign — one of possibly several. */
@@ -103,7 +105,7 @@ export default async function AdminCampaignsPage({
       // to be re-drafted, so it reads as "No invoice" again.
       supabase
         .from("invoices")
-        .select("id, campaign_id, status, reference")
+        .select("id, campaign_id, status, reference, due_date")
         .eq("kind", "campaign_package")
         .neq("status", "cancelled"),
     ]);
@@ -250,7 +252,7 @@ export default async function AdminCampaignsPage({
                           <span className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
                             Invoice
                           </span>
-                          <StatusBadge status={invoiceFor(c.id)!.status} />
+                          <StatusBadge status={invoiceDisplayStatus(invoiceFor(c.id)!)} />
                         </Link>
                       ) : (
                         <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
