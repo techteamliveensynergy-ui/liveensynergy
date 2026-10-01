@@ -1,0 +1,12 @@
+-- =============================================================================
+-- Live-En-Synergy — campaign status 'awaiting_payment'
+-- (docs/payments-email-implementation-plan.md, Phase B: the payment gate).
+--
+-- A campaign created by an admin starts as 'awaiting_payment' and is hidden
+-- from artists until its invoice is paid (or an admin waives payment).
+--
+-- THIS FILE MUST BE APPLIED ON ITS OWN, BEFORE 0049. A newly added enum value
+-- can't be used in the same transaction that adds it, and 0049 uses it (in a
+-- trigger, two functions and a policy). Run this, let it commit, then run 0049.
+-- =============================================================================
+alter type campaign_status add value if not exists 'awaiting_payment';

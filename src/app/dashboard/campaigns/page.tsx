@@ -171,6 +171,29 @@ export default async function CampaignsPage() {
                     Ref {c.reference} · Budget £
                     {Number(c.budget_gbp).toLocaleString("en-GB")}
                   </p>
+                  {c.status === "awaiting_payment" && (
+                    <p className="mt-2 rounded-lg bg-[var(--color-lavender)]/50 px-3 py-2 text-xs text-[var(--color-ink)]">
+                      Your campaign opens to artists once its invoice is paid.{" "}
+                      {(() => {
+                        const inv = invoices.find(
+                          (i) =>
+                            i.campaign_id === c.id &&
+                            (i.status === "sent" || i.status === "overdue"),
+                        );
+                        return inv ? (
+                          <Link
+                            href={`/dashboard/campaigns/invoices/${inv.id}`}
+                            className="font-semibold text-[var(--color-brand-dark)] underline"
+                          >
+                            View invoice {inv.reference}
+                            {inv.due_date ? ` (due ${formatDate(inv.due_date)})` : ""}
+                          </Link>
+                        ) : (
+                          "We'll send your invoice shortly."
+                        );
+                      })()}
+                    </p>
+                  )}
                 </div>
                 {/* Real campaigns are admin-managed from here — a brand
                     reaches the team rather than editing it directly. */}

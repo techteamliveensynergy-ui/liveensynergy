@@ -6,7 +6,11 @@ import type { Role } from "./constants";
  * run `supabase gen types typescript` once the CLI is connected.
  */
 
-export type CampaignStatus = "in_progress" | "closed" | "completed";
+export type CampaignStatus =
+  | "awaiting_payment"
+  | "in_progress"
+  | "closed"
+  | "completed";
 /**
  * `withdrawn` (0020) is where a suggested sponsorship lands when the sponsor
  * confirms a different event for the same campaign. Terminal — it never moves
@@ -265,6 +269,8 @@ export interface Campaign {
   manager_phone: string | null;
   matched_listing_id: string | null;
   status: CampaignStatus;
+  payment_waived_at: string | null;
+  payment_waived_reason: string | null;
   campaign_package_id: string | null;
   /** Snapshotted from campaign_packages at creation — doesn't move if the
    * package's own margin is edited later. */

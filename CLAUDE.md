@@ -173,6 +173,7 @@ code edit.
 |---|---|
 | `agree_to_sponsorship()` | Accepting a sponsorship takes a row lock and re-checks conflicts inside the transaction. Doing it in app code with a read-then-write let two people confirm sibling proposals against one campaign budget. Two partial unique indexes back it up (one settled sponsorship per campaign, one per listing). Returns the withdrawn siblings' references so the caller can notify their owners — which it can't look up itself under RLS. |
 | `enqueue_notification()` | Writes the in-app row and the `email_outbox` row together. |
+| `mark_invoice_paid()`, `waive_campaign_payment()` | The only two ways an `awaiting_payment` campaign reaches artists. Admin-only (checked inside), atomic: marking a package invoice paid opens its campaign in the same transaction; a waiver needs a written reason and is recorded on the campaign. The app never sets a campaign's status out of `awaiting_payment` itself (`setCampaignStatus` refuses; it can only close one). Backed by a `sponsored_events` insert trigger that refuses a sponsorship against an unpaid campaign, and by `campaigns` being admin-update-only under RLS (a brand could otherwise write its own `status`). |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |
@@ -246,6 +247,10 @@ leak a column RLS can't hide: `survey_form_questions` (0033) strips
 `sponsored_event_survey_completions` (0036) lets a brand/artist see a
 survey-completion count without a `survey_responses` read policy that would
 also hand them `quality_score`.
+
+Campaign `status` is `awaiting_payment` (a new admin-created campaign: hidden from
+artists, can't be matched) → `in_progress` (open) → `closed`/`completed`. Existing
+campaigns predate the gate and are simply `in_progress`.
 
 `campaigns`, `event_listings`, `sponsored_events` and `feedback_reports` each
 carry a human-facing sequential `reference` (`CMP-00001`, `EVT-`, `SPE-`,
