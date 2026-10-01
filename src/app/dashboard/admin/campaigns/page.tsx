@@ -4,14 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { setCampaignStatus } from "../marketplace-actions";
+import { setCampaignStatus, waiveCampaignPayment } from "../marketplace-actions";
 import { draftInvoiceForCampaign } from "../invoices/actions";
 import { MatchForm } from "./MatchForm";
 import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Campaigns · Admin" };
 
-const STATUSES = ["in_progress", "closed", "completed"];
+// Filter chips show every status; the per-row picker (below) never offers
+// awaiting_payment — it is only entered at creation and left by payment/waiver.
+const STATUSES = ["awaiting_payment", "in_progress", "closed", "completed"];
+const SETTABLE_STATUSES = ["in_progress", "closed", "completed"];
 
 interface Row {
   id: string;
@@ -28,6 +31,8 @@ interface Row {
   created_at: string;
   matched_listing_id: string | null;
   package_platform_margin_gbp: number | null;
+  payment_waived_at: string | null;
+  payment_waived_reason: string | null;
   brands: { brand_name: string; profile_id: string } | null;
 }
 
@@ -57,6 +62,7 @@ export default async function AdminCampaignsPage({
     status?: string;
     matched?: string;
     invoice_error?: string;
+    action_error?: string;
   }>;
 }) {
   await requireRole(["admin"]);
@@ -161,6 +167,12 @@ export default async function AdminCampaignsPage({
         }
       />
 
+      {sp.action_error && (
+        <p className="mb-5 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          {sp.action_error}
+        </p>
+      )}
+
       {sp.invoice_error && (
         <p className="mb-5 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
           Couldn&apos;t draft the invoice: {sp.invoice_error}
@@ -258,6 +270,12 @@ export default async function AdminCampaignsPage({
                       {c.preferred_location ? ` · ${c.preferred_location}` : ""}
                       {c.preferred_timeline ? ` · ${c.preferred_timeline}` : ""}
                     </p>
+                    {c.payment_waived_at && (
+                      <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                        <span className="font-semibold">Payment waived</span>{" "}
+                        {formatDate(c.payment_waived_at)}: {c.payment_waived_reason}
+                      </p>
+                    )}
                     {c.reward_rules && (
                       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                         <span className="font-semibold">Reward:</span>{" "}
@@ -296,6 +314,33 @@ export default async function AdminCampaignsPage({
                     >
                       Edit
                     </Link>
+                    {c.status === "awaiting_payment" && (
+                      <details className="w-64 text-left">
+                        <summary className="btn btn-ghost cursor-pointer text-sm">
+                          Waive payment…
+                        </summary>
+                        <form
+                          action={waiveCampaignPayment}
+                          className="mt-2 space-y-2 rounded-xl border border-black/10 p-3"
+                        >
+                          <input type="hidden" name="campaign_id" value={c.id} />
+                          <p className="text-xs text-[var(--color-ink-soft)]">
+                            Opens this campaign to artists without payment and
+                            cancels its invoice. Recorded against your name.
+                          </p>
+                          <textarea
+                            name="reason"
+                            required
+                            rows={2}
+                            className="textarea text-sm"
+                            placeholder="Why is payment being waived?"
+                          />
+                          <button type="submit" className="btn btn-primary w-full text-sm">
+                            Open campaign
+                          </button>
+                        </form>
+                      </details>
+                    )}
                     {!invoiceFor(c.id) && (
                       <form action={draftInvoiceForCampaign}>
                         <input type="hidden" name="campaign_id" value={c.id} />
@@ -314,7 +359,17 @@ export default async function AdminCampaignsPage({
                         className="select w-auto py-1.5 text-sm"
                         defaultValue={c.status}
                       >
-                        {STATUSES.map((s) => (
+                        {/* An unpaid campaign can only be closed from here;
+                            opening it is payment or a reasoned waiver. */}
+                        {c.status === "awaiting_payment" && (
+                          <option value="awaiting_payment" disabled>
+                            awaiting payment
+                          </option>
+                        )}
+                        {(c.status === "awaiting_payment"
+                          ? ["closed"]
+                          : SETTABLE_STATUSES
+                        ).map((s) => (
                           <option key={s} value={s}>
                             {s.replace(/_/g, " ")}
                           </option>
@@ -392,6 +447,12 @@ export default async function AdminCampaignsPage({
                   <div className="mt-4 border-t border-black/10 pt-4">
                     <MatchForm campaignId={c.id} listings={listings} />
                   </div>
+                ) : c.status === "awaiting_payment" ? (
+                  <p className="mt-4 border-t border-black/10 pt-4 text-sm text-[var(--color-ink-soft)]">
+                    Awaiting payment — hidden from artists and can&apos;t be
+                    matched until its invoice is marked paid or payment is
+                    waived.
+                  </p>
                 ) : (
                   isSettled(c.id) && (
                     <p className="mt-4 border-t border-black/10 pt-4 text-sm text-[var(--color-ink-soft)]">

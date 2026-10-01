@@ -8,6 +8,7 @@ import { sendInvoice } from "@/lib/invoicing";
 import { INVOICE } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { draftCampaignInvoice } from "@/lib/billing-server";
+import { notifyCampaignOpened } from "@/lib/campaign-payment";
 import {
   formatGbp,
   isBillingComplete,
@@ -184,12 +185,26 @@ export async function markInvoicePaid(formData: FormData) {
   const id = str(formData.get("id"));
   if (!id) return;
 
+  // One atomic database call: marks the invoice paid AND, for a campaign's
+  // package invoice, opens the campaign — so "paid but still hidden" can't
+  // happen. It refuses anything that isn't sent or overdue.
+  const { data: result, error } = await supabase.rpc("mark_invoice_paid", {
+    p_invoice_id: id,
+  });
+  if (error) {
+    console.error("[invoice] mark paid failed", id, error.message);
+    revalidateInvoiceViews(id);
+    return;
+  }
+  const { opened, campaign_id: campaignId } = (result ?? {}) as {
+    opened?: boolean;
+    campaign_id?: string | null;
+  };
+
   const { data: updated } = await supabase
     .from("invoices")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("id", id)
-    .in("status", ["sent", "overdue"])
     .select("reference, amount_gbp, brands(profile_id)")
+    .eq("id", id)
     .maybeSingle<{
       reference: string;
       amount_gbp: number;
@@ -206,6 +221,11 @@ export async function markInvoicePaid(formData: FormData) {
         amount: formatGbp(updated.amount_gbp),
       },
     });
+  }
+  if (opened && campaignId) {
+    await notifyCampaignOpened(supabase, campaignId);
+    // The campaign just appeared in artists' "Discover campaigns".
+    revalidatePath("/dashboard/discover-campaigns");
   }
 
   revalidateInvoiceViews(id);

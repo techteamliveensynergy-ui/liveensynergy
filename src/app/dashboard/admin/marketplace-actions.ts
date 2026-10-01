@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { netSponsorshipBudget, netForCampaign, roundMoney } from "@/lib/constants";
+import {
+  CAMPAIGN_STATUSES,
+  netSponsorshipBudget,
+  netForCampaign,
+  roundMoney,
+} from "@/lib/constants";
 import { notify } from "@/lib/notifications";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { rewardGateFor, rewardGatesForEvent } from "@/lib/data/reward-gate";
@@ -25,6 +30,7 @@ import { requireAdmin } from "@/lib/profile";
 import { normaliseUrl } from "@/lib/urls";
 import { isBillingComplete, type BillingFields } from "@/lib/billing";
 import { draftCampaignInvoice, redraftCampaignInvoice } from "@/lib/billing-server";
+import { notifyCampaignOpened } from "@/lib/campaign-payment";
 import type { SponsoredEventRewardTier } from "@/lib/types";
 
 export interface MarketplaceState {
@@ -92,12 +98,13 @@ export async function matchCampaign(
     supabase
       .from("campaigns")
       .select(
-        "id, reference, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
+        "id, reference, status, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
       )
       .eq("id", campaignId)
       .maybeSingle<{
         id: string;
         reference: string;
+        status: string;
         brand_id: string;
         budget_gbp: number | null;
         package_platform_margin_gbp: number | null;
@@ -113,6 +120,14 @@ export async function matchCampaign(
   ]);
 
   if (!campaign) return { error: "Campaign not found." };
+  // The database refuses this too (sponsored_events trigger, 0049) — this is the
+  // friendly version of the same rule.
+  if (campaign.status === "awaiting_payment") {
+    return {
+      error:
+        "This campaign is awaiting payment, so it can't be matched yet. Mark its invoice paid or waive payment first.",
+    };
+  }
 
   const listings = (listingRows ?? []) as {
     id: string;
@@ -287,6 +302,20 @@ export async function setCampaignStatus(formData: FormData) {
   const id = str(formData.get("id"));
   const status = str(formData.get("status"));
   if (!id || !status) return;
+  if (!(CAMPAIGN_STATUSES as readonly string[]).includes(status)) return;
+
+  // The payment gate can't be opened from here. awaiting_payment is only ever
+  // entered at creation, and only left through the invoice being paid or a
+  // reasoned waiver (mark_invoice_paid / waive_campaign_payment) — or by
+  // closing the campaign outright.
+  if (status === "awaiting_payment") return;
+  const { data: current } = await supabase
+    .from("campaigns")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle<{ status: string }>();
+  if (!current) return;
+  if (current.status === "awaiting_payment" && status !== "closed") return;
 
   await supabase.from("campaigns").update({ status }).eq("id", id);
 
@@ -306,6 +335,39 @@ export async function setCampaignStatus(formData: FormData) {
   }
 
   revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/campaigns");
+}
+
+/**
+ * Opens an awaiting_payment campaign without payment — a comp or internal
+ * campaign. Requires a written reason; the database function records who and
+ * when on the campaign and cancels its live invoice, all in one transaction.
+ */
+export async function waiveCampaignPayment(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const campaignId = str(formData.get("campaign_id"));
+  const reason = str(formData.get("reason"));
+  if (!campaignId) return;
+
+  const fail = (message: string): never =>
+    redirect(
+      `/dashboard/admin/campaigns?action_error=${encodeURIComponent(message.slice(0, 200))}`,
+    );
+  if (!reason) fail("A reason is required to waive payment.");
+
+  const { error } = await supabase.rpc("waive_campaign_payment", {
+    p_campaign_id: campaignId,
+    p_reason: reason,
+  });
+  if (error) fail(error.message);
+
+  await notifyCampaignOpened(supabase, campaignId);
+
+  revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/admin/invoices");
+  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/discover-campaigns");
+  redirect("/dashboard/admin/campaigns");
 }
 
 // --- Campaign intake (26 Aug: campaigns are now admin-created) -------------
@@ -491,7 +553,11 @@ export async function createCampaignFromAdmin(
 
   const { data: created, error } = await supabase
     .from("campaigns")
-    .insert({ ...p, brand_id: brandId, ...money })
+    // Starts hidden from artists: it opens when its invoice is paid, or an
+    // admin waives payment (0048/0049). Failing closed is deliberate — if the
+    // invoice couldn't be drafted the campaign simply waits, visibly, for the
+    // Draft invoice button rather than going live unbilled.
+    .insert({ ...p, brand_id: brandId, ...money, status: "awaiting_payment" })
     .select("id, reference")
     .single();
   if (error) return { error: error.message };

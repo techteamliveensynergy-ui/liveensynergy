@@ -206,7 +206,15 @@ export default async function InvoiceDetailPage({
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-black/10 pt-4">
+        {invoice.kind === "campaign_package" &&
+          (invoice.status === "sent" || invoice.status === "overdue") && (
+            <p className="mt-6 text-xs text-[var(--color-ink-soft)]">
+              Marking this paid also opens the campaign to artists (if it is
+              still awaiting payment) and tells the brand.
+            </p>
+          )}
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-black/10 pt-4">
           {invoice.status === "draft" && (
             <form action={sendInvoiceAction}>
               <input type="hidden" name="id" value={invoice.id} />

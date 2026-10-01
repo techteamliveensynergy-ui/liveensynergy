@@ -121,10 +121,18 @@ export async function createSponsoredEvent(
   if (initiatedByBrand && campaignId) {
     const { data: campaign } = await supabase
       .from("campaigns")
-      .select("package_platform_margin_gbp")
+      .select("package_platform_margin_gbp, status")
       .eq("id", campaignId)
       .eq("brand_id", brandId)
-      .maybeSingle<{ package_platform_margin_gbp: number | null }>();
+      .maybeSingle<{ package_platform_margin_gbp: number | null; status: string }>();
+    // A campaign still awaiting payment isn't open yet. (The database refuses
+    // this too — sponsored_events trigger, 0049 — this is the readable version.)
+    if (campaign?.status === "awaiting_payment") {
+      return {
+        error:
+          "This campaign opens once its invoice has been paid, so you can't propose an event against it yet.",
+      };
+    }
     packagePlatformMarginGbp = campaign?.package_platform_margin_gbp ?? null;
   }
 

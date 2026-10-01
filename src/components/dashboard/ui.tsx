@@ -89,6 +89,7 @@ export function MetricTile({
 
 const STATUS_STYLES: Record<string, string> = {
   in_progress: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  awaiting_payment: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   confirmed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   completed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   closed: "bg-[var(--color-pink)] text-[var(--color-accent)]",

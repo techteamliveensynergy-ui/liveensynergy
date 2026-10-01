@@ -126,6 +126,11 @@ export const BUDGET_RANGES = [
 ] as const;
 
 export const CAMPAIGN_STATUSES = [
+  // A new admin-created campaign starts here and stays hidden from artists
+  // until its invoice is paid or payment is waived (migration 0048/0049).
+  // Never chosen by hand — it is only entered at creation and only left
+  // through mark_invoice_paid() / waive_campaign_payment() (or by closing it).
+  "awaiting_payment",
   "in_progress",
   "closed",
   "completed",
@@ -135,6 +140,7 @@ export const CAMPAIGN_STATUS_LABELS: Record<
   (typeof CAMPAIGN_STATUSES)[number],
   string
 > = {
+  awaiting_payment: "Awaiting payment",
   in_progress: "In Progress",
   closed: "Closed",
   completed: "Completed",

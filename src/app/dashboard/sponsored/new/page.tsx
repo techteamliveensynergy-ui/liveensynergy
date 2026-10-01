@@ -48,6 +48,8 @@ export default async function NewSponsoredEventPage() {
             .from("campaigns")
             .select("id, reference, description, budget_gbp")
             .eq("brand_id", brand.id)
+            // Not open until paid — see the payment gate (0049).
+            .neq("status", "awaiting_payment")
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as Campaign[] })
       : supabase
