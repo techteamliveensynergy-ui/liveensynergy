@@ -319,3 +319,8 @@ Path alias: `@/*` → `./src/*`.
 - `docs/survey-form-builder-design.md` — schema and admin drag-and-drop
   builder design for the (not yet built) survey system; Phase 3 of the plan
   above.
+- `docs/payments-email-implementation-plan.md` — Stripe Invoicing (brand
+  payments, admin-managed test/live credentials, webhooks), Resend email
+  delivery, and the security/rate-limit design. Supersedes the "bank transfer
+  only" money-in section of `docs/payments-kyc-strategy.md` pending client
+  sign-off; read before touching invoices, campaigns' payment state or email.
