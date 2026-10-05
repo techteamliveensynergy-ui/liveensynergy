@@ -119,28 +119,70 @@ export default async function BrandInvoicePage({
           <p className="mt-6 rounded-xl bg-[var(--color-sage)]/50 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
             Paid{invoice.paid_at ? ` on ${formatDate(invoice.paid_at)}` : ""} —
             thank you.
+            {invoice.hosted_invoice_url && (
+              <>
+                {" "}
+                <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                  View receipt
+                </a>
+              </>
+            )}
           </p>
         ) : (
-          <p className="mt-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          <div className="mt-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
             {daysOverdue(invoice.due_date) > 0 && (
               <span className="mb-1 block font-semibold text-[var(--color-accent)]">
                 This invoice is {daysOverdue(invoice.due_date)} day
                 {daysOverdue(invoice.due_date) === 1 ? "" : "s"} overdue.
               </span>
             )}
-            Please pay {formatGbp(invoice.amount_gbp)} by bank transfer, quoting{" "}
-            <span className="font-semibold text-[var(--color-ink)]">
-              {invoice.reference}
-            </span>{" "}
-            as the payment reference. For our bank details,{" "}
-            <Link
-              href="/dashboard/messages?tab=support"
-              className="font-semibold text-[var(--color-brand-dark)] underline"
-            >
-              contact support
-            </Link>
-            .
-          </p>
+            {invoice.hosted_invoice_url ? (
+              // Stripe's hosted page: card or bank transfer, with the bank
+              // details and a receipt. Marked paid here automatically.
+              <>
+                <p>
+                  Pay {formatGbp(invoice.amount_gbp)} online by card or bank
+                  transfer. This invoice updates automatically once your
+                  payment arrives.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={invoice.hosted_invoice_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary text-sm"
+                  >
+                    Pay online
+                  </a>
+                  {invoice.invoice_pdf_url && (
+                    <a
+                      href={invoice.invoice_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost text-sm"
+                    >
+                      Download PDF
+                    </a>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p>
+                Please pay {formatGbp(invoice.amount_gbp)} by bank transfer, quoting{" "}
+                <span className="font-semibold text-[var(--color-ink)]">
+                  {invoice.reference}
+                </span>{" "}
+                as the payment reference. For our bank details,{" "}
+                <Link
+                  href="/dashboard/messages?tab=support"
+                  className="font-semibold text-[var(--color-brand-dark)] underline"
+                >
+                  contact support
+                </Link>
+                .
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

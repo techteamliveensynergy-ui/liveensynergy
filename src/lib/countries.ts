@@ -212,3 +212,55 @@ export const COUNTRIES: readonly string[] = [
   "Zambia",
   "Zimbabwe",
 ];
+
+let codeByName: Map<string, string> | null = null;
+
+/** Our names that the runtime spells differently ("St. Lucia", "Türkiye", …). */
+const CODE_ALIASES: Record<string, string> = {
+  "antigua and barbuda": "AG",
+  "bosnia and herzegovina": "BA",
+  congo: "CG",
+  "congo (democratic republic)": "CD",
+  "hong kong": "HK",
+  "ivory coast": "CI",
+  macao: "MO",
+  myanmar: "MM",
+  palestine: "PS",
+  "saint kitts and nevis": "KN",
+  "saint lucia": "LC",
+  "saint vincent and the grenadines": "VC",
+  "sao tome and principe": "ST",
+  "trinidad and tobago": "TT",
+  turkey: "TR",
+};
+
+/**
+ * ISO 3166-1 alpha-2 code for a country name from COUNTRIES (Stripe needs the
+ * code on a customer's address). Built once from the runtime's own region
+ * names; returns null when a name has no match, and the address is then sent
+ * without a country rather than with a wrong one.
+ */
+export function countryCode(name: string | null | undefined): string | null {
+  if (!name) return null;
+  if (!codeByName) {
+    codeByName = new Map();
+    const names = new Intl.DisplayNames(["en"], { type: "region" });
+    const A = "A".charCodeAt(0);
+    for (let i = 0; i < 26; i++) {
+      for (let j = 0; j < 26; j++) {
+        const code = String.fromCharCode(A + i, A + j);
+        let label: string | undefined;
+        try {
+          label = names.of(code);
+        } catch {
+          continue;
+        }
+        // First code wins: GB before the reserved "UK", which also reads "United Kingdom".
+        const key = label?.toLowerCase();
+        if (key && label !== code && !codeByName.has(key)) codeByName.set(key, code);
+      }
+    }
+  }
+  const key = name.toLowerCase();
+  return CODE_ALIASES[key] ?? codeByName.get(key) ?? null;
+}

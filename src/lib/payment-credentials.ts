@@ -141,3 +141,15 @@ export async function getStripeSecretKey(mode: PaymentMode): Promise<string | nu
   if (error || typeof data !== "string" || !data) return null;
   return data;
 }
+
+/** The webhook signing secret (`whsec_…`) for `mode`, from Vault. Server-only. */
+export async function getStripeWebhookSecret(mode: PaymentMode): Promise<string | null> {
+  const supabase = createServiceClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("payment_secret_key", {
+    p_mode: mode,
+    p_field: "webhook_secret",
+  });
+  if (error || typeof data !== "string" || !data) return null;
+  return data;
+}

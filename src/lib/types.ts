@@ -127,6 +127,12 @@ export interface Invoice {
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancel_reason: string | null;
+  /** Set when the invoice went out through Stripe (0053). */
+  stripe_mode: "test" | "live" | null;
+  stripe_invoice_id: string | null;
+  stripe_invoice_number: string | null;
+  hosted_invoice_url: string | null;
+  invoice_pdf_url: string | null;
   created_at: string;
   updated_at: string;
 }

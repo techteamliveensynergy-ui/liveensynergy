@@ -6,6 +6,8 @@ import { notify } from "@/lib/notifications";
  * Tells a brand its campaign has opened to artists — after its invoice was
  * paid, or after an admin waived payment. Shared by both paths. Never throws
  * (notify() doesn't), so a notification problem can't undo the payment.
+ * Uses the caller's client throughout, so the webhook (no signed-in user)
+ * can pass a service-role client.
  */
 export async function notifyCampaignOpened(
   supabase: SupabaseClient,
@@ -23,5 +25,5 @@ export async function notifyCampaignOpened(
     recipientProfileId: data.brands.profile_id,
     link: "/dashboard/campaigns",
     variables: { campaign_reference: data.reference },
-  });
+  }, { client: supabase }); // the Stripe webhook calls this with a service client
 }
