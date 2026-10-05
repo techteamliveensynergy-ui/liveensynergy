@@ -5,10 +5,7 @@ import { requireAdmin } from "@/lib/profile";
 import { notifyAdmins } from "@/lib/notifications";
 import { callerIpHash } from "@/lib/survey-abuse";
 import {
-  aadFor,
-  encryptSecret,
   getStripeSecretKey,
-  isEncryptionConfigured,
   isPaymentMode,
   parseStripeSecretKey,
   parseWebhookSecret,
@@ -18,8 +15,9 @@ import {
 
 /**
  * Stripe credentials screen. Every action:
- *   requireAdmin → rate limit → validate → (verify with Stripe) → encrypt →
- *   admin-checked DB function (writes the audit row in the same transaction)
+ *   requireAdmin → rate limit → validate → (verify with Stripe) →
+ *   admin-checked DB function that stores it in Supabase Vault (and writes the
+ *   audit row in the same transaction)
  *   → tell every admin → revalidate.
  *
  * The returned state is ONLY a fixed message. Nothing an admin typed is ever
@@ -31,8 +29,6 @@ export interface PaymentSettingsState {
 }
 
 const PAGE = "/dashboard/admin/settings/payments";
-const NOT_CONFIGURED =
-  "Encryption isn't configured on this deployment (PAYMENT_CREDS_ENCRYPTION_KEY), so keys can't be saved.";
 const RATE_LIMITED = "Too many changes in a short time — wait a few minutes and try again.";
 
 const modeLabel = (m: PaymentMode) => (m === "live" ? "Live" : "Test");
@@ -69,7 +65,6 @@ export async function saveSecretKey(
 ): Promise<PaymentSettingsState> {
   const mode = readMode(formData);
   if (!mode) return { error: "Unknown mode." };
-  if (!isEncryptionConfigured()) return { error: NOT_CONFIGURED };
 
   const parsed = parseStripeSecretKey(formData.get("secret_key") as string | null, mode);
   if (!parsed.ok) return { error: parsed.error };
@@ -83,7 +78,7 @@ export async function saveSecretKey(
 
   const { error } = await ctx.supabase.rpc("save_payment_secret_key", {
     p_mode: mode,
-    p_ciphertext: encryptSecret(parsed.key, aadFor(mode, "secret_key")),
+    p_secret: parsed.key,
     p_last4: parsed.last4,
     p_kind: parsed.kind,
     p_account_id: verified.accountId,
@@ -113,7 +108,6 @@ export async function saveWebhookSecret(
 ): Promise<PaymentSettingsState> {
   const mode = readMode(formData);
   if (!mode) return { error: "Unknown mode." };
-  if (!isEncryptionConfigured()) return { error: NOT_CONFIGURED };
 
   const parsed = parseWebhookSecret(formData.get("webhook_secret") as string | null);
   if (!parsed.ok) return { error: parsed.error };
@@ -123,7 +117,7 @@ export async function saveWebhookSecret(
 
   const { error } = await ctx.supabase.rpc("save_payment_webhook_secret", {
     p_mode: mode,
-    p_ciphertext: encryptSecret(parsed.secret, aadFor(mode, "webhook_secret")),
+    p_secret: parsed.secret,
     p_last4: parsed.last4,
     p_ip_hash: ctx.ipHash,
   });
@@ -155,7 +149,7 @@ export async function reverifySecretKey(
   if (!key) {
     return {
       error:
-        "No key is saved for this mode, or it can't be decrypted with this deployment's encryption key.",
+        "No key is saved for this mode yet, or the server can't read it (check SUPABASE_SERVICE_ROLE_KEY is set in Vercel).",
     };
   }
   const verified = await verifyStripeKey(key);

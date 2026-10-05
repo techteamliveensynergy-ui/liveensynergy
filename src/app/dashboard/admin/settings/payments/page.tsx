@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
-import { isEncryptionConfigured, maskKey, type PaymentMode } from "@/lib/payment-credentials";
+import { maskKey, type PaymentMode } from "@/lib/payment-credentials";
 import {
   ModeSwitchForm,
   ReverifyForm,
@@ -77,7 +77,6 @@ export default async function PaymentSettingsPage() {
   }[])[0];
   const activeMode: PaymentMode = settings?.active_mode ?? "test";
   const audit = (auditResult.data ?? []) as unknown as AuditRow[];
-  const encryption = isEncryptionConfigured();
 
   const live = credFor("live");
   const test = credFor("test");
@@ -91,7 +90,7 @@ export default async function PaymentSettingsPage() {
     <div>
       <PageHeader
         title="Payment settings"
-        subtitle="Stripe keys for test and live, and which one is active. Keys are encrypted before they're stored and can never be viewed again — only replaced."
+        subtitle="Stripe keys for test and live, and which one is active. Keys are stored encrypted in Supabase Vault and can never be viewed again — only replaced."
       />
 
       <div
@@ -111,18 +110,6 @@ export default async function PaymentSettingsPage() {
           </span>
         )}
       </div>
-
-      {!encryption && (
-        <div className="mb-6 rounded-2xl bg-[var(--color-pink)] px-5 py-4 text-sm text-[var(--color-accent)]">
-          <p className="font-semibold">Encryption isn&apos;t configured on this deployment.</p>
-          <p className="mt-1">
-            Set <code>PAYMENT_CREDS_ENCRYPTION_KEY</code> in Vercel (32 random
-            bytes, base64 — <code>openssl rand -base64 32</code>, a different
-            value per environment) and redeploy. Until then keys can&apos;t be
-            saved.
-          </p>
-        </div>
-      )}
 
       <p className="mb-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
         Nothing charges through Stripe yet — invoices are still marked paid by
@@ -187,9 +174,9 @@ export default async function PaymentSettingsPage() {
               </dl>
 
               <div className="space-y-4 border-t border-black/10 pt-4">
-                <SecretKeyForm mode={mode} disabled={!encryption} hasKey={!!c?.has_secret_key} />
-                {c?.has_secret_key && <ReverifyForm mode={mode} disabled={!encryption} />}
-                <WebhookSecretForm mode={mode} disabled={!encryption} hasSecret={!!c?.has_webhook_secret} />
+                <SecretKeyForm mode={mode} disabled={false} hasKey={!!c?.has_secret_key} />
+                {c?.has_secret_key && <ReverifyForm mode={mode} disabled={false} />}
+                <WebhookSecretForm mode={mode} disabled={false} hasSecret={!!c?.has_webhook_secret} />
               </div>
             </section>
           );

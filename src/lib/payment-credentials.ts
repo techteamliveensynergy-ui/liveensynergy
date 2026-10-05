@@ -1,26 +1,23 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Stripe credentials entered from the admin panel (docs/payments-email-
- * implementation-plan.md §1b, migration 0050).
+ * implementation-plan.md §1b; migrations 0050 + 0052).
  *
  * How keys stay non-leakable:
- *  - Encrypted here, before they reach the database: AES-256-GCM with a
- *    master key that lives only in Vercel (PAYMENT_CREDS_ENCRYPTION_KEY). The
- *    AAD binds each ciphertext to its mode + field + key version, so a value
- *    can't be swapped into another slot.
- *  - Write-only: nothing in this module returns a key to a caller that could
- *    pass it to a browser. The admin screen reads masked status through
- *    payment_credentials_status(), which never selects ciphertext.
+ *  - Stored in Supabase Vault (0052), which encrypts each secret with a key
+ *    Supabase manages outside the database — dumps and backups hold only
+ *    ciphertext, and there is nothing to configure.
+ *  - Write-only: the admin screen reads masked status through
+ *    payment_credentials_status(); plaintext comes back only through
+ *    payment_secret_key(), which only the service role (our server) may call.
  *  - Stripe errors are mapped to fixed messages; raw errors and request
  *    headers (which carry the key) are never logged.
  */
 
 export type PaymentMode = "test" | "live";
 export const PAYMENT_MODES: PaymentMode[] = ["test", "live"];
-export const KEY_VERSION = 1;
 
 export function isPaymentMode(v: unknown): v is PaymentMode {
   return v === "test" || v === "live";
@@ -68,56 +65,6 @@ export function parseWebhookSecret(
 export function maskKey(mode: PaymentMode, kind: string | null, last4: string | null): string {
   const prefix = kind === "restricted" ? "rk" : "sk";
   return `${prefix}_${mode}_••••${last4 ?? "????"}`;
-}
-
-// --- Encryption ---------------------------------------------------------------
-
-/** The 32-byte master key, or null when it isn't configured (or is malformed). */
-export function masterKey(): Buffer | null {
-  const raw = process.env.PAYMENT_CREDS_ENCRYPTION_KEY;
-  if (!raw) return null;
-  try {
-    const key = Buffer.from(raw, "base64");
-    return key.length === 32 ? key : null;
-  } catch {
-    return null;
-  }
-}
-
-export const isEncryptionConfigured = () => masterKey() !== null;
-
-export function aadFor(mode: PaymentMode, field: "secret_key" | "webhook_secret", version = KEY_VERSION) {
-  return `${mode}|${field}|${version}`;
-}
-
-/** AES-256-GCM. Output: `v1:` + base64(iv(12) ‖ tag(16) ‖ ciphertext). */
-export function encryptWithKey(plain: string, aad: string, key: Buffer): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  cipher.setAAD(Buffer.from(aad, "utf8"));
-  const ct = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `v1:${Buffer.concat([iv, tag, ct]).toString("base64")}`;
-}
-
-/** Throws on a wrong key, wrong AAD or any tampering (GCM authenticates). */
-export function decryptWithKey(blob: string, aad: string, key: Buffer): string {
-  if (!blob.startsWith("v1:")) throw new Error("unknown ciphertext version");
-  const buf = Buffer.from(blob.slice(3), "base64");
-  if (buf.length < 12 + 16 + 1) throw new Error("ciphertext too short");
-  const iv = buf.subarray(0, 12);
-  const tag = buf.subarray(12, 28);
-  const ct = buf.subarray(28);
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAAD(Buffer.from(aad, "utf8"));
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
-}
-
-export function encryptSecret(plain: string, aad: string): string {
-  const key = masterKey();
-  if (!key) throw new Error("PAYMENT_CREDS_ENCRYPTION_KEY is not configured");
-  return encryptWithKey(plain, aad, key);
 }
 
 // --- Stripe ---------------------------------------------------------------------
@@ -180,25 +127,17 @@ export async function verifyStripeKey(key: string): Promise<VerifyResult> {
 }
 
 /**
- * Decrypts the stored secret key for `mode`. Server-only: used to re-verify
- * now, and by Stripe invoicing later. Reads through the service role because
- * the table has no policies at all — not even admin read.
+ * Reads the stored secret key for `mode` out of Supabase Vault. Server-only:
+ * used to re-verify now, and by Stripe invoicing later. Goes through the
+ * service role because payment_secret_key() refuses every user session.
  */
 export async function getStripeSecretKey(mode: PaymentMode): Promise<string | null> {
-  const key = masterKey();
   const supabase = createServiceClient();
-  if (!key || !supabase) return null;
-
-  const { data } = await supabase
-    .from("payment_credentials")
-    .select("secret_key_ct, key_version")
-    .eq("mode", mode)
-    .maybeSingle<{ secret_key_ct: string | null; key_version: number }>();
-  if (!data?.secret_key_ct) return null;
-  try {
-    return decryptWithKey(data.secret_key_ct, aadFor(mode, "secret_key", data.key_version), key);
-  } catch {
-    // Wrong master key for this environment, or tampered data.
-    return null;
-  }
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("payment_secret_key", {
+    p_mode: mode,
+    p_field: "secret_key",
+  });
+  if (error || typeof data !== "string" || !data) return null;
+  return data;
 }
