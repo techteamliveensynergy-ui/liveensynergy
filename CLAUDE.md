@@ -175,6 +175,7 @@ code edit.
 | `enqueue_notification()` | Writes the in-app row and the `email_outbox` row together. |
 | `mark_invoice_paid()`, `waive_campaign_payment()` | The only two ways an `awaiting_payment` campaign reaches artists. Admin-only (checked inside), atomic: marking a package invoice paid opens its campaign in the same transaction; a waiver needs a written reason and is recorded on the campaign. The app never sets a campaign's status out of `awaiting_payment` itself (`setCampaignStatus` refuses; it can only close one). Backed by a `sponsored_events` insert trigger that refuses a sponsorship against an unpaid campaign, and by `campaigns` being admin-update-only under RLS (a brand could otherwise write its own `status`). |
 | `save_payment_secret_key()`, `save_payment_webhook_secret()`, `record_payment_verification()`, `set_payment_mode()`, `payment_credentials_status()`, `payment_settings_status()`, `payment_secret_key()` | Stripe credentials (0050, 0052). Keys are stored in **Supabase Vault** (encrypted by Supabase; nothing to configure); `payment_credentials` holds only the Vault id plus masked/verification facts, with no RLS policies and no grants. Admins write through the admin-checked save functions (each records its `payment_settings_audit` row in the same transaction) and read only masks; `set_payment_mode` refuses Live without a verified live key. Plaintext comes back only through `payment_secret_key()`, executable by the service role alone. |
+| `stripe_mark_invoice_paid()`, `stripe_mark_invoice_voided()`, `payment_active_mode()` | Stripe invoicing (0053). Called by `/api/webhooks/stripe/[mode]` with the service client — there is no admin session — after it has verified the signature and re-fetched the invoice from Stripe. `stripe_mark_invoice_paid` is `mark_invoice_paid()`'s atomic "paid + campaign opened" step, idempotent per Stripe invoice, and can record a payment without opening the campaign (a TEST payment while the platform is LIVE). Service-role only. |
 | `rate_limit_hit()` | Generic per-user throttle (0050), keyed on the caller's own `auth.uid()` so calling it directly can only throttle yourself. Used by the payment-settings and invoice-resend actions. |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
@@ -341,6 +342,8 @@ Path alias: `@/*` → `./src/*`.
 - `docs/survey-form-builder-design.md` — schema and admin drag-and-drop
   builder design for the (not yet built) survey system; Phase 3 of the plan
   above.
+- `docs/stripe-setup.md` — turning on Stripe invoicing (keys, webhook, payment
+  methods) and testing the full pay loop in Test mode.
 - `docs/payments-email-implementation-plan.md` — Stripe Invoicing (brand
   payments, admin-managed test/live credentials, webhooks), Resend email
   delivery, and the security/rate-limit design. Supersedes the "bank transfer

@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/profile";
 import { notify } from "@/lib/notifications";
-import { sendInvoice } from "@/lib/invoicing";
+import {
+  markStripeInvoicePaidOutOfBand,
+  resendStripeInvoice,
+  sendInvoice,
+  voidStripeInvoice,
+} from "@/lib/invoicing";
+import { StripeApiError } from "@/lib/stripe";
+import type { PaymentMode } from "@/lib/payment-credentials";
 import { INVOICE } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { draftCampaignInvoice } from "@/lib/billing-server";
@@ -16,7 +23,7 @@ import {
   snapshotBilling,
   type BillingFields,
 } from "@/lib/billing";
-import type { InvoiceLine } from "@/lib/types";
+import type { BillingSnapshot, InvoiceLine } from "@/lib/types";
 
 export interface InvoiceState {
   error?: string;
@@ -79,6 +86,16 @@ function invoiceLink(id: string): string {
     : "your Live·En·Synergy dashboard, under Campaigns";
 }
 
+/** Back to the invoice's admin page with a message in the red banner. */
+function failTo(id: string, message: string): never {
+  revalidateInvoiceViews(id);
+  redirect(`/dashboard/admin/invoices/${id}?error=${encodeURIComponent(message.slice(0, 300))}`);
+}
+
+function stripeMessage(err: unknown): string {
+  return err instanceof StripeApiError ? `Stripe: ${err.message}` : "Couldn't reach Stripe — nothing was changed.";
+}
+
 function plusDays(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);
@@ -93,7 +110,7 @@ export async function sendInvoiceAction(formData: FormData) {
   const { data: invoice } = await supabase
     .from("invoices")
     .select(
-      "reference, status, amount_gbp, due_date, lines, subtotal_gbp, vat_gbp, brands(profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number)",
+      "reference, status, amount_gbp, due_date, lines, stripe_invoice_id, stripe_mode, brands(id, profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -102,9 +119,9 @@ export async function sendInvoiceAction(formData: FormData) {
       amount_gbp: number;
       due_date: string | null;
       lines: InvoiceLine[] | null;
-      subtotal_gbp: number | null;
-      vat_gbp: number | null;
-      brands: ({ profile_id: string } & BillingFields) | null;
+      stripe_invoice_id: string | null;
+      stripe_mode: PaymentMode | null;
+      brands: ({ id: string; profile_id: string } & BillingFields) | null;
     }>();
   if (!invoice?.brands || invoice.status !== "draft") return;
 
@@ -113,21 +130,26 @@ export async function sendInvoiceAction(formData: FormData) {
   if (!isBillingComplete(invoice.brands)) return;
   const billing = snapshotBilling(invoice.brands);
 
-  const dueDate = invoice.due_date ?? plusDays(INVOICE.paymentTermsDays);
-
+  // Stripe when the active mode has a verified key; otherwise a bank-transfer
+  // invoice as before. A Stripe failure comes back to the page — it used to
+  // fail silently.
   const result = await sendInvoice({
+    supabase,
     invoiceId: id,
-    brandEmail: billing.email as string,
-    brandName: billing.legal_name as string,
-    amountGbp: Number(invoice.amount_gbp),
     reference: invoice.reference,
-    dueDate,
+    brandId: invoice.brands.id,
     billing,
     lines: invoice.lines,
-    subtotalGbp: invoice.subtotal_gbp != null ? Number(invoice.subtotal_gbp) : null,
-    vatGbp: invoice.vat_gbp != null ? Number(invoice.vat_gbp) : null,
+    totalGbp: Number(invoice.amount_gbp),
+    existingStripeInvoiceId: invoice.stripe_invoice_id,
+    existingStripeMode: invoice.stripe_mode,
   });
-  if (!result.ok) return;
+  if (!result.ok) failTo(id, result.error);
+
+  const dueDate =
+    (result.via === "stripe" ? result.dueDate : null) ??
+    invoice.due_date ??
+    plusDays(INVOICE.paymentTermsDays);
 
   // Conditional on still being a draft, so a double-click can't send (and
   // notify) twice; the billing details are frozen onto the invoice here.
@@ -135,11 +157,20 @@ export async function sendInvoiceAction(formData: FormData) {
     .from("invoices")
     .update({
       status: "sent",
-      sent_at: result.result.sentAt,
+      sent_at: result.sentAt,
       sent_by: userId,
-      external_invoice_ref: result.result.externalInvoiceRef,
+      external_invoice_ref: result.externalInvoiceRef,
       billing_snapshot: billing,
       due_date: dueDate,
+      ...(result.via === "stripe"
+        ? {
+            stripe_mode: result.mode,
+            stripe_invoice_id: result.stripeInvoiceId,
+            stripe_invoice_number: result.externalInvoiceRef,
+            hosted_invoice_url: result.hostedInvoiceUrl,
+            invoice_pdf_url: result.invoicePdfUrl,
+          }
+        : {}),
     })
     .eq("id", id)
     .eq("status", "draft")
@@ -147,6 +178,8 @@ export async function sendInvoiceAction(formData: FormData) {
     .maybeSingle();
   if (!sent) return;
 
+  // Stripe emails its own invoice with the pay button; ours still goes too —
+  // it links to the invoice page, which carries "Pay online" when hosted.
   await notify({
     eventKey: "invoice.sent",
     recipientProfileId: invoice.brands.profile_id,
@@ -193,6 +226,21 @@ export async function markInvoicePaid(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
   if (!id) return;
+
+  // Paid some other way (e.g. a bank transfer straight to us): tell Stripe
+  // first, so it stops sending the brand reminders for it.
+  const { data: stripeRef } = await supabase
+    .from("invoices")
+    .select("stripe_invoice_id, stripe_mode")
+    .eq("id", id)
+    .maybeSingle<{ stripe_invoice_id: string | null; stripe_mode: PaymentMode | null }>();
+  if (stripeRef?.stripe_invoice_id && stripeRef.stripe_mode) {
+    try {
+      await markStripeInvoicePaidOutOfBand(stripeRef.stripe_mode, stripeRef.stripe_invoice_id);
+    } catch (err) {
+      failTo(id, stripeMessage(err));
+    }
+  }
 
   // One atomic database call: marks the invoice paid AND, for a campaign's
   // package invoice, opens the campaign — so "paid but still hidden" can't
@@ -248,9 +296,19 @@ export async function cancelInvoice(formData: FormData) {
 
   const { data: before } = await supabase
     .from("invoices")
-    .select("status")
+    .select("status, stripe_invoice_id, stripe_mode")
     .eq("id", id)
-    .maybeSingle<{ status: string }>();
+    .maybeSingle<{ status: string; stripe_invoice_id: string | null; stripe_mode: PaymentMode | null }>();
+
+  // Void it in Stripe first: otherwise the brand could still pay a "cancelled"
+  // invoice from Stripe's email. Refused if Stripe says it's already paid.
+  if (before?.stripe_invoice_id && before.stripe_mode && before.status !== "paid" && before.status !== "cancelled") {
+    try {
+      await voidStripeInvoice(before.stripe_mode, before.stripe_invoice_id);
+    } catch (err) {
+      failTo(id, stripeMessage(err));
+    }
+  }
 
   // A paid invoice can't be cancelled (that would be a refund, not a cancel),
   // and cancelling is what frees the campaign to be re-drafted.
@@ -263,7 +321,9 @@ export async function cancelInvoice(formData: FormData) {
       cancel_reason: reason,
     })
     .eq("id", id)
-    .in("status", ["draft", "sent", "overdue"])
+    // …or already cancelled by Stripe's "voided" webhook racing this update
+    // (that one has no cancelled_by), so the admin's reason still lands.
+    .or("status.in.(draft,sent,overdue),and(status.eq.cancelled,cancelled_by.is.null)")
     .select("reference, brands(profile_id)")
     .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
 
@@ -305,7 +365,7 @@ export async function resendInvoice(formData: FormData) {
   const { data: inv } = await supabase
     .from("invoices")
     .select(
-      "reference, status, amount_gbp, due_date, resend_count, last_resent_at, billing_snapshot, brands(profile_id, billing_email)",
+      "reference, status, amount_gbp, due_date, resend_count, last_resent_at, billing_snapshot, stripe_invoice_id, stripe_mode, brands(id, profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -315,8 +375,10 @@ export async function resendInvoice(formData: FormData) {
       due_date: string | null;
       resend_count: number;
       last_resent_at: string | null;
-      billing_snapshot: { email: string | null } | null;
-      brands: { profile_id: string; billing_email: string | null } | null;
+      billing_snapshot: BillingSnapshot | null;
+      stripe_invoice_id: string | null;
+      stripe_mode: PaymentMode | null;
+      brands: ({ id: string; profile_id: string } & BillingFields) | null;
     }>();
   if (!inv?.brands) return fail("Invoice not found.");
   if (!isUnpaidStatus(inv.status)) return fail("Only an unpaid invoice can be resent.");
@@ -352,6 +414,22 @@ export async function resendInvoice(formData: FormData) {
     .select("id")
     .maybeSingle();
   if (!claimed) return fail("Someone else just resent this invoice.");
+
+  // Stripe re-emails its invoice (with the pay button) to the customer's
+  // email, which is refreshed to the brand's current billing email first.
+  if (inv.stripe_invoice_id && inv.stripe_mode) {
+    try {
+      await resendStripeInvoice(
+        supabase,
+        inv.stripe_mode,
+        inv.stripe_invoice_id,
+        inv.brands.id,
+        { ...snapshotBilling(inv.brands), email: toEmail },
+      );
+    } catch (err) {
+      return fail(stripeMessage(err));
+    }
+  }
 
   await notify({
     eventKey: "invoice.reminder",

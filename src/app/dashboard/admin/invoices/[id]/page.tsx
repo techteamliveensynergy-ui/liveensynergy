@@ -14,6 +14,7 @@ import {
   type BillingFields,
 } from "@/lib/billing";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { stripeReadiness } from "@/lib/invoicing";
 import type { BillingSnapshot, InvoiceKind, InvoiceLine } from "@/lib/types";
 import {
   sendInvoiceAction,
@@ -32,6 +33,10 @@ interface Row {
   last_resent_at: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  stripe_mode: "test" | "live" | null;
+  stripe_invoice_id: string | null;
+  hosted_invoice_url: string | null;
+  invoice_pdf_url: string | null;
   reference: string;
   kind: InvoiceKind;
   amount_gbp: number;
@@ -104,6 +109,8 @@ export default async function InvoiceDetailPage({
   const unpaid = isUnpaidStatus(invoice.status);
   // Resend goes to the brand's CURRENT billing email (they may have fixed it).
   const resendTo = invoice.brands?.billing_email ?? snapshot?.email ?? null;
+  // Only drafts need to know where Send will go.
+  const stripe = invoice.status === "draft" ? await stripeReadiness(supabase) : null;
 
   return (
     <div>
@@ -169,6 +176,29 @@ export default async function InvoiceDetailPage({
         </p>
       )}
 
+      {invoice.status === "draft" && (
+        <p className="mb-4 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink)]">
+          {stripe?.ready ? (
+            <>
+              <span className="font-semibold">
+                Sending goes through Stripe ({stripe.mode === "live" ? "LIVE — real money" : "Test mode"}).
+              </span>{" "}
+              Stripe emails the brand&apos;s billing address a page to pay by
+              card or bank transfer, and this invoice is marked paid
+              automatically when they do.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">Stripe isn&apos;t set up for the active mode</span>{" "}
+              — sending issues a bank-transfer invoice you mark paid by hand.{" "}
+              <Link href="/dashboard/admin/settings/payments" className="underline">
+                Payment settings
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
       {invoice.status === "draft" && missing.length > 0 && (
         <div className="mb-4 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
           <p className="font-semibold">
@@ -228,8 +258,32 @@ export default async function InvoiceDetailPage({
           </div>
           <div>
             <dt className="field-label">External reference</dt>
-            <dd className="text-sm">{invoice.external_invoice_ref ?? "—"}</dd>
+            <dd className="text-sm">
+              {invoice.external_invoice_ref ?? "—"}
+              {invoice.stripe_mode && (
+                <span className="chip ml-2 text-xs">
+                  Stripe · {invoice.stripe_mode === "live" ? "Live" : "Test"}
+                </span>
+              )}
+            </dd>
           </div>
+          {(invoice.hosted_invoice_url || invoice.invoice_pdf_url) && (
+            <div className="sm:col-span-2">
+              <dt className="field-label">Stripe</dt>
+              <dd className="flex flex-wrap gap-3 text-sm">
+                {invoice.hosted_invoice_url && (
+                  <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] underline">
+                    Payment page
+                  </a>
+                )}
+                {invoice.invoice_pdf_url && (
+                  <a href={invoice.invoice_pdf_url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand)] underline">
+                    PDF
+                  </a>
+                )}
+              </dd>
+            </div>
+          )}
         </dl>
 
         <div className="mt-6 border-t border-black/10 pt-4">
@@ -275,6 +329,9 @@ export default async function InvoiceDetailPage({
         {invoice.kind === "campaign_package" &&
           (invoice.status === "sent" || invoice.status === "overdue") && (
             <p className="mt-6 text-xs text-[var(--color-ink-soft)]">
+              {invoice.stripe_invoice_id
+                ? "Paid through Stripe, this is marked paid automatically. Use Mark paid only if the money arrived another way — Stripe is told too, so it stops reminding the brand. "
+                : ""}
               Marking this paid also opens the campaign to artists (if it is
               still awaiting payment) and tells the brand.
             </p>
@@ -313,7 +370,11 @@ export default async function InvoiceDetailPage({
                   name="reason"
                   rows={2}
                   className="textarea text-sm"
-                  placeholder="Reason (optional — shown to the brand if they already received it)"
+                  placeholder={
+                    invoice.stripe_invoice_id
+                      ? "Reason (optional — shown to the brand). Also voids it in Stripe."
+                      : "Reason (optional — shown to the brand if they already received it)"
+                  }
                 />
                 <button type="submit" className="btn btn-ghost text-sm text-[var(--color-accent)]">
                   Cancel this invoice
