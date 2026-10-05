@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { netForCampaign, SPONSORED_ASSET_SLOTS } from "@/lib/constants";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { createServiceClient } from "@/lib/supabase/service";
 import { uploadImage, uploadPrivateFile } from "@/lib/storage";
 import { DEFAULT_TIMEZONE, eventStartInstant } from "@/lib/event-time";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
@@ -423,14 +424,34 @@ export async function contactSupport(formData: FormData) {
   redirect(`/dashboard/messages?c=${conversationId}&notice=support`);
 }
 
+/** The other party's profile (for their email) isn't readable under the caller's RLS. */
+function completionNotifyOpts() {
+  const client = createServiceClient();
+  return client ? { client } : {};
+}
+
 export async function markCompleted(formData: FormData) {
   const { supabase } = await requireUser();
   const id = str(formData.get("id"));
   if (!id) return;
-  await supabase
+  const { data: done } = await supabase
     .from("sponsored_events")
     .update({ status: "completed" })
-    .eq("id", id);
+    .eq("id", id)
+    .neq("status", "completed")
+    .select("name, artist_profile_id, brands(profile_id)")
+    .maybeSingle<{ name: string; artist_profile_id: string | null; brands: { profile_id: string } | null }>();
+  if (done) {
+    for (const recipient of [done.brands?.profile_id, done.artist_profile_id]) {
+      if (!recipient) continue;
+      await notify({
+        eventKey: "sponsorship.completed",
+        recipientProfileId: recipient,
+        link: `/dashboard/sponsored/${id}`,
+        variables: { event_name: done.name },
+      }, completionNotifyOpts());
+    }
+  }
   revalidatePath(`/dashboard/sponsored/${id}`);
   revalidatePath("/dashboard/sponsored");
 }

@@ -772,14 +772,29 @@ export async function adminUpdateParticipation(formData: FormData) {
           : netSponsorshipBudget(ev?.budget_gbp ?? null);
 
       if (current != null) {
+        const remaining = roundMoney(Math.max(0, current - roundMoney(amount)));
         await supabase
           .from("sponsored_events")
-          .update({
-            remaining_budget_gbp: roundMoney(
-              Math.max(0, current - roundMoney(amount)),
-            ),
-          })
+          .update({ remaining_budget_gbp: remaining })
           .eq("id", eventId);
+
+        // Tell the brand once, as the pool crosses below 10% of its net budget.
+        const net = netSponsorshipBudget(ev?.budget_gbp ?? null);
+        if (net != null && net > 0 && current >= net * 0.1 && remaining < net * 0.1) {
+          const { data: owner } = await supabase
+            .from("sponsored_events")
+            .select("name, brands(profile_id)")
+            .eq("id", eventId)
+            .maybeSingle<{ name: string; brands: { profile_id: string } | null }>();
+          if (owner?.brands?.profile_id) {
+            await notify({
+              eventKey: "sponsorship.budget_low",
+              recipientProfileId: owner.brands.profile_id,
+              link: `/dashboard/sponsored/${eventId}`,
+              variables: { event_name: owner.name, remaining_budget: `£${remaining.toFixed(2)}` },
+            });
+          }
+        }
       }
     }
   }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
@@ -77,6 +78,7 @@ export default async function AdminCampaignsPage({
     { data: suggestedRows },
     { count: pendingIntakeCount },
     { data: invoiceRows },
+    { data: orderFormRows },
   ] =
     await Promise.all([
       supabase
@@ -108,7 +110,10 @@ export default async function AdminCampaignsPage({
         .select("id, campaign_id, status, reference, due_date")
         .eq("kind", "campaign_package")
         .neq("status", "cancelled"),
+      supabase.from("campaign_order_forms").select("campaign_id, status, reference"),
     ]);
+  const orderForms = (orderFormRows ?? []) as { campaign_id: string; status: string; reference: string }[];
+  const orderFormFor = (campaignId: string) => orderForms.find((f) => f.campaign_id === campaignId);
 
   let campaigns = (campaignRows ?? []) as Row[];
   const listings = ((listingRows ?? []) as {
@@ -315,6 +320,14 @@ export default async function AdminCampaignsPage({
                       className="btn btn-ghost text-sm"
                     >
                       Edit
+                    </Link>
+                    <Link
+                      href={`/dashboard/admin/campaigns/${c.id}/order-form`}
+                      className="btn btn-ghost text-sm"
+                    >
+                      {orderFormFor(c.id)
+                        ? `Order form · ${ORDER_FORM_STATUS_LABELS[orderFormFor(c.id)!.status as OrderFormStatus]}`
+                        : "Create order form"}
                     </Link>
                     {c.status === "awaiting_payment" && (
                       <details className="w-64 text-left">

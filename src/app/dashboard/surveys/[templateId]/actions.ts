@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isSurveyClosedError } from "@/lib/survey-capacity";
 import { requireRole } from "@/lib/profile";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD, SURVEY_RATE_LIMITS } from "@/lib/survey-abuse-constants";
@@ -120,7 +121,10 @@ export async function submitSurveyResponse(
     p_started_at: startedAt,
     p_answers: answers,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    if (isSurveyClosedError(error.message)) redirect("/dashboard/participations?notice=survey-closed");
+    return { error: error.message };
+  }
 
   const outcome = data as SubmitOutcome;
   if (outcome.outcome === "not_eligible") {

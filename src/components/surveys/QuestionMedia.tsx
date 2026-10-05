@@ -43,7 +43,7 @@ export function QuestionMedia({ config, children }: { config: SurveyQuestionConf
   if (position === "left" || position === "right") {
     return (
       <div className={`flex flex-col gap-4 sm:flex-row ${position === "right" ? "sm:flex-row-reverse" : ""}`}>
-        <MediaBlock config={config} className="max-h-72 w-full sm:max-h-none sm:w-2/5" />
+        <MediaBlock config={config} className="max-h-[26rem] w-full sm:max-h-none sm:w-2/5" />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
     );
@@ -51,9 +51,9 @@ export function QuestionMedia({ config, children }: { config: SurveyQuestionConf
 
   return (
     <>
-      {position === "top" && <MediaBlock config={config} className="mb-4 max-h-72 w-full" />}
+      {position === "top" && <MediaBlock config={config} className="mb-4 max-h-[26rem] w-full" />}
       {children}
-      {position === "bottom" && <MediaBlock config={config} className="mt-4 max-h-72 w-full" />}
+      {position === "bottom" && <MediaBlock config={config} className="mt-4 max-h-[26rem] w-full" />}
     </>
   );
 }

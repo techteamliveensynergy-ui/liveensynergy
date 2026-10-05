@@ -96,7 +96,7 @@ export function SteppedQuestions({
         </span>
       </div>
 
-      <div className="card p-5" data-question-id={q.id} style={questionTypographyStyle(q.config)}>
+      <div className="card p-6 sm:p-10" data-question-id={q.id} style={questionTypographyStyle(q.config)}>
         <QuestionMedia config={q.config}>
           <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
             <QuestionField

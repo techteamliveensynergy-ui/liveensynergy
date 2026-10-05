@@ -61,6 +61,19 @@ function brandingFields(formData: FormData) {
   };
 }
 
+/**
+ * Response cap (GitHub #8, 0056): expected participants + a buffer %. Blank
+ * expected = fall back to the campaign order form's figure (or no cap).
+ */
+function capFields(formData: FormData) {
+  const expected = Number(String(formData.get("expected_participants") ?? "").trim());
+  const buffer = Number(String(formData.get("response_buffer_pct") ?? "").trim());
+  return {
+    expected_participants: Number.isInteger(expected) && expected > 0 ? expected : null,
+    response_buffer_pct: Number.isInteger(buffer) && buffer >= 0 && buffer <= 100 ? buffer : 10,
+  };
+}
+
 export async function createSurveyTemplate(
   _prev: SurveyState,
   formData: FormData,
@@ -83,6 +96,7 @@ export async function createSurveyTemplate(
       description: str(formData.get("description")),
       is_public: isPublic,
       show_intro_gate: formData.get("show_intro_gate") === "on",
+      ...capFields(formData),
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
       created_by: userId,
@@ -119,6 +133,7 @@ export async function updateSurveyTemplate(
       description: str(formData.get("description")),
       is_public: isPublic,
       show_intro_gate: formData.get("show_intro_gate") === "on",
+      ...capFields(formData),
       intro_message: str(formData.get("intro_message")),
       thank_you_message: str(formData.get("thank_you_message")),
       ...brandingFields(formData),

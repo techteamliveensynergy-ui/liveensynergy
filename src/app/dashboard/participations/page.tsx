@@ -144,6 +144,11 @@ export default async function ParticipationsPage({
           ✓ Thanks — your survey response has been recorded.
         </p>
       )}
+      {notice === "survey-closed" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          That survey has now closed — it has received all the responses it needs. Thank you for your interest.
+        </p>
+      )}
       {notice === "survey-already-submitted" && (
         <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
           You&apos;d already completed that survey.

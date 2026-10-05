@@ -33,6 +33,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
       icon: "🔎",
     },
     { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
+    { href: "/dashboard/campaign-briefs", label: "Campaign briefs", icon: "📋" },
   ],
   event: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },
@@ -43,6 +44,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
       icon: "🔎",
     },
     { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
+    { href: "/dashboard/campaign-briefs", label: "Campaign briefs", icon: "📋" },
   ],
   audience: [
     { href: "/dashboard/discover", label: "Discover events", icon: "🔎" },

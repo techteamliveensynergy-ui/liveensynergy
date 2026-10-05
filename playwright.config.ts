@@ -117,6 +117,23 @@ export default defineConfig({
       },
     },
     {
+      // 5 Oct 2026 briefing video: order forms (#9), survey cap (#8), bigger
+      // surveys (#10), refunds, invoice details, notifications. Local build
+      // only; not read-only (creates a campaign, order form, Stripe TEST
+      // invoice and a refund). See tests/standup-1005-walkthrough.spec.ts.
+      name: "s1005-video",
+      testMatch: /standup-1005-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "http://localhost:3000",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 150 },
+      },
+    },
+    {
       // Full walkthrough: pre-event (public) + post-event (attendee-only)
       // surveys, the admin builder's full customization surface, and a tour
       // of the rest of the admin console. Not deployed yet — local build

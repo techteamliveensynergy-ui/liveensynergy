@@ -1,3 +1,4 @@
+import { InvoiceDetailsForm } from "./InvoiceDetailsForm";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -46,7 +47,7 @@ export default async function PaymentSettingsPage() {
   await requireRole(["admin"]);
   const supabase = await createClient();
 
-  const [credResult, settingsResult, auditResult] = await Promise.all([
+  const [credResult, settingsResult, auditResult, contactResult] = await Promise.all([
     supabase.rpc("payment_credentials_status"),
     supabase.rpc("payment_settings_status"),
     supabase
@@ -54,7 +55,13 @@ export default async function PaymentSettingsPage() {
       .select("action, mode, detail, created_at, profiles(full_name)")
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase.rpc("invoice_contact_details"),
   ]);
+  const contact = ((contactResult.data ?? []) as {
+    whatsapp: string | null;
+    bank_details: string | null;
+    contact_note: string | null;
+  }[])[0];
 
   if (credResult.error || settingsResult.error) {
     return (
@@ -188,6 +195,18 @@ export default async function PaymentSettingsPage() {
         <div className="mt-3">
           <ModeSwitchForm current={activeMode} liveReady={liveReady} />
         </div>
+      </section>
+
+      <section className="card mt-6 p-6">
+        <h2 className="font-display text-lg font-semibold">Invoice contact &amp; bank details</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--color-ink-soft)]">
+          Shown on every invoice and in invoice emails, so a brand knows how to reach the team and pay by transfer.
+        </p>
+        <InvoiceDetailsForm
+          whatsapp={contact?.whatsapp ?? null}
+          bankDetails={contact?.bank_details ?? null}
+          contactNote={contact?.contact_note ?? null}
+        />
       </section>
 
       <section className="mt-6">

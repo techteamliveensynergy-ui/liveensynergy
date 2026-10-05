@@ -758,6 +758,9 @@ export interface SurveyTemplate {
    *  button — instead of the inline intro_message card + inline T&Cs
    *  checkboxes. Defaults true for every template. */
   show_intro_gate: boolean;
+  /** Response cap (0056): stop at this many + `response_buffer_pct`%. Null = order form figure / no cap. */
+  expected_participants: number | null;
+  response_buffer_pct: number;
   /** All questions on one scrolling page (default), or one at a time with
    *  Back/Next navigation, Typeform-style. */
   layout_mode: SurveyTemplateLayoutMode;

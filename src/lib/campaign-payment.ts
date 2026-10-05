@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { notify } from "@/lib/notifications";
+import { notify, notifyAdmins } from "@/lib/notifications";
 
 /**
  * Tells a brand its campaign has opened to artists — after its invoice was
@@ -15,9 +15,9 @@ export async function notifyCampaignOpened(
 ): Promise<void> {
   const { data } = await supabase
     .from("campaigns")
-    .select("reference, brands(profile_id)")
+    .select("reference, budget_gbp, brands(profile_id)")
     .eq("id", campaignId)
-    .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
+    .maybeSingle<{ reference: string; budget_gbp: number | null; brands: { profile_id: string } | null }>();
   if (!data?.brands?.profile_id) return;
 
   await notify({
@@ -26,4 +26,17 @@ export async function notifyCampaignOpened(
     link: "/dashboard/campaigns",
     variables: { campaign_reference: data.reference },
   }, { client: supabase }); // the Stripe webhook calls this with a service client
+
+  // Now it's visible to artists, it needs an admin to line up events.
+  await notifyAdmins(
+    {
+      eventKey: "admin.campaign_request",
+      link: "/dashboard/admin/campaigns?matched=no",
+      variables: {
+        campaign_reference: data.reference,
+        budget: data.budget_gbp != null ? `£${Number(data.budget_gbp).toLocaleString("en-GB")}` : "not set",
+      },
+    },
+    { client: supabase },
+  );
 }

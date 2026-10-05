@@ -21,6 +21,7 @@ import {
   markInvoicePaid,
   cancelInvoice,
   resendInvoice,
+  refundInvoice,
   draftInvoiceForCampaign,
 } from "../actions";
 
@@ -81,7 +82,7 @@ export default async function InvoiceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; resent?: string }>;
+  searchParams: Promise<{ error?: string; resent?: string; refunded?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -96,6 +97,33 @@ export default async function InvoiceDetailPage({
     .eq("id", id)
     .maybeSingle<Row>();
   if (!invoice) notFound();
+
+  // Refunds (0055) and the campaign's order form (0054) — the invoice should
+  // follow the brand's approval, so say so when it hasn't happened yet.
+  const [{ data: refundRows }, { data: orderForm }] = await Promise.all([
+    supabase
+      .from("invoice_refunds")
+      .select("amount_gbp, reason, method, created_at, profiles(full_name)")
+      .eq("invoice_id", id)
+      .order("created_at"),
+    invoice.campaign_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("reference, status")
+          .eq("campaign_id", invoice.campaign_id)
+          .maybeSingle<{ reference: string; status: string }>()
+      : Promise.resolve({ data: null }),
+  ]);
+  const refunds = (refundRows ?? []) as unknown as {
+    amount_gbp: number;
+    reason: string;
+    method: string;
+    created_at: string;
+    profiles: { full_name: string | null } | null;
+  }[];
+  const refundedTotal = Number((invoice as unknown as { refunded_gbp?: number }).refunded_gbp ?? 0);
+  const refundable = Math.max(0, Number(invoice.amount_gbp) - refundedTotal);
+  const paidSource = (invoice as unknown as { paid_source?: string | null }).paid_source ?? null;
 
   const missing = missingBillingFields(invoice.brands);
   const canSend = invoice.status === "draft" && missing.length === 0;
@@ -137,6 +165,17 @@ export default async function InvoiceDetailPage({
       {sp.error && (
         <p role="alert" className="mb-4 rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
           {sp.error}
+        </p>
+      )}
+      {sp.refunded && (
+        <p role="status" className="mb-4 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          Refund recorded and the brand has been told.
+        </p>
+      )}
+      {invoice.status === "draft" && orderForm && orderForm.status !== "approved" && (
+        <p className="mb-4 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm">
+          Order form {orderForm.reference} hasn&apos;t been approved by the brand yet. This invoice is sent
+          automatically when they approve it — send it by hand only if you&apos;ve agreed that with them.
         </p>
       )}
       {sp.resent && (
@@ -383,6 +422,54 @@ export default async function InvoiceDetailPage({
             </details>
           )}
         </div>
+
+        {invoice.status === "paid" && (
+          <div className="mt-4 border-t border-black/10 pt-4">
+            <p className="field-label">Refunds</p>
+            {refunds.length > 0 ? (
+              <ul className="mb-3 space-y-1 text-sm">
+                {refunds.map((r, i) => (
+                  <li key={i}>
+                    <span className="font-semibold">{formatGbp(r.amount_gbp)}</span> · {r.reason} ·{" "}
+                    {r.method === "stripe" ? "through Stripe" : "recorded by hand"} · {formatDateTime(r.created_at)}
+                    {r.profiles?.full_name ? ` · ${r.profiles.full_name}` : ""}
+                  </li>
+                ))}
+                <li className="text-[var(--color-ink-soft)]">
+                  Refunded {formatGbp(refundedTotal)} of {formatGbp(invoice.amount_gbp)}.
+                </li>
+              </ul>
+            ) : (
+              <p className="mb-3 text-sm text-[var(--color-ink-soft)]">No refunds.</p>
+            )}
+            {refundable > 0 && (
+              <details>
+                <summary className="btn btn-ghost cursor-pointer text-sm">Refund…</summary>
+                <form action={refundInvoice} className="mt-2 grid gap-3 rounded-xl border border-black/10 p-4 sm:grid-cols-3">
+                  <input type="hidden" name="id" value={invoice.id} />
+                  <div>
+                    <label className="field-label" htmlFor="amount_gbp">Amount (max {formatGbp(refundable)})</label>
+                    <input id="amount_gbp" name="amount_gbp" inputMode="decimal" className="input" required />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="field-label" htmlFor="reason">Reason (the brand sees this)</label>
+                    <input id="reason" name="reason" className="input" required placeholder="e.g. Event postponed — 90% refund agreed" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                    <input type="checkbox" name="manual" defaultChecked={paidSource !== "stripe"} disabled={paidSource !== "stripe"} />
+                    {paidSource === "stripe"
+                      ? "Already refunded outside Stripe — just record it"
+                      : "Paid outside Stripe, so this records a refund made by bank transfer"}
+                  </label>
+                  {paidSource !== "stripe" && <input type="hidden" name="manual" value="on" />}
+                  <div className="sm:text-right">
+                    <button type="submit" className="btn btn-primary text-sm">Issue refund</button>
+                  </div>
+                </form>
+              </details>
+            )}
+          </div>
+        )}
 
         {unpaid && (
           <div className="mt-4 border-t border-black/10 pt-4">

@@ -1,5 +1,7 @@
 "use server";
 
+import { notify } from "@/lib/notifications";
+import { createServiceClient } from "@/lib/supabase/service";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +14,17 @@ async function requireUser() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
   return { supabase, userId: user.id };
+}
+
+/**
+ * notify() reads the recipient's email from their profile — which the
+ * sender's own session can't see under RLS when the recipient is someone
+ * else (an audience member notifying the event's artist). The server's
+ * service client can; without it the in-app notice still lands.
+ */
+function serviceOpts() {
+  const client = createServiceClient();
+  return client ? { client } : {};
 }
 
 function str(v: FormDataEntryValue | null): string | null {
@@ -33,11 +46,24 @@ export async function uploadTicketProof(formData: FormData) {
     redirect("/dashboard/participations?notice=upload-failed");
   }
 
-  await supabase
+  const { data: uploaded } = await supabase
     .from("participations")
     .update({ ticket_proof_url: path, status: "ticket_uploaded" })
     .eq("id", id)
-    .eq("audience_profile_id", userId);
+    .eq("audience_profile_id", userId)
+    .select("sponsored_events(id, name, artist_profile_id)")
+    .maybeSingle<{ sponsored_events: { id: string; name: string; artist_profile_id: string | null } | null }>();
+
+  // The artist / organiser running the event reviews ticket proofs.
+  const ev = uploaded?.sponsored_events;
+  if (ev?.artist_profile_id) {
+    await notify({
+      eventKey: "participant.proof_uploaded",
+      recipientProfileId: ev.artist_profile_id,
+      link: `/dashboard/sponsored/${ev.id}`,
+      variables: { event_name: ev.name },
+    }, serviceOpts());
+  }
 
   revalidatePath("/dashboard/participations");
   redirect("/dashboard/participations?notice=upload-success");
