@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacity } from "@/lib/survey-capacity";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/Logo";
 import { formatDateTime } from "@/lib/format";
@@ -12,7 +13,7 @@ export const metadata = { title: "Survey" };
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--color-mist)] px-4 py-10">
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-5xl">
         <div className="mb-8 flex justify-center">
           <Link href="/">
             <Logo />
@@ -70,6 +71,10 @@ export default async function PublicSurveyPage({
     );
   }
 
+  // Response cap (#8): checked up front so nobody fills in a form that can't
+  // be submitted. Someone who already answered still sees "already completed".
+  const full = (await surveyCapacity(supabase, templateId))?.is_full ?? false;
+
   let event: PublicSurveyEvent | null = null;
   if (tpl.campaign_id) {
     // A campaign can carry several sponsored_events rows (withdrawn
@@ -106,6 +111,14 @@ export default async function PublicSurveyPage({
               title={`✓ You've already completed "${tpl.title}"`}
               body={`Submitted ${formatDateTime(existingResponse.submitted_at)}.`}
             />
+          </Shell>
+        );
+      }
+
+      if (full) {
+        return (
+          <Shell>
+            <StatusCard title={SURVEY_CLOSED_TITLE} body={SURVEY_CLOSED_BODY} />
           </Shell>
         );
       }
@@ -187,6 +200,14 @@ export default async function PublicSurveyPage({
   // account-creation time — this account has a random password the
   // respondent never saw, so the thank-you screen offers to set a real one.
   const needsPassword = Boolean((user?.user_metadata as Record<string, unknown> | undefined)?.survey_account);
+
+  if (full) {
+    return (
+      <Shell>
+        <StatusCard title={SURVEY_CLOSED_TITLE} body={SURVEY_CLOSED_BODY} />
+      </Shell>
+    );
+  }
 
   if (publicQuestions.length === 0) {
     return (

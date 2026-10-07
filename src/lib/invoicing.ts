@@ -24,8 +24,27 @@ export interface StripeReadiness {
   ready: boolean;
 }
 
-/** Which mode new invoices go to, and whether it has a verified key. Admin session. */
-export async function stripeReadiness(supabase: SupabaseClient): Promise<StripeReadiness | null> {
+/**
+ * Which mode new invoices go to, and whether it has a verified key. Works with
+ * an admin session (through the admin-checked status RPCs) or with the
+ * service-role client (a brand's order-form approval sends the invoice with no
+ * admin signed in — those tables have no policies, so it reads them directly).
+ */
+export async function stripeReadiness(
+  supabase: SupabaseClient,
+  opts: { asService?: boolean } = {},
+): Promise<StripeReadiness | null> {
+  if (opts.asService) {
+    const [{ data: settings }, { data: creds }] = await Promise.all([
+      supabase.from("payment_settings").select("active_mode").maybeSingle<{ active_mode: string }>(),
+      supabase.from("payment_credentials").select("mode, secret_key_vault_id, verified_at"),
+    ]);
+    if (!settings) return null;
+    const mode = (settings.active_mode === "live" ? "live" : "test") as PaymentMode;
+    const row = ((creds ?? []) as { mode: string; secret_key_vault_id: string | null; verified_at: string | null }[])
+      .find((c) => c.mode === mode);
+    return { mode, ready: !!row?.secret_key_vault_id && !!row.verified_at };
+  }
   const [settings, creds] = await Promise.all([
     supabase.rpc("payment_settings_status"),
     supabase.rpc("payment_credentials_status"),
@@ -49,6 +68,12 @@ export interface SendInvoiceInput {
   /** Set when an earlier attempt already created a Stripe invoice. */
   existingStripeInvoiceId: string | null;
   existingStripeMode: PaymentMode | null;
+  /** YYYY-MM-DD the brand must pay by (an order form's payment date). Default: 14 days. */
+  dueDate?: string | null;
+  /** Printed at the foot of the Stripe invoice: WhatsApp + bank-transfer details. */
+  footer?: string | null;
+  /** True when `supabase` is the service-role client (no admin session). */
+  asService?: boolean;
 }
 
 export type SendInvoiceResult =
@@ -68,8 +93,15 @@ export type SendInvoiceResult =
 
 const pence = (gbp: number) => Math.round(gbp * 100);
 
+/** Unix seconds for the end of a YYYY-MM-DD date (UK), or null if missing / not in the future. */
+function futureDueDate(date: string | null | undefined): number | null {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const ts = Math.floor(Date.parse(`${date}T23:00:00Z`) / 1000);
+  return ts > Math.floor(Date.now() / 1000) + 3600 ? ts : null;
+}
+
 export async function sendInvoice(input: SendInvoiceInput): Promise<SendInvoiceResult> {
-  const readiness = await stripeReadiness(input.supabase);
+  const readiness = await stripeReadiness(input.supabase, { asService: input.asService });
   if (!readiness?.ready) {
     return {
       ok: true,
@@ -158,7 +190,12 @@ async function createFinalizeAndSend(
   const created = await stripeRequest<StripeInvoice>(key, "POST", "/v1/invoices", {
     customer: customerId,
     collection_method: "send_invoice",
-    days_until_due: INVOICE.paymentTermsDays,
+    // A payment date agreed on the order form wins; Stripe rejects a due date
+    // in the past, so a stale one falls back to the standard terms.
+    ...(futureDueDate(input.dueDate)
+      ? { due_date: futureDueDate(input.dueDate) }
+      : { days_until_due: INVOICE.paymentTermsDays }),
+    ...(input.footer ? { footer: input.footer.slice(0, 5000) } : {}),
     currency: "gbp",
     auto_advance: false,
     pending_invoice_items_behavior: "exclude",
@@ -320,4 +357,40 @@ export async function resendStripeInvoice(
 
 export async function retrieveStripeInvoice(key: string, stripeInvoiceId: string) {
   return stripeRequest<StripeInvoice>(key, "GET", `/v1/invoices/${stripeInvoiceId}`);
+}
+
+/**
+ * Partial or full refund of a paid Stripe invoice (5 Oct: case-by-case amount
+ * entered by an admin). Issued as a credit note with one custom line for the
+ * amount, refunding it to the original payment — Stripe's own record of what
+ * was given back and why. `idempotencyKey` makes a double-click one refund.
+ */
+export async function refundStripeInvoice(
+  mode: PaymentMode,
+  stripeInvoiceId: string,
+  amountGbp: number,
+  reason: string,
+  idempotencyKey: string,
+): Promise<{ id: string }> {
+  const key = await keyFor(mode);
+  const amount = pence(amountGbp);
+  return stripeRequest<{ id: string }>(
+    key,
+    "POST",
+    "/v1/credit_notes",
+    {
+      invoice: stripeInvoiceId,
+      lines: [
+        {
+          type: "custom_line_item",
+          description: `Refund: ${reason}`.slice(0, 500),
+          quantity: 1,
+          unit_amount: amount,
+        },
+      ],
+      refund_amount: amount,
+      memo: reason.slice(0, 500),
+    },
+    idempotencyKey,
+  );
 }

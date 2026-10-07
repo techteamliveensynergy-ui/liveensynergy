@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { surveyCapacity } from "@/lib/survey-capacity";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
@@ -34,6 +35,12 @@ export default async function AdminSurveysPage() {
   ]);
 
   const templates = (templateRows ?? []) as unknown as Row[];
+  // Responses vs. the cap (#8, 0056) — one small RPC per survey.
+  const capacities = new Map(
+    await Promise.all(
+      templates.map(async (t) => [t.id, await surveyCapacity(supabase, t.id)] as const),
+    ),
+  );
   const questionCounts = new Map<string, number>();
   for (const q of questionRows ?? []) {
     questionCounts.set(q.template_id, (questionCounts.get(q.template_id) ?? 0) + 1);
@@ -79,6 +86,17 @@ export default async function AdminSurveysPage() {
                   {t.kind === "pre_event" ? "Pre-event" : "Post-event"} · {count}{" "}
                   question{count === 1 ? "" : "s"}
                 </p>
+                {(() => {
+                  const cap = capacities.get(t.id);
+                  if (!cap) return null;
+                  return (
+                    <p className={`mt-1 text-sm ${cap.is_full ? "font-semibold text-[var(--color-accent)]" : "text-[var(--color-ink-soft)]"}`}>
+                      {cap.responses} response{cap.responses === 1 ? "" : "s"}
+                      {cap.response_limit != null ? ` of ${cap.response_limit} (cap)` : " · no cap"}
+                      {cap.is_full ? " · closed" : ""}
+                    </p>
+                  );
+                })()}
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                   {t.campaigns
                     ? `${t.campaigns.reference}${t.campaigns.brands ? ` · ${t.campaigns.brands.brand_name}` : ""}`

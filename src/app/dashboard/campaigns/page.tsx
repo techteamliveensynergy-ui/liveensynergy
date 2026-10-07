@@ -11,6 +11,7 @@ import {
   type BillingFields,
 } from "@/lib/billing";
 import { withdrawCampaignIntake } from "./actions";
+import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 
 export const metadata = { title: "Campaigns" };
 
@@ -28,7 +29,7 @@ export default async function CampaignsPage() {
     .eq("profile_id", profile.id)
     .maybeSingle<{ id: string } & Partial<BillingFields>>();
 
-  const [{ data: intakeData }, { data: campaignData }, { data: invoiceData }] = brand
+  const [{ data: intakeData }, { data: campaignData }, { data: invoiceData }, { data: orderFormData }] = brand
     ? await Promise.all([
         supabase
           .from("campaign_intake_requests")
@@ -48,8 +49,24 @@ export default async function CampaignsPage() {
           .eq("brand_id", brand.id)
           .neq("status", "draft")
           .order("created_at", { ascending: false }),
+        // Order forms the team has sent (RLS hides drafts) — 0054.
+        supabase
+          .from("campaign_order_forms")
+          .select("id, reference, status, campaign_name, total_gbp, sent_at, approved_at, campaigns(reference)")
+          .eq("brand_id", brand.id)
+          .order("created_at", { ascending: false }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+  const orderForms = (orderFormData ?? []) as unknown as {
+    id: string;
+    reference: string;
+    status: OrderFormStatus;
+    campaign_name: string | null;
+    total_gbp: number | null;
+    sent_at: string | null;
+    approved_at: string | null;
+    campaigns: { reference: string } | null;
+  }[];
 
   const requests = (intakeData ?? []) as CampaignIntakeRequest[];
   const campaigns = (campaignData ?? []) as Campaign[];
@@ -69,6 +86,36 @@ export default async function CampaignsPage() {
           </Link>
         }
       />
+
+      {orderForms.length > 0 && (
+        <section className="mb-6 space-y-3">
+          {orderForms.map((f) => (
+            <Link
+              key={f.id}
+              href={`/order-forms/${f.id}`}
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4 ${
+                f.status === "sent"
+                  ? "bg-[var(--color-brand)] text-white"
+                  : "card"
+              }`}
+            >
+              <div>
+                <p className="font-semibold">
+                  {f.status === "sent" ? "Your order form is ready to review — " : "Order form "}
+                  {f.reference}
+                </p>
+                <p className={`text-sm ${f.status === "sent" ? "text-white/85" : "text-[var(--color-ink-soft)]"}`}>
+                  {f.campaign_name ?? "Campaign"} · {f.campaigns?.reference ?? ""}
+                  {f.total_gbp != null ? ` · ${formatGbp(f.total_gbp)} incl. VAT` : ""}
+                </p>
+              </div>
+              <span className={f.status === "sent" ? "btn btn-white text-sm" : "chip"}>
+                {f.status === "sent" ? "Review & approve →" : ORDER_FORM_STATUS_LABELS[f.status]}
+              </span>
+            </Link>
+          ))}
+        </section>
+      )}
 
       {needsBilling && (
         <div className="mb-6 rounded-2xl bg-[var(--color-gold)]/40 px-5 py-4 text-sm text-[var(--color-ink)]">

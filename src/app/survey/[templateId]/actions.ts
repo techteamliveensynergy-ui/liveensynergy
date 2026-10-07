@@ -1,5 +1,6 @@
 "use server";
 
+import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE } from "@/lib/survey-capacity";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -132,7 +133,12 @@ export async function submitPublicSurveyResponse(
     p_residency_confirmed: formData.get("residency_confirmed") === "on",
     p_consent_accepted: formData.get("consent_accepted") === "on",
   });
-  if (error) return { error: error.message };
+  if (error) {
+    if (isSurveyClosedError(error.message)) {
+      return { error: `${SURVEY_CLOSED_TITLE}. ${SURVEY_CLOSED_BODY}` };
+    }
+    return { error: error.message };
+  }
 
   const outcome = data as SubmitOutcome;
   if (outcome.outcome === "not_eligible") {

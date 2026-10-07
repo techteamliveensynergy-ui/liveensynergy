@@ -187,6 +187,34 @@ export function SurveyTemplateForm({
           </label>
         )}
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Expected participants"
+            htmlFor="expected_participants"
+            hint="Responses stop at this number plus the buffer, then the survey shows as closed. Leave blank to use the campaign order form's figure (or no limit)."
+          >
+            <input
+              id="expected_participants"
+              name="expected_participants"
+              type="number"
+              min={1}
+              className="input"
+              defaultValue={template?.expected_participants ?? ""}
+            />
+          </Field>
+          <Field label="Buffer (%)" htmlFor="response_buffer_pct" hint="Extra responses allowed on top — 10–15% is usual.">
+            <input
+              id="response_buffer_pct"
+              name="response_buffer_pct"
+              type="number"
+              min={0}
+              max={100}
+              className="input"
+              defaultValue={template?.response_buffer_pct ?? 10}
+            />
+          </Field>
+        </div>
+
         <label className="flex items-start gap-2.5 text-sm font-medium text-[var(--color-ink)]">
           <input
             type="checkbox"

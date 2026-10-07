@@ -506,7 +506,7 @@ export function PublicSurveyForm({
                   refs.current[q.id] = el;
                 }}
                 data-question-id={q.id}
-                className="card p-5"
+                className="card p-6 sm:p-10"
                 style={questionTypographyStyle(q.config)}
               >
                 <QuestionMedia config={q.config}>

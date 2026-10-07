@@ -77,7 +77,25 @@ export default async function SurveyPreviewPage({
           Add at least one question in the editor to preview it.
         </div>
       ) : (
-        <PreviewSurveyForm questions={questions} template={tpl} />
+        // Full screen, like a respondent sees it on a laptop — the dashboard's
+        // content column was too narrow to judge the layout (GitHub #10).
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-[var(--color-mist)]">
+          <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-white/90 px-6 py-3 backdrop-blur">
+            <p className="text-sm font-semibold">
+              Preview · {tpl.title}{" "}
+              <span className="font-normal text-[var(--color-ink-soft)]">— answers here are never saved</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <CopyLinkButton url={previewUrl} />
+              <Link href={`/dashboard/admin/surveys/${id}`} className="btn btn-ghost text-sm">
+                ← Back to editor
+              </Link>
+            </div>
+          </div>
+          <div className="mx-auto w-full max-w-5xl px-4 py-10">
+            <PreviewSurveyForm questions={questions} template={tpl} />
+          </div>
+        </div>
       )}
     </div>
   );

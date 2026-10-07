@@ -20,8 +20,10 @@ type Row = Invoice & { campaigns: { reference: string } | null };
  */
 export default async function BrandInvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ approved?: string }>;
 }) {
   const { id } = await params;
   const { profile } = await requireRole(["brand"]);
@@ -42,6 +44,14 @@ export default async function BrandInvoicePage({
     .neq("status", "draft")
     .maybeSingle<Row>();
   if (!invoice) notFound();
+  const sp = (await searchParams) ?? {};
+
+  const [{ data: contactRows }, { data: refundRows }] = await Promise.all([
+    supabase.rpc("invoice_contact_details"),
+    supabase.from("invoice_refunds").select("amount_gbp, reason, created_at").eq("invoice_id", id).order("created_at"),
+  ]);
+  const contact = ((contactRows ?? []) as { whatsapp: string | null; bank_details: string | null; contact_note: string | null }[])[0];
+  const refunds = (refundRows ?? []) as { amount_gbp: number; reason: string; created_at: string }[];
 
   const b = invoice.billing_snapshot;
   const addressLines = b
@@ -66,6 +76,12 @@ export default async function BrandInvoicePage({
       >
         ← Back to campaigns
       </Link>
+
+      {sp.approved && (
+        <p role="status" className="mb-4 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          Thank you for approving your order form. Here&apos;s your invoice — your campaign goes live as soon as it&apos;s paid.
+        </p>
+      )}
 
       <div className="card p-6">
         <dl className="grid gap-3 sm:grid-cols-3">
@@ -172,16 +188,64 @@ export default async function BrandInvoicePage({
                 <span className="font-semibold text-[var(--color-ink)]">
                   {invoice.reference}
                 </span>{" "}
-                as the payment reference. For our bank details,{" "}
-                <Link
-                  href="/dashboard/messages?tab=support"
-                  className="font-semibold text-[var(--color-brand-dark)] underline"
-                >
-                  contact support
-                </Link>
-                .
+                as the payment reference.
+                {contact?.bank_details ? null : (
+                  <>
+                    {" "}For our bank details,{" "}
+                    <Link
+                      href="/dashboard/messages?tab=support"
+                      className="font-semibold text-[var(--color-brand-dark)] underline"
+                    >
+                      contact support
+                    </Link>
+                    .
+                  </>
+                )}
               </p>
             )}
+          </div>
+        )}
+        {(contact?.bank_details || contact?.whatsapp || contact?.contact_note) && invoice.status !== "cancelled" && (
+          <div className="mt-6 grid gap-4 border-t border-black/10 pt-4 text-sm sm:grid-cols-2">
+            {contact.bank_details && (
+              <div>
+                <p className="field-label">Bank transfer details</p>
+                <p className="whitespace-pre-line">{contact.bank_details}</p>
+                <p className="mt-1 text-[var(--color-ink-soft)]">Quote {invoice.reference} as the reference.</p>
+              </div>
+            )}
+            {(contact.whatsapp || contact.contact_note) && (
+              <div>
+                <p className="field-label">Questions about this invoice?</p>
+                {contact.whatsapp && (
+                  <p>
+                    WhatsApp:{" "}
+                    <a
+                      href={`https://wa.me/${contact.whatsapp.replace(/[^\d]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline"
+                    >
+                      {contact.whatsapp}
+                    </a>
+                  </p>
+                )}
+                {contact.contact_note && <p className="mt-1">{contact.contact_note}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {refunds.length > 0 && (
+          <div className="mt-6 border-t border-black/10 pt-4 text-sm">
+            <p className="field-label">Refunds</p>
+            <ul className="space-y-1">
+              {refunds.map((r, i) => (
+                <li key={i}>
+                  {formatGbp(r.amount_gbp)} refunded on {formatDate(r.created_at)} — {r.reason}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

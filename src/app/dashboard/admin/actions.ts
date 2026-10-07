@@ -362,7 +362,20 @@ export async function setListingStatus(formData: FormData) {
   const id = str(formData.get("id"));
   const status = str(formData.get("status"));
   if (!id || !status) return;
-  await supabase.from("event_listings").update({ status }).eq("id", id);
+  const { data: listing } = await supabase
+    .from("event_listings")
+    .update({ status })
+    .eq("id", id)
+    .select("name, owner_profile_id")
+    .maybeSingle<{ name: string; owner_profile_id: string }>();
+  if (listing) {
+    await notify({
+      eventKey: "listing.status_changed",
+      recipientProfileId: listing.owner_profile_id,
+      link: `/dashboard/events/${id}`,
+      variables: { event_name: listing.name, status: status.replace(/_/g, " ") },
+    });
+  }
   revalidatePath("/dashboard/admin/events");
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacity } from "@/lib/survey-capacity";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -73,6 +74,22 @@ export default async function TakeSurveyPage({
             Submitted {formatDateTime(existingResponse.submitted_at)}.
           </p>
           <Link href="/dashboard/participations" className="btn btn-primary mt-4">
+            Back to My events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const capacity = await surveyCapacity(supabase, templateId);
+  if (capacity?.is_full) {
+    return (
+      <div>
+        <PageHeader title={tpl.title} />
+        <div className="card p-10 text-center">
+          <p className="text-xl font-semibold">{SURVEY_CLOSED_TITLE}</p>
+          <p className="mt-2 text-[var(--color-ink-soft)]">{SURVEY_CLOSED_BODY}</p>
+          <Link href="/dashboard/participations" className="btn btn-primary mt-5">
             Back to My events
           </Link>
         </div>
