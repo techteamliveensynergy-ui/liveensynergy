@@ -1,6 +1,6 @@
 # Survey results & analysis — next-phase plan
 
-Status: **plan, not built.** Drafted 8 Oct 2026 from the 7 Oct standup
+Status: **slices A + B built (8 Oct 2026, migration 0059); C + D planned.** Drafted 8 Oct 2026 from the 7 Oct standup
 ("Analyze Reports"), the client's *Survey Response Quality Engine — Build Plan*
 §05–§07 (`docs/New-model/_txt/`), *Packages Details* (Insights / Measurement)
 and *Brand Portal* ("Campaign Performance Report").
@@ -12,6 +12,79 @@ public surveys, branding and the response cap (0056).
 
 > The client's own words: *"Collecting responses is only half the product —
 > the campaign performance report is what the brand actually bought."*
+
+---
+
+## 0. Built — admin results page + anonymised exports (slices A + B)
+
+**Where:** Admin → Surveys → **Results** on any survey
+(`/dashboard/admin/surveys/[id]/results`), and three downloads on that page.
+
+**On screen (Typeform-style, deliberately basic):**
+- Tiles: responses counted (received / rejected), progress against the
+  target (expected participants + buffer, or the order form's figure),
+  average time to complete + the most typical time band, quality mix.
+- Responses per day (last 30 days, London days) and a time-to-complete
+  distribution.
+- One card per question: answered count and % of responses, average time
+  spent on it, then by type — bars for choice / yes-no / dropdown /
+  picture / Likert / attention check (with pass rate); scale distribution +
+  average + spread (N/A shown separately, left out of the average); number
+  average + spread; ranking average position; latest 5 open-text answers
+  with their RSP id.
+- Live: works while the survey is open; rejected responses are excluded,
+  pending / in-review count until decided.
+
+**Downloads (CSV, anonymised):**
+
+| File | One row per | Columns |
+|---|---|---|
+| Responses | person | Respondent ID (RSP-…), Person ID (PER-…), source, started, submitted, time taken, questions answered / total, quality status + score, age band, gender, country, one column per question (option labels; multi-select `; `, ranking `>`), then seconds per question |
+| Answers | answer | Respondent ID, Person ID, submitted, quality, question no + text + type, answer, seconds on question |
+| Question summary | option / measure | counts and % per option, mean / SD, ranking average position, average seconds per question |
+
+Rejected responses are excluded unless "including rejected (audit)" is used.
+No name, email, phone or date of birth ever leaves; hidden-field questions
+are dropped at the database. Person ID is a salted hash, stable for the same
+person across surveys (so pre and post can be linked) but not reversible.
+
+### How it stays fast (the scalability design)
+
+- **Counters, not queries over answers.** Each submission updates a few small
+  rows in the same transaction (`survey_template_stats`,
+  `survey_question_stats`, `survey_daily_stats`). The page reads roughly
+  *3 + number of text questions* small queries whether the survey has 10
+  responses or 100,000. Nothing is aggregated in the browser or in Node.
+- **What's stored per question:** answered count, time-on-question sum +
+  count, option → count map, numeric sum + sum of squares (→ mean and SD),
+  N/A count, ranking item → position sum. Averages are computed at read time
+  from those sums.
+- **Reject / overturn / delete stay correct:** triggers subtract a response's
+  answers when it's rejected (or its participation is deleted) and add them
+  back if a reject is overturned. A "Recalculate" button rebuilds a survey
+  from raw rows as a safety net; a test showed the rebuild matches the live
+  counters exactly.
+- **No lost updates:** submissions to one survey already queue on the 0056
+  template lock, so two simultaneous responses can't race a counter.
+- **Outliers can't skew averages:** time on a question is capped at 10 min
+  and completion time at 2 h inside the sums (both are client-reported); the
+  completion-time *bands* use the real value.
+- **Exports stream:** 500 respondents per database round-trip, keyset-paged
+  by respondent number, written straight to the download — memory stays flat
+  however large the survey.
+- **Open text** is never aggregated — it's paged (latest 5 on screen,
+  everything in the Answers file).
+
+### Known limits (by design, for now)
+
+- **No drop-off / "started but didn't finish".** A response is written only
+  on submit, so abandoned attempts aren't recorded. Adding it means saving a
+  "started" event when the form opens — a separate change.
+- **Medians** aren't kept (they can't be updated incrementally); the time
+  band where the middle respondent falls is shown instead. Exact medians are
+  one formula away in the exported file.
+- **Admin only.** Brands get their own anonymised report in slice D.
+- **Not yet applied:** migration 0059 must be applied before this code ships.
 
 ---
 
@@ -79,9 +152,9 @@ Each slice ships on its own and is useful on its own.
   dependency, prints cleanly, works in the PDF. Revisit only if the client
   wants interactive charts.
 
-Computed in one `survey_results(template_id, include_statuses[])` SQL function
-(admin-checked) returning JSON per question — aggregating in Postgres rather
-than shipping every answer row to the server component.
+*As built:* read from running counters kept by triggers (see §0), not
+aggregated per view — the earlier idea of one aggregating SQL function per
+page load was dropped because it re-reads every answer each time.
 
 ### Slice B — CSV exports (Small–Medium)
 
@@ -202,8 +275,8 @@ Apply each before the code that reads it ships, and log in
 
 | Order | Slice | Size | Unblocks |
 |---|---|---|---|
-| 1 | A — admin results page | Medium | Sakshi's weekend report review has something to review |
-| 2 | B — CSV exports | Small–Medium | Admin can build client reports by hand immediately |
+| 1 | A — admin results page | ✅ built | Sakshi's weekend report review has something to review |
+| 2 | B — CSV exports | ✅ built (participants export extension still to do) | Admin can build client reports by hand immediately |
 | 3 | C — pre/post + demographics | Medium | Needs decision 5 |
 | 4 | D — brand report + publish | Medium | Needs decisions 1, 3, 4 |
 

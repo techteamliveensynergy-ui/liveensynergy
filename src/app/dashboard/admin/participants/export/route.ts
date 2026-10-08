@@ -2,37 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { calculateAge } from "@/lib/age";
-
-/** Wraps a value in quotes and escapes embedded quotes/commas/newlines, per RFC 4180. */
-function csvCell(value: unknown): string {
-  const s = value == null ? "" : String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/**
- * Dates in the export were raw ISO timestamps ("2026-08-03T21:39:12.482+00:00")
- * — unreadable in a spreadsheet and not something Excel parses as a date
- * (3 Aug standup). `DD/MM/YYYY HH:mm` is unambiguous for a UK team and is
- * recognised as a date on import.
- */
-function csvDateTime(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
-
-/** Date-only columns (an event date carries no time of day). */
-function csvDate(value: string | null | undefined): string {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-}
+import { csvCell, csvDate, csvDateTime } from "@/lib/csv";
 
 interface Row {
   status: string;
