@@ -7,6 +7,7 @@ import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { formatGbp } from "@/lib/billing";
 import { displayUrl } from "@/lib/urls";
+import { INVOICE } from "@/lib/constants";
 import { SURVEY_TYPE_LABELS, vatFor, type CampaignOrderForm, type SurveyType } from "@/lib/order-forms";
 import { saveOrderForm, type OrderFormState } from "../../../order-form-actions";
 
@@ -103,10 +104,15 @@ export function OrderFormEditor({
 
   // --- Commercial: fee, VAT and total are separate inputs (Enterprise pricing
   // is custom). Picking a priced package fills the fee; VAT follows the fee
-  // at 20% unless set to 0 (zero-rated); the total is always fee + VAT.
+  // at 20% unless set to 0 (zero-rated). The total can be typed too — for an
+  // all-in Enterprise price — and the fee and VAT are worked back from it.
+  // Either way fee + VAT = total holds to the penny (the table checks it, and
+  // the server saves fee + VAT, never a typed total).
   const [packageId, setPackageId] = useState(initial.campaign_package_id ?? "");
   const [fee, setFee] = useState(v(initial.campaign_fee_gbp));
   const [vat, setVat] = useState(v(initial.vat_gbp));
+  // What's in the total box while the admin is typing in it; null = show fee + VAT.
+  const [totalDraft, setTotalDraft] = useState<string | null>(null);
   const feeNum = Number(fee);
   const vatNum = Number(vat);
   const total = fee !== "" && vat !== "" && Number.isFinite(feeNum + vatNum) ? feeNum + vatNum : null;
@@ -115,6 +121,18 @@ export function OrderFormEditor({
     setFee(next);
     const n = Number(next);
     if (next !== "" && Number.isFinite(n) && vat !== "0") setVat(vatFor(n).toFixed(2));
+  }
+  function changeTotal(next: string) {
+    setTotalDraft(next);
+    const cleaned = next.replace(/[£,\s]/g, "");
+    const t = Number(cleaned);
+    if (cleaned === "" || !Number.isFinite(t) || t <= 0) return;
+    const pence = Math.round(t * 100);
+    // Zero-rated stays zero-rated; otherwise split at the standard rate and
+    // let VAT absorb the rounding penny so the two add back to the total.
+    const feePence = Number(vat) === 0 && vat !== "" ? pence : Math.round(pence / (1 + INVOICE.vatRate));
+    setFee((feePence / 100).toFixed(2));
+    setVat(((pence - feePence) / 100).toFixed(2));
   }
   function changePackage(id: string) {
     setPackageId(id);
@@ -228,7 +246,7 @@ export function OrderFormEditor({
         </div>
       </FormSection>
 
-      <FormSection title="Research" description="Approx. participants also sets the survey's response cap (+10% buffer) unless the survey sets its own.">
+      <FormSection title="Research" description="Shown to the brand, not the artist. Approx. participants also sets the survey's response cap (+10% buffer) unless the survey sets its own.">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Approx. number of participants" htmlFor="approx_participants">
             <input id="approx_participants" name="approx_participants" type="number" min={1} className="input" defaultValue={v(initial.approx_participants)} />
@@ -278,7 +296,7 @@ export function OrderFormEditor({
         <textarea id="social_media_details" name="social_media_details" rows={4} className="textarea" defaultValue={v(initial.social_media_details)} aria-label="Artist social media details" />
       </FormSection>
 
-      <FormSection title="Any other details">
+      <FormSection title="Any other details" description="Shown to the brand on the order form (not to the artist). Don't put internal notes here.">
         <textarea id="other_details" name="other_details" rows={3} className="textarea" defaultValue={v(initial.other_details)} aria-label="Any other details" />
       </FormSection>
 
@@ -346,8 +364,16 @@ export function OrderFormEditor({
           <Field label="VAT" htmlFor="vat_gbp" required hint="20% of the fee, or 0 if zero-rated.">
             <input id="vat_gbp" name="vat_gbp" inputMode="decimal" className="input" value={vat} onChange={(e) => setVat(e.target.value)} readOnly={moneyLocked} />
           </Field>
-          <Field label="Total amount" htmlFor="total_display">
-            <input id="total_display" className="input font-semibold" value={total != null ? formatGbp(total) : ""} readOnly />
+          <Field label="Total amount" htmlFor="total_display" hint="Type an all-in price to work out the fee and VAT.">
+            <input
+              id="total_display"
+              inputMode="decimal"
+              className="input font-semibold"
+              value={totalDraft ?? (total != null ? total.toFixed(2) : "")}
+              onChange={(e) => changeTotal(e.target.value)}
+              onBlur={() => setTotalDraft(null)}
+              readOnly={moneyLocked}
+            />
           </Field>
           <Field label="Payment date" htmlFor="payment_date" hint="Becomes the invoice due date.">
             <input id="payment_date" name="payment_date" type="date" className="input" defaultValue={v(initial.payment_date)} />

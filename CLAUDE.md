@@ -181,6 +181,7 @@ code edit.
 | `record_invoice_refund()` | Partial/full refunds (0055). Admin-only, locks the invoice, refuses more than what's left, writes the `invoice_refunds` row and `invoices.refunded_gbp` together — called only after Stripe accepted the credit note. |
 | `survey_capacity()`, `survey_response_limit()` | Survey response cap (0056): expected participants + buffer %, falling back to the order form's approx. participants. Counts are hidden from respondents by RLS, so pages ask these for "is it full?". The cap itself is enforced by a `BEFORE INSERT` trigger on `survey_responses` raising `SURVEY_CLOSED`. |
 | `invoice_contact_details()`, `save_invoice_contact_details()` | WhatsApp + bank-transfer details on invoices (0055), stored on the `payment_settings` row that otherwise has no policies. |
+| `rebuild_survey_stats()`, `survey_export_rows()`, `survey_text_answers()` | Survey results (0059). The results page reads running counters (`survey_template_stats` / `survey_question_stats` / `survey_daily_stats`) that triggers on `survey_responses` and `survey_answers` keep current — never aggregate answers in TypeScript. `survey_export_rows()` is the only export path and strips identity at the database (no name/email/phone/DOB, no hidden-field answers, salted `PER-` pseudonym); `rebuild_survey_stats()` is the admin safety net. A new question type needs a branch in `survey_stats_apply_answer()` (a new migration) as well as in `src/lib/survey-results.ts`. |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |
@@ -353,3 +354,7 @@ Path alias: `@/*` → `./src/*`.
   delivery, and the security/rate-limit design. Supersedes the "bank transfer
   only" money-in section of `docs/payments-kyc-strategy.md` pending client
   sign-off; read before touching invoices, campaigns' payment state or email.
+- `docs/survey-results-analysis-plan.md` — next phase (not built): survey
+  results page, CSV exports, pre/post comparison and the brand's anonymised
+  Campaign Performance Report; who-sees-what, edge cases and open client
+  decisions. Read before touching survey reporting or brand access to answers.
