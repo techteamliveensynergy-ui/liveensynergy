@@ -20,7 +20,6 @@ type Brief = Pick<
   | "event_date"
   | "event_venue"
   | "event_location"
-  | "approx_participants"
   | "discount_reward"
   | "rewards_available"
   | "redemption_arrangements"

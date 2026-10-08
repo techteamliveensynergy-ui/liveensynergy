@@ -9,6 +9,7 @@ import { setCampaignStatus, waiveCampaignPayment } from "../marketplace-actions"
 import { draftInvoiceForCampaign } from "../invoices/actions";
 import { invoiceDisplayStatus } from "@/lib/billing";
 import { MatchForm } from "./MatchForm";
+import { OrderFormPicker } from "./OrderFormPicker";
 import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Campaigns · Admin" };
@@ -35,6 +36,8 @@ interface Row {
   package_platform_margin_gbp: number | null;
   payment_waived_at: string | null;
   payment_waived_reason: string | null;
+  brand_id: string;
+  target_name: string | null;
   brands: { brand_name: string; profile_id: string } | null;
 }
 
@@ -172,6 +175,20 @@ export default async function AdminCampaignsPage({
             Review requests{pendingIntakeCount ? ` (${pendingIntakeCount})` : ""}
           </Link>
         }
+      />
+
+      <OrderFormPicker
+        campaigns={((campaignRows ?? []) as Row[]).map((c) => {
+          const f = orderFormFor(c.id);
+          return {
+            id: c.id,
+            reference: c.reference,
+            label: c.target_name || (c.description ?? "").slice(0, 60) || "Untitled campaign",
+            brandId: c.brand_id,
+            brandName: c.brands?.brand_name ?? "Unnamed brand",
+            formStatus: f ? ORDER_FORM_STATUS_LABELS[f.status as OrderFormStatus] : null,
+          };
+        })}
       />
 
       {sp.action_error && (

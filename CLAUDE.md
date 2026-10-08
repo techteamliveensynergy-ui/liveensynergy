@@ -353,3 +353,7 @@ Path alias: `@/*` → `./src/*`.
   delivery, and the security/rate-limit design. Supersedes the "bank transfer
   only" money-in section of `docs/payments-kyc-strategy.md` pending client
   sign-off; read before touching invoices, campaigns' payment state or email.
+- `docs/survey-results-analysis-plan.md` — next phase (not built): survey
+  results page, CSV exports, pre/post comparison and the brand's anonymised
+  Campaign Performance Report; who-sees-what, edge cases and open client
+  decisions. Read before touching survey reporting or brand access to answers.
