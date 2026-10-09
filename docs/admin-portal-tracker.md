@@ -1,9 +1,8 @@
 # Admin Portal brief — tracker
 
 Source: the client's *Admin Portal* document (latest copy 9 Oct 2026). Each
-item, what was built, and anything still open. Code is on the branch that
-carries migrations 0058–0060 — **none of it is live until those migrations
-are applied and the code is deployed** (see "To ship" at the end).
+item, what was built, and anything still open. Merged to `main` in #13; migrations 0058–0060 applied to production on
+9 Oct 2026.
 
 ## 1. Admin console overview
 
@@ -94,9 +93,7 @@ New page listing every area in the brief with an honest status:
 
 ## To ship
 
-1. Apply migrations **0058, 0059, 0060** to production (in order). 0060 must
-   be in before the code: the brand/artist event page reads its view and
-   functions.
+1. ✅ Migrations **0058, 0059, 0060** applied to production on 9 Oct 2026.
 2. Merge the PR into `main` and deploy (`liveensynergy` remote).
 3. Check: admin sidebar order; open a campaign request and a live campaign;
    the brand's event page shows the Live campaign block without the check-in
