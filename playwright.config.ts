@@ -117,6 +117,23 @@ export default defineConfig({
       },
     },
     {
+      // 9 Oct 2026 update video: Admin Portal brief (console, campaign
+      // requests, live campaign, compliance) + survey results. READ-ONLY, so
+      // it defaults to the deployed site like the 3 / 10 Aug walkthroughs.
+      // See tests/standup-1009-walkthrough.spec.ts.
+      name: "s1009-video",
+      testMatch: /standup-1009-walkthrough\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "https://liveensynergy-rho.vercel.app",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 150 },
+      },
+    },
+    {
       // 5 Oct 2026 briefing video: order forms (#9), survey cap (#8), bigger
       // surveys (#10), refunds, invoice details, notifications. Local build
       // only; not read-only (creates a campaign, order form, Stripe TEST
