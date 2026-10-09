@@ -22,6 +22,8 @@ import type {
 import { eventStartInstant, formatEventDateTime } from "@/lib/event-time";
 import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
+import { LiveCampaignPanel, type LiveCampaignSurvey } from "@/components/campaigns/LiveCampaignPanel";
+import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import {
   toggleAgreement,
   updateSponsoredEvent,
@@ -144,18 +146,21 @@ export default async function SponsoredEventPage({
         .order("created_at", { ascending: false }),
     ]);
 
-  // Discount codes (0045) — both parties read the pool and issued codes under
-  // RLS; neither carries participant names.
+  // Discount codes (0045) — both parties read the pool, and issued codes
+  // through sponsored_event_party_codes (0060), which has no participant or
+  // redeemer column: which person got which code is admin-only.
   const [{ data: poolRows }, { data: rewardCodeRows }] = await Promise.all([
     supabase
       .from("reward_code_pool")
       .select("*")
       .eq("sponsored_event_id", id)
       .order("created_at", { ascending: true }),
-    supabase.from("reward_codes").select("*").eq("sponsored_event_id", id),
+    supabase.from("sponsored_event_party_codes").select("*").eq("sponsored_event_id", id),
   ]);
   const rewardPool = (poolRows ?? []) as RewardCodePoolEntry[];
-  const rewardCodes = (rewardCodeRows ?? []) as RewardCode[];
+  const rewardCodes = ((rewardCodeRows ?? []) as Omit<RewardCode, "participation_id" | "issued_by" | "redeemed_by">[]).map(
+    (c): RewardCode => ({ ...c, participation_id: null, issued_by: null, redeemed_by: null }),
+  );
 
   const { data: completionRows } = await supabase
     .from("sponsored_event_survey_completions")
@@ -163,6 +168,23 @@ export default async function SponsoredEventPage({
     .eq("sponsored_event_id", id);
   const completions = (completionRows ?? []) as SponsoredEventSurveyCompletion[];
   const completedParticipations = new Set(completions.map((c) => c.participation_id));
+
+  // Live campaign block (Admin Portal brief, 9 Oct): survey links come through
+  // campaign_party_surveys() (0060) — neither party has a read policy on
+  // survey_templates; the brand's order form through its own read policy.
+  const [{ data: partySurveyRows }, { data: brandOrderForm }] = await Promise.all([
+    event.campaign_id
+      ? supabase.rpc("campaign_party_surveys", { p_campaign_id: event.campaign_id })
+      : Promise.resolve({ data: [] }),
+    event.campaign_id && brand && brand.id === event.brand_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("id, status")
+          .eq("campaign_id", event.campaign_id)
+          .maybeSingle<{ id: string; status: string }>()
+      : Promise.resolve({ data: null }),
+  ]);
+  const partySurveys = (partySurveyRows ?? []) as LiveCampaignSurvey[];
 
   const listing = listingRow as EventListing | null;
   const assets = (assetRows ?? []) as SponsoredEventAsset[];
@@ -226,7 +248,7 @@ export default async function SponsoredEventPage({
       : null;
 
   const checkInUrl = attendUrl(event.attendance_qr_token);
-  const checkInQr = locked ? await qrCodeDataUrl(checkInUrl) : null;
+  const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
 
   return (
     <div className="space-y-6">
@@ -264,6 +286,44 @@ export default async function SponsoredEventPage({
           Something went wrong recording your agreement. Please try again, or
           contact the Live·En·Synergy team.
         </div>
+      )}
+
+      {event.campaign_id && (
+        <LiveCampaignPanel
+          viewer={isBrand ? "brand" : "artist"}
+          siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? ""}
+          orderForm={
+            isBrand
+              ? brandOrderForm
+                ? {
+                    href: `/order-forms/${brandOrderForm.id}`,
+                    label: "View order form",
+                    note: ORDER_FORM_STATUS_LABELS[brandOrderForm.status as OrderFormStatus] ?? undefined,
+                  }
+                : null
+              : {
+                  href: "/dashboard/campaign-briefs",
+                  label: "Campaign brief",
+                  note: "The order form sections shared with you, once the brand approves it",
+                }
+          }
+          surveys={partySurveys.map((s) => ({
+            ...s,
+            resultsHref: isBrand ? `/dashboard/survey-results/${s.id}` : null,
+          }))}
+          participants={{
+            total: participations.length,
+            verified: participations.filter((p) => p.status === "attendance_verified" || p.status === "reward_released").length,
+            surveysCompleted: completedParticipations.size,
+          }}
+          codes={{
+            issued: rewardCodes.filter((c) => c.status !== "void").length,
+            redeemed: rewardCodes.filter((c) => c.status === "redeemed").length,
+            tiers: rewardTiers.length,
+            consented: !!event.reward_codes_confirmed_at,
+          }}
+          checkIn={isArtist && checkInQr ? { href: "#check-in", note: "Display it at the venue" } : null}
+        />
       )}
 
       {event.banner_url && (
@@ -615,9 +675,10 @@ export default async function SponsoredEventPage({
       {/* Artist payment split is built but deliberately not shown yet —
           money-movement UI held back pending a later go-ahead. */}
 
-      {/* Attendance check-in */}
-      {(isBrand || isArtist) && checkInQr && (
-        <div className="card p-6">
+      {/* Attendance check-in — artist only (Admin Portal brief, 9 Oct:
+          check-in is for the audience and the artist, not the brand). */}
+      {isArtist && checkInQr && (
+        <div id="check-in" className="card p-6">
           <h2 className="text-lg font-semibold">Attendance check-in</h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Display this QR code at the venue — audience members who scan it

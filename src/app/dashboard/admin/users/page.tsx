@@ -68,7 +68,13 @@ export default async function AdminUsersPage({
     users = users.filter((u) => u.onboarding_completed);
   if (sp.status === "pending")
     users = users.filter((u) => !u.onboarding_completed);
-  if (sp.activity) {
+  if (sp.activity === "inactive_12m") {
+    // Admin Portal brief (9 Oct). Never-seen accounts count from sign-up, so
+    // an account created over a year ago and never used is included — the
+    // same rule as the Compliance page's count (0060 compliance_overview).
+    const cutoff = Date.now() - 365 * 86_400_000;
+    users = users.filter((u) => new Date(u.last_seen_at ?? u.created_at).getTime() < cutoff);
+  } else if (sp.activity) {
     users = users.filter((u) => activityBucket(u.last_seen_at) === sp.activity);
   }
 

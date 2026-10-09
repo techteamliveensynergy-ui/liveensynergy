@@ -30,7 +30,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const [{ data: tierRows }, { data: poolRows }, { data: codeRows }] = await Promise.all([
     supabase.from("sponsored_event_reward_tiers").select("*").eq("sponsored_event_id", id).order("rank"),
     supabase.from("reward_code_pool").select("*").eq("sponsored_event_id", id).order("created_at"),
-    supabase.from("reward_codes").select("*").eq("sponsored_event_id", id),
+    // No participant column (0060): this file is for loading codes into a
+    // ticketing platform, not for knowing who holds which.
+    supabase.from("sponsored_event_party_codes").select("*").eq("sponsored_event_id", id),
   ]);
   const tiers = (tierRows ?? []) as SponsoredEventRewardTier[];
   // The tiers read is party-or-admin under RLS — no tiers visible means this

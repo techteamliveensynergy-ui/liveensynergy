@@ -7,19 +7,13 @@ import { EmptyState, MetricTile, PageHeader, StatusBadge } from "@/components/da
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   averageSeconds,
-  CHOICE_TYPES,
-  choiceBars,
   countedResponses,
   DURATION_BUCKETS,
   EMPTY_TEMPLATE_STATS,
   formatDuration,
   formatPct,
-  meanAndSd,
   medianBucket,
   pct,
-  QUESTION_TYPE_LABELS,
-  rankingRows,
-  scaleBars,
   TEXT_TYPES,
   type SurveyDailyStat,
   type SurveyQuestionStats,
@@ -27,6 +21,7 @@ import {
 } from "@/lib/survey-results";
 import type { SurveyQuestion } from "@/lib/types";
 import { recalculateSurveyResults } from "../../actions";
+import { BarRow, QuestionResultCard } from "@/components/surveys/QuestionResultCard";
 
 export const metadata = { title: "Survey results · Admin" };
 
@@ -56,24 +51,6 @@ function trendDays(): string[] {
   const base = new Date(`${today}T00:00:00Z`).getTime();
   return Array.from({ length: TREND_DAYS }, (_, i) =>
     new Date(base - (TREND_DAYS - 1 - i) * 86_400_000).toISOString().slice(0, 10),
-  );
-}
-
-/** One labelled horizontal bar: label and figures on a line, the bar beneath. */
-function BarRow({ label, value, share, title }: { label: string; value: string; share: number; title?: string }) {
-  return (
-    <div className="space-y-1" title={title ?? `${label}: ${value}`}>
-      <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="min-w-0 break-words text-[var(--color-ink)]">{label}</span>
-        <span className="shrink-0 tabular-nums text-[var(--color-ink-soft)]">{value}</span>
-      </div>
-      <div className="h-2.5 w-full rounded-full bg-black/5">
-        <div
-          className="h-2.5 rounded-full bg-[var(--color-brand)]"
-          style={{ width: `${Math.max(Math.min(share, 100), share > 0 ? 1.5 : 0)}%` }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -284,129 +261,17 @@ export default async function SurveyResultsPage({
 
           <h2 className="mb-3 text-lg font-semibold">Question by question</h2>
           <div className="space-y-4">
-            {questions.map((q, i) => {
-              const s = qStats.get(q.id);
-              const answered = s?.answered_count ?? 0;
-              const avgTime = s ? averageSeconds(s.time_sum_ms / 1000, s.time_count) : null;
-              return (
-                <section key={q.id} className="card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                    Q{i + 1} · {QUESTION_TYPE_LABELS[q.type]}
-                  </p>
-                  <h3 className="mt-1 font-semibold">{q.prompt || "Untitled question"}</h3>
-                  <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                    {answered} answered ({formatPct(pct(answered, counted))} of responses)
-                    {avgTime != null ? ` · about ${formatDuration(avgTime)} on this question` : ""}
-                  </p>
-
-                  <div className="mt-4 space-y-2.5">
-                    {CHOICE_TYPES.includes(q.type) && (
-                      <>
-                        {choiceBars(q, s?.option_counts ?? {}, answered).map((b) => (
-                          <BarRow key={b.key} label={b.label} value={`${b.count} · ${formatPct(b.share)}`} share={b.share} />
-                        ))}
-                        {q.type === "multiple_choice" && (
-                          <p className="text-xs text-[var(--color-ink-soft)]">
-                            People could pick more than one, so these add up to more than 100%.
-                          </p>
-                        )}
-                        {q.type === "attention_check" && typeof q.config?.expected_answer === "string" && answered > 0 && (
-                          <p className="text-xs text-[var(--color-ink-soft)]">
-                            Passed the check:{" "}
-                            {formatPct(pct(s?.option_counts?.[q.config.expected_answer as string] ?? 0, answered))}
-                          </p>
-                        )}
-                      </>
-                    )}
-
-                    {q.type === "scale" && (() => {
-                      const m = s ? meanAndSd(s.num_count, Number(s.num_sum), Number(s.num_sumsq)) : null;
-                      return (
-                        <>
-                          {m && (
-                            <p className="text-sm">
-                              Average <span className="font-semibold">{m.mean.toFixed(1)}</span>
-                              {q.config?.max != null ? ` out of ${q.config.max}` : ""}
-                              <span className="text-[var(--color-ink-soft)]"> · spread ±{m.sd.toFixed(1)}</span>
-                            </p>
-                          )}
-                          {scaleBars(q, s?.option_counts ?? {}, s?.num_count ?? 0).map((b) => (
-                            <BarRow key={b.key} label={b.label} value={`${b.count} · ${formatPct(b.share)}`} share={b.share} />
-                          ))}
-                          {!!s?.na_count && (
-                            <p className="text-xs text-[var(--color-ink-soft)]">
-                              {s.na_count} chose &ldquo;{(q.config?.na_label as string) || "Not applicable"}&rdquo; — not
-                              included in the average.
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
-
-                    {q.type === "number" && (() => {
-                      const m = s ? meanAndSd(s.num_count, Number(s.num_sum), Number(s.num_sumsq)) : null;
-                      return m ? (
-                        <p className="text-sm">
-                          Average <span className="font-semibold">{m.mean.toFixed(1)}</span>
-                          <span className="text-[var(--color-ink-soft)]">
-                            {" "}
-                            · spread ±{m.sd.toFixed(1)} · {s?.num_count} answers
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-sm text-[var(--color-ink-soft)]">No answers yet.</p>
-                      );
-                    })()}
-
-                    {q.type === "ranking" && (() => {
-                      const rows = rankingRows(q, s?.option_counts ?? {}, s?.rank_sums ?? {});
-                      const n = Math.max(rows.length, 2);
-                      return (
-                        <>
-                          <p className="text-xs text-[var(--color-ink-soft)]">Average position — 1 is ranked top. Longer bar = ranked higher.</p>
-                          {rows.map((r) => (
-                            <BarRow
-                              key={r.key}
-                              label={r.label}
-                              value={r.avg != null ? `avg ${r.avg.toFixed(1)}` : "—"}
-                              share={r.avg != null ? ((n - r.avg) / (n - 1)) * 100 : 0}
-                            />
-                          ))}
-                        </>
-                      );
-                    })()}
-
-                    {TEXT_TYPES.includes(q.type) && (() => {
-                      const list = textAnswers.get(q.id) ?? [];
-                      return list.length === 0 ? (
-                        <p className="text-sm text-[var(--color-ink-soft)]">No written answers yet.</p>
-                      ) : (
-                        <>
-                          <ul className="space-y-2">
-                            {list.map((a) => (
-                              <li key={a.reference} className="rounded-xl bg-[var(--color-mist)] px-3 py-2 text-sm">
-                                <p className="whitespace-pre-line break-words">{a.answer}</p>
-                                <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                                  {a.reference} · {formatDate(a.submitted_at)}
-                                </p>
-                              </li>
-                            ))}
-                          </ul>
-                          {answered > list.length && (
-                            <p className="text-xs text-[var(--color-ink-soft)]">
-                              Latest {list.length} of {answered}.{" "}
-                              <a href={exportHref("answers")} className="underline">
-                                Download all answers
-                              </a>
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </section>
-              );
-            })}
+            {questions.map((q, i) => (
+              <QuestionResultCard
+                key={q.id}
+                index={i}
+                q={q}
+                s={qStats.get(q.id)}
+                counted={counted}
+                textAnswers={textAnswers.get(q.id)}
+                moreTextHref={exportHref("answers")}
+              />
+            ))}
           </div>
         </>
       )}

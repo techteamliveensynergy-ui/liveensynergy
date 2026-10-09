@@ -39,6 +39,14 @@ export async function GET(request: NextRequest) {
   if (selected === "yes") query = query.eq("selected", true);
   if (eventId) query = query.eq("sponsored_event_id", eventId);
 
+  const { error: logError } = await supabase.rpc("log_admin_action", {
+    p_action: "participants.export",
+    p_target_type: "participations",
+    p_target_id: eventId,
+    p_detail: { status, selected, event: eventId },
+  });
+  if (logError) console.error("audit log write failed (participants.export)", logError.message);
+
   const { data } = await query;
   const rows = (data ?? []) as unknown as Row[];
 

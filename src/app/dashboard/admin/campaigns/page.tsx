@@ -67,6 +67,7 @@ export default async function AdminCampaignsPage({
   searchParams: Promise<{
     status?: string;
     matched?: string;
+    live?: string;
     invoice_error?: string;
     action_error?: string;
   }>;
@@ -150,6 +151,9 @@ export default async function AdminCampaignsPage({
   if (sp.status) campaigns = campaigns.filter((c) => c.status === sp.status);
   if (sp.matched === "no")
     campaigns = campaigns.filter((c) => !c.matched_listing_id);
+  // "Live" = a sponsorship both parties agreed is running (Admin Portal
+  // brief, 9 Oct: campaigns split into requests and live).
+  if (sp.live === "yes") campaigns = campaigns.filter((c) => isSettled(c.id));
   if (sp.matched === "yes")
     campaigns = campaigns.filter((c) => c.matched_listing_id);
 
@@ -165,8 +169,8 @@ export default async function AdminCampaignsPage({
   return (
     <div>
       <PageHeader
-        title="Campaigns"
-        subtitle={`Sponsorship requests from brands. ${unmatched} still need matching.`}
+        title="Campaigns live"
+        subtitle={`Every campaign once a brand's request is accepted — awaiting payment, being matched, live and finished. ${unmatched} still need matching. Brand submissions are under Campaign requests.`}
         action={
           <Link
             href="/dashboard/admin/campaigns/intake"
@@ -207,7 +211,7 @@ export default async function AdminCampaignsPage({
         <Link
           href={link({})}
           className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            !sp.status && !sp.matched
+            !sp.status && !sp.matched && !sp.live
               ? "bg-[var(--color-brand)] text-white"
               : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
           }`}
@@ -223,6 +227,16 @@ export default async function AdminCampaignsPage({
           }`}
         >
           Needs matching ({unmatched})
+        </Link>
+        <Link
+          href={link({ live: "yes" })}
+          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+            sp.live === "yes"
+              ? "bg-[var(--color-brand)] text-white"
+              : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
+          }`}
+        >
+          Live (event confirmed)
         </Link>
         {STATUSES.map((s) => (
           <Link
@@ -252,9 +266,12 @@ export default async function AdminCampaignsPage({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-[var(--color-ink)]">
+                      <Link
+                        href={`/dashboard/admin/campaigns/${c.id}`}
+                        className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
+                      >
                         {c.brands?.brand_name ?? "Unknown brand"}
-                      </span>
+                      </Link>
                       <StatusBadge status={c.status} />
                       {c.matched_listing_id ? (
                         <span className="rounded-full bg-[var(--color-sage)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-olive-deep)]">
@@ -334,10 +351,18 @@ export default async function AdminCampaignsPage({
                   <div className="flex flex-col items-end gap-2">
                     <Link
                       href={`/dashboard/admin/campaigns/${c.id}`}
-                      className="btn btn-ghost text-sm"
+                      className="btn btn-primary text-sm"
                     >
-                      Edit
+                      Open campaign
                     </Link>
+                    {c.brands && (
+                      <Link
+                        href={`/dashboard/messages/with/${c.brands.profile_id}?subject=${encodeURIComponent(`Campaign ${c.reference}`)}`}
+                        className="btn btn-ghost text-sm"
+                      >
+                        Message brand
+                      </Link>
+                    )}
                     <Link
                       href={`/dashboard/admin/campaigns/${c.id}/order-form`}
                       className="btn btn-ghost text-sm"

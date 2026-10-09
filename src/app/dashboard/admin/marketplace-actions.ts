@@ -398,7 +398,9 @@ export async function reviewCampaignIntake(formData: FormData) {
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .eq("status", "submitted")
+      // An approved request whose campaign was never created sits in
+      // in_review; it can still be declined.
+      .in("status", ["submitted", "in_review"])
       .select("reference, brands(profile_id)")
       .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
 
@@ -411,6 +413,7 @@ export async function reviewCampaignIntake(formData: FormData) {
       });
     }
     revalidatePath("/dashboard/admin/campaigns/intake");
+    revalidatePath(`/dashboard/admin/campaigns/intake/${id}`);
   }
 }
 

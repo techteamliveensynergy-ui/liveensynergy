@@ -17,7 +17,8 @@ const ACTIVITY_OPTIONS = [
   { value: "today", label: "Active today" },
   { value: "week", label: "Active this week" },
   { value: "month", label: "Active this month" },
-  { value: "inactive", label: "Inactive 30d+" },
+  { value: "inactive", label: "Inactive users (30+ days)" },
+  { value: "inactive_12m", label: "Inactive for more than 12 months" },
   { value: "never", label: "Never seen" },
 ] as const;
 

@@ -68,6 +68,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .order("order_index"),
   ]);
   if (!template) return new Response("Survey not found", { status: 404 });
+
+  // Compliance & audit (0060): every data export is recorded — who, which
+  // survey, which file, whether rejected responses were included. A failed
+  // log write doesn't block the download (it's an admin pulling their own
+  // platform's data), but it is surfaced in the server log.
+  const { error: logError } = await supabase.rpc("log_admin_action", {
+    p_action: "survey.export",
+    p_target_type: "survey_template",
+    p_target_id: template.id,
+    p_detail: { file, include_rejected: includeRejected, title: template.title },
+  });
+  if (logError) console.error("audit log write failed (survey.export)", logError.message);
   const questions = (questionRows ?? []) as Question[];
   const qLabel = (q: Question, i: number) => `Q${i + 1}. ${q.prompt ?? QUESTION_TYPE_LABELS[q.type]}`;
 
