@@ -39,10 +39,17 @@ export function Sidebar({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const isActive = (href: string) =>
+  // Only the closest match lights up: on /dashboard/admin/campaigns/intake
+  // that's "Campaign requests", not also "Campaigns live" above it.
+  const matches = (href: string) =>
     EXACT_NAV_HREFS.has(href)
       ? pathname === href
-      : pathname.startsWith(href);
+      : pathname === href || pathname.startsWith(`${href}/`);
+  const activeHref = nav
+    .map((item) => item.href)
+    .filter(matches)
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (href: string) => href === activeHref;
 
   const navList = (
     <nav className="flex-1 space-y-1 px-3">

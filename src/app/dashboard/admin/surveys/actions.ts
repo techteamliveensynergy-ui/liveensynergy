@@ -406,3 +406,17 @@ export async function unarchiveSurveyTemplate(formData: FormData) {
   revalidatePath("/dashboard/admin/surveys");
   revalidatePath(`/dashboard/admin/surveys/${id}`);
 }
+
+/**
+ * Rebuilds a survey's results counters from its raw responses (0059's
+ * rebuild_survey_stats). The counters update themselves on every response;
+ * this is the safety net if they ever look wrong.
+ */
+export async function recalculateSurveyResults(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await supabase.rpc("rebuild_survey_stats", { p_template_id: id });
+  revalidatePath(`/dashboard/admin/surveys/${id}/results`);
+  redirect(`/dashboard/admin/surveys/${id}/results?recalculated=1`);
+}

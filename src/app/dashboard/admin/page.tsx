@@ -20,6 +20,7 @@ export default async function AdminPage() {
   await requireRole(["admin"]);
   const supabase = await createClient();
 
+  const headCount = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
   const [
     users,
     campaignRows,
@@ -27,16 +28,46 @@ export default async function AdminPage() {
     listingRows,
     participationRows,
     enquiryRows,
+    roleCounts,
+    paidInvoiceRows,
+    surveyStatRows,
+    surveysToReview,
+    newRequests,
+    codesIssued,
+    surveyParticipations,
   ] = await Promise.all([
     count(supabase, "profiles"),
-    supabase.from("campaigns").select("id, reference, description, status, matched_listing_id, created_at"),
+    supabase
+      .from("campaigns")
+      .select("id, reference, description, target_name, status, matched_listing_id, created_at, brands(brand_name)")
+      .order("created_at", { ascending: false }),
     supabase
       .from("sponsored_events")
-      .select("id, reference, name, status, brand_agreed, artist_agreed, created_at"),
+      .select("id, reference, name, status, brand_agreed, artist_agreed, campaign_id, event_date, created_at")
+      .order("created_at", { ascending: false }),
     supabase.from("event_listings").select("id, status"),
     supabase.from("participations").select("id, status, reward_amount_gbp"),
     supabase.from("contact_messages").select("id, subject, name, handled_at, created_at"),
+    Promise.all(
+      (["brand", "artist", "event", "audience"] as const).map((role) =>
+        headCount(supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", role)),
+      ),
+    ),
+    supabase.from("invoices").select("amount_gbp, refunded_gbp, paid_at").eq("status", "paid"),
+    // Running survey counters (0059) — a row per survey, not per response.
+    supabase.from("survey_template_stats").select("pending_count, pass_count, review_count, reject_count"),
+    headCount(supabase.from("survey_responses").select("id", { count: "exact", head: true }).eq("quality_status", "review")),
+    headCount(supabase.from("campaign_intake_requests").select("id", { count: "exact", head: true }).eq("status", "submitted")),
+    headCount(supabase.from("reward_codes").select("id", { count: "exact", head: true }).neq("status", "void")),
+    headCount(
+      supabase
+        .from("survey_responses")
+        .select("id", { count: "exact", head: true })
+        .not("participation_id", "is", null)
+        .neq("quality_status", "reject"),
+    ),
   ]);
+  const [brandCount, artistCount, organiserCount, audienceCount] = roleCounts;
 
   const campaigns = campaignRows.data ?? [];
   const sponsored = sponsoredRows.data ?? [];
@@ -54,11 +85,31 @@ export default async function AdminPage() {
     (p) => p.status === "attendance_verified",
   );
 
+  const awaitingPayment = campaigns.filter((c) => c.status === "awaiting_payment");
+  const liveDeals = sponsored.filter((e) => e.status === "confirmed");
+  const liveCampaignIds = new Set(liveDeals.map((e) => e.campaign_id).filter(Boolean));
+  const surveyTotals = ((surveyStatRows.data ?? []) as {
+    pending_count: number; pass_count: number; review_count: number; reject_count: number;
+  }[]).reduce(
+    (t, r) => ({ counted: t.counted + r.pending_count + r.pass_count + r.review_count, rejected: t.rejected + r.reject_count }),
+    { counted: 0, rejected: 0 },
+  );
+  // Revenue = paid invoices less refunds, inc. VAT. "This month" by London date.
+  const monthPrefix = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()).slice(0, 7);
+  const paidInvoices = (paidInvoiceRows.data ?? []) as { amount_gbp: number; refunded_gbp: number; paid_at: string | null }[];
+  const net = (i: { amount_gbp: number; refunded_gbp: number }) => Number(i.amount_gbp) - Number(i.refunded_gbp ?? 0);
+  const revenueToDate = paidInvoices.reduce((t, i) => t + net(i), 0);
+  const revenueThisMonth = paidInvoices
+    .filter((i) => i.paid_at && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(i.paid_at)).startsWith(monthPrefix))
+    .reduce((t, i) => t + net(i), 0);
+  const gbp = (n: number) => `£${n.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+
   const totalRewarded = participations.reduce(
     (sum, p) => sum + Number(p.reward_amount_gbp ?? 0),
     0,
   );
 
+  // Order from the Admin Portal brief (9 Oct).
   const attention = [
     {
       label: "Campaigns to match",
@@ -73,10 +124,28 @@ export default async function AdminPage() {
       tint: "bg-[var(--color-lavender)]",
     },
     {
+      label: "Awaiting payment",
+      count: awaitingPayment.length,
+      href: "/dashboard/admin/campaigns?status=awaiting_payment",
+      tint: "bg-[var(--color-lavender)]",
+    },
+    {
+      label: "Surveys awaiting review",
+      count: surveysToReview,
+      href: "/dashboard/admin/surveys/responses?status=review",
+      tint: "bg-[var(--color-gold)]",
+    },
+    {
       label: "Open enquiries",
       count: openEnquiries.length,
       href: "/dashboard/admin/enquiries?filter=open",
       tint: "bg-[var(--color-pink)]",
+    },
+    {
+      label: "New campaign requests",
+      count: newRequests,
+      href: "/dashboard/admin/campaigns/intake",
+      tint: "bg-[var(--color-mint)]",
     },
     {
       label: "Verified, unrewarded",
@@ -88,6 +157,7 @@ export default async function AdminPage() {
 
   const funnel = [
     { label: "Registered", n: participations.length },
+    { label: "Took a survey", n: surveyParticipations },
     {
       label: "Proof uploaded",
       n: participations.filter((p) =>
@@ -143,19 +213,63 @@ export default async function AdminPage() {
         <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
           Platform
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <MetricTile label="Users" value={users} />
-          <MetricTile label="Campaigns" value={campaigns.length} />
-          <MetricTile
-            label="Listings live"
-            value={listings.filter((l) => l.status === "available").length}
-          />
-          <MetricTile label="Sponsorships" value={sponsored.length} />
+          <MetricTile label="Brands" value={brandCount} />
+          <MetricTile label="Artists" value={artistCount + organiserCount} hint={organiserCount ? `incl. ${organiserCount} pre-merge organisers` : undefined} />
+          <MetricTile label="Audience" value={audienceCount} />
+          <MetricTile label="Revenue this month" value={gbp(revenueThisMonth)} hint="paid invoices, inc. VAT, less refunds" />
+          <MetricTile label="Revenue to date" value={gbp(revenueToDate)} hint="paid invoices, inc. VAT, less refunds" />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
+          Campaigns
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <MetricTile label="Campaigns launched" value={campaigns.length} />
+          <MetricTile label="Campaigns live" value={liveCampaignIds.size} hint="event confirmed" />
+          <MetricTile label="Surveys completed" value={surveyTotals.counted} hint="not rejected" />
+          <MetricTile label="Surveys rejected" value={surveyTotals.rejected} />
+          <MetricTile label="Codes issued" value={codesIssued} />
           <MetricTile
             label="Rewarded"
             value={`£${totalRewarded.toLocaleString("en-GB")}`}
+            hint={`${listings.filter((l) => l.status === "available").length} listings open`}
           />
         </div>
+      </section>
+
+      <section className="card min-w-0 p-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">Active campaigns</h2>
+          <Link href="/dashboard/admin/campaigns?live=yes" className="text-sm font-semibold text-[var(--color-brand-dark)]">
+            See all →
+          </Link>
+        </div>
+        {liveDeals.length === 0 ? (
+          <p className="text-sm text-[var(--color-ink-soft)]">No campaign is live right now.</p>
+        ) : (
+          <div className="space-y-2">
+            {liveDeals.slice(0, 8).map((e) => {
+              const c = campaigns.find((x) => x.id === e.campaign_id);
+              return (
+                <Link
+                  key={e.id}
+                  href={c ? `/dashboard/admin/campaigns/${c.id}` : `/dashboard/admin/events/sponsored/${e.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-2.5 text-sm transition hover:bg-white"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {c ? `${c.reference} · ${(c.brands as unknown as { brand_name: string } | null)?.brand_name ?? ""} — ` : ""}
+                    {e.name}
+                  </span>
+                  <span className="text-xs text-[var(--color-ink-soft)]">{e.event_date ?? ""}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Funnel */}
@@ -163,7 +277,7 @@ export default async function AdminPage() {
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
           Audience funnel
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {funnel.map((s) => (
             <div key={s.label}>
               <div className="flex items-baseline justify-between">

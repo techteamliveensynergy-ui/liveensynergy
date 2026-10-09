@@ -8,7 +8,7 @@ import { reviewCampaignIntake } from "../../marketplace-actions";
 export const metadata = { title: "Campaign requests · Admin" };
 
 interface Row extends CampaignIntakeRequest {
-  brands: { brand_name: string } | null;
+  brands: { brand_name: string; profile_id: string } | null;
 }
 
 export default async function AdminCampaignIntakePage({
@@ -23,7 +23,7 @@ export default async function AdminCampaignIntakePage({
   const status = sp.status ?? "submitted";
   const { data } = await supabase
     .from("campaign_intake_requests")
-    .select("*, brands(brand_name)")
+    .select("*, brands(brand_name, profile_id)")
     .eq("status", status)
     .order("created_at", { ascending: true });
 
@@ -64,9 +64,12 @@ export default async function AdminCampaignIntakePage({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[var(--color-ink)]">
+                    <Link
+                      href={`/dashboard/admin/campaigns/intake/${r.id}`}
+                      className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
+                    >
                       {r.brands?.brand_name ?? "Unknown brand"}
-                    </span>
+                    </Link>
                     <StatusBadge status={r.status} />
                   </div>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
@@ -102,6 +105,20 @@ export default async function AdminCampaignIntakePage({
                         </>
                       )}
                     </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                  <Link href={`/dashboard/admin/campaigns/intake/${r.id}`} className="btn btn-ghost text-sm">
+                    View details
+                  </Link>
+                  {r.brands && (
+                    <Link
+                      href={`/dashboard/messages/with/${r.brands.profile_id}?subject=${encodeURIComponent(`Campaign request ${r.reference}`)}`}
+                      className="btn btn-ghost text-sm"
+                    >
+                      Message brand
+                    </Link>
                   )}
                 </div>
 
