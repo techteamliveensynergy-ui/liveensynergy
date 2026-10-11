@@ -5,12 +5,12 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import { ROLES, SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
+import { SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
 import { termsForRole } from "@/lib/terms";
 import { signUp, type AuthState } from "../actions";
 
 function isRole(value: string | undefined): value is Role {
-  return !!value && (ROLES as readonly string[]).includes(value);
+  return !!value && SIGNUP_ROLE_OPTIONS.some((o) => o.value === value);
 }
 
 function SubmitButton() {

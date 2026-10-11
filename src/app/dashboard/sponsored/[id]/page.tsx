@@ -214,6 +214,12 @@ export default async function SponsoredEventPage({
   const locked = event.status !== "in_progress";
 
   const CHANGE_REQUEST_CUTOFF_MS = 2 * 24 * 60 * 60 * 1000;
+  // "Mark completed" only once the event's own calendar day has arrived — the
+  // sponsorships guard (0061) refuses it before then.
+  const eventDateReached =
+    !event.event_date ||
+    event.event_date <=
+      new Intl.DateTimeFormat("en-CA", { timeZone: event.timezone || "Europe/London" }).format(new Date());
   const eventInstant = eventStartInstant({
     date: event.event_date,
     time: event.start_time,
@@ -508,6 +514,10 @@ export default async function SponsoredEventPage({
         ) : (
           <form action={updateSponsoredEvent} className="mt-4 grid gap-4">
             <input type="hidden" name="id" value={event.id} />
+            <p className="text-xs text-[var(--color-ink-soft)]">
+              Saving changes to these terms clears both agreements, so each side confirms the version they&apos;ve
+              actually read.
+            </p>
             <Field label="Reward rules" htmlFor="reward_rules">
               <textarea
                 id="reward_rules"
@@ -636,7 +646,7 @@ export default async function SponsoredEventPage({
             >
               Raise an enquiry ↗
             </a>
-            {event.status === "confirmed" && (
+            {event.status === "confirmed" && eventDateReached && (
               <form action={markCompleted}>
                 <input type="hidden" name="id" value={event.id} />
                 <button type="submit" className="btn btn-ghost">
@@ -772,7 +782,11 @@ export default async function SponsoredEventPage({
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Only before verification — otherwise a released reward
                         could be regressed back to "attendance verified". */}
-                    {p.selected &&
+                    {/* Artist only: the 9 Oct brief keeps check-in with the
+                        artist and the audience, and the participations guard
+                        (0061) refuses it from the brand. */}
+                    {isArtist &&
+                      p.selected &&
                       (p.status === "registered" ||
                         p.status === "ticket_uploaded") && (
                         <ParticipationBtn
@@ -784,7 +798,7 @@ export default async function SponsoredEventPage({
                       )}
                     {p.status === "attendance_verified" && (
                       <span className="text-xs text-[var(--color-ink-soft)]">
-                        Awaiting reward payout by the team
+                        Checked in — discount code follows the post-event survey
                       </span>
                     )}
                     {!p.selected && p.status !== "rejected" && (

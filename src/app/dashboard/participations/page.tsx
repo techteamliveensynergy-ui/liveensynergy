@@ -139,6 +139,16 @@ export default async function ParticipationsPage({
           That file couldn&apos;t be uploaded — check it&apos;s under 25 MB and try again.
         </p>
       )}
+      {notice === "upload-wrong-type" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Please upload your ticket as a photo or a PDF.
+        </p>
+      )}
+      {notice === "upload-not-allowed" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Ticket proof can be added once you&apos;ve been selected, and before you check in at the event.
+        </p>
+      )}
       {notice === "survey-submitted" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
           ✓ Thanks — your survey response has been recorded.

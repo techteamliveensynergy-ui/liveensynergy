@@ -64,22 +64,17 @@ export async function updateSession(request: NextRequest) {
 
     // An automatic (no-show) suspension lifts itself once it has run its
     // course, rather than staying blocked forever like a manual block does.
+    // Done by lift_expired_suspension() (0061): users can no longer write
+    // their own is_active, and the function only ever lifts the caller's own
+    // expired suspension.
     if (
       profile &&
       profile.is_active === false &&
       profile.suspended_until &&
       new Date(profile.suspended_until) <= new Date()
     ) {
-      await supabase
-        .from("profiles")
-        .update({
-          is_active: true,
-          blocked_at: null,
-          blocked_reason: null,
-          suspended_until: null,
-        })
-        .eq("id", user.id);
-      profile.is_active = true;
+      const { data: active } = await supabase.rpc("lift_expired_suspension");
+      if (active === true) profile.is_active = true;
     }
 
     // Blocked: tear down the session and send them to the explainer page.
