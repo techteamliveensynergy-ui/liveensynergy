@@ -2,7 +2,15 @@
 
 Drafted 10 Oct 2026 from the 9 Oct standup notes (Ketan, Sakshi), a code
 audit of every portal (admin, brand, artist, audience) and a read-only check of
-the production database. Nothing here is built yet.
+the production database.
+
+**Status (11 Oct):** §1 security — **done** (migration 0061 applied to
+production; app changes in PR #16). §3 old-model clean-up — **done** for the
+items listed in §3.1–3.4 except: brand campaign page / status timeline,
+artist "Discover campaigns" (decision §8.4), messaging (§5), notification
+template wording (needs a migration), and the archived-survey gate (now a
+client decision — counting archived surveys is deliberate, see
+`src/lib/data/reward-gate.ts`). §4 Insights — **not started**.
 
 **Order of work:** security fixes first (§1), then the clean-up that testing
 will otherwise keep tripping over (§3), then the new Insights module (§4).
