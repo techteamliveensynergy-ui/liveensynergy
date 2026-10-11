@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
-import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
+import { computePlatformFee } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
@@ -264,27 +264,24 @@ export default async function AdminSponsoredDetailPage({
     ["attendance_verified", "reward_released"].includes(p.status),
   ).length;
   const rewarded = participants.filter((p) => p.status === "reward_released").length;
-  const released = participants.reduce(
-    (sum, p) => sum + Number(p.reward_amount_gbp ?? 0),
-    0,
-  );
+  const codesIssued = rewardCodes.filter((c) => c.status !== "void").length;
+  const codesRedeemed = rewardCodes.filter((c) => c.status === "redeemed").length;
 
   const fee = event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
   const pct = (n: number) => (registered ? Math.round((n / registered) * 100) : 0);
 
   // The random draw (10 Aug standup). "Waiting" is everyone still registered
-  // and unselected; the suggested number of places is what the money actually
-  // stretches to at the linked listing's ticket price.
+  // and unselected; the suggested number of places is what's left of the
+  // event's capacity. (It used to be the remaining cash budget ÷ ticket price,
+  // from the cash reward model — rewards are discount codes now.)
   const waiting = participants.filter(
     (p) => !p.selected && p.status === "registered",
   ).length;
   const ticketPrice = event.event_listings?.ticket_price_gbp ?? null;
-  const availableForRewards =
-    event.remaining_budget_gbp ?? netSponsorshipBudget(event.budget_gbp);
+  const capacity = event.event_listings?.capacity ?? null;
+  const alreadySelected = participants.filter((p) => p.selected).length;
   const suggestedPlaces =
-    ticketPrice != null && Number(ticketPrice) > 0 && availableForRewards != null
-      ? Math.max(0, Math.floor(Number(availableForRewards) / Number(ticketPrice)))
-      : null;
+    capacity != null ? Math.max(0, Math.min(waiting, Number(capacity) - alreadySelected)) : null;
 
   return (
     <div className="space-y-6">
@@ -336,20 +333,13 @@ export default async function AdminSponsoredDetailPage({
             tint: "bg-[#faf5ee]",
           },
           {
-            label: "Available for rewards",
-            value: (
-              <Money
-                value={
-                  event.remaining_budget_gbp ??
-                  netSponsorshipBudget(event.budget_gbp)
-                }
-              />
-            ),
+            label: "Codes issued",
+            value: codesIssued.toLocaleString("en-GB"),
             tint: "bg-[var(--color-sage)]",
           },
           {
-            label: "Released",
-            value: `£${released.toLocaleString("en-GB")}`,
+            label: "Codes redeemed",
+            value: codesRedeemed.toLocaleString("en-GB"),
             tint: "bg-[var(--color-lavender)]",
           },
           {
@@ -711,9 +701,6 @@ export default async function AdminSponsoredDetailPage({
                     {p.attendance_verified_at
                       ? ` · verified ${formatDateTime(p.attendance_verified_at)}`
                       : ""}
-                    {p.reward_amount_gbp != null
-                      ? ` · £${Number(p.reward_amount_gbp).toLocaleString("en-GB")}`
-                      : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]/70">
                     {p.ticketHref ? (
@@ -728,7 +715,6 @@ export default async function AdminSponsoredDetailPage({
                     ) : (
                       "No ticket proof"
                     )}
-                    {p.bank_details_provided ? " · payout consented" : ""}
                     {p.newsletter_opt_in ? " · newsletter opt-in" : ""}
                   </p>
                 </div>
@@ -767,38 +753,9 @@ export default async function AdminSponsoredDetailPage({
                         </button>
                       </form>
                     )}
-                  {p.status === "attendance_verified" && (() => {
-                    const gate = gates.get(p.id);
-                    const blocked = !!gate && !gate.allowed;
-                    return (
-                      <form
-                        action={adminUpdateParticipation}
-                        className="flex items-center gap-1.5"
-                        title={blocked ? gate!.note : undefined}
-                      >
-                        <input type="hidden" name="event_id" value={event.id} />
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="op" value="release" />
-                        <input
-                          name="reward_amount_gbp"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          required
-                          disabled={blocked}
-                          placeholder="£"
-                          className="input w-20 px-2 py-1 text-sm"
-                          aria-label="Reward amount"
-                        />
-                        <button type="submit" className="btn btn-ghost text-sm" disabled={blocked}>
-                          Release
-                        </button>
-                        {blocked && (
-                          <span className="text-xs text-[var(--color-accent)]">{gate!.note}</span>
-                        )}
-                      </form>
-                    );
-                  })()}
+                  {/* The cash "Release £" control is retired: the reward is a
+                      discount code, issued below (9 Oct standup). Historic
+                      £ releases stay on the record. */}
                   {rewardTiers.length > 0 &&
                     (p.status === "attendance_verified" ||
                       p.status === "reward_released") &&

@@ -14,7 +14,7 @@ export const metadata = { title: "Event details" };
  * The details step that now precedes registering (aligned 29 Jul). A single
  * click was letting people sign up accidentally, and without ever seeing the
  * reward terms or what they'd be expected to do — which matters, because
- * registering commits them to buying a ticket and later sharing payout details.
+ * registering commits them to buying a ticket if they're selected.
  */
 export default async function EventDetailsPage({
   params,
@@ -95,21 +95,18 @@ export default async function EventDetailsPage({
 
         <h2 className="mt-6 text-lg font-semibold">How it works</h2>
         <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-[var(--color-ink-soft)]">
-          <li>Register here to take part.</li>
-          <li>Buy your ticket to the event as you normally would.</li>
+          <li>Register here to take part — answer the short pre-event survey if there is one.</li>
+          <li>The Live·En·Synergy team draws who takes part once registration closes.</li>
           <li>
-            Add your ticket reference under <strong>My events</strong> so we can
-            check it.
+            If you&apos;re selected, buy your ticket as you normally would and upload it under{" "}
+            <strong>My events</strong>.
           </li>
           <li>
             {event.attendance_method
-              ? `Attendance is confirmed at the venue: ${event.attendance_method}`
-              : "Attend the event — the organiser confirms attendance at the venue."}
+              ? `On the day, check in at the venue: ${event.attendance_method}`
+              : "On the day, scan the QR code at the venue to check in."}
           </li>
-          <li>
-            If you&apos;re selected, confirm your payout details and the reward
-            is released to you.
-          </li>
+          <li>Complete the post-event survey and your discount code appears in My rewards.</li>
         </ol>
 
         {event.participation_deadline && (

@@ -13,7 +13,7 @@ export default async function NewCampaignPage() {
 
   return (
     <div>
-      <PageHeader title="Create a campaign" />
+      <PageHeader title="Request a campaign" />
       <Link
         href="/dashboard/campaigns"
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"

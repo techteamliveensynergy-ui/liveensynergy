@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
-import { computePlatformFee, netForCampaign } from "@/lib/constants";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { Field } from "@/components/ui/Field";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
@@ -229,29 +228,16 @@ export default async function SponsoredEventPage({
     ? Date.now() > eventInstant.getTime() - CHANGE_REQUEST_CUTOFF_MS
     : false;
 
-  // The platform fee (or package margin) comes off the gross budget before
-  // anything can be paid out, so every figure below works from the net
-  // amount. `remaining` falls back to the recomputed net for rows written
-  // before that fix.
-  const packageMargin = campaignRow?.package_platform_margin_gbp ?? null;
-  const feeAmount =
-    event.budget_gbp != null
-      ? packageMargin != null
-        ? packageMargin
-        : computePlatformFee(Number(event.budget_gbp)).feeIncVat
-      : null;
-  const netBudget = netForCampaign({
-    budget_gbp: event.budget_gbp,
-    package_platform_margin_gbp: packageMargin,
-  });
-  const remaining = event.remaining_budget_gbp ?? netBudget;
-
-  // How far the remaining budget stretches, at the linked event's ticket price.
-  const ticketPrice = listing?.ticket_price_gbp ?? null;
-  const sponsorableCount =
-    ticketPrice != null && ticketPrice > 0 && remaining != null
-      ? Math.floor(Number(remaining) / Number(ticketPrice))
-      : null;
+  // Where the event stands with its audience. The old £ tiles (service fee,
+  // "available for rewards", "people this can sponsor") belonged to the cash
+  // reward model and were wrong for the artist anyway — they can't read the
+  // campaign's package margin. Rewards are discount codes now.
+  const ticketPrice = listing?.ticket_price_gbp ?? null; // discount-cost estimate in the codes panel
+  const registeredCount = participations.length;
+  const selectedCount = participations.filter((p) => p.selected).length;
+  const checkedInCount = participations.filter((p) =>
+    ["attendance_verified", "reward_released"].includes(p.status),
+  ).length;
 
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
@@ -343,40 +329,14 @@ export default async function SponsoredEventPage({
 
       {/* Sponsorship management */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold">Sponsorship management</h2>
+        <h2 className="text-lg font-semibold">Sponsorship at a glance</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Stat
-            label="Budget (gross)"
-            value={money(event.budget_gbp)}
-            hint="what the brand commits"
-          />
-          <Stat
-            label="Service fee"
-            value={feeAmount != null ? money(feeAmount) : "—"}
-            hint={packageMargin != null ? "package margin" : "inc. VAT"}
-          />
-          <Stat
-            label="Available for rewards"
-            value={money(remaining)}
-            hint={
-              netBudget != null && remaining != null && remaining < netBudget
-                ? `of ${money(netBudget)} after fees`
-                : "after fees"
-            }
-          />
-          <Stat
-            label="People this can sponsor"
-            value={
-              sponsorableCount != null
-                ? sponsorableCount.toLocaleString("en-GB")
-                : "—"
-            }
-            hint={
-              ticketPrice != null && ticketPrice > 0
-                ? `at £${Number(ticketPrice).toLocaleString("en-GB")} a ticket`
-                : "add a ticket price on the listing"
-            }
-          />
+          {isBrand && (
+            <Stat label="Campaign budget" value={money(event.budget_gbp)} hint="what you committed" />
+          )}
+          <Stat label="Registered" value={registeredCount.toLocaleString("en-GB")} hint="audience sign-ups" />
+          <Stat label="Selected" value={selectedCount.toLocaleString("en-GB")} hint="chosen in the draw" />
+          <Stat label="Checked in" value={checkedInCount.toLocaleString("en-GB")} hint="at the venue" />
           <Stat
             label="Participation deadline"
             value={
@@ -736,11 +696,11 @@ export default async function SponsoredEventPage({
             )}
           </h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Verify attendance here. Who gets a reward is drawn at random by the
-            Live·En·Synergy team once the participation deadline passes — it
-            isn&apos;t picked by hand on either side — and the team pays the
-            reward out after attendance is verified. Get in touch if a draw or a
-            payout needs chasing.
+            Who takes part is drawn at random by the Live·En·Synergy team once
+            the participation deadline passes — it isn&apos;t picked by hand on
+            either side. Selected attendees check in by scanning the event QR
+            code{isArtist ? " (or you can verify them here)" : ""}, then receive a
+            discount code after the post-event survey.
           </p>
 
           {participations.length === 0 ? (
@@ -768,12 +728,9 @@ export default async function SponsoredEventPage({
                       {p.selected && (
                         <span className="text-xs text-[var(--color-olive-deep)]">selected</span>
                       )}
-                      {p.status === "reward_released" &&
-                        p.reward_amount_gbp != null && (
-                          <span className="text-xs text-[var(--color-ink-soft)]">
-                            {money(p.reward_amount_gbp)} paid
-                          </span>
-                        )}
+                      {p.status === "reward_released" && (
+                        <span className="text-xs text-[var(--color-ink-soft)]">code issued</span>
+                      )}
                     </div>
                   </div>
                   {/* No Select / Reject: the draw is random and run by the

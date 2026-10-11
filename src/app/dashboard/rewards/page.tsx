@@ -36,69 +36,47 @@ export default async function RewardsPage() {
       : { data: [] };
   const codes = (codeData ?? []) as CodeRow[];
 
-  const released = rows.filter((r) => r.status === "reward_released");
-  const total = released.reduce(
-    (sum, r) => sum + Number(r.reward_amount_gbp ?? 0),
-    0,
-  );
+  // Rewards are discount codes (9 Oct standup). A checked-in event with no
+  // code yet is waiting on the post-event survey (or the team issuing codes).
+  const codedParticipations = new Set(codes.filter((c) => c.status !== "void").map((c) => c.participation_id));
+  const waiting = rows.filter((r) => !codedParticipations.has(r.id));
 
   return (
     <div>
       <PageHeader
         title="My rewards"
-        subtitle="Rewards from events where your attendance was verified."
+        subtitle="Discount codes from events you attended."
       />
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && (
         <EmptyState
           icon="🎁"
           title="No rewards yet"
-          body="Register for events, attend and get verified to unlock sponsor-funded rewards."
+          body="Register for an event, check in at the venue and complete the post-event survey to receive a discount code."
           cta={{ href: "/dashboard/discover", label: "Discover events" }}
         />
-      ) : (
-        <>
-          <div className="card mb-6 flex items-center justify-between p-6">
-            <div>
-              <p className="text-sm text-[var(--color-ink-soft)]">
-                Total rewards released
-              </p>
-              <p className="text-2xl font-bold">
-                £{total.toLocaleString("en-GB")}
-              </p>
-            </div>
-            <Link href="/dashboard/participations" className="btn btn-ghost">
-              View all events
-            </Link>
-          </div>
+      )}
+
+      {waiting.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 font-display text-lg font-semibold">Waiting for your code</h2>
           <div className="space-y-3">
-            {rows.map((r) => (
-              <div
-                key={r.id}
-                className="card flex items-center justify-between p-5"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">
-                      {r.sponsored_events?.name ?? "Event"}
-                    </h3>
-                    <StatusBadge status={r.status} />
-                  </div>
+            {waiting.map((r) => (
+              <div key={r.id} className="card flex flex-wrap items-center justify-between gap-3 p-5">
+                <div className="min-w-0">
+                  <h3 className="font-semibold">{r.sponsored_events?.name ?? "Event"}</h3>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                    {r.reward_released_at
-                      ? `Released ${new Date(r.reward_released_at).toLocaleDateString("en-GB")}`
-                      : "Pending release"}
+                    You&apos;re checked in. Complete the post-event survey in My events — your code is issued once
+                    it&apos;s reviewed.
                   </p>
                 </div>
-                <p className="text-lg font-semibold">
-                  {r.reward_amount_gbp != null
-                    ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
-                    : "—"}
-                </p>
+                <Link href="/dashboard/participations" className="btn btn-ghost text-sm">
+                  Go to my events
+                </Link>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {codes.length > 0 && (
@@ -134,7 +112,7 @@ export default async function RewardsPage() {
                     {c.value_label ?? (c.code_type === "merch" ? "Merch" : "Discount")}
                     {platform ? ` · redeem on ${platform}` : ""}
                   </p>
-                  <p className="mt-2 inline-block rounded-lg bg-[var(--color-mist)] px-3 py-1.5 font-mono text-lg tracking-wide">
+                  <p className="mt-2 inline-block max-w-full break-all rounded-lg bg-[var(--color-mist)] px-3 py-1.5 font-mono text-lg tracking-wide">
                     {c.code}
                   </p>
                   {howTo && c.status === "issued" && !expired && (

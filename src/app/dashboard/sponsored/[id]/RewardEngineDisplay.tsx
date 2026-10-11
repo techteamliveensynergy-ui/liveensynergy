@@ -137,7 +137,7 @@ export function RewardEngineDisplay({
                 {t.distribution_model === "shared" && t.shared_code && (
                   <div>
                     <dt className="inline font-medium text-[var(--color-ink)]">Code: </dt>
-                    <dd className="inline font-mono">{t.shared_code}</dd>
+                    <dd className="inline break-all font-mono">{t.shared_code}</dd>
                   </div>
                 )}
                 {t.distribution_model === "unique" && (
@@ -156,8 +156,15 @@ export function RewardEngineDisplay({
                   <div className="sm:col-span-2">
                     <dt className="inline font-medium text-[var(--color-ink)]">Worst-case discount cost: </dt>
                     <dd className="inline">
-                      {money(est.base)} ({money(est.withMargin)} incl. {Math.round(REWARD_ADMIN_MARGIN * 100)}%
-                      admin margin)
+                      {money(est.base)}
+                      {/* The admin margin is between the platform and the
+                          brand; the artist sees the discount cost only. */}
+                      {!isArtist && (
+                        <>
+                          {" "}
+                          ({money(est.withMargin)} incl. {Math.round(REWARD_ADMIN_MARGIN * 100)}% admin margin)
+                        </>
+                      )}
                     </dd>
                   </div>
                 )}

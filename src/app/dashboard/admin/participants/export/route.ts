@@ -7,8 +7,7 @@ import { csvCell, csvDate, csvDateTime } from "@/lib/csv";
 interface Row {
   status: string;
   selected: boolean;
-  reward_amount_gbp: number | null;
-  bank_details_provided: boolean;
+  id: string;
   newsletter_opt_in: boolean;
   ticket_proof_url: string | null;
   attendance_verified_at: string | null;
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("participations")
     .select(
-      "status, selected, reward_amount_gbp, bank_details_provided, newsletter_opt_in, ticket_proof_url, attendance_verified_at, created_at, audience_profile_id, sponsored_event_id, profiles(full_name, email), sponsored_events(name, event_date)",
+      "id, status, selected, newsletter_opt_in, ticket_proof_url, attendance_verified_at, created_at, audience_profile_id, sponsored_event_id, profiles(full_name, email), sponsored_events(name, event_date)",
     )
     .order("created_at", { ascending: false });
 
@@ -49,6 +48,18 @@ export async function GET(request: NextRequest) {
 
   const { data } = await query;
   const rows = (data ?? []) as unknown as Row[];
+
+  // Code status per participation (issued / redeemed) — the reward is a
+  // discount code now, not a £ amount with payout consent.
+  // (All live codes rather than `.in(ids)`: a large export's id list would
+  // overflow the request URL.)
+  const { data: codeRows } = await supabase
+    .from("reward_codes")
+    .select("participation_id, status")
+    .neq("status", "void");
+  const codeByParticipation = new Map(
+    ((codeRows ?? []) as { participation_id: string; status: string }[]).map((c) => [c.participation_id, c.status]),
+  );
 
   const audienceIds = Array.from(new Set(rows.map((r) => r.audience_profile_id)));
   const { data: memberRows } = audienceIds.length
@@ -82,8 +93,7 @@ export async function GET(request: NextRequest) {
     "Event date",
     "Status",
     "Selected",
-    "Reward (GBP)",
-    "Payout consent",
+    "Discount code",
     "Newsletter opt-in",
     "Ticket proof",
     "Attendance confirmed at",
@@ -106,8 +116,7 @@ export async function GET(request: NextRequest) {
         csvDate(r.sponsored_events?.event_date),
         r.status,
         r.selected ? "yes" : "no",
-        r.reward_amount_gbp ?? "",
-        r.bank_details_provided ? "yes" : "no",
+        codeByParticipation.get(r.id) ?? "",
         r.newsletter_opt_in ? "yes" : "no",
         r.ticket_proof_url ? "yes" : "no",
         csvDateTime(r.attendance_verified_at),

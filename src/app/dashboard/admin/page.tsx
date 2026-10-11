@@ -35,6 +35,7 @@ export default async function AdminPage() {
     newRequests,
     codesIssued,
     surveyParticipations,
+    codesRedeemed,
   ] = await Promise.all([
     count(supabase, "profiles"),
     supabase
@@ -46,7 +47,7 @@ export default async function AdminPage() {
       .select("id, reference, name, status, brand_agreed, artist_agreed, campaign_id, event_date, created_at")
       .order("created_at", { ascending: false }),
     supabase.from("event_listings").select("id, status"),
-    supabase.from("participations").select("id, status, reward_amount_gbp"),
+    supabase.from("participations").select("id, status"),
     supabase.from("contact_messages").select("id, subject, name, handled_at, created_at"),
     Promise.all(
       (["brand", "artist", "event", "audience"] as const).map((role) =>
@@ -66,6 +67,7 @@ export default async function AdminPage() {
         .not("participation_id", "is", null)
         .neq("quality_status", "reject"),
     ),
+    headCount(supabase.from("reward_codes").select("id", { count: "exact", head: true }).eq("status", "redeemed")),
   ]);
   const [brandCount, artistCount, organiserCount, audienceCount] = roleCounts;
 
@@ -77,8 +79,10 @@ export default async function AdminPage() {
 
   // --- the queue that actually needs a human ---
   const needsMatching = campaigns.filter((c) => !c.matched_listing_id);
+  // Only proposals still being agreed — withdrawn siblings and settled deals
+  // aren't waiting on anyone.
   const awaitingAgreement = sponsored.filter(
-    (e) => !e.brand_agreed || !e.artist_agreed,
+    (e) => e.status === "in_progress" && (!e.brand_agreed || !e.artist_agreed),
   );
   const openEnquiries = enquiries.filter((e) => !e.handled_at);
   const verifiedUnrewarded = participations.filter(
@@ -104,10 +108,6 @@ export default async function AdminPage() {
     .reduce((t, i) => t + net(i), 0);
   const gbp = (n: number) => `£${n.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 
-  const totalRewarded = participations.reduce(
-    (sum, p) => sum + Number(p.reward_amount_gbp ?? 0),
-    0,
-  );
 
   // Order from the Admin Portal brief (9 Oct).
   const attention = [
@@ -148,7 +148,7 @@ export default async function AdminPage() {
       tint: "bg-[var(--color-mint)]",
     },
     {
-      label: "Verified, unrewarded",
+      label: "Checked in, no code yet",
       count: verifiedUnrewarded.length,
       href: "/dashboard/admin/participants?status=attendance_verified",
       tint: "bg-[var(--color-sage)]",
@@ -167,13 +167,13 @@ export default async function AdminPage() {
       ).length,
     },
     {
-      label: "Verified",
+      label: "Checked in",
       n: participations.filter((p) =>
         ["attendance_verified", "reward_released"].includes(p.status),
       ).length,
     },
     {
-      label: "Rewarded",
+      label: "Code issued",
       n: participations.filter((p) => p.status === "reward_released").length,
     },
   ];
@@ -234,8 +234,8 @@ export default async function AdminPage() {
           <MetricTile label="Surveys rejected" value={surveyTotals.rejected} />
           <MetricTile label="Codes issued" value={codesIssued} />
           <MetricTile
-            label="Rewarded"
-            value={`£${totalRewarded.toLocaleString("en-GB")}`}
+            label="Codes redeemed"
+            value={codesRedeemed}
             hint={`${listings.filter((l) => l.status === "available").length} listings open`}
           />
         </div>
