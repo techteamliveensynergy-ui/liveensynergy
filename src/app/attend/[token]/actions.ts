@@ -9,6 +9,13 @@ import { notify } from "@/lib/notifications";
  * Self-service attendance confirmation — the audience member scans the QR
  * code (or follows the link) the artist displays at the venue and confirms
  * it's them, in place of the organiser having to verify each attendee by hand.
+ *
+ * The check itself lives in `confirm_attendance()` (migration 0061): it
+ * compares the scanned token with the participation's own event, requires
+ * the person to be selected, and only opens from the day before to the day
+ * after the event (in the event's time zone). Before 0061 this action updated
+ * whatever participation id the form posted, so check-in worked from home and
+ * for any event. A direct update is now refused by the participations guard.
  */
 export async function confirmAttendance(formData: FormData) {
   const supabase = await createClient();
@@ -22,32 +29,21 @@ export async function confirmAttendance(formData: FormData) {
   const participationId = String(formData.get("participation_id") ?? "");
   if (!participationId) redirect(`/attend/${token}`);
 
-  const { data: p } = await supabase
-    .from("participations")
-    .select("id, status, selected, sponsored_events(name)")
-    .eq("id", participationId)
-    .eq("audience_profile_id", user.id)
-    .maybeSingle<{
-      id: string;
-      status: string;
-      selected: boolean;
-      sponsored_events: { name: string } | null;
-    }>();
+  const { data, error } = await supabase.rpc("confirm_attendance", {
+    p_token: token,
+    p_participation_id: participationId,
+  });
+  const result =
+    error || !data ? "error" : String((data as { result?: string }).result ?? "error");
+  if (error) console.error("[confirmAttendance] rpc failed", error.message);
 
-  if (p && p.selected && (p.status === "registered" || p.status === "ticket_uploaded")) {
-    await supabase
-      .from("participations")
-      .update({
-        status: "attendance_verified",
-        attendance_verified_at: new Date().toISOString(),
-      })
-      .eq("id", participationId);
-
+  if (result === "verified") {
+    const eventName = (data as { event_name?: string }).event_name ?? "your event";
     await notify({
       eventKey: "participation.verified",
       recipientProfileId: user.id,
       link: "/dashboard/participations",
-      variables: { event_name: p.sponsored_events?.name ?? "your event" },
+      variables: { event_name: eventName },
     });
   }
 
@@ -55,5 +51,5 @@ export async function confirmAttendance(formData: FormData) {
   // screen, so the attendee sees no acknowledgement that the tap registered.
   revalidatePath(`/attend/${token}`);
   revalidatePath("/dashboard/participations");
-  redirect(`/attend/${token}`);
+  redirect(result === "verified" || result === "already" ? `/attend/${token}` : `/attend/${token}?result=${result}`);
 }

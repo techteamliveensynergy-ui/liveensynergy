@@ -48,6 +48,29 @@ export default async function AdminEventsPage({
     status: string;
   }[];
 
+  // Artist (or pre-merge organiser) names, so admin can search a deal by who
+  // is performing — the 9 Oct standup's "filter by artist name".
+  const artistIds = Array.from(new Set(sponsored.map((e) => e.artist_profile_id).filter(Boolean))) as string[];
+  const [{ data: artistRows }, { data: organiserRows }] = artistIds.length
+    ? await Promise.all([
+        supabase.from("artists").select("profile_id, artist_name, stage_name").in("profile_id", artistIds),
+        supabase.from("event_organisers").select("profile_id, event_name").in("profile_id", artistIds),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const artistName = new Map<string, string>();
+  for (const o of (organiserRows ?? []) as { profile_id: string; event_name: string }[]) artistName.set(o.profile_id, o.event_name);
+  for (const a of (artistRows ?? []) as { profile_id: string; artist_name: string; stage_name: string | null }[])
+    artistName.set(a.profile_id, a.stage_name || a.artist_name);
+  const artistFor = (e: { artist_profile_id: string | null; artist_display_name?: string | null }) =>
+    e.artist_display_name || (e.artist_profile_id ? artistName.get(e.artist_profile_id) : undefined) || null;
+
+  // A confirmed deal whose date has passed counts as completed for filtering
+  // ("completed when dates have passed", 9 Oct standup), even before someone
+  // marks it — the badge then says so.
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+  const datePassed = (e: { status: string; event_date: string | null }) =>
+    e.status === "confirmed" && !!e.event_date && e.event_date < today;
+
   const q = sp.q?.toLowerCase().trim();
   if (q) {
     listings = listings.filter(
@@ -58,15 +81,22 @@ export default async function AdminEventsPage({
     sponsored = sponsored.filter(
       (e) =>
         e.name.toLowerCase().includes(q) ||
-        (e.reference ?? "").toLowerCase().includes(q),
+        (e.reference ?? "").toLowerCase().includes(q) ||
+        (artistFor(e) ?? "").toLowerCase().includes(q) ||
+        (e.brands?.brand_name ?? "").toLowerCase().includes(q),
     );
   }
   if (sp.status) {
     listings = listings.filter((l) => l.status === sp.status);
+    // Awaiting = still being agreed; a withdrawn sibling isn't awaiting anyone.
     if (sp.status === "awaiting_brand") {
-      sponsored = sponsored.filter((e) => !e.brand_agreed);
+      sponsored = sponsored.filter((e) => e.status === "in_progress" && !e.brand_agreed);
     } else if (sp.status === "awaiting_artist") {
-      sponsored = sponsored.filter((e) => !e.artist_agreed);
+      sponsored = sponsored.filter((e) => e.status === "in_progress" && !e.artist_agreed);
+    } else if (sp.status === "completed") {
+      sponsored = sponsored.filter((e) => e.status === "completed" || datePassed(e));
+    } else if (sp.status === "confirmed") {
+      sponsored = sponsored.filter((e) => e.status === "confirmed" && !datePassed(e));
     } else {
       sponsored = sponsored.filter((e) => e.status === sp.status);
     }
@@ -83,17 +113,17 @@ export default async function AdminEventsPage({
 
   const tabLink = (t: Tab) => `/dashboard/admin/events?tab=${t}`;
   const filterLink = (value: string) =>
-    `/dashboard/admin/events?tab=${tab}${value ? `&status=${value}` : ""}`;
+    `/dashboard/admin/events?tab=${tab}${value ? `&status=${value}` : ""}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ""}`;
 
   const filters =
     tab === "sponsored"
       ? [
           { value: "", label: "All" },
-          { value: "in_progress", label: "In progress" },
-          { value: "confirmed", label: "Confirmed" },
-          { value: "completed", label: "Completed" },
-          { value: "awaiting_brand", label: "Awaiting brand" },
           { value: "awaiting_artist", label: "Awaiting artist" },
+          { value: "awaiting_brand", label: "Awaiting brand" },
+          { value: "in_progress", label: "Being agreed" },
+          { value: "confirmed", label: "Confirmed (upcoming)" },
+          { value: "completed", label: "Completed / date passed" },
         ]
       : [
           { value: "", label: "All" },
@@ -124,6 +154,21 @@ export default async function AdminEventsPage({
           </Link>
         ))}
       </div>
+
+      <form method="get" className="mb-3 flex flex-wrap gap-2">
+        <input type="hidden" name="tab" value={tab} />
+        {sp.status && <input type="hidden" name="status" value={sp.status} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={sp.q ?? ""}
+          placeholder={tab === "sponsored" ? "Search event, artist, brand or reference" : "Search listing or reference"}
+          className="input w-full max-w-md"
+        />
+        <button type="submit" className="btn btn-ghost text-sm">
+          Search
+        </button>
+      </form>
 
       <div className="mb-5 flex flex-wrap gap-2">
         {filters.map((f) => (
@@ -160,19 +205,25 @@ export default async function AdminEventsPage({
                       {e.name}
                     </span>
                     <StatusBadge status={e.status} />
-                    {!e.brand_agreed && (
+                    {datePassed(e) && (
+                      <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
+                        Date passed — not yet marked completed
+                      </span>
+                    )}
+                    {e.status === "in_progress" && !e.brand_agreed && (
                       <span className="rounded-full bg-[var(--color-gold)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)]">
                         Awaiting brand
                       </span>
                     )}
-                    {!e.artist_agreed && (
+                    {e.status === "in_progress" && !e.artist_agreed && (
                       <span className="rounded-full bg-[var(--color-lavender)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-purple-deep)]">
                         Awaiting artist
                       </span>
                     )}
                   </div>
                   <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">
-                    {e.brands?.brand_name ?? "No brand"} · Ref {e.reference}
+                    {e.brands?.brand_name ?? "No brand"}
+                    {artistFor(e) ? ` × ${artistFor(e)}` : ""} · Ref {e.reference}
                     {e.event_date ? ` · ${formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone })}` : ""}
                   </p>
                 </div>

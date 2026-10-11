@@ -51,12 +51,47 @@ function StatusCard({
  * self-confirm their attendance, instead of the organiser verifying each
  * person by hand — see `attendance_qr_token` on `sponsored_events`.
  */
+// Why a check-in was refused (confirm_attendance(), migration 0061).
+const RESULT_MESSAGES: Record<string, { title: string; body: string }> = {
+  too_early: {
+    title: "Check-in isn't open yet",
+    body: "Check-in opens the day before the event. Scan the code again when you're at the venue.",
+  },
+  too_late: {
+    title: "Check-in has closed",
+    body: "Check-in closes the day after the event. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
+  },
+  wrong_event: {
+    title: "This code is for a different event",
+    body: "The QR code you scanned doesn't match your registration. Make sure you're scanning the code shown at your event.",
+  },
+  not_selected: {
+    title: "Not yet selected for this event",
+    body: "Check-in opens once you've been selected. Check My events for updates.",
+  },
+  event_not_live: {
+    title: "This event isn't open for check-in",
+    body: "The event isn't confirmed for check-in. Check My events for updates.",
+  },
+  not_found: {
+    title: "We couldn't find your registration",
+    body: "Make sure you're signed in with the account you registered with.",
+  },
+  error: {
+    title: "Something went wrong",
+    body: "Your check-in didn't go through. Please try again in a moment.",
+  },
+};
+
 export default async function AttendPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ result?: string }>;
 }) {
   const { token } = await params;
+  const { result } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -136,7 +171,7 @@ export default async function AttendPage({
         <StatusCard
           icon="✅"
           title="Attendance confirmed"
-          body={`You're checked in to ${event.name}${when ? ` (${when})` : ""}. Thanks for coming — your reward is on its way if it isn't already.`}
+          body={`You're checked in to ${event.name}${when ? ` (${when})` : ""}. Thanks for coming — complete the post-event survey in My events to receive your discount code.`}
         />
         <Link href="/dashboard/participations" className="btn btn-primary mt-6 w-full">
           Go to my events
@@ -151,7 +186,7 @@ export default async function AttendPage({
         <StatusCard
           icon="⏳"
           title="Not yet selected for this event"
-          body="Attendance check-in opens once you've been selected for the reward. If you're at the venue, enjoy the show — check My events for updates."
+          body="Attendance check-in opens once you've been selected. If you're at the venue, enjoy the show — check My events for updates."
         />
         <Link href="/dashboard/participations" className="btn btn-ghost mt-6 w-full">
           Go to my events
@@ -160,12 +195,20 @@ export default async function AttendPage({
     );
   }
 
+  const refused = result ? RESULT_MESSAGES[result] : undefined;
+
   return (
     <Shell>
+      {refused && (
+        <div className="mb-6 rounded-xl bg-[var(--color-gold)]/40 p-4 text-left text-sm" role="alert">
+          <p className="font-semibold text-[var(--color-ink)]">{refused.title}</p>
+          <p className="mt-1 text-[var(--color-ink-soft)]">{refused.body}</p>
+        </div>
+      )}
       <StatusCard
         icon="📍"
         title="Confirm you're here"
-        body={`Tap below to confirm you're attending ${event.name}${when ? ` (${when})` : ""}. This tells us your attendance is verified so your reward can be released.`}
+        body={`Tap below to confirm you're attending ${event.name}${when ? ` (${when})` : ""}. Once you're checked in, the post-event survey unlocks in My events — complete it to receive your discount code.`}
       />
       <form action={confirmAttendance} className="mt-6">
         <input type="hidden" name="token" value={token} />

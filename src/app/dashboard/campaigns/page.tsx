@@ -207,7 +207,8 @@ export default async function CampaignsPage() {
             {campaigns.map((c) => (
               <div
                 key={c.id}
-                className="card flex flex-wrap items-center justify-between gap-4 p-5"
+                id={`campaign-${c.id}`}
+                className="card flex scroll-mt-24 flex-wrap items-center justify-between gap-4 p-5 target:ring-2 target:ring-[var(--color-brand)]"
               >
                 <div className="max-w-xl">
                   <div className="flex items-center gap-2">

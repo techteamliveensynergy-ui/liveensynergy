@@ -38,10 +38,27 @@ export async function uploadTicketProof(formData: FormData) {
   const id = str(formData.get("id"));
   if (!id) return;
 
-  const { path, error } = await uploadPrivateFile(
-    formData.get("ticket_file"),
-    "ticket-proof",
-  );
+  // Selected, and not yet checked in — the same rule the participations guard
+  // (0061) enforces, checked first so the file isn't uploaded for nothing and
+  // the attendee gets a clear message rather than a silent no-op.
+  const { data: current } = await supabase
+    .from("participations")
+    .select("selected, status")
+    .eq("id", id)
+    .eq("audience_profile_id", userId)
+    .maybeSingle<{ selected: boolean; status: string }>();
+  if (!current?.selected || !["registered", "ticket_uploaded"].includes(current.status)) {
+    redirect("/dashboard/participations?notice=upload-not-allowed");
+  }
+
+  // A ticket is a photo or a PDF. Anything else (an .exe, a zip) is refused
+  // here rather than stored for the artist to open.
+  const file = formData.get("ticket_file");
+  if (file instanceof File && file.size > 0 && !(file.type.startsWith("image/") || file.type === "application/pdf")) {
+    redirect("/dashboard/participations?notice=upload-wrong-type");
+  }
+
+  const { path, error } = await uploadPrivateFile(file, "ticket-proof");
   if (error || !path) {
     redirect("/dashboard/participations?notice=upload-failed");
   }
@@ -77,11 +94,10 @@ export async function provideConsent(formData: FormData) {
 
   await supabase
     .from("participations")
+    // Newsletter only. bank_details_provided belonged to the cash payout and
+    // is left as recorded; the form no longer offers it.
     .update({
       newsletter_opt_in: formData.get("newsletter_opt_in") ? true : false,
-      bank_details_provided: formData.get("bank_details_provided")
-        ? true
-        : false,
     })
     .eq("id", id)
     .eq("audience_profile_id", userId);

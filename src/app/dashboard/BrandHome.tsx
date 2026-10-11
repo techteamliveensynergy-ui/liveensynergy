@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { profileCompleteness } from "@/lib/profile";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
-import { computePlatformFee, netSponsorshipBudget } from "@/lib/constants";
 import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -61,14 +60,10 @@ export async function BrandHome({ profile }: { profile: Profile }) {
   const activeCampaigns = campaigns.filter((c) => c.status === "in_progress").length;
   const confirmedEvents = sponsored.filter((s) => s.status === "confirmed");
   const confirmed = confirmedEvents.length;
-  // Net of the platform fee — `remaining_budget_gbp` already excludes it, and
-  // the fallback recomputes it for rows written before that fix.
-  const budgetRemaining = sponsored.reduce(
-    (sum, s) =>
-      sum +
-      Number(s.remaining_budget_gbp ?? netSponsorshipBudget(s.budget_gbp) ?? 0),
-    0,
-  );
+  // What the brand has committed across its campaigns (package price). The
+  // old "available for rewards" pool belonged to the cash reward model —
+  // rewards are discount codes now (9 Oct standup).
+  const committedBudget = campaigns.reduce((sum, c) => sum + Number(c.budget_gbp ?? 0), 0);
 
   return (
     <div>
@@ -81,9 +76,9 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {!brand
-            ? "Finish your brand profile to start creating sponsorship campaigns."
+            ? "Finish your brand profile to start requesting sponsorship campaigns."
             : campaigns.length === 0
-              ? "Create your first sponsorship campaign to get matched with an artist or event."
+              ? "Request your first sponsorship campaign — the Live·En·Synergy team matches it with artists and events."
               : `You have ${activeCampaigns} campaign${activeCampaigns === 1 ? "" : "s"} in progress.`}
         </p>
       </div>
@@ -107,8 +102,8 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           tint="bg-[var(--color-sage)]"
         />
         <MetricTile
-          label="Available for rewards"
-          value={`£${budgetRemaining.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
+          label="Committed budget"
+          value={`£${committedBudget.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
           tint="bg-[#fbeadd]"
         />
       </div>
@@ -120,9 +115,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
               <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
                 Campaigns in flight
               </h2>
-              <p className="text-xs text-[var(--color-ink-soft)]">
-                All budgets shown net of platform fee.
-              </p>
+
             </div>
             <Link
               href="/dashboard/campaigns"
@@ -138,17 +131,16 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                 href="/dashboard/campaigns/new"
                 className="font-semibold text-[var(--color-brand-dark)]"
               >
-                Create one →
+                Request one →
               </Link>
             </div>
           ) : (
             <div className="space-y-2">
               {campaigns.slice(0, 4).map((c) => {
-                const fee = computePlatformFee(Number(c.budget_gbp));
                 return (
                   <Link
                     key={c.id}
-                    href={`/dashboard/campaigns/${c.id}`}
+                    href={`/dashboard/campaigns#campaign-${c.id}`}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
                   >
                     <div>
@@ -161,7 +153,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                     </div>
                     <StatusBadge status={c.status} />
                     <span className="text-xs text-[var(--color-ink-soft)]">
-                      £{fee.availableForSponsorship.toLocaleString("en-GB", { maximumFractionDigits: 0 })} net
+                      £{Number(c.budget_gbp ?? 0).toLocaleString("en-GB", { maximumFractionDigits: 0 })}
                     </span>
                     <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
                       Manage →
@@ -217,8 +209,8 @@ export async function BrandHome({ profile }: { profile: Profile }) {
               Confirmed sponsorships
             </h2>
             <p className="text-xs text-[var(--color-ink-soft)]">
-              Deals both sides have agreed. Remaining budget updates as rewards
-              are released.
+              Deals both sides have agreed — open one for its live campaign:
+              surveys, participants and results.
             </p>
           </div>
           <Link
@@ -253,17 +245,6 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                     {s.location ? ` · ${s.location}` : ""}
                   </p>
                 </div>
-                <span className="text-xs text-[var(--color-ink-soft)]">
-                  £
-                  {Number(
-                    s.remaining_budget_gbp ??
-                      netSponsorshipBudget(s.budget_gbp) ??
-                      0,
-                  ).toLocaleString("en-GB", {
-                    maximumFractionDigits: 0,
-                  })}{" "}
-                  for rewards
-                </span>
                 <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
                   Open →
                 </span>
@@ -278,9 +259,9 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           href="/dashboard/campaigns/new"
           className="card block p-5 transition hover:-translate-y-0.5"
         >
-          <h3 className="font-semibold text-[var(--color-ink)]">Create a campaign</h3>
+          <h3 className="font-semibold text-[var(--color-ink)]">Request a campaign</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Set a budget and reward rules — we&apos;ll find a fitting match.
+            Tell us what you want to achieve — the team prices it and finds a fitting match.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →

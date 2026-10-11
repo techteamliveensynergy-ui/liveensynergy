@@ -32,7 +32,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
   const sponsored = (sponsoredData ?? []) as SponsoredEvent[];
   const published = listings.filter((l) => l.status === "available").length;
   const confirmed = sponsored.filter((s) => s.status === "confirmed").length;
-  const pendingOffers = sponsored.filter((s) => !s.artist_agreed).length;
+  const pendingOffers = sponsored.filter((s) => s.status === "in_progress" && !s.artist_agreed).length;
 
   let verifiedCount = 0;
   const sponsoredIds = sponsored.map((s) => s.id);

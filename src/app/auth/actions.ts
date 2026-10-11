@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLES, ROLE_LABELS, type SignupRole } from "@/lib/constants";
+import { safeRedirectPath } from "@/lib/urls";
+import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type SignupRole } from "@/lib/constants";
 import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
 
@@ -35,7 +36,10 @@ export async function signUp(
   if (!fullName || !email || !password) {
     return { error: "Please fill in your name, email and password." };
   }
-  if (!ROLES.includes(role)) {
+  // Only the three sign-up cards. `event` stays in ROLES for accounts created
+  // before the 3 Aug merge, but a new organiser signs up as an artist — a
+  // ?role=event link used to create a fresh legacy account.
+  if (!SIGNUP_ROLE_OPTIONS.some((o) => o.value === role)) {
     return {
       error:
         "Please choose whether you're a brand, an artist / event organiser, or an audience member.",
@@ -106,7 +110,7 @@ export async function signIn(
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const redirectTo = String(formData.get("redirectTo") ?? "") || "/dashboard";
+  const redirectTo = safeRedirectPath(String(formData.get("redirectTo") ?? ""), "/dashboard");
 
   if (!email || !password) {
     return { error: "Please enter your email and password." };
@@ -127,11 +131,20 @@ export async function signIn(
   if (data.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_active")
+      .select("is_active, suspended_until")
       .eq("id", data.user.id)
       .maybeSingle();
 
-    if (profile && profile.is_active === false) {
+    // An automatic no-show suspension that has run its course lifts here too
+    // — otherwise someone whose year was up could never sign back in, since
+    // the middleware's lift only runs for a session that already exists.
+    let active = profile?.is_active !== false;
+    if (!active && profile?.suspended_until && new Date(profile.suspended_until) <= new Date()) {
+      const { data: lifted } = await supabase.rpc("lift_expired_suspension");
+      active = lifted === true;
+    }
+
+    if (profile && !active) {
       await supabase.auth.signOut();
       return {
         error:

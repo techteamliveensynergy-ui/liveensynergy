@@ -63,12 +63,14 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
 
   if (question.config.display_style === "likert" && options.length === LIKERT_STYLE.length) {
     return (
-      <div className="grid grid-cols-5 gap-2 text-center">
+      // Tiles size to the column rather than a fixed 56px each: five of them
+      // plus gaps overflowed 320–375px phones (test MOB-02).
+      <div className="grid min-w-0 grid-cols-5 gap-1 text-center sm:gap-2">
         {options.map((o, i) => {
           const style = LIKERT_STYLE[i];
           const selected = value === o.value;
           return (
-            <label key={o.value} className="flex flex-col items-center gap-1.5 text-[0.75em]">
+            <label key={o.value} className="flex min-w-0 flex-col items-center gap-1.5 text-[0.75em]">
               <input
                 type="radio"
                 name={question.id}
@@ -77,7 +79,7 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
                 onChange={() => onChange(o.value)}
               />
               <span
-                className={`flex h-14 w-14 items-center justify-center rounded-xl text-[1.5em] transition-transform ${
+                className={`flex aspect-square w-full max-w-14 items-center justify-center rounded-xl text-[1.5em] transition-transform ${
                   selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                 }`}
                 style={{ background: style.bg }}
@@ -85,7 +87,7 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
               >
                 {style.emoji}
               </span>
-              <span className="leading-tight text-[var(--color-ink-soft)]">{o.label}</span>
+              <span className="w-full break-words leading-tight text-[var(--color-ink-soft)] [hyphens:auto]">{o.label}</span>
             </label>
           );
         })}

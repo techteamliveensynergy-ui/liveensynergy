@@ -91,3 +91,19 @@ export function normaliseUrlFields(
   }
   return { values };
 }
+
+/**
+ * A post-sign-in / post-confirmation redirect target, kept on this site.
+ * `redirectTo` and `next` arrive from the URL, so without this a link like
+ * /auth/sign-in?redirectTo=https://evil.example (or `next=@evil.example`,
+ * which `${origin}${next}` turns into a userinfo URL) sent a freshly signed-in
+ * user wherever the link's author chose. Only a single-slash absolute path is
+ * accepted; anything else falls back.
+ */
+export function safeRedirectPath(target: string | null | undefined, fallback: string): string {
+  const t = (target ?? "").trim();
+  if (!t.startsWith("/") || t.startsWith("//") || t.startsWith("/\\") || /[\r\n\t]/.test(t)) {
+    return fallback;
+  }
+  return t;
+}

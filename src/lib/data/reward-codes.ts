@@ -131,6 +131,17 @@ export async function issueCodeFromTier(
     if (!code) return { ok: false, reason: "failed" };
   }
 
+  // The code is the reward now (9 Oct standup), so issuing one completes the
+  // participation — before this the row stayed at "attendance verified" and
+  // the audience's tracker read "your reward is being processed" for good.
+  // Only forward from a checked-in row; the caller is an admin, so the
+  // participations guard (0061) lets it through.
+  await supabase
+    .from("participations")
+    .update({ status: "reward_released", reward_released_at: new Date().toISOString() })
+    .eq("id", args.participationId)
+    .eq("status", "attendance_verified");
+
   await notify({
     eventKey: "reward.code_issued",
     recipientProfileId: args.recipientProfileId,

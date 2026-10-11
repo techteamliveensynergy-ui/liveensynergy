@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
-import { netSponsorshipBudget } from "@/lib/constants";
 import type { SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
@@ -54,8 +53,8 @@ export default async function SponsoredPage() {
         subtitle="Confirmed and in-progress sponsorships linking a brand and an artist or event."
         action={
           isBrand ? (
-            <Link href="/dashboard/sponsored/new" className="btn btn-primary">
-              + New sponsored event
+            <Link href="/dashboard/campaigns/new" className="btn btn-primary">
+              + Request a campaign
             </Link>
           ) : undefined
         }
@@ -67,12 +66,12 @@ export default async function SponsoredPage() {
           title="No sponsored events yet"
           body={
             isBrand
-              ? "Once you've matched with an artist or event, create a sponsored event to agree terms."
-              : "When a brand proposes a sponsorship, it will appear here to review and agree."
+              ? "Request a campaign and the Live·En·Synergy team matches it with artists. Proposed events appear here for you to agree."
+              : "When the Live·En·Synergy team proposes your event for a brand's campaign, it appears here to review and agree."
           }
           cta={
             isBrand
-              ? { href: "/dashboard/sponsored/new", label: "Create one" }
+              ? { href: "/dashboard/campaigns/new", label: "Request a campaign" }
               : undefined
           }
         />
@@ -178,11 +177,6 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
         <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
           Sponsorship ref {e.reference}
           {e.artist_display_name ? ` · with ${e.artist_display_name}` : ""}
-          {/* The net figure, not the gross budget — the service fee comes off
-              before anything can be paid out. */}
-          {netSponsorshipBudget(e.budget_gbp) != null
-            ? ` · £${netSponsorshipBudget(e.budget_gbp)!.toLocaleString("en-GB")} for rewards`
-            : ""}
         </p>
       </div>
       <div className="flex items-center gap-2 text-xs">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -13,8 +14,12 @@ export default async function NewSponsoredEventPage() {
   // their own listings and one of the brands' open campaign briefs, which is
   // what identifies the brand on the other side.
   const { profile } = await requireRole(["brand", "artist", "event"]);
+  // Brands no longer build sponsorships themselves: campaigns are created by
+  // the team from a request, priced by package, and matched by admin (new
+  // model). This self-serve form also carried the old fee calculator.
+  if (profile.role === "brand") redirect("/dashboard/campaigns/new");
   const supabase = await createClient();
-  const isBrand = profile.role === "brand";
+  const isBrand = false;
 
   const { data: brand } = isBrand
     ? await supabase

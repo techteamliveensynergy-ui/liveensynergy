@@ -131,12 +131,6 @@ export function AudienceForm({
         </div>
       </Placeholder>
 
-      <Placeholder
-        title="Payout details"
-        description="Where we send your reward once your attendance is verified."
-        note="Not collected here yet. If you're selected for a reward, you'll be asked to consent and share payout details from My events."
-      />
-
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & explore events"}
         confirmSave={mode === "profile"}

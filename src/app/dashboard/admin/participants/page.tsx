@@ -21,8 +21,6 @@ interface Row {
   id: string;
   status: string;
   selected: boolean;
-  reward_amount_gbp: number | null;
-  bank_details_provided: boolean;
   newsletter_opt_in: boolean;
   attendance_verified_at: string | null;
   created_at: string;
@@ -84,10 +82,16 @@ export default async function AdminParticipantsPage({
   if (sp.selected === "yes") rows = rows.filter((r) => r.selected);
   if (sp.event) rows = rows.filter((r) => r.sponsored_event_id === sp.event);
 
-  const totalRewarded = ((data ?? []) as Row[]).reduce(
-    (sum, r) => sum + Number(r.reward_amount_gbp ?? 0),
-    0,
+  // The reward is a discount code now (9 Oct standup) — show each person's
+  // code status instead of the old £ amount and payout consent.
+  const { data: codeRows } = await supabase
+    .from("reward_codes")
+    .select("participation_id, status")
+    .neq("status", "void");
+  const codeByParticipation = new Map(
+    ((codeRows ?? []) as { participation_id: string; status: string }[]).map((c) => [c.participation_id, c.status]),
   );
+  const codesIssued = codeByParticipation.size;
 
   const link = (params: Record<string, string>) => {
     const q = new URLSearchParams(params);
@@ -104,7 +108,7 @@ export default async function AdminParticipantsPage({
     <div>
       <PageHeader
         title="Participants"
-        subtitle={`${total} registrations across every sponsored event · £${totalRewarded.toLocaleString("en-GB")} rewarded to date.`}
+        subtitle={`${total} registrations across every sponsored event · ${codesIssued} discount code${codesIssued === 1 ? "" : "s"} issued.`}
         action={
           <a href={exportHref} className="btn btn-ghost text-sm">
             ⬇ Export CSV
@@ -143,7 +147,7 @@ export default async function AdminParticipantsPage({
                 : "border border-black/10 bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-mist)]"
             }`}
           >
-            {s.replace(/_/g, " ")}
+            {s === "reward_released" ? "code issued" : s.replace(/_/g, " ")}
           </Link>
         ))}
       </div>
@@ -204,17 +208,17 @@ export default async function AdminParticipantsPage({
               </Link>
 
               <div className="w-24 text-right">
-                <p className="text-xs text-[var(--color-ink-soft)]">Reward</p>
+                <p className="text-xs text-[var(--color-ink-soft)]">Code</p>
                 <p className="text-sm font-medium text-[var(--color-ink)]">
-                  {r.reward_amount_gbp != null
-                    ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
-                    : "—"}
+                  {codeByParticipation.get(r.id) === "redeemed"
+                    ? "Redeemed"
+                    : codeByParticipation.has(r.id)
+                      ? "Issued"
+                      : "—"}
                 </p>
               </div>
 
               <div className="w-28 text-right text-xs text-[var(--color-ink-soft)]">
-                {r.bank_details_provided ? "payout ✓" : "payout —"}
-                <br />
                 {r.newsletter_opt_in ? "newsletter ✓" : "newsletter —"}
               </div>
             </div>

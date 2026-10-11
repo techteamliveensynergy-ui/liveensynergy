@@ -52,9 +52,9 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
     ["registered", "ticket_uploaded"].includes(r.status),
   ).length;
   const selectedCount = rows.filter((r) => r.selected).length;
-  const totalRewarded = rows
-    .filter((r) => r.status === "reward_released")
-    .reduce((sum, r) => sum + Number(r.reward_amount_gbp ?? 0), 0);
+  // Rewards are discount codes (9 Oct standup); a participation reaches
+  // reward_released when its code is issued.
+  const codesReceived = rows.filter((r) => r.status === "reward_released").length;
 
   const memberSince = member?.created_at
     ? new Date(member.created_at).toLocaleDateString("en-GB", {
@@ -72,7 +72,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {rows.length === 0
-            ? "Discover events with sponsor-funded rewards and register to attend."
+            ? "Discover sponsored events — attend, share your views in a short survey and get a discount code."
             : pendingCount > 0
               ? `You have ${pendingCount} event${pendingCount === 1 ? "" : "s"} in progress — keep an eye on the next step.`
               : "You're all caught up — go find your next event."}
@@ -85,18 +85,14 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
           value={rows.length}
           tint="bg-[var(--color-sage)]"
         />
-        <MetricTile label="Selected for reward" value={selectedCount} tint="bg-[var(--color-mint)]" />
+        <MetricTile label="Selected in the draw" value={selectedCount} tint="bg-[var(--color-mint)]" />
         <MetricTile
           label="Verified attendance at events"
           value={verifiedCount}
           tint="bg-[var(--color-lavender)]"
         />
         <MetricTile label="In progress" value={pendingCount} tint="bg-[var(--color-pink)]" />
-        <MetricTile
-          label="Rewarded to date"
-          value={`£${totalRewarded.toLocaleString("en-GB")}`}
-          tint="bg-[var(--color-gold)]"
-        />
+        <MetricTile label="Discount codes received" value={codesReceived} tint="bg-[var(--color-gold)]" />
       </div>
 
       {/* Account card alongside the shortcuts; the reward tracker gets the
@@ -130,9 +126,9 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
             </div>
             <div className="rounded-xl border border-black/10 bg-white p-3.5 text-center">
               <p className="font-display text-xl font-semibold text-[var(--color-brand-dark)]">
-                £{totalRewarded.toLocaleString("en-GB")}
+                {codesReceived}
               </p>
-              <p className="text-[11px] text-[var(--color-ink-soft)]">Rewarded to date</p>
+              <p className="text-[11px] text-[var(--color-ink-soft)]">Codes received</p>
             </div>
           </div>
           <Link href="/dashboard/profile" className="btn btn-ghost mt-4 w-full">
@@ -144,7 +140,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/discover" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">Find events</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Browse events with sponsor-funded rewards.
+            Browse sponsored events near you.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →
@@ -162,7 +158,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/rewards" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">My rewards</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Upload proof and claim your reimbursements.
+            Your discount codes and how to use them.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →
@@ -176,7 +172,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
       <div className="card mt-5 p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-            Reward tracker
+            Your events
           </h2>
           <Link
             href="/dashboard/participations"
@@ -214,11 +210,6 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
                     </p>
                   </div>
                   <StatusBadge status={r.status} />
-                  <span className="text-sm text-[var(--color-ink-soft)]">
-                    {r.reward_amount_gbp != null
-                      ? `£${Number(r.reward_amount_gbp).toLocaleString("en-GB")}`
-                      : "—"}
-                  </span>
                 </div>
 
                 {/* Where they are in the flow, at a glance (3 Aug standup). */}
