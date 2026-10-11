@@ -37,7 +37,7 @@ const SURVEY_TYPES: SurveyType[] = ["pre", "post", "pre_post"];
 function orderFormLink(id: string): string {
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   return origin
-    ? `${origin}/dashboard/campaigns/order-forms/${id}`
+    ? `${origin}/order-forms/${id}`
     : "your Live·En·Synergy dashboard, under Campaigns";
 }
 
@@ -201,7 +201,7 @@ export async function saveOrderForm(
       eventKey: "order_form.sent",
       recipientProfileId: campaign.brands.profile_id,
       toEmail: row.contact_email ?? undefined,
-      link: `/dashboard/campaigns/order-forms/${saved.id}`,
+      link: `/order-forms/${saved.id}`,
       variables: {
         reference: saved.reference,
         campaign_reference: campaign.reference,
@@ -214,7 +214,7 @@ export async function saveOrderForm(
   revalidatePath(`/dashboard/admin/campaigns/${campaignId}/order-form`);
   revalidatePath("/dashboard/admin/invoices");
   revalidatePath("/dashboard/campaigns");
-  revalidatePath(`/dashboard/campaigns/order-forms/${saved.id}`);
+  revalidatePath(`/order-forms/${saved.id}`);
   redirect(`/dashboard/admin/campaigns/${campaignId}/order-form?${intent === "send" ? "sent" : "saved"}=1`);
 }
 

@@ -370,9 +370,13 @@ export default async function MessagesPage({
                       Event details ↗
                     </a>
                   )}
-                  {active.campaigns && (
+                  {active.campaigns && (isAdmin || profile!.role === "brand") && (
                     <a
-                      href={`/dashboard/campaigns/${active.campaigns.id}`}
+                      href={
+                        isAdmin
+                          ? `/dashboard/admin/campaigns/${active.campaigns.id}`
+                          : `/dashboard/campaigns#campaign-${active.campaigns.id}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"

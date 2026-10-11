@@ -348,16 +348,16 @@ export default async function ParticipationsPage({
 
                 {p.status === "attendance_verified" && (
                   <p className="mt-4 text-sm text-[var(--color-purple-deep)]">
-                    🎉 Attendance verified — your reward is being processed.
+                    🎉 Attendance verified — complete the post-event survey to receive your discount code.
                   </p>
                 )}
 
                 {p.status === "reward_released" && (
                   <p className="mt-4 text-sm text-[var(--color-olive-deep)]">
-                    💸 Reward released
-                    {p.reward_amount_gbp != null
-                      ? `: £${Number(p.reward_amount_gbp).toLocaleString("en-GB")}`
-                      : ""}
+                    🎟 Your discount code is ready —{" "}
+                    <Link href="/dashboard/rewards" className="font-semibold underline">
+                      see My rewards
+                    </Link>
                     .
                   </p>
                 )}
@@ -365,7 +365,8 @@ export default async function ParticipationsPage({
                 {/* The "not selected" message is part of the step tracker
                     above, so it isn't repeated here. */}
 
-                {/* Consent / payout details */}
+                {/* Marketing consent. The payout-details consent went with the
+                    cash reward (9 Oct standup: rewards are discount codes). */}
                 {p.selected && (
                   <form
                     action={provideConsent}
@@ -373,15 +374,6 @@ export default async function ParticipationsPage({
                   >
                     <input type="hidden" name="id" value={p.id} />
                     <p className="font-semibold">You&apos;ve been selected 🎯</p>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="bank_details_provided"
-                        defaultChecked={p.bank_details_provided}
-                        className="h-4 w-4"
-                      />
-                      I consent to share my payout details to receive the reward
-                    </label>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"

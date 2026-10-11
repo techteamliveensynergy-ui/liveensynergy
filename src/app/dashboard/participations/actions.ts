@@ -94,11 +94,10 @@ export async function provideConsent(formData: FormData) {
 
   await supabase
     .from("participations")
+    // Newsletter only. bank_details_provided belonged to the cash payout and
+    // is left as recorded; the form no longer offers it.
     .update({
       newsletter_opt_in: formData.get("newsletter_opt_in") ? true : false,
-      bank_details_provided: formData.get("bank_details_provided")
-        ? true
-        : false,
     })
     .eq("id", id)
     .eq("audience_profile_id", userId);

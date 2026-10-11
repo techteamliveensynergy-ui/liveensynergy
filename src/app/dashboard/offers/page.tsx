@@ -24,6 +24,9 @@ export default async function OffersPage() {
       .select("*")
       .eq("artist_profile_id", profile.id)
       .eq("artist_agreed", false)
+      // Only proposals still being agreed — withdrawn and completed ones used
+      // to show up here as "awaiting your response".
+      .eq("status", "in_progress")
       .order("created_at", { ascending: false }),
   ]);
 

@@ -34,10 +34,10 @@ export function participationSteps(p: Participation): ProgressStep[] {
   const done = [true, p.selected, uploaded, verified, rewarded];
   const labels: { label: string; hint?: string }[] = [
     { label: "Registered", hint: "You signed up for this event" },
-    { label: "Selected", hint: "The sponsor confirms who's in" },
+    { label: "Selected", hint: "Chosen in the random draw" },
     { label: "Ticket uploaded", hint: "Upload your ticket as proof" },
     { label: "Attended", hint: "Scan the QR code at the venue" },
-    { label: "Reward released", hint: "Paid out by the team" },
+    { label: "Code issued", hint: "Find it under My rewards" },
   ];
 
   const firstPending = done.indexOf(false);
@@ -138,7 +138,7 @@ export function ParticipationProgress({
       </ol>
 
       {/* One hint for the step they're actually on, rather than squeezing it
-          into a column narrow enough to hold "Reward released". */}
+          into a column narrow enough to hold "Ticket uploaded". */}
       {!compact && current?.hint && (
         <p className="mt-2.5 text-center text-xs text-[var(--color-ink-soft)]">
           Next: {current.hint}
