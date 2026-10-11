@@ -362,3 +362,7 @@ Path alias: `@/*` → `./src/*`.
   results page, CSV exports, pre/post comparison and the brand's anonymised
   Campaign Performance Report; who-sees-what, edge cases and open client
   decisions. Read before touching survey reporting or brand access to answers.
+- `docs/standup-2026-10-09-plan.md` — next phase from the 9 Oct standup: the
+  participations/check-in security fixes, old cash-reward model clean-up across
+  every portal, and the Insights module (async analysis runs, cross-tabs, AI
+  summary). Read before touching participations, rewards or survey reporting.
