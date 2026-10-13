@@ -10,6 +10,7 @@ import { CampaignStatusActions } from "./CampaignStatusActions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { campaignTitle } from "@/lib/campaign-requests";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { CampaignChecklist } from "@/components/campaigns/CampaignChecklist";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import {
   CAMPAIGN_STAGE_LABELS,
@@ -336,31 +337,6 @@ export default async function AdminCampaignsPage({
                         · {c.brands?.brand_name ?? "Unknown brand"}
                       </span>
                       <CampaignStageBadge stage={stageOf.get(c.id)!} />
-                      {c.matched_listing_id ? (
-                        <span className="rounded-full bg-[var(--color-sage)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-olive-deep)]">
-                          Matched
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-[var(--color-gold)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)]">
-                          Needs matching
-                        </span>
-                      )}
-                      {invoiceFor(c.id) ? (
-                        <Link
-                          href={`/dashboard/admin/invoices/${invoiceFor(c.id)!.id}`}
-                          className="inline-flex items-center gap-1"
-                          title={`Invoice ${invoiceFor(c.id)!.reference}`}
-                        >
-                          <span className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
-                            Invoice
-                          </span>
-                          <StatusBadge status={invoiceDisplayStatus(invoiceFor(c.id)!)} />
-                        </Link>
-                      ) : (
-                        <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
-                          No invoice
-                        </span>
-                      )}
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {c.description}
@@ -374,6 +350,28 @@ export default async function AdminCampaignsPage({
                       {c.preferred_location ? ` · ${c.preferred_location}` : ""}
                       {c.preferred_timeline ? ` · ${c.preferred_timeline}` : ""}
                     </p>
+                    {invoiceFor(c.id) && (
+                      <p className="mt-1 text-xs">
+                        <Link
+                          href={`/dashboard/admin/invoices/${invoiceFor(c.id)!.id}`}
+                          className="font-semibold text-[var(--color-brand-dark)] underline"
+                        >
+                          Invoice {invoiceFor(c.id)!.reference} →
+                        </Link>
+                      </p>
+                    )}
+                    <div className="mt-3">
+                      <CampaignChecklist
+                        facts={{
+                          status: c.status,
+                          paymentWaived: !!c.payment_waived_at,
+                          orderForm: orderFormFor(c.id) ?? null,
+                          invoice: invoiceFor(c.id) ?? null,
+                          events: suggestionsFor(c.id),
+                          surveyPublished: publishedSurvey.has(c.id),
+                        }}
+                      />
+                    </div>
                     {(c.status === "completed" || c.status === "closed") && finishedRecord.get(c.id) && (
                       <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-3 py-2 text-xs text-[var(--color-ink)]">
                         <span className="font-semibold">

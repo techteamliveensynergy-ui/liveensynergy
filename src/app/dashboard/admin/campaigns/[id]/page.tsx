@@ -9,6 +9,7 @@ import { invoiceDisplayStatus } from "@/lib/billing";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import type { Campaign, CampaignStatus } from "@/lib/types";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { CampaignChecklist } from "@/components/campaigns/CampaignChecklist";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import { CAMPAIGN_STATUS_LABELS, campaignStage, closeReasonLabel } from "@/lib/campaign-stage";
 import { CampaignStatusActions } from "../CampaignStatusActions";
@@ -329,10 +330,23 @@ export default async function AdminCampaignPage({
                 Stored as “{CAMPAIGN_STATUS_LABELS[campaign.status]}” — see the legend below.
               </span>
             </p>
+            <div className="mt-3">
+              <CampaignChecklist
+                facts={{
+                  status: campaign.status,
+                  paymentWaived: !!campaign.payment_waived_at,
+                  orderForm: orderForm ?? null,
+                  invoice: invoice ?? null,
+                  events: sponsorships,
+                  surveyPublished: templates.some((t) => t.status === "published"),
+                }}
+              />
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">History</p>
             {history.length === 0 ? (
-              <p className="mt-3 text-sm text-[var(--color-ink-soft)]">No manual status changes yet.</p>
+              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">No manual status changes yet.</p>
             ) : (
-              <ul className="mt-3 space-y-2 text-sm">
+              <ul className="mt-1 space-y-2 text-sm">
                 {history.map((h) => (
                   <li key={h.id} className="rounded-xl bg-[var(--color-mist)] px-4 py-2.5">
                     <span className="font-semibold">
