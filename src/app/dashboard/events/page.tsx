@@ -90,7 +90,11 @@ export default async function EventsPage({
                   )}
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{l.name}</h3>
+                      <h3 className="font-semibold">
+                        <Link href={`/dashboard/events/${l.id}/view`} className="hover:underline">
+                          {l.name}
+                        </Link>
+                      </h3>
                       <StatusBadge status={l.status} />
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
@@ -110,17 +114,25 @@ export default async function EventsPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <form action={toggleListingStatus}>
-                    <input type="hidden" name="id" value={l.id} />
-                    <input
-                      type="hidden"
-                      name="next_status"
-                      value={l.status === "available" ? "draft" : "available"}
-                    />
-                    <button className="btn btn-ghost text-sm" type="submit">
-                      {l.status === "available" ? "Unpublish" : "Publish"}
-                    </button>
-                  </form>
+                  {(l.status === "draft" || l.status === "available") && (
+                    <form action={toggleListingStatus}>
+                      <input type="hidden" name="id" value={l.id} />
+                      <input
+                        type="hidden"
+                        name="next_status"
+                        value={l.status === "available" ? "draft" : "available"}
+                      />
+                      <button className="btn btn-ghost text-sm" type="submit">
+                        {l.status === "available" ? "Unpublish" : "Publish"}
+                      </button>
+                    </form>
+                  )}
+                  <Link
+                    href={`/dashboard/events/${l.id}/view`}
+                    className="btn btn-ghost text-sm"
+                  >
+                    View
+                  </Link>
                   <Link
                     href={`/dashboard/events/${l.id}`}
                     className="btn btn-ghost text-sm"

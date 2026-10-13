@@ -128,13 +128,27 @@ export async function updateListing(
   if (fieldError) return { error: fieldError };
   if (!payload.name) return { error: "Event name is required." };
 
+  // A matched or closed listing keeps its status: the form's "available"
+  // checkbox only switches between draft and available. Before, saving any
+  // edit to a matched listing silently put it back to draft (13 Oct).
+  const { data: current } = await supabase
+    .from("event_listings")
+    .select("status")
+    .eq("id", id)
+    .eq("owner_profile_id", userId)
+    .maybeSingle();
+  if (!current) return { error: "Event not found." };
+  const { status, ...rest } = payload;
+  const fields =
+    current.status === "matched" || current.status === "closed" ? rest : { ...rest, status };
+
   const image = await uploadImage(formData.get("image"), "event");
   if (image.error) return { error: image.error };
 
   const { error } = await supabase
     .from("event_listings")
     // Leaving the picker empty keeps the existing artwork.
-    .update(image.url ? { ...payload, image_url: image.url } : payload)
+    .update(image.url ? { ...fields, image_url: image.url } : fields)
     .eq("id", id)
     .eq("owner_profile_id", userId);
 
@@ -161,12 +175,15 @@ export async function toggleListingStatus(formData: FormData) {
   const { supabase, userId } = await currentContext();
   const id = str(formData.get("id"));
   const next = str(formData.get("next_status"));
-  if (!id || !next) return;
+  // Publish / unpublish only moves between draft and available; a matched or
+  // closed listing is left alone (it would otherwise reopen to sponsors).
+  if (!id || (next !== "draft" && next !== "available")) return;
   const { data: updated } = await supabase
     .from("event_listings")
     .update({ status: next })
     .eq("id", id)
     .eq("owner_profile_id", userId)
+    .in("status", ["draft", "available"])
     .select("name")
     .maybeSingle();
 

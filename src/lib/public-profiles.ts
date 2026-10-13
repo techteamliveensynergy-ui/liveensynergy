@@ -64,7 +64,9 @@ export async function getPublicProfile(
       videoUrl: data.video_url,
       videoUrls: data.video_urls,
       socialLinks: data.social_links,
-      sponsorValue: data.sponsor_value_details,
+      // No longer collected at set-up (13 Oct), so an old answer the owner can't
+      // edit any more isn't shown to brands.
+      sponsorValue: null,
     };
   }
 
@@ -88,7 +90,9 @@ export async function getPublicProfile(
       videoUrl: data.video_url,
       videoUrls: data.video_urls,
       socialLinks: data.social_links,
-      sponsorValue: data.sponsor_value_details,
+      // No longer collected at set-up (13 Oct), so an old answer the owner can't
+      // edit any more isn't shown to brands.
+      sponsorValue: null,
     };
   }
 

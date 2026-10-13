@@ -225,16 +225,23 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             defaultValue={d?.sponsor_benefits ?? ""}
           />
         </Field>
-        <label className="flex items-center gap-3 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm">
-          <input
-            type="checkbox"
-            name="make_available"
-            defaultChecked={d?.status === "available"}
-            className="h-4 w-4"
-          />
-          Make this event available for sponsorship now (otherwise saved as a
-          draft)
-        </label>
+        {d?.status === "matched" || d?.status === "closed" ? (
+          <p className="rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm">
+            This event is {d.status === "matched" ? "matched with a sponsor" : "closed"} — saving
+            your changes keeps it that way.
+          </p>
+        ) : (
+          <label className="flex items-center gap-3 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm">
+            <input
+              type="checkbox"
+              name="make_available"
+              defaultChecked={d?.status === "available"}
+              className="h-4 w-4"
+            />
+            Make this event available for sponsorship now (otherwise saved as a
+            draft)
+          </label>
+        )}
       </FormSection>
 
       <div className="flex justify-end">

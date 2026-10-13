@@ -9,9 +9,11 @@ import {
   formatDayLabel,
   formatTime,
   timeAgo,
+  ukDayKey,
 } from "@/lib/format";
 import type { Conversation, Message } from "@/lib/types";
 import { startSupportThread } from "./actions";
+import { LinkifiedText } from "@/components/LinkifiedText";
 import { Composer } from "./Composer";
 import { NewAdminThread } from "./NewAdminThread";
 
@@ -362,7 +364,7 @@ export default async function MessagesPage({
                   {/* Opens in a new tab so the thread isn't lost. */}
                   {active.event_listings && (
                     <a
-                      href={`/dashboard/events/${active.event_listings.id}`}
+                      href={`/dashboard/events/${active.event_listings.id}/view`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"
@@ -400,8 +402,7 @@ export default async function MessagesPage({
                       const previous = messages[i - 1];
                       const newDay =
                         !previous ||
-                        new Date(previous.created_at).toDateString() !==
-                          new Date(m.created_at).toDateString();
+                        ukDayKey(previous.created_at) !== ukDayKey(m.created_at);
                       // Watching someone else's thread, "mine" is never true,
                       // so the two speakers have to be told apart some other
                       // way: the brand side goes right, the partner left, and
@@ -439,7 +440,9 @@ export default async function MessagesPage({
                                 : "bg-[var(--color-mist)] text-[var(--color-ink)]"
                             }`}
                           >
-                            {m.body}
+                            <span className="whitespace-pre-wrap break-words">
+                              <LinkifiedText text={m.body} linkClassName="font-semibold underline break-all" />
+                            </span>
                             {attachmentUrls[i] && (
                               <a
                                 href={attachmentUrls[i]!}

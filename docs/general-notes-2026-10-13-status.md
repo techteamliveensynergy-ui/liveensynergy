@@ -33,8 +33,8 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | Real campaign name instead of "Conferences" | ✅ | PR #22, #24 (older test campaigns CMP-00001–00007 have no name; admin list flags them) |
 | Click into a campaign | ✅ | PR #20 |
 | Campaign statuses (Live, Completed + note, Closed + reason) | ✅ | PR #21, #24 (0066) |
-| Sidebar modules | 🟡 | Missing **Invoices** and **Reporting & Analysis**; brand nav also has **Sponsored events**, which isn't in the client's list |
-| Invoices information in an Invoices module | ❌ | Brands only see invoices inside Campaigns live |
+| Sidebar modules | 🟡 | **Invoices** added (PR #25). Still missing **Reporting & Analysis**; **Sponsored events** kept until decision 2 |
+| Invoices information in an Invoices module | ✅ | PR #25: `/dashboard/invoices` — to pay / overdue / paid totals, every invoice with campaign, dates, refunds, PDF and "View & pay" |
 | Correct information cards / clean-up of the brand dashboard | ❌ | See "Brand dashboard" below |
 
 ### Brands & artists
@@ -49,7 +49,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 
 | Item | Status | Notes |
 |---|---|---|
-| Confirm / reset-password emails go to localhost | ⚙️ + ❌ | Supabase Auth **Site URL / Redirect URLs** must be the live site (dashboard setting). The code also falls back to `localhost` when `NEXT_PUBLIC_SITE_URL` is missing, and the email callback only understands one link format, so links opened on another device fail. |
+| Confirm / reset-password emails go to localhost | ⚙️ | Code side fixed in PR #25: no localhost fallback (uses the request's own origin), callback accepts `?code=` and `?token_hash=`, failed links explain themselves on sign-in. Still needs the Supabase **Site URL / Redirect URLs** setting, and optionally the email-template change in `docs/email-setup.md` §2.6 so links work on another device. |
 
 ### Artist
 
@@ -57,16 +57,16 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 |---|---|---|
 | Welcome + profile set-up | ✅ | PR #23 |
 | "Which applies to you" (Artist/Group, Promoter/Management, Event Organiser, Venue Operator) | ❌ | Only an event-category select exists |
-| Remove DOB and sponsor value from set-up | ❌ | Both still asked (sponsor value also shows on the public profile to brands) |
+| Remove DOB and sponsor value from set-up | ✅ | PR #25: no longer asked (artist and legacy organiser forms); existing answers stay on file for admins; sponsor value no longer shown on public profiles (decision 3 can bring it back) |
 | Save details and finish later (profile, event, campaign request) | 🟡 | Events can be saved as a draft; profile and campaign request can't |
 | View your profile + update your profile | ✅ | "Preview public profile" on the Profile page and in the sidebar |
 | Event end time; "Describe your event audience" | ❌ | Only a start time; no audience field |
-| Click into an event to preview it | ❌ | Event cards only have Edit; there is no read-only preview |
+| Click into an event to preview it | ✅ | PR #25: `/dashboard/events/<id>/view` — owner, admin and brands (where RLS allows); event names and a View button on My events |
 | Upcoming event cards on the dashboard (and admin dashboard) | ❌ | Artist home lists latest 4 listings, no dates; admin shows only a count |
-| Unable to open event listing | 🟡 | No broken route found. Found: the public Events page shows **sample** events only and none open; message-thread "Event details" link is broken for brands/admins; **editing a matched/closed listing silently resets it to draft** (bug) |
+| Unable to open event listing | 🟡 | PR #25 fixed the thread's "Event details" link (now the read-only view) and the draft-reset bug (edit and Publish/Unpublish leave matched/closed listings alone). Still open: the public Events page shows **sample** events only |
 | Artist Fulfillment form | ❓ | The Google Doc isn't shared with us — needs access or its content |
 | Campaign Briefs as a list | ❌ | Each brief renders as a full document, one after another |
-| "Worst-case discount cost: £1,250" | ❓ | The most the discount codes could cost if every capped code is used (cap × value). It's on the artist's reward-codes card because the artist absorbs the discount. Needs a clearer label or hiding from artists. |
+| "Worst-case discount cost: £1,250" | 🟡 | Relabelled "Maximum discount if every code is used" (PR #25). Hiding it from artists instead is decision 5 |
 | Show artist's events on their public profile | ❌ | |
 | Correct information cards / clean-up of the artist dashboard | ❌ | See "Artist dashboard" below |
 
@@ -76,8 +76,8 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 |---|---|---|
 | Read / delivered ticks in chat | ❌ | `messages.read_at` exists but is never written |
 | Recall a message sent by mistake | ❌ | |
-| Times one hour behind | ❌ (bug) | Date/time helpers don't set `Europe/London`; the server runs in UTC, so everything shows GMT during BST |
-| Can an event link be sent in chat and viewed by the brand? | ❌ | Links aren't clickable in chat, and there's no event page a brand can open |
+| Times one hour behind | ✅ | PR #25: every date/time helper, chat day headings, CSV exports and the participation-deadline inputs use UK time |
+| Can an event link be sent in chat and viewed by the brand? | ✅ | PR #25: links in messages are clickable; the event view page opens for brands |
 | Phone number when an audience member signs up to take a survey | ✅ | Required on the survey sign-up (PR #18) |
 | Password setting | ❓ | The note says "I forgot what I wanted to ask" |
 
@@ -108,16 +108,16 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 
 ### Phase 1 — bugs and quick fixes (~1 day, no decisions needed)
 
-1. Times shown in UK time everywhere (chat, notifications, invoices, admin).
-2. Email links: accept both Supabase link formats and stop falling back to localhost.
-3. Editing a matched/closed event no longer resets it to draft.
-4. Clickable links in chat; fix the thread's "Event details" link.
+1. ✅ Times shown in UK time everywhere (chat, notifications, invoices, admin).
+2. ✅ Email links: accept both Supabase link formats and stop falling back to localhost.
+3. ✅ Editing a matched/closed event no longer resets it to draft.
+4. ✅ Clickable links in chat; fix the thread's "Event details" link.
 5. Readable request references (`REQ-00012` instead of `INT-7B825C92`).
-6. Invoice footer copy that says "no card details" while Stripe card payment exists.
+6. ✅ Invoice footer copy that says "no card details" while Stripe card payment exists.
 
 ### Phase 2 — brand (~2 days)
 
-1. **Invoices** module: every invoice with campaign, amount, due date, status, pay link, PDF and refunds.
+1. ✅ **Invoices** module: every invoice with campaign, amount, due date, status, pay link, PDF and refunds.
 2. **Reporting & Analysis** module: each campaign's surveys with results (aggregated, as today), plus participants and codes redeemed.
 3. Sidebar in the client's order.
 4. Dashboard cards cleaned up (above).
@@ -125,9 +125,9 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 ### Phase 3 — artist (~2–3 days, one small migration)
 
 1. "Which applies to you" question at the top of set-up (stored, shown on the public profile).
-2. Remove DOB and sponsor value from set-up.
+2. ✅ Remove DOB and sponsor value from set-up.
 3. Event end time and "Describe your event audience".
-4. Read-only event preview (owner, admin, and brands where relevant); cards clickable.
+4. ✅ Read-only event preview (owner, admin, and brands where relevant); cards clickable.
 5. Upcoming events on the artist home and admin dashboard.
 6. Campaign Briefs as a compact list, opening to the full brief.
 7. Artist's upcoming events on their public profile.

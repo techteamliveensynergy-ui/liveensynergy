@@ -4,6 +4,8 @@
  * by Excel, unlike raw ISO timestamps (3 Aug standup).
  */
 
+import { ukCsvDateTime } from "./format";
+
 /** Wraps a value in quotes and escapes embedded quotes/commas/newlines, per RFC 4180. */
 export function csvCell(value: unknown): string {
   const s = value == null ? "" : String(value);
@@ -18,10 +20,8 @@ export function csvDateTime(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
+  // UK time — the server runs in UTC.
+  return ukCsvDateTime(iso);
 }
 
 /** Date-only columns (an event date carries no time of day). */

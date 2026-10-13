@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABELS } from "@/lib/constants";
 import { ROLE_PROFILE_SPECS } from "@/lib/admin-user-fields";
-import { formatDateTime, timeAgo } from "@/lib/format";
+import { formatDateTime, timeAgo, UK_TIME_ZONE } from "@/lib/format";
 import { calculateAge } from "@/lib/age";
 import type { Plan, Profile } from "@/lib/types";
 import { toggleUserActive } from "../../actions";
@@ -101,7 +101,7 @@ export default async function AdminUserDetailPage({
           { label: "Last login", value: timeAgo(lastSignIn) },
           {
             label: "Joined",
-            value: new Date(user.created_at).toLocaleDateString("en-GB"),
+            value: new Date(user.created_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE }),
           },
           {
             label: "Onboarding",
@@ -112,7 +112,7 @@ export default async function AdminUserDetailPage({
           {
             label: "Terms accepted",
             value: user.terms_accepted_at
-              ? `${new Date(user.terms_accepted_at).toLocaleDateString("en-GB")}${
+              ? `${new Date(user.terms_accepted_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}${
                   user.terms_version ? ` · v${user.terms_version}` : ""
                 }`
               : "Not recorded",

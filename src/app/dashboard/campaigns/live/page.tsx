@@ -309,8 +309,9 @@ export default async function CampaignsLivePage() {
 
       {invoices.length > 0 && (
         <p className="mt-6 text-xs text-[var(--color-ink-soft)]">
-          Payment is by bank transfer against the invoice reference — no card details are collected on the
-          platform.
+          Open an invoice to pay it — online by card or bank transfer through our secure payment page
+          (Stripe), or by bank transfer quoting the invoice reference. Card details never touch
+          Live·En·Synergy.
         </p>
       )}
     </div>

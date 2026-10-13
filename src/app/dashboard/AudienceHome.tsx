@@ -9,6 +9,7 @@ import {
 import { signedUrlFor } from "@/lib/storage";
 import type { AudienceMember, Participation, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 type Row = Participation & { sponsored_events: SponsoredEvent | null };
 
@@ -58,6 +59,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
 
   const memberSince = member?.created_at
     ? new Date(member.created_at).toLocaleDateString("en-GB", {
+        timeZone: UK_TIME_ZONE,
         month: "short",
         year: "numeric",
       })

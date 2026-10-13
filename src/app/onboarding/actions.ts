@@ -457,7 +457,9 @@ export async function saveArtist(
       category_other: str(formData.get("category_other")),
       website_url: urls.website_url,
       social_links: links,
-      date_of_birth: str(formData.get("date_of_birth")),
+      // Date of birth and "what you can offer sponsors" are no longer asked
+      // (client, 13 Oct). Left out of the upsert — not set to null — so values
+      // given before stay on file for the team.
       location: str(formData.get("location")),
       contact_name: str(formData.get("contact_name")),
       contact_email: str(formData.get("contact_email")),
@@ -465,7 +467,6 @@ export async function saveArtist(
       address: str(formData.get("address")),
       art_keywords: toArray(formData.get("art_keywords")),
       mission_vision: str(formData.get("mission_vision")),
-      sponsor_value_details: str(formData.get("sponsor_value_details")),
     },
     { onConflict: "profile_id" },
   );
@@ -537,7 +538,6 @@ export async function saveEvent(
       company_address: str(formData.get("company_address")),
       keywords: toArray(formData.get("keywords")),
       mission_vision: str(formData.get("mission_vision")),
-      sponsor_value_details: str(formData.get("sponsor_value_details")),
     },
     { onConflict: "profile_id" },
   );

@@ -70,12 +70,16 @@ export default async function BrandInvoicePage({
         title={`Invoice ${invoice.reference}`}
         action={<StatusBadge status={invoiceDisplayStatus(invoice)} />}
       />
-      <Link
-        href={invoice.campaign_id ? `/dashboard/campaigns/live/${invoice.campaign_id}` : "/dashboard/campaigns/live"}
-        className="mb-4 inline-block text-sm text-[var(--color-brand)]"
-      >
-        {invoice.campaign_id ? "← Campaign" : "← Campaigns live"}
-      </Link>
+      <div className="mb-4 flex flex-wrap gap-4 text-sm">
+        <Link href="/dashboard/invoices" className="text-[var(--color-brand)]">
+          ← All invoices
+        </Link>
+        {invoice.campaign_id && (
+          <Link href={`/dashboard/campaigns/live/${invoice.campaign_id}`} className="text-[var(--color-brand)]">
+            View campaign
+          </Link>
+        )}
+      </div>
 
       {sp.approved && (
         <p role="status" className="mb-4 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
