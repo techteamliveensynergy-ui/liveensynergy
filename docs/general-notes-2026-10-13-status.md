@@ -35,7 +35,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | Campaign statuses (Live, Completed + note, Closed + reason) | ✅ | PR #21, #24 (0066) |
 | Sidebar modules | 🟡 | **Invoices** added (PR #25). Still missing **Reporting & Analysis**; **Sponsored events** kept until decision 2 |
 | Invoices information in an Invoices module | ✅ | PR #25: `/dashboard/invoices` — to pay / overdue / paid totals, every invoice with campaign, dates, refunds, PDF and "View & pay" |
-| Correct information cards / clean-up of the brand dashboard | ❌ | See "Brand dashboard" below |
+| Correct information cards / clean-up of the brand dashboard | ✅ | PR #26 — see "Brand dashboard" below |
 
 ### Brands & artists
 
@@ -62,13 +62,13 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | View your profile + update your profile | ✅ | "Preview public profile" on the Profile page and in the sidebar |
 | Event end time; "Describe your event audience" | ❌ | Only a start time; no audience field |
 | Click into an event to preview it | ✅ | PR #25: `/dashboard/events/<id>/view` — owner, admin and brands (where RLS allows); event names and a View button on My events |
-| Upcoming event cards on the dashboard (and admin dashboard) | ❌ | Artist home lists latest 4 listings, no dates; admin shows only a count |
-| Unable to open event listing | 🟡 | PR #25 fixed the thread's "Event details" link (now the read-only view) and the draft-reset bug (edit and Publish/Unpublish leave matched/closed listings alone). Still open: the public Events page shows **sample** events only |
+| Upcoming event cards on the dashboard (and admin dashboard) | ✅ | PR #26: artist home lists upcoming events with dates; admin overview has an "Upcoming events" list |
+| Unable to open event listing | ✅ | PR #25 fixed the thread's "Event details" link (now the read-only view) and the draft-reset bug (edit and Publish/Unpublish leave matched/closed listings alone). PR #26: the public Events page now lists real events open for sponsorship (it showed hard-coded samples), each opening the event page |
 | Artist Fulfillment form | ❓ | The Google Doc isn't shared with us — needs access or its content |
-| Campaign Briefs as a list | ❌ | Each brief renders as a full document, one after another |
+| Campaign Briefs as a list | ✅ | PR #26: one row per brief (brand, campaign, event, date) opening to the full brief |
 | "Worst-case discount cost: £1,250" | 🟡 | Relabelled "Maximum discount if every code is used" (PR #25). Hiding it from artists instead is decision 5 |
-| Show artist's events on their public profile | ❌ | |
-| Correct information cards / clean-up of the artist dashboard | ❌ | See "Artist dashboard" below |
+| Show artist's events on their public profile | ✅ | PR #26: upcoming events open for sponsorship, on artist and organiser profiles |
+| Correct information cards / clean-up of the artist dashboard | ✅ | PR #26 — see "Artist dashboard" below |
 
 ### General
 
@@ -81,7 +81,12 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | Phone number when an audience member signs up to take a survey | ✅ | Required on the survey sign-up (PR #18) |
 | Password setting | ❓ | The note says "I forgot what I wanted to ask" |
 
-### Brand dashboard (cards to correct)
+### Brand dashboard (cards to correct) — ✅ PR #26
+
+Now: Requests in review · Active campaigns (incl. awaiting payment) · Attendees checked in · To pay; active campaigns only in the list; "Requests with our team" replaces "Suggested for you"; "Your events" links each agreed event.
+
+Was:
+
 
 - "Committed budget" adds up every campaign's package price, including closed and unpaid ones, and says "budget".
 - "Verified attendees" uses the old cash-reward status wording.
@@ -91,7 +96,12 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 - "Confirmed sponsorships" copy describes brand/artist negotiation (old model) and links to Sponsored events, not the campaign.
 - Missing: requests in review, amount due / invoices, survey results.
 
-### Artist dashboard (cards to correct)
+### Artist dashboard (cards to correct) — ✅ PR #26
+
+Now: Upcoming events · Waiting on you (terms to agree + discount codes to confirm) · Sponsored events · Attendees checked in; upcoming events with dates; a "Waiting on you" list and a Campaign briefs count replace the old offers/enquiries copy.
+
+Was:
+
 
 - "Sponsor offers pending", "Review sponsor offers" and "Brand enquiries waiting · N open" describe the old direct brand-artist marketplace; the enquiry count is every conversation, not open ones.
 - "Verified attendees" uses the old cash-reward wording.
@@ -112,7 +122,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 2. ✅ Email links: accept both Supabase link formats and stop falling back to localhost.
 3. ✅ Editing a matched/closed event no longer resets it to draft.
 4. ✅ Clickable links in chat; fix the thread's "Event details" link.
-5. Readable request references (`REQ-00012` instead of `INT-7B825C92`).
+5. ✅ Readable request references (`REQ-00012` instead of `INT-7B825C92`) — migration 0068, PR #26.
 6. ✅ Invoice footer copy that says "no card details" while Stripe card payment exists.
 
 ### Phase 2 — brand (~2 days)
@@ -120,7 +130,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 1. ✅ **Invoices** module: every invoice with campaign, amount, due date, status, pay link, PDF and refunds.
 2. **Reporting & Analysis** module: each campaign's surveys with results (aggregated, as today), plus participants and codes redeemed.
 3. Sidebar in the client's order.
-4. Dashboard cards cleaned up (above).
+4. ✅ Dashboard cards cleaned up (above).
 
 ### Phase 3 — artist (~2–3 days, one small migration)
 
@@ -128,10 +138,10 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 2. ✅ Remove DOB and sponsor value from set-up.
 3. Event end time and "Describe your event audience".
 4. ✅ Read-only event preview (owner, admin, and brands where relevant); cards clickable.
-5. Upcoming events on the artist home and admin dashboard.
-6. Campaign Briefs as a compact list, opening to the full brief.
-7. Artist's upcoming events on their public profile.
-8. Dashboard cards cleaned up (above); clearer discount-cost wording.
+5. ✅ Upcoming events on the artist home and admin dashboard.
+6. ✅ Campaign Briefs as a compact list, opening to the full brief.
+7. ✅ Artist's upcoming events on their public profile.
+8. ✅ Dashboard cards cleaned up (above); clearer discount-cost wording.
 
 ### Phase 4 — bigger features (~3–4 days)
 

@@ -55,23 +55,40 @@ export default async function CampaignBriefsPage() {
           body="When a brand approves a campaign linked to one of your events, its brief appears here."
         />
       ) : (
-        <div className="space-y-12">
+        // A compact list, each brief opening in place (General Notes, 13 Oct:
+        // every brief rendered as a full document, one after another). A lone
+        // brief starts open.
+        <div className="space-y-3">
           {briefs.map((b) => (
-            <article key={b.id}>
-              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-xl font-semibold">
-                  {b.brand_name} · {b.campaign_name ?? b.campaign_reference}
-                </h2>
-                <p className="text-sm text-[var(--color-ink-soft)]">
-                  {b.reference} · approved {formatDate(b.approved_at)}
-                </p>
+            <details key={b.id} open={briefs.length === 1} className="card group overflow-hidden p-0">
+              <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-[var(--color-mist)]">
+                <span className="min-w-0">
+                  <span className="block font-semibold text-[var(--color-ink)]">
+                    {b.brand_name} · {b.campaign_name ?? b.campaign_reference}
+                  </span>
+                  <span className="block text-xs text-[var(--color-ink-soft)]">
+                    {[
+                      b.event_name,
+                      b.event_date ? formatDate(b.event_date) : null,
+                      `${b.reference} · approved ${formatDate(b.approved_at)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
+                  <span className="group-open:hidden">Read brief ▾</span>
+                  <span className="hidden group-open:inline">Hide ▴</span>
+                </span>
+              </summary>
+              <div className="border-t border-black/10 p-5">
+                <OrderFormDocument
+                  form={{ ...b, media_image_urls: [] }}
+                  sections={ARTIST_SECTIONS}
+                  campaignReference={b.campaign_reference}
+                />
               </div>
-              <OrderFormDocument
-                form={{ ...b, media_image_urls: [] }}
-                sections={ARTIST_SECTIONS}
-                campaignReference={b.campaign_reference}
-              />
-            </article>
+            </details>
           ))}
         </div>
       )}
