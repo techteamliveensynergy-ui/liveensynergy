@@ -19,7 +19,7 @@ export const metadata = { title: "Messages" };
 
 type ConversationRow = Conversation & {
   event_listings: { id: string; name: string } | null;
-  campaigns: { id: string; reference: string } | null;
+  campaigns: { id: string; reference: string; campaign_name: string | null } | null;
 };
 
 type Tab = "partner" | "support";
@@ -41,7 +41,7 @@ export default async function MessagesPage({
 
   const { data: convData } = await supabase
     .from("conversations")
-    .select("*, event_listings(id, name), campaigns(id, reference)")
+    .select("*, event_listings(id, name), campaigns(id, reference, campaign_name)")
     .order("created_at", { ascending: false });
   const all = (convData ?? []) as ConversationRow[];
 
@@ -476,7 +476,10 @@ export default async function MessagesPage({
 
 function threadTitle(conv: ConversationRow) {
   if (conv.subject) return conv.subject;
-  if (conv.campaigns) return `Campaign ${conv.campaigns.reference}`;
+  if (conv.campaigns)
+    return conv.campaigns.campaign_name
+      ? `${conv.campaigns.campaign_name} (${conv.campaigns.reference})`
+      : `Campaign ${conv.campaigns.reference}`;
   if (conv.event_listings) return conv.event_listings.name;
   return conv.kind === "support" ? "Live·En·Synergy team" : "Direct message";
 }

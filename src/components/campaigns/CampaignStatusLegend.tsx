@@ -33,8 +33,9 @@ export function CampaignStatusLegend({ defaultOpen = false }: { defaultOpen?: bo
         ))}
       </dl>
       <p className="mt-4 text-xs text-[var(--color-ink-soft)]">
-        <strong>Matched</strong> and <strong>Invoice</strong> chips next to the badge show those two facts on
-        their own. Agreeing an event no longer closes the campaign — it moves to Awaiting artist.
+        Under each campaign, the list shows every step: <strong>green</strong> is done,{" "}
+        <strong>yellow</strong> is still to do (and says who it&apos;s waiting on), grey can&apos;t start yet.
+        Agreeing an event no longer closes the campaign — it moves to Awaiting artist.
       </p>
     </details>
   );
