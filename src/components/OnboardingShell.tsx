@@ -5,17 +5,34 @@ import { ROLE_LABELS, type Role } from "@/lib/constants";
 
 interface OnboardingShellProps {
   role: Role;
-  title: string;
+  /** The new user's name, for the welcome line (falls back to no name). */
+  name?: string | null;
+  /** What this role's profile is for — shown under "Let's get your profile set up!". */
   subtitle: string;
   children: ReactNode;
 }
 
+/** What each kind of account gets out of the platform — the welcome card's
+ *  one-liner (client request, 13 Oct: welcome first, then profile set-up). */
+const WELCOME_LINES: Record<Role, string> = {
+  brand:
+    "Reach engaged audiences at live events. Our team turns your goals into sponsorship campaigns and pairs you with the right artists and events.",
+  artist:
+    "Get your shows and events sponsored by brands that suit your audience — and give your fans rewards for coming.",
+  event:
+    "Get your events sponsored by brands that suit your audience — and give attendees rewards for coming.",
+  audience:
+    "Discover live events near you and unlock sponsor-funded rewards just for going.",
+  admin: "You're set up as part of the Live·En·Synergy team.",
+};
+
 export function OnboardingShell({
   role,
-  title,
+  name,
   subtitle,
   children,
 }: OnboardingShellProps) {
+  const firstName = name?.trim().split(/\s+/)[0];
   return (
     <div className="min-h-screen bg-[var(--color-mist)]">
       <header className="border-b border-black/10 bg-white">
@@ -26,14 +43,32 @@ export function OnboardingShell({
       </header>
       {/* pb-28 so the form's submit row clears the fixed feedback tab. */}
       <main className="mx-auto max-w-3xl px-5 pb-28 pt-10">
-        <div className="mb-8">
-          <p className="font-serif text-sm text-[var(--color-ink-soft)]">
-            Phase 2 · onboarding
+        {/* Welcome first, then the set-up (client request, 13 Oct) — for
+            every account type. */}
+        <section
+          aria-labelledby="welcome-title"
+          className="mb-8 rounded-2xl bg-[var(--color-gold)]/45 px-6 py-6"
+        >
+          <p className="text-3xl" aria-hidden>
+            👋
           </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-3xl">
-            {title}
+          <h1
+            id="welcome-title"
+            className="mt-2 font-display text-2xl font-semibold tracking-tight text-[var(--color-ink)] md:text-3xl"
+          >
+            Welcome to Live·En·Synergy{firstName ? `, ${firstName}` : ""}!
           </h1>
+          <p className="mt-2 text-[var(--color-ink)]/80">{WELCOME_LINES[role]}</p>
+        </section>
+
+        <div className="mb-6">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-[var(--color-ink)] md:text-2xl">
+            Let&apos;s get your profile set up!
+          </h2>
           <p className="mt-2 text-[var(--color-ink-soft)]">{subtitle}</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            You can change any of this later from your profile.
+          </p>
         </div>
         {children}
       </main>

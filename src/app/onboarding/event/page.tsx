@@ -13,7 +13,7 @@ export default async function EventOnboardingPage() {
   return (
     <OnboardingShell
       role="event"
-      title="Set up your event profile"
+      name={profile.full_name}
       subtitle="Tell brands about your event and what you can offer as a sponsorship partner."
     >
       <EventForm mode="onboarding" />
