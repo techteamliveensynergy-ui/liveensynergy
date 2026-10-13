@@ -182,7 +182,9 @@ export default async function CampaignsLivePage() {
                 <div className="max-w-xl">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">
-                      {c.target_name || c.category || "Sponsorship campaign"}
+                      <Link href={`/dashboard/campaigns/live/${c.id}`} className="hover:underline">
+                        {c.target_name || c.category || "Sponsorship campaign"}
+                      </Link>
                     </h3>
                     <StatusBadge status={c.status} />
                   </div>
@@ -194,6 +196,9 @@ export default async function CampaignsLivePage() {
                     {Number(c.budget_gbp).toLocaleString("en-GB")}
                   </p>
                 </div>
+                <Link href={`/dashboard/campaigns/live/${c.id}`} className="btn btn-ghost text-sm">
+                  View campaign
+                </Link>
                 <div className="w-full">
                   <CampaignProgress
                     campaign={c}

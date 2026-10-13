@@ -329,7 +329,7 @@ export async function setCampaignStatus(formData: FormData) {
     await notify({
       eventKey: "campaign.status_changed",
       recipientProfileId: campaign.brands.profile_id,
-      link: `/dashboard/campaigns/live#campaign-${id}`,
+      link: `/dashboard/campaigns/live/${id}`,
       variables: { campaign_reference: campaign.reference, status },
     });
   }
@@ -603,7 +603,7 @@ export async function createCampaignFromAdmin(
       await notify({
         eventKey: "campaign_intake.converted",
         recipientProfileId: intake.brands.profile_id,
-        link: `/dashboard/campaigns/live#campaign-${created.id}`,
+        link: `/dashboard/campaigns/live/${created.id}`,
         variables: { reference: intake.reference, campaign_reference: created.reference },
       });
     }
