@@ -117,7 +117,7 @@ export default async function OrderFormPage({
             {sp.approved && (
               <p className="mt-4 text-[var(--color-ink-soft)] print:hidden">
                 Thank you. Your invoice is on its way — you&apos;ll find it under{" "}
-                <Link href="/dashboard/campaigns" className="underline">Campaigns</Link>.
+                <Link href="/dashboard/campaigns/live" className="underline">Campaigns live</Link>.
               </p>
             )}
           </section>

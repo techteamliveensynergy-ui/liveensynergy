@@ -45,10 +45,15 @@ export function Sidebar({
     EXACT_NAV_HREFS.has(href)
       ? pathname === href
       : pathname === href || pathname.startsWith(`${href}/`);
+  // Each item competes with its longest matching prefix — its own href or
+  // an alsoActiveFor alias — so an alias beats a shorter parent href.
   const activeHref = nav
-    .map((item) => item.href)
-    .filter(matches)
-    .sort((a, b) => b.length - a.length)[0];
+    .map((item) => ({
+      href: item.href,
+      len: Math.max(-1, ...[item.href, ...(item.alsoActiveFor ?? [])].filter(matches).map((p) => p.length)),
+    }))
+    .filter((m) => m.len >= 0)
+    .sort((a, b) => b.len - a.len)[0]?.href;
   const isActive = (href: string) => href === activeHref;
 
   const navList = (

@@ -146,7 +146,7 @@ function revalidateInvoice(id: string) {
   revalidatePath("/dashboard/admin/invoices");
   revalidatePath(`/dashboard/admin/invoices/${id}`);
   revalidatePath("/dashboard/admin/campaigns");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath(`/dashboard/campaigns/invoices/${id}`);
   revalidatePath("/dashboard/discover-campaigns");
 }

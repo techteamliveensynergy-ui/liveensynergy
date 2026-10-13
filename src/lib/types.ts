@@ -305,7 +305,10 @@ export interface CampaignIntakeRequest {
   brand_id: string;
   description: string;
   budget_expectation_gbp: number | null;
+  /** First of `categories` — kept so older readers keep working (0063). */
   category: string | null;
+  /** Every category the brand ticked (0063). */
+  categories: string[];
   category_other: string | null;
   preferred_location: string | null;
   preferred_timeline: string | null;

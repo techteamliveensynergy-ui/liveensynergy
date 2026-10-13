@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -35,16 +35,30 @@ export default async function EditCampaignPage({
         .maybeSingle()
     : { data: null };
 
-  if (!data) notFound();
+  if (!data) {
+    // Not an editable request. Send older links somewhere useful rather than
+    // a 404: a request past 'submitted' → its read-only page; a campaign id
+    // (the campaign.status_changed notification linked here before 13 Oct)
+    // → that campaign under Campaigns live.
+    if (brand) {
+      const [{ data: request }, { data: campaign }] = await Promise.all([
+        supabase.from("campaign_intake_requests").select("id").eq("id", id).eq("brand_id", brand.id).maybeSingle(),
+        supabase.from("campaigns").select("id").eq("id", id).eq("brand_id", brand.id).maybeSingle(),
+      ]);
+      if (request) redirect(`/dashboard/campaigns/requests/${id}`);
+      if (campaign) redirect(`/dashboard/campaigns/live#campaign-${id}`);
+    }
+    notFound();
+  }
 
   return (
     <div>
       <PageHeader title="Edit campaign request" />
       <Link
-        href="/dashboard/campaigns"
+        href={`/dashboard/campaigns/requests/${id}`}
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"
       >
-        ← Back to campaigns
+        ← Back to request
       </Link>
       <CampaignForm intake={data as CampaignIntakeRequest} />
     </div>

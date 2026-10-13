@@ -52,7 +52,10 @@ test("B-CAMP-04 artist categories include Sports, Gaming, Conference", async ({
   page,
 }) => {
   await page.goto("/dashboard/campaigns/new");
-  const options = await page.locator("#category option").allInnerTexts();
+  // Checkboxes since 13 Oct — a brand can pick several categories.
+  const options = await page
+    .locator('input[name="categories"]')
+    .evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
   expect(options).toContain("Sports");
   expect(options).toContain("Gaming");
   expect(options).toContain("Conference");

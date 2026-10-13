@@ -397,7 +397,7 @@ export async function saveBrand(
   if (isProfileMode(formData)) {
     revalidatePath("/dashboard/profile");
     // The "add your billing details" banner and the invoice screens read these.
-    revalidatePath("/dashboard/campaigns");
+    revalidatePath("/dashboard/campaigns", "layout");
     revalidatePath("/dashboard/admin/invoices");
     return { success: true };
   }

@@ -18,7 +18,7 @@ export default async function NewCampaignPage() {
         href="/dashboard/campaigns"
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"
       >
-        ← Back to campaigns
+        ← Campaign requests
       </Link>
 
       {/* Our team contacts the sponsor within 48 hours of a match — that needs

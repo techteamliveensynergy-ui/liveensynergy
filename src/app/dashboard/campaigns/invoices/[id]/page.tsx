@@ -71,10 +71,10 @@ export default async function BrandInvoicePage({
         action={<StatusBadge status={invoiceDisplayStatus(invoice)} />}
       />
       <Link
-        href="/dashboard/campaigns"
+        href="/dashboard/campaigns/live"
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"
       >
-        ← Back to campaigns
+        ← Campaigns live
       </Link>
 
       {sp.approved && (

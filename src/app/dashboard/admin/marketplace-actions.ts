@@ -329,13 +329,13 @@ export async function setCampaignStatus(formData: FormData) {
     await notify({
       eventKey: "campaign.status_changed",
       recipientProfileId: campaign.brands.profile_id,
-      link: `/dashboard/campaigns/${id}`,
+      link: `/dashboard/campaigns/live#campaign-${id}`,
       variables: { campaign_reference: campaign.reference, status },
     });
   }
 
   revalidatePath("/dashboard/admin/campaigns");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
 }
 
 /**
@@ -365,7 +365,7 @@ export async function waiveCampaignPayment(formData: FormData) {
 
   revalidatePath("/dashboard/admin/campaigns");
   revalidatePath("/dashboard/admin/invoices");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath("/dashboard/discover-campaigns");
   redirect("/dashboard/admin/campaigns");
 }
@@ -408,7 +408,7 @@ export async function reviewCampaignIntake(formData: FormData) {
       await notify({
         eventKey: "campaign_intake.declined",
         recipientProfileId: updated.brands.profile_id,
-        link: "/dashboard/campaigns",
+        link: `/dashboard/campaigns/requests/${id}`,
         variables: { reference: updated.reference, reason: reason ?? "no reason given" },
       });
     }
@@ -603,7 +603,7 @@ export async function createCampaignFromAdmin(
       await notify({
         eventKey: "campaign_intake.converted",
         recipientProfileId: intake.brands.profile_id,
-        link: `/dashboard/campaigns`,
+        link: `/dashboard/campaigns/live#campaign-${created.id}`,
         variables: { reference: intake.reference, campaign_reference: created.reference },
       });
     }
@@ -691,7 +691,7 @@ export async function updateCampaignAdmin(
 
   revalidatePath("/dashboard/admin/campaigns");
   revalidatePath("/dashboard/admin/invoices");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   redirect("/dashboard/admin/campaigns");
 }
 

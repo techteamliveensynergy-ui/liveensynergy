@@ -23,7 +23,7 @@ export async function notifyCampaignOpened(
   await notify({
     eventKey: "campaign.opened",
     recipientProfileId: data.brands.profile_id,
-    link: "/dashboard/campaigns",
+    link: `/dashboard/campaigns/live#campaign-${campaignId}`,
     variables: { campaign_reference: data.reference },
   }, { client: supabase }); // the Stripe webhook calls this with a service client
 
