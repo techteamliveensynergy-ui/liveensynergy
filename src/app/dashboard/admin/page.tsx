@@ -3,6 +3,9 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import { timeAgo } from "@/lib/format";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { campaignStagesFor } from "@/lib/data/campaign-stages";
+import type { CampaignStatus } from "@/lib/types";
 
 export const metadata = { title: "Admin console" };
 
@@ -72,6 +75,11 @@ export default async function AdminPage() {
   const [brandCount, artistCount, organiserCount, audienceCount] = roleCounts;
 
   const campaigns = campaignRows.data ?? [];
+  const recentStages = await campaignStagesFor(
+    supabase,
+    (campaigns as { id: string; status: CampaignStatus }[]).slice(0, 5),
+    "admin",
+  );
   const sponsored = sponsoredRows.data ?? [];
   const listings = listingRows.data ?? [];
   const participations = participationRows.data ?? [];
@@ -330,7 +338,7 @@ export default async function AdminPage() {
                   <span className="min-w-0 flex-1 truncate">
                     {c.reference} — {c.description}
                   </span>
-                  <StatusBadge status={c.status} />
+                  {recentStages.get(c.id) && <CampaignStageBadge stage={recentStages.get(c.id)!} />}
                   <span className="text-xs text-[var(--color-ink-soft)]">
                     {timeAgo(c.created_at)}
                   </span>

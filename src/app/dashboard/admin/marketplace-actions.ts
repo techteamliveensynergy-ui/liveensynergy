@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  CAMPAIGN_STATUSES,
   netSponsorshipBudget,
   netForCampaign,
   roundMoney,
@@ -31,7 +30,11 @@ import { normaliseUrl } from "@/lib/urls";
 import { isBillingComplete, type BillingFields } from "@/lib/billing";
 import { draftCampaignInvoice, redraftCampaignInvoice } from "@/lib/billing-server";
 import { notifyCampaignOpened } from "@/lib/campaign-payment";
-import type { SponsoredEventRewardTier } from "@/lib/types";
+import { CAMPAIGN_STATUS_LABELS } from "@/lib/campaign-stage";
+import { voidStripeInvoice } from "@/lib/invoicing";
+import { StripeApiError } from "@/lib/stripe";
+import type { PaymentMode } from "@/lib/payment-credentials";
+import type { CampaignStatus, SponsoredEventRewardTier } from "@/lib/types";
 
 export interface MarketplaceState {
   error?: string;
@@ -295,47 +298,117 @@ export async function matchCampaign(
   );
 }
 
-// --- Status overrides ------------------------------------------------------
+// --- Campaign status: complete / close / reopen (0066, FB-00031) ----------
 
-export async function setCampaignStatus(formData: FormData) {
+const CAMPAIGN_STATUS_ACTIONS = ["complete", "close", "reopen"] as const;
+
+/** Where to send the admin back to — only ever an admin campaign page. */
+function campaignReturnPath(raw: string | null, campaignId: string): string {
+  return raw && raw.startsWith("/dashboard/admin/campaigns") && !raw.includes("//")
+    ? raw.split("?")[0]
+    : `/dashboard/admin/campaigns/${campaignId}`;
+}
+
+/**
+ * Completes, closes or reopens a campaign through admin_change_campaign_status
+ * (0066), which validates the move, records it (reason + note, admin-only) and
+ * — on complete/close — withdraws proposals nobody agreed and, closing an
+ * unpaid campaign, cancels its invoice, all in one transaction. The Stripe
+ * copy of that invoice is voided FIRST (as cancelInvoice does), so the brand
+ * can't pay a cancelled invoice from Stripe's email; if Stripe says it's
+ * already paid, nothing changes.
+ */
+export async function changeCampaignStatus(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
-  const status = str(formData.get("status"));
-  if (!id || !status) return;
-  if (!(CAMPAIGN_STATUSES as readonly string[]).includes(status)) return;
+  const action = str(formData.get("action"));
+  const reason = str(formData.get("reason"));
+  const note = str(formData.get("note"));
+  if (!id) redirect("/dashboard/admin/campaigns");
+  const back = campaignReturnPath(str(formData.get("return_to")), id!);
 
-  // The payment gate can't be opened from here. awaiting_payment is only ever
-  // entered at creation, and only left through the invoice being paid or a
-  // reasoned waiver (mark_invoice_paid / waive_campaign_payment) — or by
-  // closing the campaign outright.
-  if (status === "awaiting_payment") return;
-  const { data: current } = await supabase
-    .from("campaigns")
-    .select("status")
-    .eq("id", id)
-    .maybeSingle<{ status: string }>();
-  if (!current) return;
-  if (current.status === "awaiting_payment" && status !== "closed") return;
-
-  await supabase.from("campaigns").update({ status }).eq("id", id);
+  const fail = (message: string): never =>
+    redirect(`${back}?action_error=${encodeURIComponent(message.slice(0, 200))}`);
+  if (!action || !(CAMPAIGN_STATUS_ACTIONS as readonly string[]).includes(action)) fail("Unknown action.");
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("reference, brands(profile_id)")
-    .eq("id", id)
-    .maybeSingle<{ reference: string; brands: { profile_id: string } | null }>();
+    .select("status, reference, brands(profile_id)")
+    .eq("id", id!)
+    .maybeSingle<{ status: CampaignStatus; reference: string; brands: { profile_id: string } | null }>();
+  if (!campaign) fail("Campaign not found.");
 
-  if (campaign?.brands?.profile_id) {
+  if (action === "close" && campaign!.status === "awaiting_payment") {
+    const { data: openInvoices } = await supabase
+      .from("invoices")
+      .select("stripe_invoice_id, stripe_mode")
+      .eq("campaign_id", id!)
+      .in("status", ["draft", "sent", "overdue"])
+      .not("stripe_invoice_id", "is", null);
+    for (const inv of (openInvoices ?? []) as { stripe_invoice_id: string; stripe_mode: PaymentMode | null }[]) {
+      if (!inv.stripe_mode) continue;
+      try {
+        await voidStripeInvoice(inv.stripe_mode, inv.stripe_invoice_id);
+      } catch (err) {
+        fail(
+          err instanceof StripeApiError
+            ? `Stripe: ${err.message} The campaign was not closed.`
+            : "Couldn't reach Stripe to cancel the invoice — the campaign was not closed.",
+        );
+      }
+    }
+  }
+
+  const { data, error } = await supabase.rpc("admin_change_campaign_status", {
+    p_campaign_id: id,
+    p_action: action,
+    p_reason: reason,
+    p_note: note,
+  });
+  if (error) fail(error.message);
+  const result = data as {
+    from: CampaignStatus;
+    to: CampaignStatus;
+    withdrawn: { id: string; reference: string | null; name: string; artist_profile_id: string | null }[];
+    cancelled_invoices: { id: string; reference: string; status: string }[];
+  };
+
+  const brandProfileId = campaign!.brands?.profile_id;
+  if (brandProfileId) {
+    // The reason and note stay internal; the brand hears the new status only.
     await notify({
       eventKey: "campaign.status_changed",
-      recipientProfileId: campaign.brands.profile_id,
+      recipientProfileId: brandProfileId,
       link: `/dashboard/campaigns/live/${id}`,
-      variables: { campaign_reference: campaign.reference, status },
+      variables: { campaign_reference: campaign!.reference, status: CAMPAIGN_STATUS_LABELS[result.to] },
+    });
+    for (const inv of result.cancelled_invoices ?? []) {
+      // A draft never reached the brand.
+      if (inv.status === "draft") continue;
+      await notify({
+        eventKey: "invoice.cancelled",
+        recipientProfileId: brandProfileId,
+        link: `/dashboard/campaigns/invoices/${inv.id}`,
+        variables: { reference: inv.reference, reason: "The campaign was closed." },
+      });
+    }
+  }
+  for (const p of result.withdrawn ?? []) {
+    if (!p.artist_profile_id) continue;
+    await notify({
+      eventKey: "sponsorship.campaign_ended",
+      recipientProfileId: p.artist_profile_id,
+      link: `/dashboard/sponsored/${p.id}`,
+      variables: { event_name: p.name, reference: p.reference ?? "—" },
     });
   }
 
-  revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/admin/campaigns", "layout");
+  revalidatePath("/dashboard/admin/invoices");
   revalidatePath("/dashboard/campaigns", "layout");
+  revalidatePath("/dashboard/sponsored", "layout");
+  revalidatePath("/dashboard/discover-campaigns");
+  redirect(`${back}?status_updated=${result.to}`);
 }
 
 /**
@@ -354,6 +427,27 @@ export async function waiveCampaignPayment(formData: FormData) {
       `/dashboard/admin/campaigns?action_error=${encodeURIComponent(message.slice(0, 200))}`,
     );
   if (!reason) fail("A reason is required to waive payment.");
+
+  // waive_campaign_payment cancels the invoice on our side; void the Stripe
+  // copy first, or the brand could still pay it from Stripe's email.
+  const { data: openInvoices } = await supabase
+    .from("invoices")
+    .select("stripe_invoice_id, stripe_mode")
+    .eq("campaign_id", campaignId)
+    .in("status", ["draft", "sent", "overdue"])
+    .not("stripe_invoice_id", "is", null);
+  for (const inv of (openInvoices ?? []) as { stripe_invoice_id: string; stripe_mode: PaymentMode | null }[]) {
+    if (!inv.stripe_mode) continue;
+    try {
+      await voidStripeInvoice(inv.stripe_mode, inv.stripe_invoice_id);
+    } catch (err) {
+      fail(
+        err instanceof StripeApiError
+          ? `Stripe: ${err.message} Payment was not waived.`
+          : "Couldn't reach Stripe to cancel the invoice — payment was not waived.",
+      );
+    }
+  }
 
   const { error } = await supabase.rpc("waive_campaign_payment", {
     p_campaign_id: campaignId,

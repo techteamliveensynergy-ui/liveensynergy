@@ -8,6 +8,8 @@ import { formatGbp, invoiceDisplayStatus } from "@/lib/billing";
 import { requestCategoryLabel } from "@/lib/campaign-requests";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import { CampaignProgress, type CampaignEventRow } from "@/components/campaigns/CampaignProgress";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { campaignStage } from "@/lib/campaign-stage";
 import { DetailFact as Fact } from "@/components/campaigns/DetailFact";
 import type { LiveCampaignSurvey } from "@/components/campaigns/LiveCampaignPanel";
 import type { Campaign, Invoice } from "@/lib/types";
@@ -101,7 +103,14 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
       <section className="card p-6">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">{title}</h1>
-          <StatusBadge status={c.status} />
+          <CampaignStageBadge
+            stage={campaignStage({
+              status: c.status,
+              settled: events.find((e) => e.status === "confirmed" || e.status === "completed") ?? null,
+              openProposals: events.filter((e) => e.status === "in_progress").length,
+              surveyPublished: surveys.some((s) => s.status === "published"),
+            })}
+          />
         </div>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           Ref {c.reference} · Set up {formatDate(c.created_at)}
