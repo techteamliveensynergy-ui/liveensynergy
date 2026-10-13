@@ -1,6 +1,7 @@
 "use client";
 
 import type { FieldProps } from "./types";
+import { OptionRow } from "./OptionRow";
 
 /** Fixed by position, not by option value/label — a Likert question's icons
  *  never change even when an admin edits the option text they sit under. */
@@ -39,13 +40,13 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
                 <img
                   src={o.image_url}
                   alt=""
-                  className={`aspect-square w-full rounded-xl object-cover transition-transform ${
+                  className={`aspect-square w-full rounded-lg object-cover transition-transform ${
                     selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                 />
               ) : (
                 <div
-                  className={`flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--color-mist)] text-[0.75em] text-[var(--color-ink-soft)] transition-transform ${
+                  className={`flex aspect-square w-full items-center justify-center rounded-lg bg-[var(--color-mist)] text-[0.75em] text-[var(--color-ink-soft)] transition-transform ${
                     selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                   aria-hidden
@@ -97,17 +98,16 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
 
   return (
     <div className="space-y-2">
-      {options.map((o) => (
-        <label key={o.value} className="flex items-center gap-2">
-          <input
-            type="radio"
-            name={question.id}
-            className="h-4 w-4"
-            checked={value === o.value}
-            onChange={() => onChange(o.value)}
-          />
-          {o.label}
-        </label>
+      {options.map((o, i) => (
+        <OptionRow
+          key={o.value}
+          type="radio"
+          name={question.id}
+          index={i}
+          label={o.label}
+          checked={value === o.value}
+          onToggle={() => onChange(o.value)}
+        />
       ))}
     </div>
   );

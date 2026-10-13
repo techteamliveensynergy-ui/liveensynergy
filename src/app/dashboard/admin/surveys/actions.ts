@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminOrNull, requireAdmin } from "@/lib/profile";
 import { uploadImage } from "@/lib/storage";
+import { DEFAULT_BACKGROUND_IMAGE_OPACITY } from "@/lib/survey-media";
 import {
   validateQuestions,
   validContradictionRules,
@@ -44,6 +45,17 @@ function brandingFields(formData: FormData) {
   // on a layout switch.
   const rawScale = Number(str(formData.get("font_scale")) ?? "1");
   const fontScale = Number.isFinite(rawScale) ? Math.min(1.6, Math.max(0.8, rawScale)) : 1;
+  // 0062 — whitelisted here as well as by the column checks, so a tampered
+  // form gets a sane default rather than a raw constraint error.
+  const rawSize = str(formData.get("question_font_size"));
+  const questionFontSize = rawSize && ["sm", "md", "lg", "xl"].includes(rawSize) ? rawSize : "md";
+  const rawOpacity = Number(str(formData.get("background_image_opacity")) ?? String(DEFAULT_BACKGROUND_IMAGE_OPACITY));
+  const backgroundImageOpacity = Number.isFinite(rawOpacity)
+    ? Math.round(Math.min(100, Math.max(0, rawOpacity)))
+    : DEFAULT_BACKGROUND_IMAGE_OPACITY;
+  const rawVideoFormat = str(formData.get("cover_video_format"));
+  const coverVideoFormat =
+    rawVideoFormat === "landscape" || rawVideoFormat === "portrait" ? rawVideoFormat : null;
   return {
     layout_mode: layoutMode,
     cover_media_url: layoutMode === "single_page" ? str(formData.get("cover_media_url")) : null,
@@ -58,6 +70,10 @@ function brandingFields(formData: FormData) {
     font_family: str(formData.get("font_family")),
     question_text_color: str(formData.get("question_text_color")),
     body_text_color: str(formData.get("body_text_color")),
+    question_font_size: questionFontSize,
+    card_background_color: str(formData.get("card_background_color")),
+    background_image_opacity: backgroundImageOpacity,
+    cover_video_format: layoutMode === "single_page" && coverMediaType === "video" ? coverVideoFormat : null,
   };
 }
 

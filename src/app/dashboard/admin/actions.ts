@@ -217,7 +217,7 @@ export async function updateUserRoleProfile(
 
   revalidatePath(`/dashboard/admin/users/${userId}`);
   if (spec.table === "brands") {
-    revalidatePath("/dashboard/campaigns");
+    revalidatePath("/dashboard/campaigns", "layout");
     revalidatePath("/dashboard/admin/invoices");
   }
   return { success: true };

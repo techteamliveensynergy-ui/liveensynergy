@@ -4,21 +4,24 @@ import Link from "next/link";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
-import { QuestionMedia } from "@/components/surveys/QuestionMedia";
+import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
+import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { SurveySlide } from "@/components/surveys/SurveySlide";
 import {
   accentColorVars,
   backgroundImageStyle,
-  questionTypographyStyle,
+  cardBackgroundStyle,
+  DEFAULT_SURVEY_APPEARANCE,
   typographyVars,
+  type SurveyAppearance,
   type SurveyTypography,
 } from "@/lib/survey-media";
-import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
+import { emptyAnswerFor } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
-import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
 import { ResetPasswordForm } from "@/app/auth/reset-password/ResetPasswordForm";
 import {
@@ -74,10 +77,16 @@ function ThankYouScreen({
   event,
   isAuthenticated,
   needsPassword,
+  typography,
+  appearance,
+  accentColor,
 }: {
   message: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
+  typography?: SurveyTypography;
+  appearance: SurveyAppearance;
+  accentColor?: string | null;
   /** True for an account startSurveyAccount() just created — it has a
    *  random password the respondent never saw, so they need to set a real
    *  one before the "register" step (or later, from the emailed reset
@@ -85,14 +94,17 @@ function ThankYouScreen({
   needsPassword: boolean;
 }) {
   return (
-    <div className="card space-y-4 p-8 text-center">
-      <div className="text-4xl" aria-hidden>
+    <SurveySlide
+      className="survey-scope"
+      style={{ ...typographyVars(typography ?? {}), ...cardBackgroundStyle(appearance), ...accentColorVars(accentColor) }}
+    >
+      <div className="text-[2.5em]" aria-hidden>
         🎉
       </div>
-      <h2 className="font-display text-xl font-semibold text-[var(--color-ink)]">
+      <h2 className="font-display text-[1.75em] font-semibold text-[var(--survey-question-color,var(--color-ink))]">
         Thanks for taking part!
       </h2>
-      <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+      <p className="whitespace-pre-line text-[1.05em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
         {message ??
           "Your answers have been recorded. Join the Live·En·Synergy community to unlock rewards and exclusive offers."}
       </p>
@@ -120,7 +132,7 @@ function ThankYouScreen({
           Create your account &amp; register
         </Link>
       )}
-    </div>
+    </SurveySlide>
   );
 }
 
@@ -145,6 +157,7 @@ export function PublicSurveyForm({
   accentColor,
   backgroundImageUrl,
   typography,
+  appearance = DEFAULT_SURVEY_APPEARANCE,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -164,6 +177,7 @@ export function PublicSurveyForm({
   accentColor?: string | null;
   backgroundImageUrl?: string | null;
   typography?: SurveyTypography;
+  appearance?: SurveyAppearance;
 }) {
   const [stage, setStage] = useState<Stage>(() => {
     if (showIntroGate) return "gate";
@@ -319,6 +333,9 @@ export function PublicSurveyForm({
         event={event}
         isAuthenticated={isAuthenticated}
         needsPassword={needsPassword}
+        typography={typography}
+        appearance={appearance}
+        accentColor={accentColor}
       />
     );
   }
@@ -333,6 +350,7 @@ export function PublicSurveyForm({
         requireResidency={!prefill}
         footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
         typography={typography}
+        appearance={appearance}
         onStart={(c) => {
           setConsent(c);
           setStage(prefill ? "questions" : "contact");
@@ -487,40 +505,28 @@ export function PublicSurveyForm({
             <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
           }
           accentColor={accentColor}
+          appearance={appearance}
         />
       ) : (
         <div
-          className={`space-y-4 ${backgroundImageStyle(backgroundImageUrl) ? "p-4" : ""}`}
-          style={backgroundImageStyle(backgroundImageUrl)}
+          className={`space-y-4 ${backgroundImageUrl ? "p-4" : ""}`}
+          style={backgroundImageStyle(backgroundImageUrl, appearance.backgroundImageOpacity)}
         >
-          {coverMediaUrl && (
-            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
-          )}
+          <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => {
-            const spec = questionSpec(q.type);
-            return (
-              <div
-                key={q.id}
-                ref={(el) => {
-                  refs.current[q.id] = el;
-                }}
-                data-question-id={q.id}
-                className="card p-6 sm:p-10"
-                style={questionTypographyStyle(q.config)}
-              >
-                <QuestionMedia config={q.config}>
-                  <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-                    <QuestionField
-                      question={q}
-                      value={values[q.id] ?? null}
-                      onChange={(v) => handleChange(q.id, v)}
-                    />
-                  </Field>
-                </QuestionMedia>
-              </div>
-            );
-          })}
+          {questions.map((q) => (
+            <SurveyQuestionCard
+              key={q.id}
+              question={q}
+              value={values[q.id] ?? null}
+              onChange={(v) => handleChange(q.id, v)}
+              appearance={appearance}
+              accentColor={accentColor}
+              cardRef={(el) => {
+                refs.current[q.id] = el;
+              }}
+            />
+          ))}
 
           <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
 

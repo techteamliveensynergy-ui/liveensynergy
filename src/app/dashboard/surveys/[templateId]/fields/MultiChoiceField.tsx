@@ -1,6 +1,7 @@
 "use client";
 
 import type { FieldProps } from "./types";
+import { OptionRow } from "./OptionRow";
 
 export function MultiChoiceField({ question, value, onChange }: FieldProps) {
   const options = question.options ?? [];
@@ -30,13 +31,13 @@ export function MultiChoiceField({ question, value, onChange }: FieldProps) {
                 <img
                   src={o.image_url}
                   alt=""
-                  className={`aspect-square w-full rounded-xl object-cover transition-transform ${
+                  className={`aspect-square w-full rounded-lg object-cover transition-transform ${
                     checked ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                 />
               ) : (
                 <div
-                  className={`flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--color-mist)] text-[0.75em] text-[var(--color-ink-soft)] transition-transform ${
+                  className={`flex aspect-square w-full items-center justify-center rounded-lg bg-[var(--color-mist)] text-[0.75em] text-[var(--color-ink-soft)] transition-transform ${
                     checked ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                   aria-hidden
@@ -54,16 +55,15 @@ export function MultiChoiceField({ question, value, onChange }: FieldProps) {
 
   return (
     <div className="space-y-2">
-      {options.map((o) => (
-        <label key={o.value} className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={selected.includes(o.value)}
-            onChange={(e) => toggle(o.value, e.target.checked)}
-          />
-          {o.label}
-        </label>
+      {options.map((o, i) => (
+        <OptionRow
+          key={o.value}
+          type="checkbox"
+          index={i}
+          label={o.label}
+          checked={selected.includes(o.value)}
+          onToggle={(checked) => toggle(o.value, checked)}
+        />
       ))}
     </div>
   );

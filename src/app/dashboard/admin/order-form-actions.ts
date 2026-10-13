@@ -213,7 +213,7 @@ export async function saveOrderForm(
   revalidatePath("/dashboard/admin/campaigns");
   revalidatePath(`/dashboard/admin/campaigns/${campaignId}/order-form`);
   revalidatePath("/dashboard/admin/invoices");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath(`/order-forms/${saved.id}`);
   redirect(`/dashboard/admin/campaigns/${campaignId}/order-form?${intent === "send" ? "sent" : "saved"}=1`);
 }
@@ -316,6 +316,6 @@ export async function withdrawOrderForm(formData: FormData) {
     .in("status", ["sent", "changes_requested"]);
   revalidatePath(`/dashboard/admin/campaigns/${campaignId}/order-form`);
   revalidatePath("/dashboard/admin/campaigns");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   redirect(`/dashboard/admin/campaigns/${campaignId}/order-form`);
 }

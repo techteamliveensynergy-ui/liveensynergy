@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/format";
 import { displayUrl } from "@/lib/urls";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { reviewCampaignIntake } from "../../../marketplace-actions";
+import { requestCategoryLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaign request · Admin" };
 
@@ -91,7 +92,7 @@ export default async function AdminCampaignRequestPage({ params }: { params: Pro
         <p className="mt-2 whitespace-pre-line">{r.description}</p>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
           <Fact label="Budget guidance" value={r.budget_expectation_gbp ? `£${Number(r.budget_expectation_gbp).toLocaleString("en-GB")}` : null} />
-          <Fact label="Category" value={r.category === "other" ? r.category_other : r.category} />
+          <Fact label="Categories" value={requestCategoryLabel(r)} />
           <Fact label="Preferred location" value={r.preferred_location} />
           <Fact label="Preferred timeline" value={r.preferred_timeline} />
           <Fact label="Artist / event in mind" value={r.target_name} />

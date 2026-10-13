@@ -168,9 +168,10 @@ test("B3 a brand can suggest an external event on a campaign", async ({
   await page.fill("#suggested_event_url", "eventbrite.co.uk/e/late-shift");
   await fillManagerIfBlank(page);
   await page.getByRole("button", { name: /Save changes/i }).click();
-  await page.waitForURL(/\/dashboard\/campaigns$/, { timeout: 30_000 });
+  // Saving lands on the request's own page since 13 Oct.
+  await page.waitForURL(/\/dashboard\/campaigns\/requests\/[0-9a-f-]{36}\?updated=1/, { timeout: 30_000 });
 
-  await expect(page.getByText(/Your suggested event/i).first()).toBeVisible();
+  await expect(page.getByText(/Event you suggested/i).first()).toBeVisible();
   await shot(page, "B3c-on-card", "The suggestion on the brand's campaign card", {
     fullPage: true,
   });

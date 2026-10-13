@@ -88,7 +88,7 @@ export async function approveOrderForm(
   }
 
   revalidatePath(`/order-forms/${id}`);
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath("/dashboard/admin/campaigns");
   revalidatePath("/dashboard/admin/invoices");
   if (invoiceId) {
@@ -134,7 +134,7 @@ export async function requestOrderFormChanges(
   );
 
   revalidatePath(`/order-forms/${id}`);
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath("/dashboard/admin/campaigns");
   redirect(`/order-forms/${id}?changes=1`);
 }

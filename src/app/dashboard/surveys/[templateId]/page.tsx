@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
 import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
+import { surveyAppearance } from "@/lib/survey-media";
 import { SurveyForm } from "./SurveyForm";
 
 export const metadata = { title: "Survey" };
@@ -127,6 +128,7 @@ export default async function TakeSurveyPage({
           questionTextColor: tpl.question_text_color,
           bodyTextColor: tpl.body_text_color,
         }}
+        appearance={surveyAppearance(tpl)}
       />
     </div>
   );

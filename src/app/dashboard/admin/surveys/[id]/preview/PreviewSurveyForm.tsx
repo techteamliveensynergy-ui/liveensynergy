@@ -1,16 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
-import { QuestionMedia } from "@/components/surveys/QuestionMedia";
+import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
-import { accentColorVars, backgroundImageStyle, questionTypographyStyle, typographyVars } from "@/lib/survey-media";
+import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { SurveySlide } from "@/components/surveys/SurveySlide";
+import {
+  accentColorVars,
+  backgroundImageStyle,
+  cardBackgroundStyle,
+  surveyAppearance,
+  typographyVars,
+} from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion, SurveyTemplate } from "@/lib/types";
-import { emptyAnswerFor, questionSpec, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
-import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
+import { emptyAnswerFor, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 
 /**
  * Admin-only stand-in for the real SurveyForm — same field renderers, but
@@ -37,6 +43,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     body_text_color: bodyTextColor,
     show_intro_gate: showIntroGate,
   } = template;
+  const appearance = surveyAppearance(template);
+  const typography = { fontScale, fontFamily, questionTextColor, bodyTextColor };
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
     const initial: Record<string, SurveyAnswerValue> = {};
     for (const q of questions) {
@@ -66,14 +74,17 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
 
   if (finished) {
     return (
-      <div className="card space-y-4 p-8 text-center">
-        <div className="text-4xl" aria-hidden>
+      <SurveySlide
+        className="survey-scope"
+        style={{ ...typographyVars(typography), ...cardBackgroundStyle(appearance), ...accentColorVars(accentColor) }}
+      >
+        <div className="text-[2.5em]" aria-hidden>
           🎉
         </div>
-        <h2 className="font-display text-xl font-semibold text-[var(--color-ink)]">
+        <h2 className="font-display text-[1.75em] font-semibold text-[var(--survey-question-color,var(--color-ink))]">
           Thanks for taking part!
         </h2>
-        <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+        <p className="whitespace-pre-line text-[1.05em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
           {thankYouMessage ??
             "Your answers have been recorded. Join the Live·En·Synergy community to unlock rewards and exclusive offers."}
         </p>
@@ -83,7 +94,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         <button type="button" className="btn btn-primary mt-2 w-full" onClick={reset}>
           Try again
         </button>
-      </div>
+      </SurveySlide>
     );
   }
 
@@ -96,7 +107,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         accentColor={accentColor}
         requireResidency={true}
         footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
-        typography={{ fontScale, fontFamily, questionTextColor, bodyTextColor }}
+        typography={typography}
+        appearance={appearance}
         onStart={() => setGateCleared(true)}
       />
     );
@@ -121,7 +133,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         setFinished(true);
       }}
       className="survey-scope space-y-4"
-      style={typographyVars({ fontScale, fontFamily, questionTextColor, bodyTextColor })}
+      style={typographyVars(typography)}
     >
       <p className="rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm text-[var(--color-ink-soft)]">
         Preview mode — answers here are not saved, and no reward or quality scoring runs.
@@ -143,33 +155,26 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
             <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
           }
           accentColor={accentColor}
+          appearance={appearance}
           submitLabel="Finish preview"
         />
       ) : (
         <div
-          className={`space-y-4 ${backgroundImageStyle(backgroundImageUrl) ? "p-4" : ""}`}
-          style={backgroundImageStyle(backgroundImageUrl)}
+          className={`space-y-4 ${backgroundImageUrl ? "p-4" : ""}`}
+          style={backgroundImageStyle(backgroundImageUrl, appearance.backgroundImageOpacity)}
         >
-          {coverMediaUrl && (
-            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
-          )}
+          <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => {
-            const spec = questionSpec(q.type);
-            return (
-              <div key={q.id} className="card p-6 sm:p-10" style={questionTypographyStyle(q.config)}>
-                <QuestionMedia config={q.config}>
-                  <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-                    <QuestionField
-                      question={q}
-                      value={values[q.id] ?? null}
-                      onChange={(v) => handleChange(q.id, v)}
-                    />
-                  </Field>
-                </QuestionMedia>
-              </div>
-            );
-          })}
+          {questions.map((q) => (
+            <SurveyQuestionCard
+              key={q.id}
+              question={q}
+              value={values[q.id] ?? null}
+              onChange={(v) => handleChange(q.id, v)}
+              appearance={appearance}
+              accentColor={accentColor}
+            />
+          ))}
 
           <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
 

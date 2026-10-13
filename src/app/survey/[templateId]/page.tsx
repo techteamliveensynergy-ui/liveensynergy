@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/Logo";
 import { formatDateTime } from "@/lib/format";
 import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
+import { surveyAppearance } from "@/lib/survey-media";
 import { SurveyForm } from "@/app/dashboard/surveys/[templateId]/SurveyForm";
 import { PublicSurveyForm, type PublicSurveyEvent, type SurveyPrefill } from "./PublicSurveyForm";
 
@@ -157,6 +158,7 @@ export default async function PublicSurveyPage({
               questionTextColor: tpl.question_text_color,
               bodyTextColor: tpl.body_text_color,
             }}
+            appearance={surveyAppearance(tpl)}
           />
         </Shell>
       );
@@ -252,6 +254,7 @@ export default async function PublicSurveyPage({
           questionTextColor: tpl.question_text_color,
           bodyTextColor: tpl.body_text_color,
         }}
+        appearance={surveyAppearance(tpl)}
       />
     </Shell>
   );

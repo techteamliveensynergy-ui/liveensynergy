@@ -30,7 +30,7 @@ function RankingRow({ id, label, index }: { id: string; label: string; index: nu
     opacity: isDragging ? 0.4 : 1,
   };
   return (
-    <div ref={setNodeRef} style={style} className="card flex items-center gap-3 p-3">
+    <div ref={setNodeRef} style={style} className="card flex items-center gap-3 p-3 text-[var(--color-ink)]">
       <button
         type="button"
         className="cursor-grab touch-none px-1 text-[1.125em] text-[var(--color-ink-soft)]"

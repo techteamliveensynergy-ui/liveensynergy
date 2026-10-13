@@ -1,24 +1,24 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Field } from "@/components/ui/Field";
 import { ErrorBanner } from "@/components/onboarding/parts";
-import { QuestionMedia } from "@/components/surveys/QuestionMedia";
+import { CoverMedia } from "@/components/surveys/QuestionMedia";
+import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
 import {
   accentColorVars,
   backgroundImageStyle,
-  questionTypographyStyle,
+  DEFAULT_SURVEY_APPEARANCE,
   typographyVars,
+  type SurveyAppearance,
   type SurveyTypography,
 } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
-import { emptyAnswerFor, questionSpec } from "@/lib/surveys";
+import { emptyAnswerFor } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import { submitSurveyResponse, type SurveyResponseState } from "./actions";
-import { QuestionField } from "./fields";
 import { TurnstileWidget } from "./TurnstileWidget";
 
 interface Timing {
@@ -40,6 +40,7 @@ export function SurveyForm({
   accentColor,
   backgroundImageUrl,
   typography,
+  appearance = DEFAULT_SURVEY_APPEARANCE,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -54,6 +55,7 @@ export function SurveyForm({
   accentColor?: string | null;
   backgroundImageUrl?: string | null;
   typography?: SurveyTypography;
+  appearance?: SurveyAppearance;
 }) {
   // A registered participant already agreed to the platform's own T&Cs at
   // sign-up (participations.terms_accepted_at/profiles.terms_accepted_at) —
@@ -106,8 +108,12 @@ export function SurveyForm({
   // wins; scrolling a question back into view never resets it. Only wired
   // up for single-page — stepped mode marks shown_at itself as each
   // question becomes the active step (see markShown below).
+  //
+  // Waits for the intro gate to clear: behind it the question cards aren't
+  // mounted, so observing at first render found no elements and every
+  // single-page answer went in with shown_at = null.
   useEffect(() => {
-    if (layoutMode !== "single_page") return;
+    if (layoutMode !== "single_page" || !gateCleared) return;
     if (typeof IntersectionObserver === "undefined") {
       const fallback = mountedAt.current;
       setTimings((prev) => {
@@ -146,7 +152,7 @@ export function SurveyForm({
     // Registered once against the refs captured at mount — re-subscribing
     // on every keystroke would defeat the point of the observer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutMode]);
+  }, [layoutMode, gateCleared]);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -185,7 +191,7 @@ export function SurveyForm({
   const footer = (
     <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
   );
-  const singlePageBackground = backgroundImageStyle(backgroundImageUrl);
+  const singlePageBackground = backgroundImageStyle(backgroundImageUrl, appearance.backgroundImageOpacity);
 
   if (!gateCleared) {
     return (
@@ -197,6 +203,7 @@ export function SurveyForm({
         requireResidency={false}
         footer={footer}
         typography={typography}
+        appearance={appearance}
         onStart={() => setGateCleared(true)}
       />
     );
@@ -259,37 +266,25 @@ export function SurveyForm({
           isPending={isPending}
           footer={footer}
           accentColor={accentColor}
+          appearance={appearance}
         />
       ) : (
         <div className={`space-y-4 ${singlePageBackground ? "p-4" : ""}`} style={singlePageBackground}>
-          {coverMediaUrl && (
-            <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
-          )}
+          <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => {
-            const spec = questionSpec(q.type);
-            return (
-              <div
-                key={q.id}
-                ref={(el) => {
-                  refs.current[q.id] = el;
-                }}
-                data-question-id={q.id}
-                className="card p-6 sm:p-10"
-                style={questionTypographyStyle(q.config)}
-              >
-                <QuestionMedia config={q.config}>
-                  <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-                    <QuestionField
-                      question={q}
-                      value={values[q.id] ?? null}
-                      onChange={(v) => handleChange(q.id, v)}
-                    />
-                  </Field>
-                </QuestionMedia>
-              </div>
-            );
-          })}
+          {questions.map((q) => (
+            <SurveyQuestionCard
+              key={q.id}
+              question={q}
+              value={values[q.id] ?? null}
+              onChange={(v) => handleChange(q.id, v)}
+              appearance={appearance}
+              accentColor={accentColor}
+              cardRef={(el) => {
+                refs.current[q.id] = el;
+              }}
+            />
+          ))}
 
           {footer}
 

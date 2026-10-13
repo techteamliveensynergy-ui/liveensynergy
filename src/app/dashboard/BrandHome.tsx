@@ -118,7 +118,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
 
             </div>
             <Link
-              href="/dashboard/campaigns"
+              href="/dashboard/campaigns/live"
               className="text-sm font-semibold text-[var(--color-brand-dark)]"
             >
               See all →
@@ -140,7 +140,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                 return (
                   <Link
                     key={c.id}
-                    href={`/dashboard/campaigns#campaign-${c.id}`}
+                    href={`/dashboard/campaigns/live#campaign-${c.id}`}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
                   >
                     <div>

@@ -80,7 +80,7 @@ function revalidateInvoiceViews(id: string) {
   revalidatePath("/dashboard/admin/invoices");
   revalidatePath(`/dashboard/admin/invoices/${id}`);
   revalidatePath("/dashboard/admin/campaigns");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath(`/dashboard/campaigns/invoices/${id}`);
 }
 
@@ -178,7 +178,7 @@ export async function markInvoicePaid(formData: FormData) {
     await notify({
       eventKey: "invoice.paid",
       recipientProfileId: updated.brands.profile_id,
-      link: "/dashboard/campaigns",
+      link: "/dashboard/campaigns/live",
       variables: {
         reference: updated.reference,
         amount: formatGbp(updated.amount_gbp),

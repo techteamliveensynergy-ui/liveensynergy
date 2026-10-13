@@ -116,12 +116,20 @@ const STATUS_STYLES: Record<string, string> = {
   overdue: "bg-[var(--color-pink)] text-[var(--color-accent)]",
 };
 
+/** Statuses whose raw value reads badly as a label. Written exactly as
+ *  shown — these skip the capitalize styling the generic labels get. */
+const STATUS_LABELS: Record<string, string> = {
+  // A brand's campaign request that became a real campaign (13 Oct notes).
+  converted: "Converted to Live Campaign",
+};
+
 export function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_STYLES[status] ?? "bg-[var(--color-mist)] text-[var(--color-ink-soft)]";
-  const label = status.replace(/_/g, " ");
+  const explicit = STATUS_LABELS[status];
+  const label = explicit ?? status.replace(/_/g, " ");
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${cls}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${explicit ? "" : "capitalize"} ${cls}`}
     >
       {label}
     </span>

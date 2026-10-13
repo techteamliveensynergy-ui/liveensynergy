@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { reviewCampaignIntake } from "../../marketplace-actions";
+import { CAMPAIGN_INTAKE_STATUS_LABELS, requestCategoryLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaign requests · Admin" };
 
@@ -42,13 +43,13 @@ export default async function AdminCampaignIntakePage({
           <Link
             key={s}
             href={`/dashboard/admin/campaigns/intake?status=${s}`}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold capitalize transition ${
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
               status === s
                 ? "bg-[var(--color-brand)] text-white"
                 : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
             }`}
           >
-            {s.replace(/_/g, " ")}
+            {CAMPAIGN_INTAKE_STATUS_LABELS[s as keyof typeof CAMPAIGN_INTAKE_STATUS_LABELS]}
           </Link>
         ))}
       </div>
@@ -80,7 +81,7 @@ export default async function AdminCampaignIntakePage({
                     {r.budget_expectation_gbp
                       ? ` · Budget guidance £${Number(r.budget_expectation_gbp).toLocaleString("en-GB")}`
                       : ""}
-                    {r.category ? ` · ${r.category}` : ""}
+                    {requestCategoryLabel(r) ? ` · ${requestCategoryLabel(r)}` : ""}
                     {r.preferred_location ? ` · ${r.preferred_location}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]">

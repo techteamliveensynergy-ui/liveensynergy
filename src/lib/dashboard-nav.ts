@@ -4,6 +4,9 @@ export interface NavItem {
   href: string;
   label: string;
   icon: string; // emoji glyph for the MVP; swap for an icon set later
+  /** Other path prefixes that should light this item up — pages that live
+   *  outside its own folder (e.g. invoices under /dashboard/campaigns). */
+  alsoActiveFor?: string[];
 }
 
 const COMMON_TOP: NavItem[] = [
@@ -20,7 +23,16 @@ const COMMON_BOTTOM: NavItem[] = [
 
 const BY_ROLE: Record<Role, NavItem[]> = {
   brand: [
-    { href: "/dashboard/campaigns", label: "Campaigns", icon: "📣" },
+    // Split in two (13 Oct client notes) — what was asked for vs what's
+    // running. The sidebar highlights the longest matching href, so
+    // /dashboard/campaigns/live/* lights "Campaigns live", not "requests".
+    { href: "/dashboard/campaigns", label: "Campaign requests", icon: "📥" },
+    {
+      href: "/dashboard/campaigns/live",
+      label: "Campaigns live",
+      icon: "📣",
+      alsoActiveFor: ["/dashboard/campaigns/invoices"],
+    },
     { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
     { href: "/dashboard/discover", label: "Discover events", icon: "🔎" },
   ],

@@ -2,8 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { QuestionMedia } from "@/components/surveys/QuestionMedia";
-import { accentColorVars, typographyVars, type SurveyTypography } from "@/lib/survey-media";
+import { SurveySlide } from "@/components/surveys/SurveySlide";
+import {
+  accentColorVars,
+  cardBackgroundStyle,
+  typographyVars,
+  type SurveyAppearance,
+  type SurveyTypography,
+} from "@/lib/survey-media";
 import type { SurveyMediaType } from "@/lib/types";
 
 export interface SurveyConsent {
@@ -31,6 +37,7 @@ export function SurveyIntroGate({
   onStart,
   startLabel = "Start survey",
   typography,
+  appearance,
 }: {
   /** Optional — every call site already shows the survey title elsewhere on
    *  the page, so this is only for a context that doesn't. */
@@ -46,6 +53,7 @@ export function SurveyIntroGate({
   onStart: (consent: SurveyConsent) => void;
   startLabel?: string;
   typography?: SurveyTypography;
+  appearance?: SurveyAppearance;
 }) {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [residencyConfirmed, setResidencyConfirmed] = useState(false);
@@ -53,19 +61,19 @@ export function SurveyIntroGate({
   const canStart = consentAccepted && (!requireResidency || residencyConfirmed);
 
   return (
-    <div
-      className="survey-scope card space-y-4 p-8 text-center"
-      style={typographyVars(typography ?? {})}
+    <SurveySlide
+      mediaUrl={coverMediaUrl}
+      mediaType={coverMediaType}
+      videoFormat={appearance?.coverVideoFormat}
+      className="survey-scope"
+      style={{ ...typographyVars(typography ?? {}), ...cardBackgroundStyle(appearance) }}
     >
-      {coverMediaUrl && (
-        <QuestionMedia config={{ media_url: coverMediaUrl, media_type: coverMediaType ?? "image" }} />
-      )}
       {title && (
         <h1 className="font-display text-[1.5em] font-semibold text-[var(--survey-question-color,var(--color-ink))]">
           {title}
         </h1>
       )}
-      <p className="text-[0.875em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
+      <p className="whitespace-pre-line text-[1.05em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
         {introMessage ?? "Thanks for taking part — a few quick questions before we get started."}
       </p>
 
@@ -115,6 +123,6 @@ export function SurveyIntroGate({
       </div>
 
       {footer}
-    </div>
+    </SurveySlide>
   );
 }

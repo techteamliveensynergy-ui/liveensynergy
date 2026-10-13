@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/OnboardingShell";
@@ -22,6 +22,69 @@ function Submit({ label }: { label: string }) {
     <button type="submit" className="btn btn-primary" disabled={pending}>
       {pending ? "Saving…" : label}
     </button>
+  );
+}
+
+/**
+ * Category of artist / event — any number of them (13 Oct client notes). The
+ * "please specify" box only appears, and is only meaningful, with Other
+ * ticked; un-ticking Other clears it so a stale value isn't saved.
+ */
+function CategoryPicker({ initial, initialOther }: { initial: string[]; initialOther: string }) {
+  const [selected, setSelected] = useState<string[]>(
+    initial.map((c) => ARTIST_CATEGORIES.find((a) => a.toLowerCase() === c.toLowerCase()) ?? c),
+  );
+  const [other, setOther] = useState(initialOther);
+  const otherOn = selected.includes("Other");
+
+  function toggle(c: string, on: boolean) {
+    setSelected((prev) => (on ? [...prev, c] : prev.filter((x) => x !== c)));
+    if (c === "Other" && !on) setOther("");
+  }
+
+  return (
+    <div>
+      <p className="field-label">Categories of artist / event</p>
+      <p className="field-hint mb-2 mt-0">Tick all that apply.</p>
+      <div className="flex flex-wrap gap-2">
+        {ARTIST_CATEGORIES.map((c) => {
+          const on = selected.includes(c);
+          return (
+            <label
+              key={c}
+              className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${
+                on
+                  ? "border-[var(--color-brand)] bg-[var(--color-brand)]/10 font-semibold"
+                  : "border-black/15 hover:border-[var(--color-brand)]"
+              }`}
+            >
+              <input
+                type="checkbox"
+                name="categories"
+                value={c}
+                checked={on}
+                onChange={(e) => toggle(c, e.target.checked)}
+                className="h-4 w-4"
+              />
+              {c}
+            </label>
+          );
+        })}
+      </div>
+      {otherOn && (
+        <div className="mt-3 max-w-md">
+          <Field label="Other — please specify" htmlFor="category_other">
+            <input
+              id="category_other"
+              name="category_other"
+              className="input"
+              value={other}
+              onChange={(e) => setOther(e.target.value)}
+            />
+          </Field>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -86,31 +149,10 @@ export function CampaignForm({ intake }: { intake?: CampaignIntakeRequest }) {
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Category of artist / event" htmlFor="category">
-            <select
-              id="category"
-              name="category"
-              className="select"
-              defaultValue={d?.category ?? ""}
-            >
-              <option value="">Select…</option>
-              {ARTIST_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="If 'Other' category, specify" htmlFor="category_other">
-            <input
-              id="category_other"
-              name="category_other"
-              className="input"
-              defaultValue={d?.category_other ?? ""}
-            />
-          </Field>
-        </div>
+        <CategoryPicker
+          initial={d ? (d.categories?.length ? d.categories : d.category ? [d.category] : []) : []}
+          initialOther={d?.category_other ?? ""}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Preferred event location" htmlFor="preferred_location">

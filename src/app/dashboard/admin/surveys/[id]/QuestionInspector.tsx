@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import { HIDDEN_FIELD_SOURCES, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
 import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
+import {
+  QUESTION_FONT_SIZE_OPTIONS,
+  RECOMMENDED_IMAGE_SIZES,
+  videoEmbedUrl,
+  videoFormatFor,
+} from "@/lib/survey-media";
 import type { SurveyMediaPosition, SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
 import { uploadQuestionMedia } from "../actions";
@@ -141,6 +147,23 @@ export function QuestionInspector({
             question.
           </p>
 
+          <Field label="Question size" htmlFor="q-question-size">
+            <select
+              id="q-question-size"
+              className="select"
+              disabled={!editable}
+              value={question.config.question_size ?? ""}
+              onChange={(e) => setConfig("question_size", e.target.value)}
+            >
+              <option value="">Survey default</option>
+              {QUESTION_FONT_SIZE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label.replace(" (default)", "")}
+                </option>
+              ))}
+            </select>
+          </Field>
+
           <Field label="Font" htmlFor="q-font-family">
             <select
               id="q-font-family"
@@ -219,6 +242,37 @@ export function QuestionInspector({
               )}
             </div>
           </Field>
+
+          <Field label="Card colour" htmlFor="q-card-background-color">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Pick a card colour"
+                disabled={!editable}
+                value={question.config.card_background_color || "#ffffff"}
+                onChange={(e) => setConfig("card_background_color", e.target.value)}
+                className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+              />
+              <input
+                id="q-card-background-color"
+                className="input"
+                disabled={!editable}
+                placeholder="Survey default"
+                value={question.config.card_background_color ?? ""}
+                onChange={(e) => setConfig("card_background_color", e.target.value)}
+              />
+              {question.config.card_background_color && (
+                <button
+                  type="button"
+                  className="btn btn-ghost shrink-0 text-xs"
+                  disabled={!editable}
+                  onClick={() => setConfig("card_background_color", "")}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </Field>
         </div>
       )}
 
@@ -282,14 +336,37 @@ export function QuestionInspector({
             )}
 
             {mediaType === "video" && (
-              <input
-                type="url"
-                className="input"
-                disabled={!editable}
-                placeholder="https://youtube.com/watch?v=…"
-                value={mediaUrl ?? ""}
-                onChange={(e) => onChange({ config: { ...question!.config, media_url: e.target.value } })}
-              />
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  className="input"
+                  disabled={!editable}
+                  placeholder="https://youtube.com/watch?v=…"
+                  value={mediaUrl ?? ""}
+                  onChange={(e) => onChange({ config: { ...question!.config, media_url: e.target.value } })}
+                />
+                {mediaUrl?.trim() && !videoEmbedUrl(mediaUrl) && (
+                  <p className="text-sm text-[var(--color-accent)]">
+                    This link can&apos;t be embedded — respondents won&apos;t see a video. Use a YouTube (incl.
+                    Shorts), Vimeo, Loom, Instagram Reel or TikTok video link.
+                  </p>
+                )}
+                <Field label="Video shape" htmlFor="q-video-format">
+                  <select
+                    id="q-video-format"
+                    className="select"
+                    disabled={!editable}
+                    value={question.config.video_format ?? ""}
+                    onChange={(e) => setConfig("video_format", e.target.value)}
+                  >
+                    <option value="">
+                      Detect from link (now {videoFormatFor(mediaUrl, null) === "portrait" ? "reel" : "normal"})
+                    </option>
+                    <option value="landscape">Normal video (16:9, landscape)</option>
+                    <option value="portrait">Reel / short (9:16, portrait)</option>
+                  </select>
+                </Field>
+              </div>
             )}
 
             {mediaType && (
@@ -317,6 +394,35 @@ export function QuestionInspector({
                   )}
                 </select>
               </Field>
+            )}
+
+            {mediaType === "image" && mediaPosition !== "background" && (
+              <Field
+                label="Image fit"
+                htmlFor="q-media-fit"
+                hint={`Best size here: ${
+                  mediaPosition === "left" || mediaPosition === "right"
+                    ? RECOMMENDED_IMAGE_SIZES.side
+                    : RECOMMENDED_IMAGE_SIZES.topBottom
+                } — an image that shape fills the space exactly with either setting.`}
+              >
+                <select
+                  id="q-media-fit"
+                  className="select"
+                  disabled={!editable}
+                  value={question.config.media_fit ?? "cover"}
+                  onChange={(e) => setConfig("media_fit", e.target.value === "cover" ? "" : e.target.value)}
+                >
+                  <option value="cover">Fill the space (edges may be cropped)</option>
+                  <option value="contain">Show the whole image (may leave bands)</option>
+                </select>
+              </Field>
+            )}
+            {mediaType === "image" && mediaPosition === "background" && (
+              <p className="field-hint">
+                Best size for a background: {RECOMMENDED_IMAGE_SIZES.background}. How strongly it shows is set
+                by &ldquo;Background image visibility&rdquo; in Layout &amp; branding.
+              </p>
             )}
           </div>
         </Field>

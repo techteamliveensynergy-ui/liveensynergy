@@ -7,6 +7,7 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
 import { normaliseUrl } from "@/lib/urls";
+import { ARTIST_CATEGORIES } from "@/lib/constants";
 
 export interface CampaignState {
   error?: string;
@@ -40,15 +41,24 @@ async function requireBrand() {
   return { supabase, brandId: brand.id as string, brand };
 }
 
+/** Ticked categories, whitelisted and de-duplicated, in catalogue order. */
+function categories(formData: FormData): string[] {
+  const picked = new Set(formData.getAll("categories").map((v) => String(v)));
+  return ARTIST_CATEGORIES.filter((c) => picked.has(c));
+}
+
 function payload(formData: FormData) {
+  const cats = categories(formData);
   return {
     description: str(formData.get("description")),
     // Guidance only, not a committed figure — the real budget only exists
     // once admin assigns a package (or a custom amount) on conversion
     // (26 Aug: admin-only campaign creation).
     budget_expectation_gbp: num(formData.get("budget_expectation_gbp")),
-    category: str(formData.get("category")),
-    category_other: str(formData.get("category_other")),
+    // `category` stays the first pick so older readers keep working (0063).
+    categories: cats,
+    category: cats[0] ?? null,
+    category_other: cats.includes("Other") ? str(formData.get("category_other")) : null,
     preferred_location: str(formData.get("preferred_location")),
     preferred_timeline: str(formData.get("preferred_timeline")),
     target_name: str(formData.get("target_name")),
@@ -133,7 +143,7 @@ export async function submitCampaignIntake(
     await notify({
       eventKey: "campaign_intake.submitted",
       recipientProfileId: user.id,
-      link: "/dashboard/campaigns",
+      link: `/dashboard/campaigns/requests/${created.id}`,
       variables: { reference: created.reference },
     });
   }
@@ -149,8 +159,9 @@ export async function submitCampaignIntake(
     },
   });
 
-  revalidatePath("/dashboard/campaigns");
-  redirect("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
+  // Lands on the request itself with a thank-you message (13 Oct notes).
+  redirect(`/dashboard/campaigns/requests/${created.id}?submitted=1`);
 }
 
 export async function updateCampaignIntake(
@@ -179,8 +190,8 @@ export async function updateCampaignIntake(
     .eq("status", "submitted");
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/campaigns");
-  redirect("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
+  redirect(`/dashboard/campaigns/requests/${id}?updated=1`);
 }
 
 export async function withdrawCampaignIntake(formData: FormData) {
@@ -193,5 +204,7 @@ export async function withdrawCampaignIntake(formData: FormData) {
     .eq("id", id)
     .eq("brand_id", brandId)
     .eq("status", "submitted");
-  revalidatePath("/dashboard/campaigns");
+  revalidatePath("/dashboard/campaigns", "layout");
+  // Also called from the request's own page, which no longer exists after this.
+  redirect("/dashboard/campaigns");
 }

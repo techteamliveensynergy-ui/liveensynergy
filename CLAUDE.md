@@ -363,6 +363,15 @@ Path alias: `@/*` → `./src/*`.
   results page, CSV exports, pre/post comparison and the brand's anonymised
   Campaign Performance Report; who-sees-what, edge cases and open client
   decisions. Read before touching survey reporting or brand access to answers.
+- `docs/survey-feedback-2026-10-13-plan.md` — the 13 Oct survey look-and-feel
+  notes (what shipped with 0062, the shared `SurveyQuestionCard`/`SurveySlide`
+  renderers) and the designs + open client questions for logic/branching,
+  "Other — please specify" and multi-row rating. Read before touching survey
+  rendering or adding a question type.
+- `docs/campaign-feedback-2026-10-13-plan.md` — the brand-side campaign
+  changes (Campaign requests vs Campaigns live, request page + thank-you,
+  multi-category requests in 0063, the live-campaign next-step checklist in
+  `src/lib/campaign-progress.ts`) and the client decisions still open.
 - `docs/standup-2026-10-09-plan.md` — next phase from the 9 Oct standup: the
   participations/check-in security fixes, old cash-reward model clean-up across
   every portal, and the Insights module (async analysis runs, cross-tabs, AI

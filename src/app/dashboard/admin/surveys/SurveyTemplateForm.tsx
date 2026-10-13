@@ -1,12 +1,27 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type CSSProperties } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { FormSection } from "@/components/OnboardingShell";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
-import type { SurveyMediaType, SurveyTemplate, SurveyTemplateKind, SurveyTemplateLayoutMode } from "@/lib/types";
+import type {
+  SurveyMediaType,
+  SurveyQuestionFontSize,
+  SurveyTemplate,
+  SurveyTemplateKind,
+  SurveyTemplateLayoutMode,
+  SurveyVideoFormat,
+} from "@/lib/types";
 import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
+import {
+  DEFAULT_BACKGROUND_IMAGE_OPACITY,
+  QUESTION_FONT_SIZE_OPTIONS,
+  RECOMMENDED_IMAGE_SIZES,
+  SURVEY_THEME_PRESETS,
+  videoEmbedUrl,
+  videoFormatFor,
+} from "@/lib/survey-media";
 import {
   createSurveyTemplate,
   updateSurveyTemplate,
@@ -65,6 +80,26 @@ export function SurveyTemplateForm({
   const [backgroundImageUrl, setBackgroundImageUrl] = useState(template?.background_image_url ?? "");
   const [bgUploading, setBgUploading] = useState(false);
   const [bgUploadError, setBgUploadError] = useState<string | null>(null);
+  // 0062 presentation settings (13 Oct client notes).
+  const [questionFontSize, setQuestionFontSize] = useState<SurveyQuestionFontSize>(
+    template?.question_font_size ?? "md",
+  );
+  const [cardBackgroundColor, setCardBackgroundColor] = useState(template?.card_background_color ?? "");
+  const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(
+    template?.background_image_opacity ?? DEFAULT_BACKGROUND_IMAGE_OPACITY,
+  );
+  const [coverVideoFormat, setCoverVideoFormat] = useState<SurveyVideoFormat | "">(
+    template?.cover_video_format ?? "",
+  );
+
+  function applyTheme(key: string) {
+    const theme = SURVEY_THEME_PRESETS.find((t) => t.key === key);
+    if (!theme) return;
+    setAccentColor(theme.accent ?? "");
+    setCardBackgroundColor(theme.card ?? "");
+    setQuestionTextColor(theme.question ?? "");
+    setBodyTextColor(theme.body ?? "");
+  }
 
   async function handleCoverImageSelect(file: File | undefined) {
     if (!file) return;
@@ -281,7 +316,7 @@ export function SurveyTemplateForm({
           <Field
             label="Cover image or video (optional)"
             htmlFor="cover_media_type"
-            hint="Shown once at the top of the survey. For per-question media instead, switch to step-by-step layout."
+            hint={`Shown once at the top of the survey and on the welcome slide. Best image size: ${RECOMMENDED_IMAGE_SIZES.cover}. For per-question media instead, switch to step-by-step layout.`}
           >
             <div className="space-y-2">
               <select
@@ -320,25 +355,47 @@ export function SurveyTemplateForm({
               )}
 
               {coverMediaType === "video" && (
-                <input
-                  type="url"
-                  className="input"
-                  placeholder="https://youtube.com/watch?v=…"
-                  value={coverMediaUrl}
-                  onChange={(e) => setCoverMediaUrl(e.target.value)}
-                />
+                <>
+                  <input
+                    type="url"
+                    className="input"
+                    placeholder="https://youtube.com/watch?v=…"
+                    value={coverMediaUrl}
+                    onChange={(e) => setCoverMediaUrl(e.target.value)}
+                  />
+                  {coverMediaUrl.trim() && !videoEmbedUrl(coverMediaUrl) && (
+                    <p className="text-sm text-[var(--color-accent)]">
+                      This link can&apos;t be embedded. Use a YouTube (incl. Shorts), Vimeo, Loom, Instagram
+                      Reel or TikTok video link.
+                    </p>
+                  )}
+                  <select
+                    aria-label="Video shape"
+                    className="select"
+                    value={coverVideoFormat}
+                    onChange={(e) => setCoverVideoFormat(e.target.value as SurveyVideoFormat | "")}
+                  >
+                    <option value="">
+                      Video shape: detect from link (now{" "}
+                      {videoFormatFor(coverMediaUrl, null) === "portrait" ? "reel" : "normal"})
+                    </option>
+                    <option value="landscape">Normal video (16:9, landscape)</option>
+                    <option value="portrait">Reel / short (9:16, portrait)</option>
+                  </select>
+                </>
               )}
             </div>
           </Field>
         )}
         <input type="hidden" name="cover_media_type" value={coverMediaType} />
         <input type="hidden" name="cover_media_url" value={coverMediaUrl} />
+        <input type="hidden" name="cover_video_format" value={coverVideoFormat} />
 
         {layoutMode === "single_page" && (
           <Field
             label="Background image (optional)"
             htmlFor="background_image_file"
-            hint="A decorative image behind the whole survey — one for the page. For a different one per step instead, switch to step-by-step layout."
+            hint={`A decorative image behind the whole survey — one for the page. Best size: ${RECOMMENDED_IMAGE_SIZES.background}. For a different one per step instead, switch to step-by-step layout.`}
           >
             <div className="space-y-2">
               {backgroundImageUrl && (
@@ -373,6 +430,25 @@ export function SurveyTemplateForm({
         )}
         <input type="hidden" name="background_image_url" value={backgroundImageUrl} />
 
+        <Field
+          label={`Background image visibility — ${backgroundImageOpacity}%`}
+          htmlFor="background_image_opacity"
+          hint="How strongly a background image shows through behind the cards — this survey's page background, or each step's own background in step-by-step layout. Question cards stay solid on top, so text stays readable."
+        >
+          <input
+            id="background_image_opacity"
+            name="background_image_opacity"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            className="range-slider"
+            value={backgroundImageOpacity}
+            style={{ ["--range-progress" as string]: `${backgroundImageOpacity}%` } as CSSProperties}
+            onChange={(e) => setBackgroundImageOpacity(Number(e.target.value))}
+          />
+        </Field>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Footer company name"
@@ -399,7 +475,7 @@ export function SurveyTemplateForm({
         <Field
           label="Footer logo (optional)"
           htmlFor="footer_logo_file"
-          hint="Shown next to the footer text — both layout modes."
+          hint={`Shown next to the footer text — both layout modes. Best size: ${RECOMMENDED_IMAGE_SIZES.logo}.`}
         >
           <div className="flex items-center gap-3">
             {footerLogoUrl && (
@@ -434,9 +510,34 @@ export function SurveyTemplateForm({
         <input type="hidden" name="footer_logo_url" value={footerLogoUrl} />
 
         <Field
+          label="Colour theme"
+          htmlFor="theme_preset"
+          hint="Fills in the button, card and text colours below in one go — adjust any of them afterwards."
+        >
+          <div id="theme_preset" className="flex flex-wrap gap-2">
+            {SURVEY_THEME_PRESETS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className="flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold hover:border-[var(--color-brand)]"
+                style={{ backgroundColor: t.card ?? "#fff", color: t.question ?? "#2c2422" }}
+                onClick={() => applyTheme(t.key)}
+              >
+                <span
+                  aria-hidden
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: t.accent ?? DEFAULT_ACCENT }}
+                />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field
           label="Button colour (optional)"
           htmlFor="accent_color"
-          hint="Applied to the Next / Submit survey button. Leave blank to use the platform default."
+          hint="Applied to the Next / Submit button, the progress bar and selected answers. Leave blank to use the platform default."
         >
           <div className="flex items-center gap-2">
             <input
@@ -480,6 +581,26 @@ export function SurveyTemplateForm({
             <option value="1.15">Large</option>
             <option value="1.3">Extra large</option>
             <option value="1.5">Maximum</option>
+          </select>
+        </Field>
+
+        <Field
+          label="Question size"
+          htmlFor="question_font_size"
+          hint="How big each question's text is. A question can override this for itself in the builder."
+        >
+          <select
+            id="question_font_size"
+            name="question_font_size"
+            className="select"
+            value={questionFontSize}
+            onChange={(e) => setQuestionFontSize(e.target.value as SurveyQuestionFontSize)}
+          >
+            {QUESTION_FONT_SIZE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </Field>
 
@@ -564,6 +685,40 @@ export function SurveyTemplateForm({
                 type="button"
                 className="btn btn-ghost shrink-0 text-xs"
                 onClick={() => setBodyTextColor("")}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </Field>
+
+        <Field
+          label="Card colour (optional)"
+          htmlFor="card_background_color"
+          hint="Fill for the question, welcome and thank-you cards. With a dark colour, set light text colours above (or pick the Midnight theme)."
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              aria-label="Pick a card colour"
+              value={cardBackgroundColor || "#ffffff"}
+              onChange={(e) => setCardBackgroundColor(e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded border border-black/10 p-0.5"
+            />
+            <input
+              id="card_background_color"
+              name="card_background_color"
+              type="text"
+              className="input"
+              placeholder="#ffffff"
+              value={cardBackgroundColor}
+              onChange={(e) => setCardBackgroundColor(e.target.value)}
+            />
+            {cardBackgroundColor && (
+              <button
+                type="button"
+                className="btn btn-ghost shrink-0 text-xs"
+                onClick={() => setCardBackgroundColor("")}
               >
                 Reset
               </button>
