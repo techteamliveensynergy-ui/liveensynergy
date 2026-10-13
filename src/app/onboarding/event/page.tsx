@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { OnboardingShell } from "@/components/OnboardingShell";
 import { requireProfile } from "@/lib/profile";
 import { EventForm } from "./EventForm";
+import { OnboardingNotices } from "@/components/OnboardingNotices";
 
 export const metadata = { title: "Set up your event profile" };
 
@@ -12,6 +13,7 @@ export default async function EventOnboardingPage() {
 
   return (
     <OnboardingShell
+      notices={<OnboardingNotices />}
       role="event"
       name={profile.full_name}
       subtitle="Tell brands about your event and what you can offer as a sponsorship partner."

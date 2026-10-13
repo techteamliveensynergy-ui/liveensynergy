@@ -33,6 +33,9 @@ export interface Profile {
   blocked_reason: string | null;
   /** Set on an automatic 3-strikes no-show suspension; cleared on restore. */
   suspended_until: string | null;
+  /** When the person proved they own their email address (0069). Null =
+   *  not yet; the middleware keeps such an account to profile/settings/surveys. */
+  email_verified_at?: string | null;
   /** Stamped by middleware, throttled to ~once every 5 minutes. */
   last_seen_at: string | null;
   plan_id: string | null;

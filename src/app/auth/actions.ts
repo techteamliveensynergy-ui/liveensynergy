@@ -12,6 +12,9 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 export interface AuthState {
   error?: string;
   message?: string;
+  /** Set when sign-in failed only because the address isn't confirmed yet,
+   *  so the form can offer to resend the confirmation email. */
+  unconfirmedEmail?: string;
 }
 
 export async function signUp(
@@ -72,6 +75,14 @@ export async function signUp(
   });
 
   if (error) {
+    // Supabase's own mailer caps confirmation emails per hour across the
+    // whole project until custom SMTP is set up (docs/email-setup.md).
+    if (error.code === "over_email_send_rate_limit") {
+      return {
+        error:
+          "We couldn't send your confirmation email just now — too many sign-ups in the last hour. Please try again in a little while.",
+      };
+    }
     return { error: error.message };
   }
 
@@ -89,12 +100,12 @@ export async function signUp(
     });
   }
 
-  // If email confirmation is required, there is no active session yet.
+  // Email confirmation is on, so there is no session yet: the link in the
+  // email signs them in and lands them on onboarding (/auth/callback). Show a
+  // proper "check your inbox" screen with the address and a resend button —
+  // a one-line note under the form was easy to miss (client, 13 Oct).
   if (!data.session) {
-    return {
-      message:
-        "Check your inbox to confirm your email address, then sign in to finish setting up your profile.",
-    };
+    redirect(`/auth/check-email?email=${encodeURIComponent(email)}`);
   }
 
   revalidatePath("/", "layout");
@@ -120,6 +131,13 @@ export async function signIn(
   });
 
   if (error) {
+    if (error.code === "email_not_confirmed") {
+      return {
+        error:
+          "Please confirm your email address first — open the link we emailed you when you signed up. Can't find it? Send a new one below.",
+        unconfirmedEmail: email,
+      };
+    }
     return { error: error.message };
   }
 
@@ -152,6 +170,72 @@ export async function signIn(
 
   revalidatePath("/", "layout");
   redirect(redirectTo);
+}
+
+/**
+ * Sends the sign-up confirmation email again. Always answers the same way so
+ * it can't be used to discover which addresses have accounts. Supabase rate-
+ * limits these per address on its side as well.
+ */
+export async function resendConfirmation(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Please enter your email address." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` },
+  });
+  if (error && (error.code === "over_email_send_rate_limit" || /rate|too many|seconds/i.test(error.message))) {
+    return { error: "We've just sent one — please wait a minute before asking for another." };
+  }
+  return {
+    message: `If ${email} is waiting to be confirmed, a new confirmation link is on its way. Check your spam folder too.`,
+  };
+}
+
+/**
+ * Banner button for a signed-in account whose email isn't proved yet (0069).
+ * A survey-created account was confirmed on creation, so Supabase won't send
+ * it a sign-up confirmation; the set-your-password email does the same job —
+ * opening its link marks the address verified (/auth/callback).
+ */
+export async function resendVerification(
+  _prev: AuthState,
+  _formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "Please sign in again." };
+
+  const { data: allowed } = await supabase.rpc("rate_limit_hit", {
+    p_action: "email_verification",
+    p_window_seconds: 600,
+    p_max: 3,
+  });
+  if (allowed === false) {
+    return { error: "We've sent a few already — please check your inbox (and spam) and try again in 10 minutes." };
+  }
+
+  const { error } = user.email_confirmed_at
+    ? await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
+      })
+    : await supabase.auth.resend({
+        type: "signup",
+        email: user.email,
+        options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` },
+      });
+  if (error) {
+    return { error: "We couldn't send the email just now. Please try again in a few minutes." };
+  }
+  return { message: `Sent — check ${user.email} (and your spam folder).` };
 }
 
 export async function signOut() {

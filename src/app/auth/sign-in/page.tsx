@@ -12,6 +12,7 @@ const LINK_ERRORS: Record<string, string> = {
   "reset-link":
     "That password-reset link has expired or was opened in a different browser. Use “Forgot password?” to get a new one.",
   auth: "We couldn't sign you in from that link. Please sign in below.",
+  confirmed: "Your email address is confirmed. Sign in to carry on.",
 };
 
 export default async function SignInPage({

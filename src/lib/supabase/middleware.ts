@@ -1,6 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Pages an account may use before it has confirmed its email address. */
+const OPEN_BEFORE_VERIFIED = ["/dashboard/profile", "/dashboard/settings", "/dashboard/notifications"];
+
+function needsVerifiedEmail(pathname: string) {
+  if (pathname === "/dashboard") return false;
+  if (OPEN_BEFORE_VERIFIED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return false;
+  return pathname.startsWith("/dashboard/") || pathname.startsWith("/attend/");
+}
+
 /** How often a signed-in user's `last_seen_at` is stamped. */
 const SEEN_THROTTLE_SECONDS = 5 * 60;
 const SEEN_COOKIE = "les-seen";
@@ -14,6 +23,20 @@ const SEEN_COOKIE = "les-seen";
  * it is in the app, and cannot reach anything authenticated again.
  */
 export async function updateSession(request: NextRequest) {
+  // An email link whose redirect Supabase didn't recognise falls back to the
+  // bare Site URL, i.e. "/?code=…" — hand it to the callback that knows what
+  // to do with it rather than showing the home page with the person still
+  // signed out (13 Oct: confirmation links "went nowhere").
+  if (request.nextUrl.pathname === "/") {
+    const params = request.nextUrl.searchParams;
+    if (params.has("code") || params.has("token_hash") || params.has("error_code")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/callback";
+      if (!params.has("next")) url.searchParams.set("next", "/onboarding");
+      return NextResponse.redirect(url);
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -56,11 +79,25 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const { data: profile } = await supabase
+    // email_verified_at arrives with 0069; until the column exists the
+    // select errors, so fall back rather than lose the blocking check below.
+    let { data: profile } = await supabase
       .from("profiles")
-      .select("is_active, suspended_until")
+      .select("is_active, suspended_until, role, email_verified_at")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<{
+        is_active: boolean;
+        suspended_until: string | null;
+        role: string;
+        email_verified_at?: string | null;
+      }>();
+    if (!profile) {
+      ({ data: profile } = await supabase
+        .from("profiles")
+        .select("is_active, suspended_until, role")
+        .eq("id", user.id)
+        .maybeSingle());
+    }
 
     // An automatic (no-show) suspension lifts itself once it has run its
     // course, rather than staying blocked forever like a manual block does.
@@ -93,6 +130,23 @@ export async function updateSession(request: NextRequest) {
         return redirectResponse;
       }
       return supabaseResponse;
+    }
+
+    // Email not yet proved (survey-created accounts, 0069): the profile,
+    // settings and surveys stay open — everything else waits for the link in
+    // our email (client, 13 Oct: all communication is by email, so the
+    // address must be real before anything else happens).
+    if (
+      profile &&
+      profile.role !== "admin" &&
+      "email_verified_at" in profile &&
+      !profile.email_verified_at &&
+      needsVerifiedEmail(pathname)
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "?verify=required";
+      return NextResponse.redirect(url);
     }
 
     // Stamp activity at most once per throttle window (cookie-gated so this

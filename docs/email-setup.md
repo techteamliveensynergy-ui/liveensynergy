@@ -80,22 +80,36 @@ Safety properties worth knowing:
    Settings: host `smtp.resend.com`, port `465`, user `resend`, password = a
    Resend API key, sender = the same `EMAIL_FROM` address. Then Auth → Rate
    Limits: raise the email limit (custom SMTP starts around 30/hour).
-5. Auth → URL Configuration: Site URL must be the **production origin** — it
-   builds the links inside those emails (lessons L5). Add
-   `https://<production origin>/auth/callback` to **Redirect URLs** too — a
-   redirect URL not on that list is silently swapped for the Site URL.
-6. Optional but recommended — links that work on any device. The default
-   templates use PKCE (`?code=`), which only works in the browser that asked
-   for the email; opened on a phone it fails. In Auth → Email Templates,
-   change the link in **Confirm signup** to
-   `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=signup`
-   and in **Reset password** to
-   `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`.
-   `{{ .RedirectTo }}` is the app's own `/auth/callback?next=…` URL, so each
-   email keeps its destination (onboarding, reset password, or back to a
-   survey). This needs step 5's Redirect URL — otherwise `RedirectTo` falls
-   back to the bare Site URL and the link breaks. `/auth/callback` accepts
-   both formats (13 Oct), so the templates can change at any time.
+5. **Auth → URL Configuration** (checked 13 Oct: production still had
+   `http://localhost:3000` here, so every confirmation link sent people to
+   localhost after confirming them):
+   - **Site URL** = the production origin, e.g. `https://liveensynergy-rho.vercel.app`
+     (or the custom domain once live). It builds every link in these emails
+     (lessons L5).
+   - **Redirect URLs**: add `https://<production origin>/**`. A redirect not on
+     this list is silently swapped for the Site URL.
+6. **Auth → Email Templates** — paste the branded templates from
+   `docs/email-templates/`:
+   - *Confirm signup* → `confirm-signup.html`, subject "Confirm your email to
+     join Live·En·Synergy".
+   - *Reset password* → `reset-password.html`, subject "Set your
+     Live·En·Synergy password".
+   Their links use `{{ .SiteURL }}/auth/callback?token_hash=…`, which works on
+   any device (the default `?code=` link only works in the browser that
+   signed up) and doesn't depend on the Redirect URLs list. `/auth/callback`
+   accepts both formats, and a link that lands on `/` is forwarded to it.
+   Trade-off: a survey respondent who already had an account and asks for a
+   reset lands on "set your password" rather than back on the survey.
+7. **Every account confirms its email** (client, 13 Oct). Keep *Auth →
+   Providers → Email → Confirm email* **on**: nobody can sign in until they
+   click the link, which signs them in and opens profile set-up. Accounts
+   created from a survey skip that step so the respondent can keep answering;
+   they're held to profile/settings until they open the set-your-password
+   email (0069, `profiles.email_verified_at`).
+8. **Sending limits.** Until step 4's custom SMTP is set up, Supabase's own
+   mailer sends only a handful of auth emails per hour for the whole project —
+   enough for testing, not for a launch. Sign-up shows a friendly "try again
+   shortly" message when it hits the cap.
 
 ### 3. Vercel environment variables
 | Variable | Production | Preview / dev |

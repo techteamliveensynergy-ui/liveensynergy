@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { OnboardingShell } from "@/components/OnboardingShell";
 import { requireProfile } from "@/lib/profile";
 import { AudienceForm } from "./AudienceForm";
+import { OnboardingNotices } from "@/components/OnboardingNotices";
 
 export const metadata = { title: "Complete your profile" };
 
@@ -19,6 +20,7 @@ export default async function AudienceOnboardingPage() {
 
   return (
     <OnboardingShell
+      notices={<OnboardingNotices />}
       role="audience"
       name={profile.full_name}
       subtitle="Just a few details so you can start unlocking sponsor-funded rewards."

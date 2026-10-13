@@ -25,12 +25,26 @@ export async function GET(request: Request) {
   const next = safeRedirectPath(searchParams.get("next"), "/onboarding");
   const supabase = await createClient();
 
+  let ok = false;
   if (tokenHash && type && OTP_TYPES.includes(type)) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   } else if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
+  }
+
+  if (ok) {
+    // Opening a link from our email proves the person owns the address —
+    // records it for accounts made without the usual confirmation step
+    // (survey sign-ups, 0069). No-op for everyone else.
+    await supabase.rpc("mark_email_verified").then(
+      () => undefined,
+      () => undefined,
+    );
+    // Straight into profile set-up, with a "your email is confirmed" note.
+    const dest = next.startsWith("/onboarding")
+      ? `${next}${next.includes("?") ? "&" : "?"}confirmed=1`
+      : next;
+    return NextResponse.redirect(`${origin}${dest}`);
   }
 
   // Supabase reports an expired/used link as ?error_code=otp_expired.

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { OnboardingShell } from "@/components/OnboardingShell";
 import { requireProfile } from "@/lib/profile";
 import { BrandForm } from "./BrandForm";
+import { OnboardingNotices } from "@/components/OnboardingNotices";
 
 export const metadata = { title: "Set up your brand" };
 
@@ -12,6 +13,7 @@ export default async function BrandOnboardingPage() {
 
   return (
     <OnboardingShell
+      notices={<OnboardingNotices />}
       role="brand"
       name={profile.full_name}
       subtitle="Complete your profile so our team can match you with the right artists and events."

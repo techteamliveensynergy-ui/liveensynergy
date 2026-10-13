@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { signIn, type AuthState } from "../actions";
+import { ResendConfirmationForm } from "../check-email/ResendConfirmationForm";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -20,6 +21,7 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
   const [state, formAction] = useActionState<AuthState, FormData>(signIn, {});
 
   return (
+    <div className="space-y-4">
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="redirectTo" value={redirectTo} />
 
@@ -61,5 +63,9 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
 
       <SubmitButton />
     </form>
+    {state.unconfirmedEmail && (
+      <ResendConfirmationForm email={state.unconfirmedEmail} label="Send me a new confirmation link" />
+    )}
+    </div>
   );
 }
