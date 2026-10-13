@@ -375,7 +375,7 @@ export default async function MessagesPage({
                       href={
                         isAdmin
                           ? `/dashboard/admin/campaigns/${active.campaigns.id}`
-                          : `/dashboard/campaigns/live#campaign-${active.campaigns.id}`
+                          : `/dashboard/campaigns/live/${active.campaigns.id}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"

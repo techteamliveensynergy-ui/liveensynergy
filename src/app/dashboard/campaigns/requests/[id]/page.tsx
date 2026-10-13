@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -6,20 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import { requestCategoryLabel } from "@/lib/campaign-requests";
+import { DetailFact as Fact } from "@/components/campaigns/DetailFact";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { withdrawCampaignIntake } from "../../actions";
 
 export const metadata = { title: "Campaign request" };
-
-function Fact({ label, value }: { label: string; value: ReactNode }) {
-  if (value == null || value === "") return null;
-  return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{label}</dt>
-      <dd className="mt-1 whitespace-pre-line break-words">{value}</dd>
-    </div>
-  );
-}
 
 /** What a brand can expect after submitting — shown on the thank-you banner
  *  and kept in step with the next-step checklist on Campaigns live. */
@@ -72,8 +62,8 @@ export default async function CampaignRequestPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/campaigns" className="inline-block text-sm text-[var(--color-brand)]">
-        ← Campaign requests
+      <Link href="/dashboard/campaigns" className="btn btn-ghost text-sm">
+        ← Back to Campaign requests
       </Link>
 
       {submitted && (
@@ -146,10 +136,10 @@ export default async function CampaignRequestPage({
               <>
                 This request is now live campaign <strong>{campaign.reference}</strong>.{" "}
                 <Link
-                  href={`/dashboard/campaigns/live#campaign-${campaign.id}`}
+                  href={`/dashboard/campaigns/live/${campaign.id}`}
                   className="font-semibold text-[var(--color-brand-dark)] underline"
                 >
-                  Follow it in Campaigns live →
+                  View the campaign →
                 </Link>
               </>
             ) : (

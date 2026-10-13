@@ -46,7 +46,7 @@ export default async function EditCampaignPage({
         supabase.from("campaigns").select("id").eq("id", id).eq("brand_id", brand.id).maybeSingle(),
       ]);
       if (request) redirect(`/dashboard/campaigns/requests/${id}`);
-      if (campaign) redirect(`/dashboard/campaigns/live#campaign-${id}`);
+      if (campaign) redirect(`/dashboard/campaigns/live/${id}`);
     }
     notFound();
   }

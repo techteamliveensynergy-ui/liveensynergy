@@ -110,7 +110,7 @@ export default async function CampaignRequestsPage() {
                 </Link>
                 {r.status === "converted" && r.converted_campaign_id && (
                   <Link
-                    href={`/dashboard/campaigns/live#campaign-${r.converted_campaign_id}`}
+                    href={`/dashboard/campaigns/live/${r.converted_campaign_id}`}
                     className="btn btn-ghost text-sm"
                   >
                     Live campaign →

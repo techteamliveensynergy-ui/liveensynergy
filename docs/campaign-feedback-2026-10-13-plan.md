@@ -22,6 +22,24 @@ was built for each.
 - An existing admin bug: the request detail compared the category to `"other"` while the form stores `"Other"`, so "please specify" text never showed. Fixed by the shared helper.
 - **Checklist facts are independent.** A pre-event survey published before matching shows as done; the "Next" line is the first unfinished step.
 
+## Follow-up: campaign detail page (13 Oct, later)
+
+Client note: "should be able to click into the campaigns to view them". Live
+campaigns had no page of their own — the list card was the whole view.
+
+- New brand page `/dashboard/campaigns/live/[id]`: the next-step checklist,
+  order form and invoices, the sponsored events the campaign produced (withdrawn
+  proposals hidden), its surveys (open link when public, "View results" → the
+  brand's aggregated results page) and the details it was set up with, plus a
+  link back to the request it came from. Read-only — campaigns are
+  admin-update-only under RLS.
+- The list card's title and a "View campaign" button open it; every link that
+  used the old `/dashboard/campaigns/live#campaign-<id>` anchor (notifications,
+  brand home, messages, request pages, old `/dashboard/campaigns/<campaign id>`
+  links) now points at it. Notifications already sent keep the anchor link,
+  which still lands on the right card in the list.
+- Both detail pages (request and campaign) have a "← Back" button.
+
 ## Decisions to confirm with the client
 
 1. **Who acts on each step.** The checklist says the *artist* sets up discount codes and *our team* publishes the campaign survey (that's how the platform works today: admins publish surveys). The note could be read as "artist publishes the survey". Say if it should read differently.
