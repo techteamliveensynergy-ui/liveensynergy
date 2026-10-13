@@ -13,7 +13,7 @@ export default async function BrandOnboardingPage() {
   return (
     <OnboardingShell
       role="brand"
-      title="Set up your brand profile"
+      name={profile.full_name}
       subtitle="Complete your profile so our team can match you with the right artists and events."
     >
       <BrandForm mode="onboarding" />

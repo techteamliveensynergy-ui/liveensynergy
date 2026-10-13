@@ -13,7 +13,7 @@ export default async function ArtistOnboardingPage() {
   return (
     <OnboardingShell
       role="artist"
-      title="Set up your profile"
+      name={profile.full_name}
       subtitle="Artist or event organiser — tell brands who you are and what you can offer as a sponsorship partner."
     >
       <ArtistForm mode="onboarding" />

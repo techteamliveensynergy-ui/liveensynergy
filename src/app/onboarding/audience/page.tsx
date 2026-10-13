@@ -20,7 +20,7 @@ export default async function AudienceOnboardingPage() {
   return (
     <OnboardingShell
       role="audience"
-      title="Complete your profile"
+      name={profile.full_name}
       subtitle="Just a few details so you can start unlocking sponsor-funded rewards."
     >
       {/* A survey sign-up already gave us a mobile number (FB-00032) —
