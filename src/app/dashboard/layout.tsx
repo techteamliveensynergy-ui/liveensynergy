@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { navForRole } from "@/lib/dashboard-nav";
 import { ROLE_LABELS } from "@/lib/constants";
 import { PUBLIC_PROFILE_PATH } from "@/lib/public-profiles";
+import { Suspense } from "react";
+import { EmailConfirmedNotice } from "@/components/EmailConfirmedNotice";
+import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
 
 const WORKSPACE_TABLE: Partial<
   Record<string, { table: string; name: string; category: string }>
@@ -96,7 +99,13 @@ export default async function DashboardLayout({
             tab in the bottom-right. Without it, a form whose Save button sits
             bottom-right — the profile editor at a narrower viewport, say —
             ends up underneath the tab, and the click lands on the wrong one. */}
-        <main className="mx-auto max-w-5xl px-5 pb-28 pt-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-5 pb-28 pt-8">
+          <Suspense fallback={null}>
+            <EmailConfirmedNotice />
+          </Suspense>
+          <VerifyEmailBanner />
+          {children}
+        </main>
       </div>
       {/* Feedback tab on every dashboard page (3 Aug standup) — mounted in the
           layout rather than the root one so the public marketing pages, which

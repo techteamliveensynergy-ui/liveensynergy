@@ -9,6 +9,10 @@ interface OnboardingShellProps {
   name?: string | null;
   /** What this role's profile is for — shown under "Let's get your profile set up!". */
   subtitle: string;
+  /** Notices above the welcome card (email confirmed / please confirm). Passed
+   *  in by the page: this module is also imported by client forms, so it can't
+   *  pull in server-only components itself. */
+  notices?: ReactNode;
   children: ReactNode;
 }
 
@@ -30,6 +34,7 @@ export function OnboardingShell({
   role,
   name,
   subtitle,
+  notices,
   children,
 }: OnboardingShellProps) {
   const firstName = name?.trim().split(/\s+/)[0];
@@ -43,6 +48,7 @@ export function OnboardingShell({
       </header>
       {/* pb-28 so the form's submit row clears the fixed feedback tab. */}
       <main className="mx-auto max-w-3xl px-5 pb-28 pt-10">
+        {notices}
         {/* Welcome first, then the set-up (client request, 13 Oct) — for
             every account type. */}
         <section

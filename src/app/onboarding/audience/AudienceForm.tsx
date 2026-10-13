@@ -117,8 +117,11 @@ export function AudienceForm({
         </Field>
       </FormSection>
 
-      {/* --- Not yet built. Flows still to be decided — see docs/PLATFORM.md. --- */}
+      {/* --- Not yet built. Flows still to be decided — see docs/PLATFORM.md.
+          Kept out of first-time onboarding (13 Oct walkthrough: a "Coming
+          soon" box was the first thing a new audience member couldn't use). */}
 
+      {mode === "profile" && (
       <Placeholder
         title="What do you love going to?"
         description="Pick your favourite categories and we'll surface sponsored events that match."
@@ -130,6 +133,7 @@ export function AudienceForm({
           ))}
         </div>
       </Placeholder>
+      )}
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & explore events"}
