@@ -1,4 +1,5 @@
 import "server-only";
+import { campaignLabel } from "./campaign-requests";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notify, notifyAdmins } from "@/lib/notifications";
 
@@ -15,16 +16,21 @@ export async function notifyCampaignOpened(
 ): Promise<void> {
   const { data } = await supabase
     .from("campaigns")
-    .select("reference, budget_gbp, brands(profile_id)")
+    .select("reference, campaign_name, budget_gbp, brands(profile_id)")
     .eq("id", campaignId)
-    .maybeSingle<{ reference: string; budget_gbp: number | null; brands: { profile_id: string } | null }>();
+    .maybeSingle<{
+      reference: string;
+      campaign_name: string | null;
+      budget_gbp: number | null;
+      brands: { profile_id: string } | null;
+    }>();
   if (!data?.brands?.profile_id) return;
 
   await notify({
     eventKey: "campaign.opened",
     recipientProfileId: data.brands.profile_id,
     link: `/dashboard/campaigns/live/${campaignId}`,
-    variables: { campaign_reference: data.reference },
+    variables: { campaign_reference: campaignLabel(data) },
   }, { client: supabase }); // the Stripe webhook calls this with a service client
 
   // Now it's visible to artists, it needs an admin to line up events.
@@ -33,7 +39,7 @@ export async function notifyCampaignOpened(
       eventKey: "admin.campaign_request",
       link: "/dashboard/admin/campaigns?matched=no",
       variables: {
-        campaign_reference: data.reference,
+        campaign_reference: campaignLabel(data),
         budget: data.budget_gbp != null ? `£${Number(data.budget_gbp).toLocaleString("en-GB")}` : "not set",
       },
     },

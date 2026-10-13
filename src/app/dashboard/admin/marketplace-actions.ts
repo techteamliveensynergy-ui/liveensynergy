@@ -31,6 +31,7 @@ import { isBillingComplete, type BillingFields } from "@/lib/billing";
 import { draftCampaignInvoice, redraftCampaignInvoice } from "@/lib/billing-server";
 import { notifyCampaignOpened } from "@/lib/campaign-payment";
 import { CAMPAIGN_STATUS_LABELS } from "@/lib/campaign-stage";
+import { campaignLabel } from "@/lib/campaign-requests";
 import { voidStripeInvoice } from "@/lib/invoicing";
 import { StripeApiError } from "@/lib/stripe";
 import type { PaymentMode } from "@/lib/payment-credentials";
@@ -101,12 +102,13 @@ export async function matchCampaign(
     supabase
       .from("campaigns")
       .select(
-        "id, reference, status, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
+        "id, reference, campaign_name, status, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
       )
       .eq("id", campaignId)
       .maybeSingle<{
         id: string;
         reference: string;
+        campaign_name: string | null;
         status: string;
         brand_id: string;
         budget_gbp: number | null;
@@ -209,7 +211,7 @@ export async function matchCampaign(
       recipientProfileId: campaign.brands.profile_id,
       link: "/dashboard/sponsored",
       variables: {
-        campaign_reference: campaign.reference,
+        campaign_reference: campaignLabel(campaign),
         event_name:
           listings.length === 1
             ? listings[0].name
@@ -333,9 +335,14 @@ export async function changeCampaignStatus(formData: FormData) {
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("status, reference, brands(profile_id)")
+    .select("status, reference, campaign_name, brands(profile_id)")
     .eq("id", id!)
-    .maybeSingle<{ status: CampaignStatus; reference: string; brands: { profile_id: string } | null }>();
+    .maybeSingle<{
+      status: CampaignStatus;
+      reference: string;
+      campaign_name: string | null;
+      brands: { profile_id: string } | null;
+    }>();
   if (!campaign) fail("Campaign not found.");
 
   if (action === "close" && campaign!.status === "awaiting_payment") {
@@ -380,7 +387,7 @@ export async function changeCampaignStatus(formData: FormData) {
       eventKey: "campaign.status_changed",
       recipientProfileId: brandProfileId,
       link: `/dashboard/campaigns/live/${id}`,
-      variables: { campaign_reference: campaign!.reference, status: CAMPAIGN_STATUS_LABELS[result.to] },
+      variables: { campaign_reference: campaignLabel(campaign!), status: CAMPAIGN_STATUS_LABELS[result.to] },
     });
     for (const inv of result.cancelled_invoices ?? []) {
       // A draft never reached the brand.
@@ -656,7 +663,7 @@ export async function createCampaignFromAdmin(
     // invoice couldn't be drafted the campaign simply waits, visibly, for the
     // Draft invoice button rather than going live unbilled.
     .insert({ ...p, brand_id: brandId, ...money, status: "awaiting_payment" })
-    .select("id, reference")
+    .select("id, reference, campaign_name")
     .single();
   if (error) return { error: error.message };
 
@@ -681,7 +688,7 @@ export async function createCampaignFromAdmin(
         eventKey: "brand.billing_details_needed",
         recipientProfileId: billing.profile_id,
         link: "/dashboard/profile",
-        variables: { campaign_reference: created.reference },
+        variables: { campaign_reference: campaignLabel(created) },
       });
     }
   }
@@ -699,7 +706,7 @@ export async function createCampaignFromAdmin(
         eventKey: "campaign_intake.converted",
         recipientProfileId: intake.brands.profile_id,
         link: `/dashboard/campaigns/live/${created.id}`,
-        variables: { reference: intake.reference, campaign_reference: created.reference },
+        variables: { reference: intake.reference, campaign_reference: campaignLabel(created) },
       });
     }
   }

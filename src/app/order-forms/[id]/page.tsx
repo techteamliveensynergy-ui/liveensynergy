@@ -39,11 +39,11 @@ export default async function OrderFormPage({
   const [{ data: form }, { data: profile }] = await Promise.all([
     supabase
       .from("campaign_order_forms")
-      .select("*, campaigns(reference), campaign_packages(name), brands(profile_id)")
+      .select("*, campaigns(reference, campaign_name), campaign_packages(name), brands(profile_id)")
       .eq("id", id)
       .maybeSingle<
         CampaignOrderForm & {
-          campaigns: { reference: string } | null;
+          campaigns: { reference: string; campaign_name: string | null } | null;
           campaign_packages: { name: string } | null;
           brands: { profile_id: string } | null;
         }
@@ -72,7 +72,8 @@ export default async function OrderFormPage({
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-brand)]">Campaign order form</p>
             <h1 className="mt-1 text-3xl font-bold sm:text-5xl">{form.reference}</h1>
             <p className="mt-2 text-lg text-[var(--color-ink-soft)]">
-              Campaign {form.campaigns?.reference ?? ""}
+              {form.campaign_name || form.campaigns?.campaign_name || "Campaign"}
+              {form.campaigns?.reference ? ` · ${form.campaigns.reference}` : ""}
               {form.sent_at ? ` · sent ${formatDateTime(form.sent_at)}` : ""}
             </p>
           </div>

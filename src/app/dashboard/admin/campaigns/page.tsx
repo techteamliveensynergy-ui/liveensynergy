@@ -337,6 +337,15 @@ export default async function AdminCampaignsPage({
                         · {c.brands?.brand_name ?? "Unknown brand"}
                       </span>
                       <CampaignStageBadge stage={stageOf.get(c.id)!} />
+                      {!c.campaign_name?.trim() && (
+                        <Link
+                          href={`/dashboard/admin/campaigns/${c.id}/edit`}
+                          className="rounded-full bg-[var(--color-gold)]/70 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)] hover:underline"
+                          title="Brands see this campaign's code until it has a name"
+                        >
+                          + Add a campaign name
+                        </Link>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {c.description}

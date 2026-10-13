@@ -44,3 +44,15 @@ export function campaignTitle(
 ): string {
   return c.campaign_name?.trim() || c.target_name?.trim() || requestCategoryLabel(c) || fallback;
 }
+
+/**
+ * How a campaign is named in notifications, emails and one-line labels
+ * (client feedback, 13 Oct: brands saw bare codes like "CMP-00010"). The
+ * name, with the reference kept in brackets for anyone quoting it to the team.
+ */
+export function campaignLabel(c: { campaign_name?: string | null; reference?: string | null }): string {
+  const name = c.campaign_name?.trim();
+  const ref = c.reference?.trim();
+  if (name) return ref ? `“${name}” (${ref})` : `“${name}”`;
+  return ref ?? "your campaign";
+}

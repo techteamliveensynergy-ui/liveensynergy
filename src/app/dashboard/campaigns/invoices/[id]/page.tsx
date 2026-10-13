@@ -10,7 +10,7 @@ import type { Invoice } from "@/lib/types";
 
 export const metadata = { title: "Invoice" };
 
-type Row = Invoice & { campaigns: { reference: string } | null };
+type Row = Invoice & { campaigns: { reference: string; campaign_name: string | null } | null };
 
 /**
  * A brand's read-only view of an invoice that has been sent to them.
@@ -38,7 +38,7 @@ export default async function BrandInvoicePage({
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("*, campaigns(reference)")
+    .select("*, campaigns(reference, campaign_name)")
     .eq("id", id)
     .eq("brand_id", brand.id)
     .neq("status", "draft")
@@ -97,7 +97,13 @@ export default async function BrandInvoicePage({
           </div>
           <div>
             <dt className="field-label">Campaign</dt>
-            <dd className="text-sm">{invoice.campaigns?.reference ?? "—"}</dd>
+            <dd className="text-sm">
+              {invoice.campaigns
+                ? invoice.campaigns.campaign_name
+                  ? `${invoice.campaigns.campaign_name} (${invoice.campaigns.reference})`
+                  : invoice.campaigns.reference
+                : "—"}
+            </dd>
           </div>
         </dl>
 
