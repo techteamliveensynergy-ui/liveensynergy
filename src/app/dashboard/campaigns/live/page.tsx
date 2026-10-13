@@ -12,6 +12,8 @@ import {
 } from "@/lib/billing";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import { CampaignProgress, type CampaignEventRow } from "@/components/campaigns/CampaignProgress";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { campaignStage } from "@/lib/campaign-stage";
 
 export const metadata = { title: "Campaigns live" };
 
@@ -186,7 +188,17 @@ export default async function CampaignsLivePage() {
                         {c.target_name || c.category || "Sponsorship campaign"}
                       </Link>
                     </h3>
-                    <StatusBadge status={c.status} />
+                    <CampaignStageBadge
+                      stage={campaignStage({
+                        status: c.status,
+                        settled:
+                          events.find(
+                            (e) => e.campaign_id === c.id && (e.status === "confirmed" || e.status === "completed"),
+                          ) ?? null,
+                        openProposals: events.filter((e) => e.campaign_id === c.id && e.status === "in_progress").length,
+                        surveyPublished: surveyPublished.get(c.id) ?? false,
+                      })}
+                    />
                   </div>
                   <p className="mt-1 line-clamp-2 text-sm text-[var(--color-ink-soft)]">
                     {c.description}

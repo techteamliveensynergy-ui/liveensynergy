@@ -5,7 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { setCampaignStatus, waiveCampaignPayment } from "../marketplace-actions";
+import { waiveCampaignPayment } from "../marketplace-actions";
+import { CampaignStatusActions } from "./CampaignStatusActions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
+import {
+  CAMPAIGN_STAGE_LABELS,
+  CAMPAIGN_STAGE_ORDER,
+  campaignStage,
+  closeReasonLabel,
+  type CampaignStage,
+  type CampaignStageKey,
+} from "@/lib/campaign-stage";
+import type { CampaignStatus } from "@/lib/types";
 import { draftInvoiceForCampaign } from "../invoices/actions";
 import { invoiceDisplayStatus } from "@/lib/billing";
 import { MatchForm } from "./MatchForm";
@@ -14,10 +27,6 @@ import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "Campaigns · Admin" };
 
-// Filter chips show every status; the per-row picker (below) never offers
-// awaiting_payment — it is only entered at creation and left by payment/waiver.
-const STATUSES = ["awaiting_payment", "in_progress", "closed", "completed"];
-const SETTABLE_STATUSES = ["in_progress", "closed", "completed"];
 
 interface Row {
   id: string;
@@ -30,7 +39,7 @@ interface Row {
   reward_rules: string | null;
   suggested_event_note: string | null;
   suggested_event_url: string | null;
-  status: string;
+  status: CampaignStatus;
   created_at: string;
   matched_listing_id: string | null;
   package_platform_margin_gbp: number | null;
@@ -59,6 +68,17 @@ interface Suggestion {
   brand_agreed: boolean;
   artist_agreed: boolean;
   event_date: string | null;
+  reward_codes_confirmed_at: string | null;
+}
+
+/** The latest completed/closed record per campaign (admin-only, 0066). */
+interface StatusEventRow {
+  campaign_id: string;
+  from_status: CampaignStatus;
+  to_status: CampaignStatus;
+  reason: string | null;
+  note: string | null;
+  created_at: string;
 }
 
 export default async function AdminCampaignsPage({
@@ -68,6 +88,8 @@ export default async function AdminCampaignsPage({
     status?: string;
     matched?: string;
     live?: string;
+    stage?: string;
+    status_updated?: string;
     invoice_error?: string;
     action_error?: string;
   }>;
@@ -83,6 +105,8 @@ export default async function AdminCampaignsPage({
     { count: pendingIntakeCount },
     { data: invoiceRows },
     { data: orderFormRows },
+    { data: publishedSurveyRows },
+    { data: statusEventRows },
   ] =
     await Promise.all([
       supabase
@@ -99,7 +123,7 @@ export default async function AdminCampaignsPage({
       supabase
         .from("sponsored_events")
         .select(
-          "id, name, status, campaign_id, brand_agreed, artist_agreed, event_date",
+          "id, name, status, campaign_id, brand_agreed, artist_agreed, event_date, reward_codes_confirmed_at",
         )
         .not("campaign_id", "is", null)
         .order("created_at", { ascending: true }),
@@ -115,6 +139,15 @@ export default async function AdminCampaignsPage({
         .eq("kind", "campaign_package")
         .neq("status", "cancelled"),
       supabase.from("campaign_order_forms").select("campaign_id, status, reference"),
+      // For the stage badge: does the campaign have a published survey?
+      supabase.from("survey_templates").select("campaign_id").eq("status", "published").not("campaign_id", "is", null),
+      // Why each finished campaign was completed/closed (admin-only).
+      supabase
+        .from("campaign_status_events")
+        .select("campaign_id, from_status, to_status, reason, note, created_at")
+        .in("to_status", ["completed", "closed"])
+        .order("created_at", { ascending: false })
+        .limit(1000),
     ]);
   const orderForms = (orderFormRows ?? []) as { campaign_id: string; status: string; reference: string }[];
   const orderFormFor = (campaignId: string) => orderForms.find((f) => f.campaign_id === campaignId);
@@ -148,6 +181,32 @@ export default async function AdminCampaignsPage({
       (s) => s.status === "confirmed" || s.status === "completed",
     );
 
+  const publishedSurvey = new Set(
+    ((publishedSurveyRows ?? []) as { campaign_id: string }[]).map((t) => t.campaign_id),
+  );
+  const stageOf = new Map<string, CampaignStage>(
+    campaigns.map((c) => {
+      const mine = suggestionsFor(c.id);
+      const settled = mine.find((s) => s.status === "confirmed" || s.status === "completed") ?? null;
+      return [
+        c.id,
+        campaignStage({
+          status: c.status,
+          settled,
+          openProposals: mine.filter((s) => s.status === "in_progress").length,
+          surveyPublished: publishedSurvey.has(c.id),
+        }),
+      ];
+    }),
+  );
+  const stageCounts = new Map<CampaignStageKey, number>();
+  for (const st of stageOf.values()) stageCounts.set(st.key, (stageCounts.get(st.key) ?? 0) + 1);
+  const finishedRecord = new Map<string, StatusEventRow>();
+  for (const e of (statusEventRows ?? []) as StatusEventRow[]) {
+    if (!finishedRecord.has(e.campaign_id)) finishedRecord.set(e.campaign_id, e);
+  }
+
+  if (sp.stage) campaigns = campaigns.filter((c) => stageOf.get(c.id)?.key === sp.stage);
   if (sp.status) campaigns = campaigns.filter((c) => c.status === sp.status);
   if (sp.matched === "no")
     campaigns = campaigns.filter((c) => !c.matched_listing_id);
@@ -207,50 +266,48 @@ export default async function AdminCampaignsPage({
         </p>
       )}
 
+      {sp.status_updated && (
+        <p role="status" className="mb-5 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Campaign updated.
+        </p>
+      )}
+
       <div className="mb-5 flex flex-wrap gap-2">
         <Link
           href={link({})}
           className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            !sp.status && !sp.matched && !sp.live
+            !sp.status && !sp.matched && !sp.live && !sp.stage
               ? "bg-[var(--color-brand)] text-white"
               : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
           }`}
         >
           All
         </Link>
-        <Link
-          href={link({ matched: "no" })}
-          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            sp.matched === "no"
-              ? "bg-[var(--color-brand)] text-white"
-              : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
-          }`}
-        >
-          Needs matching ({unmatched})
-        </Link>
-        <Link
-          href={link({ live: "yes" })}
-          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            sp.live === "yes"
-              ? "bg-[var(--color-brand)] text-white"
-              : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
-          }`}
-        >
-          Live (event confirmed)
-        </Link>
-        {STATUSES.map((s) => (
+        {CAMPAIGN_STAGE_ORDER.map((key) => (
           <Link
-            key={s}
-            href={link({ status: s })}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold capitalize transition ${
-              sp.status === s
+            key={key}
+            href={link({ stage: key })}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+              sp.stage === key
                 ? "bg-[var(--color-brand)] text-white"
                 : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
             }`}
           >
-            {s.replace(/_/g, " ")}
+            {CAMPAIGN_STAGE_LABELS[key]} ({stageCounts.get(key) ?? 0})
           </Link>
         ))}
+        {/* Older links (admin overview) filter by these; shown only while in use. */}
+        {(sp.matched || sp.live || sp.status) && (
+          <span className="rounded-full bg-[var(--color-brand)] px-3.5 py-1.5 text-sm font-semibold text-white">
+            {sp.matched === "no"
+              ? "Not matched"
+              : sp.matched === "yes"
+                ? "Matched"
+                : sp.live === "yes"
+                  ? "Event agreed"
+                  : (CAMPAIGN_STAGE_LABELS as Record<string, string>)[sp.status ?? ""] ?? sp.status}
+          </span>
+        )}
       </div>
 
       {campaigns.length === 0 ? (
@@ -272,7 +329,7 @@ export default async function AdminCampaignsPage({
                       >
                         {c.brands?.brand_name ?? "Unknown brand"}
                       </Link>
-                      <StatusBadge status={c.status} />
+                      <CampaignStageBadge stage={stageOf.get(c.id)!} />
                       {c.matched_listing_id ? (
                         <span className="rounded-full bg-[var(--color-sage)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-olive-deep)]">
                           Matched
@@ -311,6 +368,18 @@ export default async function AdminCampaignsPage({
                       {c.preferred_location ? ` · ${c.preferred_location}` : ""}
                       {c.preferred_timeline ? ` · ${c.preferred_timeline}` : ""}
                     </p>
+                    {(c.status === "completed" || c.status === "closed") && finishedRecord.get(c.id) && (
+                      <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-3 py-2 text-xs text-[var(--color-ink)]">
+                        <span className="font-semibold">
+                          {c.status === "closed" ? "Closed" : "Completed"} {formatDate(finishedRecord.get(c.id)!.created_at)}
+                          {c.status === "closed" && finishedRecord.get(c.id)!.reason
+                            ? ` — ${closeReasonLabel(finishedRecord.get(c.id)!.reason)}`
+                            : ""}
+                        </span>
+                        {finishedRecord.get(c.id)!.note ? `: ${finishedRecord.get(c.id)!.note}` : ""}
+                        <span className="text-[var(--color-ink-soft)]"> (admins only)</span>
+                      </p>
+                    )}
                     {c.payment_waived_at && (
                       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                         <span className="font-semibold">Payment waived</span>{" "}
@@ -392,9 +461,20 @@ export default async function AdminCampaignsPage({
                             className="textarea text-sm"
                             placeholder="Why is payment being waived?"
                           />
-                          <button type="submit" className="btn btn-primary w-full text-sm">
-                            Open campaign
-                          </button>
+                          <ConfirmSubmitButton
+                            label="Open campaign…"
+                            className="btn btn-primary w-full text-sm"
+                            title={`Waive payment for ${c.reference}?`}
+                            warnings={["You're overriding the payment gate — the campaign opens without being paid."]}
+                            points={[
+                              `Change ${c.reference} from Awaiting payment to Needs matching, open to artists on Discover campaigns.`,
+                              invoiceFor(c.id)
+                                ? `Cancel invoice ${invoiceFor(c.id)!.reference}${invoiceFor(c.id)!.status === "draft" ? "" : " and void it in Stripe"}.`
+                                : "There's no invoice to cancel.",
+                              "Record your reason against your name, and tell the brand their campaign is open.",
+                            ]}
+                            confirmLabel="Yes, waive payment"
+                          />
                         </form>
                       </details>
                     )}
@@ -406,36 +486,26 @@ export default async function AdminCampaignsPage({
                         </button>
                       </form>
                     )}
-                    <form
-                      action={setCampaignStatus}
-                      className="flex items-center gap-2"
-                    >
-                      <input type="hidden" name="id" value={c.id} />
-                      <select
-                        name="status"
-                        className="select w-auto py-1.5 text-sm"
-                        defaultValue={c.status}
-                      >
-                        {/* An unpaid campaign can only be closed from here;
-                            opening it is payment or a reasoned waiver. */}
-                        {c.status === "awaiting_payment" && (
-                          <option value="awaiting_payment" disabled>
-                            awaiting payment
-                          </option>
-                        )}
-                        {(c.status === "awaiting_payment"
-                          ? ["closed"]
-                          : SETTABLE_STATUSES
-                        ).map((s) => (
-                          <option key={s} value={s}>
-                            {s.replace(/_/g, " ")}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="submit" className="btn btn-ghost text-sm">
-                        Update
-                      </button>
-                    </form>
+                    <CampaignStatusActions
+                      campaignId={c.id}
+                      reference={c.reference}
+                      status={c.status}
+                      stage={stageOf.get(c.id)!}
+                      openProposals={suggestionsFor(c.id).filter((s) => s.status === "in_progress").length}
+                      settledEvent={
+                        suggestionsFor(c.id).find((s) => s.status === "confirmed" || s.status === "completed") ?? null
+                      }
+                      invoice={invoiceFor(c.id) ?? null}
+                      surveyPublished={publishedSurvey.has(c.id)}
+                      reopenTo={
+                        finishedRecord.get(c.id)?.to_status === c.status
+                          ? finishedRecord.get(c.id)!.from_status === "awaiting_payment"
+                            ? "awaiting_payment"
+                            : "in_progress"
+                          : null
+                      }
+                      returnTo="/dashboard/admin/campaigns"
+                    />
                   </div>
                 </div>
 
@@ -523,6 +593,8 @@ export default async function AdminCampaignsPage({
           })}
         </div>
       )}
+
+      <CampaignStatusLegend />
     </div>
   );
 }

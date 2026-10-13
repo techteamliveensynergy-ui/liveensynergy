@@ -7,7 +7,11 @@ import { LiveCampaignPanel, type LiveCampaignSurvey } from "@/components/campaig
 import { formatDate } from "@/lib/format";
 import { invoiceDisplayStatus } from "@/lib/billing";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
-import type { Campaign } from "@/lib/types";
+import type { Campaign, CampaignStatus } from "@/lib/types";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
+import { CAMPAIGN_STATUS_LABELS, campaignStage, closeReasonLabel } from "@/lib/campaign-stage";
+import { CampaignStatusActions } from "../CampaignStatusActions";
 
 export const metadata = { title: "Campaign · Admin" };
 
@@ -38,12 +42,26 @@ const money = (n: number | null | undefined) =>
  * analysis and check-in in one place). Read-only; "Edit" is a secondary
  * action, since the content came from the brand's own request.
  */
-export default async function AdminCampaignPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminCampaignPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ action_error?: string; status_updated?: string }>;
+}) {
   await requireRole(["admin"]);
-  const { id } = await params;
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
 
-  const [{ data: campaign }, { data: orderForm }, { data: invoice }, { data: sponsorshipRows }, { data: templateRows }, { data: intake }] =
+  const [
+    { data: campaign },
+    { data: orderForm },
+    { data: invoice },
+    { data: sponsorshipRows },
+    { data: templateRows },
+    { data: intake },
+    { data: historyRows },
+  ] =
     await Promise.all([
       supabase
         .from("campaigns")
@@ -79,6 +97,12 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
         .select("id, reference")
         .eq("converted_campaign_id", id)
         .maybeSingle<{ id: string; reference: string }>(),
+      // Status history with reasons and notes — admin-only (0066).
+      supabase
+        .from("campaign_status_events")
+        .select("id, from_status, to_status, reason, note, created_at, profiles:created_by(full_name)")
+        .eq("campaign_id", id)
+        .order("created_at", { ascending: false }),
     ]);
   if (!campaign) notFound();
 
@@ -122,6 +146,21 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
       (r) => [r.template_id, r.pending_count + r.pass_count + r.review_count],
     ),
   );
+  const history = (historyRows ?? []) as unknown as {
+    id: string;
+    from_status: CampaignStatus;
+    to_status: CampaignStatus;
+    reason: string | null;
+    note: string | null;
+    created_at: string;
+    profiles: { full_name: string | null } | null;
+  }[];
+  const stage = campaignStage({
+    status: campaign.status,
+    settled: live,
+    openProposals: sponsorships.filter((s) => s.status === "in_progress").length,
+    surveyPublished: templates.some((t) => t.status === "published"),
+  });
   const brand = campaign.brands;
   const title = campaign.target_name || `${brand?.brand_name ?? "Brand"} campaign`;
   const messageHref = brand
@@ -138,7 +177,7 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
         subtitle={`${campaign.reference} · ${brand?.brand_name ?? "Unknown brand"}${campaign.campaign_packages ? ` · ${campaign.campaign_packages.name}` : ""}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={campaign.status} />
+            <CampaignStageBadge stage={stage} />
             {messageHref && (
               <Link href={messageHref} className="btn btn-primary text-sm">
                 Message brand
@@ -150,6 +189,15 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
           </div>
         }
       />
+
+      {sp.action_error && (
+        <p className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">{sp.action_error}</p>
+      )}
+      {sp.status_updated && (
+        <p role="status" className="rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Campaign updated.
+        </p>
+      )}
 
       <section className="card p-6">
         <p className="whitespace-pre-line text-[var(--color-ink)]">{campaign.description}</p>
@@ -271,6 +319,57 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
       )}
 
       <section className="card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">Status</h2>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <CampaignStageBadge stage={stage} />
+              <span className="text-[var(--color-ink-soft)]">
+                Stored as “{CAMPAIGN_STATUS_LABELS[campaign.status]}” — see the legend below.
+              </span>
+            </p>
+            {history.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--color-ink-soft)]">No manual status changes yet.</p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {history.map((h) => (
+                  <li key={h.id} className="rounded-xl bg-[var(--color-mist)] px-4 py-2.5">
+                    <span className="font-semibold">
+                      {CAMPAIGN_STATUS_LABELS[h.from_status]} → {CAMPAIGN_STATUS_LABELS[h.to_status]}
+                    </span>
+                    {h.reason ? ` · ${closeReasonLabel(h.reason)}` : ""}
+                    <span className="text-[var(--color-ink-soft)]">
+                      {" "}
+                      · {formatDate(h.created_at)}
+                      {h.profiles?.full_name ? ` · ${h.profiles.full_name}` : ""}
+                    </span>
+                    {h.note && <p className="mt-1 whitespace-pre-line">{h.note}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-[var(--color-ink-soft)]">Reasons and notes are visible to admins only.</p>
+          </div>
+          <CampaignStatusActions
+            campaignId={campaign.id}
+            reference={campaign.reference}
+            status={campaign.status}
+            stage={stage}
+            openProposals={sponsorships.filter((s) => s.status === "in_progress").length}
+            settledEvent={live}
+            invoice={invoice ?? null}
+            surveyPublished={templates.some((t) => t.status === "published")}
+            reopenTo={(() => {
+              const last = history.find((h) => h.to_status === campaign.status);
+              if (!last) return null;
+              return last.from_status === "awaiting_payment" ? "awaiting_payment" : "in_progress";
+            })()}
+            returnTo={`/dashboard/admin/campaigns/${campaign.id}`}
+          />
+        </div>
+      </section>
+
+      <section className="card p-6">
         <h2 className="text-lg font-semibold">Events and sponsorships</h2>
         {sponsorships.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
@@ -303,6 +402,8 @@ export default async function AdminCampaignPage({ params }: { params: Promise<{ 
           </ul>
         )}
       </section>
+
+      <CampaignStatusLegend />
     </div>
   );
 }

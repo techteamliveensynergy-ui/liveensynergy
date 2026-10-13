@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { profileCompleteness } from "@/lib/profile";
-import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
+import { MetricTile } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
+import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
+import { campaignStagesFor } from "@/lib/data/campaign-stages";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
@@ -58,6 +60,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
   }
 
   const activeCampaigns = campaigns.filter((c) => c.status === "in_progress").length;
+  const stages = await campaignStagesFor(supabase, campaigns.slice(0, 4), "brand");
   const confirmedEvents = sponsored.filter((s) => s.status === "confirmed");
   const confirmed = confirmedEvents.length;
   // What the brand has committed across its campaigns (package price). The
@@ -151,7 +154,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                         Ref {c.reference}
                       </p>
                     </div>
-                    <StatusBadge status={c.status} />
+                    {stages.get(c.id) && <CampaignStageBadge stage={stages.get(c.id)!} />}
                     <span className="text-xs text-[var(--color-ink-soft)]">
                       £{Number(c.budget_gbp ?? 0).toLocaleString("en-GB", { maximumFractionDigits: 0 })}
                     </span>
