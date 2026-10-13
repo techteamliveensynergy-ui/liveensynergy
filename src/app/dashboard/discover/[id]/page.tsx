@@ -7,6 +7,7 @@ import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
 import type { AudienceMember, Participation, SponsoredEvent } from "@/lib/types";
 import { RegistrationForm } from "./RegistrationForm";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Event details" };
 
@@ -113,6 +114,7 @@ export default async function EventDetailsPage({
           <p className="mt-4 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm">
             <span className="font-semibold">Register by </span>
             {new Date(event.participation_deadline).toLocaleString("en-GB", {
+              timeZone: UK_TIME_ZONE,
               dateStyle: "medium",
               timeStyle: "short",
             })}

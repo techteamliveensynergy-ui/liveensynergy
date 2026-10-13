@@ -17,6 +17,7 @@ import {
 import { notify } from "@/lib/notifications";
 import { requireAdmin } from "@/lib/profile";
 import { isValidEmail, validateVatNumber } from "@/lib/billing";
+import { ukLocalInputToIso } from "@/lib/format";
 
 export interface AdminState {
   error?: string;
@@ -463,7 +464,7 @@ export async function adminUpdateSponsoredEvent(
     start_time: str(formData.get("start_time")),
     venue_details: str(formData.get("venue_details")),
     location: str(formData.get("location")),
-    participation_deadline: str(formData.get("participation_deadline")),
+    participation_deadline: ukLocalInputToIso(str(formData.get("participation_deadline"))),
     terms: str(formData.get("terms")),
     reward_rules: str(formData.get("reward_rules")),
     branding_guidelines: str(formData.get("branding_guidelines")),

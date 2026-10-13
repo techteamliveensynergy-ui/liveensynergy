@@ -81,7 +81,21 @@ Safety properties worth knowing:
    Resend API key, sender = the same `EMAIL_FROM` address. Then Auth → Rate
    Limits: raise the email limit (custom SMTP starts around 30/hour).
 5. Auth → URL Configuration: Site URL must be the **production origin** — it
-   builds the links inside those emails (lessons L5).
+   builds the links inside those emails (lessons L5). Add
+   `https://<production origin>/auth/callback` to **Redirect URLs** too — a
+   redirect URL not on that list is silently swapped for the Site URL.
+6. Optional but recommended — links that work on any device. The default
+   templates use PKCE (`?code=`), which only works in the browser that asked
+   for the email; opened on a phone it fails. In Auth → Email Templates,
+   change the link in **Confirm signup** to
+   `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=signup`
+   and in **Reset password** to
+   `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`.
+   `{{ .RedirectTo }}` is the app's own `/auth/callback?next=…` URL, so each
+   email keeps its destination (onboarding, reset password, or back to a
+   survey). This needs step 5's Redirect URL — otherwise `RedirectTo` falls
+   back to the bare Site URL and the link breaks. `/auth/callback` accepts
+   both formats (13 Oct), so the templates can change at any time.
 
 ### 3. Vercel environment variables
 | Variable | Production | Preview / dev |

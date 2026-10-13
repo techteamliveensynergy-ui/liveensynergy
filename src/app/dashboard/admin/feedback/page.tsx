@@ -5,6 +5,7 @@ import { signedUrlFor } from "@/lib/storage";
 import { isImagePath } from "@/components/dashboard/ParticipationProgress";
 import type { FeedbackReport } from "@/lib/types";
 import { updateFeedback } from "../../feedback/actions";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Feedback inbox" };
 
@@ -125,7 +126,7 @@ export default async function AdminFeedbackPage({
                         </a>
                       </>
                     )}{" "}
-                    · {new Date(r.created_at).toLocaleString("en-GB")}
+                    · {new Date(r.created_at).toLocaleString("en-GB", { timeZone: UK_TIME_ZONE })}
                   </p>
                 </div>
               </div>

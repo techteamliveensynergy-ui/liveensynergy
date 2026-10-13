@@ -5,6 +5,7 @@ import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { Participation, RewardCode, SponsoredEvent } from "@/lib/types";
 import { selfReportRewardCodeRedeemed } from "../sponsored/actions";
 import { platformLabel, PLATFORM_HOW_TO } from "@/lib/discount-codes";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "My rewards" };
 
@@ -120,7 +121,7 @@ export default async function RewardsPage() {
                   )}
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                     {c.expires_at &&
-                      `${expired ? "Expired" : "Use by"} ${new Date(c.expires_at).toLocaleDateString("en-GB")}`}
+                      `${expired ? "Expired" : "Use by"} ${new Date(c.expires_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}`}
                     {c.redemption_url && c.status === "issued" && !expired && (
                       <>
                         {c.expires_at ? " · " : ""}

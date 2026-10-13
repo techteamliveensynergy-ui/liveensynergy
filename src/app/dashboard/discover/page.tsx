@@ -12,6 +12,7 @@ import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { contactOrganiser } from "./actions";
 import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Discover events" };
 
@@ -380,6 +381,7 @@ export default async function DiscoverPage({
                   <p className="mt-2 text-xs text-[var(--color-ink-soft)]">
                     Sign up by{" "}
                     {new Date(e.participation_deadline).toLocaleString("en-GB", {
+                      timeZone: UK_TIME_ZONE,
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}

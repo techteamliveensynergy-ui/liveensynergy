@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
+import { siteUrl } from "@/lib/site-url";
 import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type SignupRole } from "@/lib/constants";
 import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
@@ -11,10 +12,6 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 export interface AuthState {
   error?: string;
   message?: string;
-}
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
 export async function signUp(
@@ -60,7 +57,7 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: `${siteUrl()}/auth/callback?next=/onboarding`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding`,
       // The profile row is created by the `handle_new_user` trigger, not here,
       // so the terms acceptance travels with the sign-up metadata — there's no
       // session to write with yet when email confirmation is on (0021).
@@ -175,7 +172,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl()}/auth/callback?next=/auth/reset-password`,
+    redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
   });
 
   if (error) {

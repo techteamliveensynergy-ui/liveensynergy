@@ -16,10 +16,7 @@ import {
   screenSurveySubmission,
 } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
+import { siteUrl } from "@/lib/site-url";
 
 export interface PublicSurveyResponseState {
   error?: string;
@@ -388,7 +385,7 @@ export async function startSurveyAccount(
       code === "email_exists" || /already.*registered/i.test(createError.message);
     if (alreadyRegistered) {
       await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${siteUrl()}/auth/callback?next=/survey/${templateId}`,
+        redirectTo: `${await siteUrl()}/auth/callback?next=/survey/${templateId}`,
       });
       return { alreadyRegistered: true };
     }
@@ -411,7 +408,7 @@ export async function startSurveyAccount(
   // regardless of whether this send succeeds.
   await supabase.auth
     .resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl()}/auth/callback?next=/auth/reset-password`,
+      redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
     })
     .catch((err) => console.error("[startSurveyAccount] reset email failed", err));
 

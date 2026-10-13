@@ -5,6 +5,7 @@ import { signedUrlFor } from "@/lib/storage";
 import { isImagePath } from "@/components/dashboard/ParticipationProgress";
 import type { FeedbackReport } from "@/lib/types";
 import { FeedbackForm } from "./FeedbackForm";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Report a bug or idea" };
 
@@ -62,7 +63,7 @@ export default async function FeedbackPage() {
                   </div>
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                     {r.reference} ·{" "}
-                    {new Date(r.created_at).toLocaleDateString("en-GB")}
+                    {new Date(r.created_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}
                   </p>
                   {shots[i] && (
                     <a

@@ -28,6 +28,7 @@ import {
   voidRewardCode,
   type MarketplaceState,
 } from "../../../marketplace-actions";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 function Submit({ label, pending: pendingLabel, className = "btn btn-primary text-sm", disabled }: {
   label: string;
@@ -433,7 +434,7 @@ export function RewardEngineSection({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-ink-soft)]">
                   <span>
                     {est
-                      ? `Worst-case discount cost: ${money(est.base)} (${money(est.withMargin)} with ${Math.round(
+                      ? `Maximum discount if every code is used: ${money(est.base)} (${money(est.withMargin)} with ${Math.round(
                           REWARD_ADMIN_MARGIN * 100,
                         )}% admin margin)`
                       : tier.participant_cap
@@ -540,9 +541,9 @@ export function RewardEngineSection({
                     </td>
                     <td className="py-2 pr-3">{(c.tier_id && tierLabel.get(c.tier_id)) || "—"}</td>
                     <td className="py-2 pr-3 capitalize">{c.status}</td>
-                    <td className="py-2 pr-3">{new Date(c.issued_at).toLocaleDateString("en-GB")}</td>
+                    <td className="py-2 pr-3">{new Date(c.issued_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}</td>
                     <td className="py-2 pr-3">
-                      {c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString("en-GB") : "—"}
+                      {c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE }) : "—"}
                     </td>
                     <td className="py-2">
                       {c.status === "issued" && (
@@ -579,7 +580,7 @@ function ConsentBadge({ confirmedAt, hasArtist }: { confirmedAt: string | null; 
   if (!hasArtist) return <span className="chip text-xs">No artist attached</span>;
   return confirmedAt ? (
     <span className="chip bg-[var(--color-sage)] text-xs" data-testid="codes-consent">
-      Artist confirmed {new Date(confirmedAt).toLocaleDateString("en-GB")}
+      Artist confirmed {new Date(confirmedAt).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}
     </span>
   ) : (
     <span className="chip bg-[var(--color-gold)] text-xs" data-testid="codes-consent">

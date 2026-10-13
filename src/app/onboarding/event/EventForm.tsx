@@ -208,19 +208,6 @@ export function EventForm({
         </Field>
       </FormSection>
 
-      <FormSection
-        title="Sponsor value details"
-        description="How can you fulfil a sponsor partner's branding duties? (e.g. social posts, mentions, logos on promo material, onsite roll-up banners, merch stations). Up to 500 words."
-      >
-        <Field label="What you can offer sponsors" htmlFor="sponsor_value_details">
-          <textarea
-            id="sponsor_value_details"
-            name="sponsor_value_details"
-            className="textarea"
-            defaultValue={d.sponsor_value_details ?? ""}
-          />
-        </Field>
-      </FormSection>
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}

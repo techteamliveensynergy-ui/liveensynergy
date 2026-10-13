@@ -20,6 +20,7 @@ import {
   confirmRewardCodes,
   type DiscountCodeState,
 } from "../actions";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 function Submit({ label, pending, className = "btn btn-primary text-sm" }: {
   label: string;
@@ -87,7 +88,7 @@ export function RewardEngineDisplay({
           data-testid="codes-consent"
         >
           {frozen
-            ? `Confirmed by the artist ${new Date(confirmedAt!).toLocaleDateString("en-GB")}`
+            ? `Confirmed by the artist ${new Date(confirmedAt!).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}`
             : "Awaiting the artist's confirmation"}
         </span>
       </div>
@@ -131,7 +132,7 @@ export function RewardEngineDisplay({
                 {t.valid_until && (
                   <div>
                     <dt className="inline font-medium text-[var(--color-ink)]">Valid until: </dt>
-                    <dd className="inline">{new Date(t.valid_until).toLocaleDateString("en-GB")}</dd>
+                    <dd className="inline">{new Date(t.valid_until).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}</dd>
                   </div>
                 )}
                 {t.distribution_model === "shared" && t.shared_code && (
@@ -154,7 +155,7 @@ export function RewardEngineDisplay({
                 </div>
                 {est && (
                   <div className="sm:col-span-2">
-                    <dt className="inline font-medium text-[var(--color-ink)]">Worst-case discount cost: </dt>
+                    <dt className="inline font-medium text-[var(--color-ink)]">Maximum discount if every code is used: </dt>
                     <dd className="inline">
                       {money(est.base)}
                       {/* The admin margin is between the platform and the

@@ -157,15 +157,6 @@ export function ArtistForm({
         private
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Date of birth" htmlFor="date_of_birth" required>
-            <input
-              id="date_of_birth"
-              name="date_of_birth"
-              type="date"
-              className="input"
-              defaultValue={d.date_of_birth ?? ""}
-            />
-          </Field>
           <Field label="Location" htmlFor="location" required>
             <input
               id="location"
@@ -231,19 +222,6 @@ export function ArtistForm({
         </Field>
       </FormSection>
 
-      <FormSection
-        title="Sponsor value details"
-        description="How can you fulfil a sponsor partner's branding duties? (e.g. social posts, collaborations, mentions, logos on promo material, roll-up banners, merch table). Up to 500 words."
-      >
-        <Field label="What you can offer sponsors" htmlFor="sponsor_value_details">
-          <textarea
-            id="sponsor_value_details"
-            name="sponsor_value_details"
-            className="textarea"
-            defaultValue={d.sponsor_value_details ?? ""}
-          />
-        </Field>
-      </FormSection>
 
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}

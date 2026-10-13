@@ -35,7 +35,6 @@ const FIELDS_BY_ROLE: Record<string, CompletenessField[]> = {
     { key: "bio", label: "Bio" },
     { key: "profile_image_url", label: "Profile image" },
     { key: "banner_url", label: "Banner image" },
-    { key: "sponsor_value_details", label: "What sponsors get" },
     { key: "social_links", label: "Social links" },
   ],
   event: [
@@ -45,7 +44,6 @@ const FIELDS_BY_ROLE: Record<string, CompletenessField[]> = {
     { key: "description", label: "Description" },
     { key: "profile_image_url", label: "Profile image" },
     { key: "banner_url", label: "Banner image" },
-    { key: "sponsor_value_details", label: "What sponsors get" },
     { key: "social_links", label: "Social links" },
   ],
   brand: [

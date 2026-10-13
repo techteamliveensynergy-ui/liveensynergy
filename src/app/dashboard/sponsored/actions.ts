@@ -11,6 +11,7 @@ import { DEFAULT_TIMEZONE, eventStartInstant } from "@/lib/event-time";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { codeBatchText, insertPoolCodes, invalidCodesMessage } from "@/lib/data/reward-codes";
 import { parseCodeBatch } from "@/lib/discount-codes";
+import { ukLocalInputToIso } from "@/lib/format";
 
 export interface SponsoredState {
   error?: string;
@@ -200,7 +201,7 @@ export async function createSponsoredEvent(
       banner_url: banner.url ?? null,
       branding_guidelines: str(formData.get("branding_guidelines")),
       attendance_method: str(formData.get("attendance_method")),
-      participation_deadline: str(formData.get("participation_deadline")),
+      participation_deadline: ukLocalInputToIso(str(formData.get("participation_deadline"))),
       // Whoever initiated has agreed to the terms they just wrote; the other
       // side reviews and agrees to confirm the deal.
       brand_agreed: initiatedByBrand,
@@ -389,7 +390,7 @@ export async function updateSponsoredEvent(formData: FormData) {
       reward_rules: str(formData.get("reward_rules")),
       branding_guidelines: str(formData.get("branding_guidelines")),
       attendance_method: str(formData.get("attendance_method")),
-      participation_deadline: str(formData.get("participation_deadline")),
+      participation_deadline: ukLocalInputToIso(str(formData.get("participation_deadline"))),
     })
     .eq("id", id);
   revalidatePath(`/dashboard/sponsored/${id}`);

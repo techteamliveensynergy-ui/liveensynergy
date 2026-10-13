@@ -33,6 +33,7 @@ import {
 import { ProofUploadSection } from "./ProofUploadSection";
 import { RewardEngineDisplay } from "./RewardEngineDisplay";
 import { ChangeRequestSection } from "./ChangeRequestSection";
+import { UK_TIME_ZONE, ukLocalInputValue } from "@/lib/format";
 
 export const metadata = { title: "Sponsored event" };
 
@@ -45,17 +46,6 @@ function money(value: number | null | undefined) {
   return `£${Number(value).toLocaleString("en-GB", {
     maximumFractionDigits: 2,
   })}`;
-}
-
-/** `datetime-local` needs `YYYY-MM-DDTHH:mm`, not a full ISO string. */
-function toLocalInputValue(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
 }
 
 export default async function SponsoredEventPage({
@@ -342,6 +332,7 @@ export default async function SponsoredEventPage({
             value={
               event.participation_deadline
                 ? new Date(event.participation_deadline).toLocaleString("en-GB", {
+                    timeZone: UK_TIME_ZONE,
                     dateStyle: "medium",
                     timeStyle: "short",
                   })
@@ -520,7 +511,7 @@ export default async function SponsoredEventPage({
                 name="participation_deadline"
                 type="datetime-local"
                 className="input"
-                defaultValue={toLocalInputValue(event.participation_deadline)}
+                defaultValue={ukLocalInputValue(event.participation_deadline)}
               />
             </Field>
             <div className="flex justify-end">

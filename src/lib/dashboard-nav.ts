@@ -27,14 +27,19 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     // running. The sidebar highlights the longest matching href, so
     // /dashboard/campaigns/live/* lights "Campaigns live", not "requests".
     { href: "/dashboard/campaigns", label: "Campaign requests", icon: "📥" },
-    {
-      href: "/dashboard/campaigns/live",
-      label: "Campaigns live",
-      icon: "📣",
-      alsoActiveFor: ["/dashboard/campaigns/invoices"],
-    },
+    { href: "/dashboard/campaigns/live", label: "Campaigns live", icon: "📣" },
+    // Not in the client's 13 Oct list — kept until they decide whether it
+    // folds into Campaigns live.
     { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
     { href: "/dashboard/discover", label: "Discover events", icon: "🔎" },
+    // Every invoice in one place (13 Oct); an invoice's own page lives under
+    // /dashboard/campaigns/invoices and lights this item.
+    {
+      href: "/dashboard/invoices",
+      label: "Invoices",
+      icon: "🧾",
+      alsoActiveFor: ["/dashboard/campaigns/invoices"],
+    },
   ],
   artist: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },

@@ -8,6 +8,7 @@ import {
 import { ARTIST_CATEGORIES, computePlatformFee } from "@/lib/constants";
 import type { OpenCampaign } from "@/lib/types";
 import { registerInterest } from "./actions";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Discover campaigns" };
 
@@ -50,6 +51,7 @@ export default async function DiscoverCampaignsPage({
     registeredOn.set(
       r.campaign_id,
       `Sent ${new Date(r.created_at).toLocaleDateString("en-GB", {
+        timeZone: UK_TIME_ZONE,
         day: "numeric",
         month: "short",
         year: "numeric",
