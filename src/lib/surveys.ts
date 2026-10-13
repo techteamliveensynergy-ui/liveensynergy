@@ -317,6 +317,68 @@ export function newLikertQuestionDraft(): SurveyQuestionDraft {
   return base;
 }
 
+/**
+ * Settings a rating group's rows always share (FB-00028) — editing one on
+ * any row applies it to every row, so the scale, its labels and the card's
+ * look can't drift apart. Each row keeps its own prompt (the item label) and
+ * its own required flag.
+ */
+export const RATING_GROUP_SHARED_KEYS: readonly (keyof SurveyQuestionConfig)[] = [
+  "group_prompt",
+  "min",
+  "max",
+  "step",
+  "min_label",
+  "max_label",
+  "na_label",
+  "question_size",
+  "font_family",
+  "question_text_color",
+  "body_text_color",
+  "card_background_color",
+  "media_url",
+  "media_type",
+  "media_position",
+  "media_fit",
+  "video_format",
+];
+
+function newGroupId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `g-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** One more row for an existing group, copying its shared settings. */
+export function newRatingGroupRow(from: SurveyQuestionDraft, label: string): SurveyQuestionDraft {
+  const row = newQuestionDraft("scale");
+  const shared: Record<string, unknown> = {};
+  for (const k of RATING_GROUP_SHARED_KEYS) {
+    if (from.config[k] !== undefined) shared[k] = from.config[k];
+  }
+  row.config = { ...shared, group_id: from.config.group_id } as SurveyQuestionConfig;
+  row.prompt = label;
+  row.help_text = from.help_text;
+  row.required = from.required;
+  return row;
+}
+
+/** "Rating group" preset (FB-00028): three items on one 1–5 scale. */
+export function newRatingGroupDrafts(): SurveyQuestionDraft[] {
+  const first = newQuestionDraft("scale");
+  first.prompt = "Item 1";
+  first.config = {
+    min: 1,
+    max: 5,
+    step: 1,
+    min_label: "Poor",
+    max_label: "Excellent",
+    group_id: newGroupId(),
+    group_prompt: "How would you rate each of the following?",
+  };
+  return [first, newRatingGroupRow(first, "Item 2"), newRatingGroupRow(first, "Item 3")];
+}
+
 export function questionRowToDraft(
   q: import("./types").SurveyQuestion,
 ): SurveyQuestionDraft {
@@ -340,7 +402,10 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
   const spec = SURVEY_QUESTION_TYPES.find((s) => s.type === d.type);
   if (!spec) return "Unknown question type.";
   if (spec.hasPrompt && !d.prompt.trim()) {
-    return "Prompt is required.";
+    return d.type === "scale" && d.config.group_id ? "Item label is required." : "Prompt is required.";
+  }
+  if (d.type === "scale" && d.config.group_id && !d.config.group_prompt?.trim()) {
+    return "The rating group needs its question text.";
   }
   if (spec.hasOptions) {
     const options = d.options.filter((o) => o.label.trim() && o.value.trim());
@@ -350,6 +415,9 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
     const values = options.map((o) => o.value);
     if (new Set(values).size !== values.length) {
       return "Option values must be unique.";
+    }
+    if (values.includes(SURVEY_OTHER_VALUE)) {
+      return `"${SURVEY_OTHER_VALUE}" is reserved for the Other option — rename that option.`;
     }
   }
   if (d.type === "attention_check" && !d.config.expected_answer) {
@@ -407,6 +475,76 @@ export interface SurveyAnswerDraft {
   value: SurveyAnswerValue;
   shown_at: string | null;
   answered_at: string | null;
+  /** What was typed into "Other — please specify" (FB-00029). Stored by
+   *  submit_*_survey_response() (0065) only when Other was chosen. */
+  other_text?: string | null;
+}
+
+/**
+ * Value of the "Other — please specify" option (FB-00029, 0065). Reserved:
+ * the builder refuses it as a normal option value. Kept in step with the
+ * literal in validate_survey_answer_types() / survey_answer_chose_other().
+ */
+export const SURVEY_OTHER_VALUE = "__other__";
+export const OTHER_TEXT_MAX = 200;
+/** Question types that can offer an "Other" option. */
+export const OTHER_CAPABLE_TYPES: readonly SurveyQuestionType[] = ["single_choice", "multiple_choice", "dropdown"];
+
+export function offersOther(q: { type: SurveyQuestionType; config: SurveyQuestionConfig }): boolean {
+  return OTHER_CAPABLE_TYPES.includes(q.type) && q.config.allow_other === true && q.config.display_style !== "likert";
+}
+
+/**
+ * What a respondent sees as one card (one step, in stepped layout): a single
+ * question, or a rating group — consecutive scale questions sharing a
+ * config.group_id (FB-00028). Only *consecutive* rows group; a row the admin
+ * drags away from its group renders as its own one-row group card.
+ */
+export interface SurveyBlock {
+  key: string;
+  group: boolean;
+  questions: SurveyQuestion[];
+}
+
+export function surveyBlocks(questions: SurveyQuestion[]): SurveyBlock[] {
+  const blocks: SurveyBlock[] = [];
+  for (const q of questions) {
+    const groupId = q.type === "scale" ? q.config.group_id : undefined;
+    const last = blocks[blocks.length - 1];
+    if (groupId && last?.group && last.questions[0].config.group_id === groupId) {
+      last.questions.push(q);
+    } else {
+      blocks.push({ key: q.id, group: Boolean(groupId), questions: [q] });
+    }
+  }
+  return blocks;
+}
+
+/** First unanswered required question in a block, or an "Other" chosen
+ *  without its text — what blocks the stepped layout's Next button. */
+export function blockProblem(
+  block: SurveyBlock,
+  values: Record<string, SurveyAnswerValue>,
+  otherTexts: Record<string, string>,
+): string | null {
+  for (const q of block.questions) {
+    const v = values[q.id] ?? null;
+    if (q.required && isAnswerEmpty(v)) {
+      return block.group ? `Please rate "${q.prompt}" to continue.` : "Please answer this question to continue.";
+    }
+    if (offersOther(q) && choseOther(v) && !(otherTexts[q.id] ?? "").trim()) {
+      return `Please say what "${otherLabel(q.config)}" is.`;
+    }
+  }
+  return null;
+}
+
+export function otherLabel(config: SurveyQuestionConfig): string {
+  return config.other_label?.trim() || "Other";
+}
+
+export function choseOther(value: SurveyAnswerValue): boolean {
+  return Array.isArray(value) ? value.includes(SURVEY_OTHER_VALUE) : value === SURVEY_OTHER_VALUE;
 }
 
 /** A fresh, empty answer value matching the question type's answer shape. */
@@ -443,9 +581,13 @@ export function validateAnswers(
   const byId = new Map(answers.map((a) => [a.question_id, a]));
 
   for (const [i, q] of questions.entries()) {
-    const n = i + 1;
+    // Name the question as well as its number — a rating group's rows and a
+    // stepped survey don't show numbers to the respondent.
+    const n = q.prompt ? `${i + 1} ("${q.prompt.length > 60 ? `${q.prompt.slice(0, 57)}…` : q.prompt}")` : `${i + 1}`;
     const spec = questionSpec(q.type);
-    const value = byId.get(q.id)?.value ?? null;
+    const entry = byId.get(q.id);
+    const value = entry?.value ?? null;
+    const other = offersOther(q);
 
     if (isAnswerEmpty(value)) {
       if (q.required) return `Question ${n} needs an answer.`;
@@ -455,6 +597,7 @@ export function validateAnswers(
     if (spec.answerShape === "string[]") {
       const values = Array.isArray(value) ? value : [];
       const validValues = new Set((q.options ?? []).map((o) => o.value));
+      if (other) validValues.add(SURVEY_OTHER_VALUE);
       if (values.some((v) => !validValues.has(v))) {
         return `Question ${n} has an invalid answer.`;
       }
@@ -474,6 +617,7 @@ export function validateAnswers(
       if (typeof value !== "string") return `Question ${n} has an invalid answer.`;
       if (q.options && q.options.length > 0) {
         const validValues = new Set(q.options.map((o) => o.value));
+        if (other) validValues.add(SURVEY_OTHER_VALUE);
         if (!validValues.has(value)) return `Question ${n} has an invalid answer.`;
       } else if (q.config.max_length != null && value.length > q.config.max_length) {
         return `Question ${n} is too long.`;
@@ -485,6 +629,12 @@ export function validateAnswers(
       }
       if (q.config.min != null && value < q.config.min) return `Question ${n} is out of range.`;
       if (q.config.max != null && value > q.config.max) return `Question ${n} is out of range.`;
+    }
+
+    if (other && choseOther(value)) {
+      const text = (entry?.other_text ?? "").trim();
+      if (!text) return `Question ${n}: please say what "${otherLabel(q.config)}" is.`;
+      if (text.length > OTHER_TEXT_MAX) return `Question ${n}: the "${otherLabel(q.config)}" answer is too long.`;
     }
   }
 

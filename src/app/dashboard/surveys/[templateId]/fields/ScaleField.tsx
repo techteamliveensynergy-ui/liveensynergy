@@ -15,14 +15,31 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
   const points: number[] = [];
   for (let v = min; v <= max; v += step) points.push(v);
 
+  // Up to 7 points always fit on one row: each point takes an equal share of
+  // the width (capped at 3.5rem) instead of a fixed 3.5rem that pushed the
+  // 5th point of a 1–5 scale onto a second line on a phone. Longer scales
+  // (e.g. 0–10) keep wrapping.
+  const fits = points.length <= 7;
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div
+      className={fits ? "grid items-start gap-1.5 sm:gap-2" : "flex flex-wrap items-start gap-2"}
+      style={
+        fits
+          ? {
+              gridTemplateColumns: `repeat(${points.length}, minmax(0, 3.5rem))${question.config.na_label ? " auto" : ""}`,
+            }
+          : undefined
+      }
+    >
       {points.map((pt, i) => {
         const isFirst = i === 0;
         const isLast = i === points.length - 1;
         const label = isFirst ? question.config.min_label : isLast ? question.config.max_label : undefined;
         return (
-          <label key={pt} className="flex w-14 flex-col items-center gap-1 text-[0.875em]">
+          <label
+            key={pt}
+            className={`flex flex-col items-center gap-1 text-[0.875em] ${fits ? "min-w-0" : "w-14"}`}
+          >
             <input
               type="radio"
               name={question.id}
@@ -31,7 +48,7 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
               onChange={() => onChange(pt)}
             />
             <span
-              className={`flex h-10 w-10 items-center justify-center rounded-lg font-semibold transition-colors ${
+              className={`flex h-10 w-full max-w-10 items-center justify-center rounded-lg font-semibold transition-colors ${
                 value === pt
                   ? "bg-[var(--color-brand)] text-white"
                   : "bg-[var(--color-mist)] text-[var(--color-ink)] hover:bg-[var(--color-mist)]/70"
@@ -44,7 +61,7 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
                 sits next to the value it describes even once the points
                 wrap onto a second line on a narrow screen. */}
             {label && (
-              <span className="text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))]">
+              <span className="w-full break-words text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))] [hyphens:auto]">
                 {label}
               </span>
             )}

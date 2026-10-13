@@ -24,6 +24,9 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
   firstQuestionProblem,
+  newRatingGroupDrafts,
+  newRatingGroupRow,
+  RATING_GROUP_SHARED_KEYS,
   newLikertQuestionDraft,
   newQuestionDraft,
   questionSpec,
@@ -111,6 +114,29 @@ export function SurveyBuilder({
     insertQuestion(newLikertQuestionDraft());
   }
 
+  function addRatingGroup() {
+    const rows = newRatingGroupDrafts();
+    setQuestions((prev) => [...prev, ...rows]);
+    setSelectedKey(rows[0].key);
+    setDirty(true);
+  }
+
+  /** Adds an item right after the group's last row, so the group stays
+   *  contiguous (only consecutive rows render as one card). */
+  function addGroupRow(key: string) {
+    const from = questions.find((q) => q.key === key);
+    const groupId = from?.config.group_id;
+    if (!from || !groupId) return;
+    const lastIndex = questions.reduce((acc, q, i) => (q.config.group_id === groupId ? i : acc), -1);
+    const count = questions.filter((q) => q.config.group_id === groupId).length;
+    const row = newRatingGroupRow(from, `Item ${count + 1}`);
+    const next = [...questions];
+    next.splice(lastIndex + 1, 0, row);
+    setQuestions(next);
+    setSelectedKey(row.key);
+    setDirty(true);
+  }
+
   function moveQuestion(key: string, direction: -1 | 1) {
     setQuestions((prev) => {
       const index = prev.findIndex((q) => q.key === key);
@@ -134,7 +160,27 @@ export function SurveyBuilder({
   }
 
   function updateQuestion(key: string, patch: Partial<SurveyQuestionDraft>) {
-    setQuestions((prev) => prev.map((q) => (q.key === key ? { ...q, ...patch } : q)));
+    setQuestions((prev) => {
+      const target = prev.find((q) => q.key === key);
+      const groupId = target?.type === "scale" ? target.config.group_id : undefined;
+      return prev.map((q) => {
+        if (q.key === key) return { ...q, ...patch };
+        // A rating group's shared settings and help text follow the row being
+        // edited onto every other row of the same group (FB-00028).
+        if (!groupId || q.config.group_id !== groupId) return q;
+        const sibling = { ...q };
+        if (patch.help_text !== undefined) sibling.help_text = patch.help_text;
+        if (patch.config) {
+          const cfg = { ...q.config } as Record<string, unknown>;
+          for (const k of RATING_GROUP_SHARED_KEYS) {
+            if (k in patch.config) cfg[k] = (patch.config as Record<string, unknown>)[k];
+            else delete cfg[k];
+          }
+          sibling.config = cfg as SurveyQuestionDraft["config"];
+        }
+        return sibling;
+      });
+    });
     setDirty(true);
   }
 
@@ -193,6 +239,7 @@ export function SurveyBuilder({
           <QuestionPalette
             onAdd={(type) => addQuestion(type)}
             onAddLikert={addLikertQuestion}
+            onAddRatingGroup={addRatingGroup}
             disabled={!editable}
           />
 
@@ -219,6 +266,7 @@ export function SurveyBuilder({
             editable={editable}
             layoutMode={layoutMode}
             onChange={(patch) => selected && updateQuestion(selected.key, patch)}
+            onAddGroupRow={() => selected && addGroupRow(selected.key)}
           />
         </div>
 

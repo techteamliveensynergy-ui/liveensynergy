@@ -30,6 +30,8 @@ export function SurveyQuestionCard({
   accentColor,
   cardRef,
   footer,
+  otherText,
+  onOtherTextChange,
 }: {
   question: SurveyQuestion;
   value: SurveyAnswerValue;
@@ -40,6 +42,8 @@ export function SurveyQuestionCard({
   /** Rendered inside the card under the answer — the stepped layout's
    *  "please answer this" message. */
   footer?: ReactNode;
+  otherText?: string;
+  onOtherTextChange?: (text: string) => void;
 }) {
   const promptId = useId();
   const helpId = useId();
@@ -62,10 +66,13 @@ export function SurveyQuestionCard({
           <h2 id={promptId} className="survey-prompt" data-size={size}>
             {q.prompt || spec.label}
             {q.required && (
-              <span className="text-[var(--color-accent)]" aria-label="required">
+              <>
+              <span className="text-[var(--color-accent)]" aria-hidden>
                 {" "}
                 *
               </span>
+              <span className="sr-only"> (required)</span>
+              </>
             )}
           </h2>
           {q.help_text && (
@@ -74,7 +81,13 @@ export function SurveyQuestionCard({
             </p>
           )}
           <div className="survey-answer">
-            <QuestionField question={q} value={value} onChange={onChange} />
+            <QuestionField
+              question={q}
+              value={value}
+              onChange={onChange}
+              otherText={otherText}
+              onOtherTextChange={onOtherTextChange}
+            />
           </div>
           {footer}
         </div>

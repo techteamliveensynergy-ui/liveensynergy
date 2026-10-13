@@ -36,8 +36,8 @@ code; reports where the picture might change the answer are marked.
 
 | Ref | Report | Status |
 |---|---|---|
-| FB-00028 | Rating question with several elements | Designed — `docs/survey-feedback-2026-10-13-plan.md` §3; recommended route needs no database change. |
-| FB-00029 | "Other — please specify" | Designed — same doc, §2; needs one migration. |
+| FB-00028 | Rating question with several elements | **Fixed** — "Rating group" block in the survey builder (`docs/survey-feedback-2026-10-13-plan.md` §3). No database change. |
+| FB-00029 | "Other — please specify" | **Fixed** — migration 0065; brands see the Other count only, admins see the typed text (same doc, §2). |
 | FB-00031 | Live campaign statuses (Published / Completed / Closed reason) | Needs the client's call; see below. |
 
 **FB-00031 proposal:** keep `in_progress` as the stored status but show a

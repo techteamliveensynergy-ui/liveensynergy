@@ -21,8 +21,8 @@ first (logic/branching, "Other — please specify", multi-row rating).
 | 11 | Upload a theme / change the survey card colour | **Done (themes as presets)** | Card colour per survey and per question; six one-click colour themes (Classic, Sunset, Forest, Lavender, Ocean, Midnight) that fill the existing colour fields. Option rows and borders derive from the text colour, so dark cards stay readable. Uploading a theme *file* isn't proposed — see open question Q6. |
 | 12 | Typeform video for visual aesthetics | **Partly** | The video couldn't be opened from the build environment. Applied Typeform's well-known conventions: large prompts, lettered option rows (A/B/C) with a tick, split image/text layouts, slide-style welcome/thank-you. Q7 asks for the specific moments they liked. |
 | 13 | Logic and branching | **Planned** — §1 | Needs a database change (server-side validation must know which questions were skipped) and client decisions. |
-| 14 | "Other — please specify" in single/multi choice | **Planned** — §2 | Needs a database change (the server rejects any answer not in the option list). |
-| 15 | Rating question with several rated elements | **Planned** — §3 | Recommended route needs no database change. |
+| 14 | "Other — please specify" in single/multi choice | **Done** (FB-00029) — §2 | Migration 0065. Single choice, multiple choice, dropdown and image tiles. |
+| 15 | Rating question with several rated elements | **Done** (FB-00028) — §3 | "Rating group" in the builder palette; no database change. |
 | 16 | "Issues with form of surveys" | **Need details** | Too vague to act on. One real bug found and fixed while in here (below). Q8. |
 
 ### Bug fixed along the way
@@ -110,7 +110,23 @@ Display conditions:
 
 **Estimate:** 3–4 days including the migration, the builder UI and walkthrough updates.
 
-## 2. "Other — please specify"
+## 2. "Other — please specify" — built (FB-00029, migration 0065)
+
+As designed below, with these specifics:
+
+- Applies to single choice, multiple choice and dropdown (not Likert, whose
+  options are a fixed agreement scale). The builder toggle sits under the
+  options list, with a label field.
+- The server *ignores* `other_text` sent without Other chosen (stores null)
+  rather than rejecting the submission — a stale draft can't fail a respondent.
+- Brand visibility follows the recommended default: **count only**. The typed
+  text is shown to admins on the results page (latest 10, rejected responses
+  excluded) and in the CSV export as "Other: …" in the question's own column.
+- Not done yet: the typed text does not feed the open-text-quality signal in
+  `score_survey_response()` (needs another migration; low value until surveys
+  use Other heavily).
+
+Original design:
 
 - Builder: a toggle on single choice, multiple choice and dropdown, "Add an
   'Other' option", with an editable label (default "Other").
@@ -136,7 +152,18 @@ Display conditions:
 
 **Estimate:** 1–1.5 days including the migration.
 
-## 3. Rating question with several elements (matrix)
+## 3. Rating question with several elements (matrix) — built (FB-00028)
+
+Built as the recommended rating group. Builder: "Rating group" in the palette
+adds three rows (1–5, Poor → Excellent) under one group question; "+ Add
+another item" adds a row; editing the scale, labels, size, colours, media or
+help text on any row copies it to the whole group. Respondent: one card with
+the group question as heading and one compact scale per row (one step in
+stepped layout; Next names the first unanswered required row). Results and
+export title each row "Group question — Item". Rows are kept together only
+while adjacent — dragging a row away from its group shows it as its own small group card (same group question) where it lands.
+
+Original design:
 
 E.g. "Rate the following: Sound · Lighting · Bar · Staff" on one 1–5 scale.
 
@@ -167,7 +194,8 @@ about 3 days against about 1.
    you" for screen-outs)? Should a screened-out respondent count toward the
    response cap or rewards?
 3. **Other:** may the brand see the typed "Other" answers, or only the count?
-   The recommendation is count only.
+   Shipped as count only; showing the text to brands is a small change if
+   they want it.
 4. **Matrix:** grouped scale questions (recommended), or a true matrix type?
    Do rows need different scales from each other?
 5. **Defaults:** happy for live surveys to switch to the new look (bigger
