@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
-import { computePlatformFee } from "@/lib/constants";
+import { computePlatformFee, EVENT_CATEGORIES } from "@/lib/constants";
 import { useState } from "react";
 import {
   adminUpdateSponsoredEvent,
@@ -27,6 +27,8 @@ export interface EventEditDefaults {
   /** Both live on the linked event listing, not the sponsorship itself. */
   ticket_price_gbp: number | null;
   capacity: number | null;
+  /** The listing's event category (FB-00004). */
+  category: string | null;
   /** Null when the sponsorship has no listing behind it. */
   listing_name: string | null;
 }
@@ -191,6 +193,30 @@ export function EventEditForm({
                 className="input"
                 defaultValue={event.capacity ?? ""}
               />
+            </Field>
+            <Field
+              label="Category"
+              htmlFor="edit-category"
+              hint="The listing's event category, as shown to audiences and sponsors."
+            >
+              <select
+                id="edit-category"
+                name="category"
+                className="select"
+                defaultValue={event.category ?? ""}
+              >
+                <option value="">Not set</option>
+                {/* Keep a stored value that isn't in today's list (an older
+                    category) selectable, so saving doesn't silently clear it. */}
+                {event.category && !(EVENT_CATEGORIES as readonly string[]).includes(event.category) && (
+                  <option value={event.category}>{event.category}</option>
+                )}
+                {EVENT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </Field>
           </>
         )}

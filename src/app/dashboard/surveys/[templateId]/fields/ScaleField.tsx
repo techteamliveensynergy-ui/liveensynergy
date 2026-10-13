@@ -44,7 +44,7 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
                 sits next to the value it describes even once the points
                 wrap onto a second line on a narrow screen. */}
             {label && (
-              <span className="text-center text-[0.7em] leading-tight text-[var(--color-ink-soft)]">
+              <span className="text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))]">
                 {label}
               </span>
             )}

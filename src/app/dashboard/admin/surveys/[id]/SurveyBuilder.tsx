@@ -23,6 +23,7 @@ import {
 import { ErrorBanner } from "@/components/onboarding/parts";
 import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
+  firstQuestionProblem,
   newLikertQuestionDraft,
   newQuestionDraft,
   questionSpec,
@@ -70,6 +71,9 @@ export function SurveyBuilder({
     initialQuestions[0]?.key ?? null,
   );
   const [dirty, setDirty] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  // A pre-save warning goes stale the moment the admin edits anything.
+  useEffect(() => setClientError(null), [questions]);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
   const [state, formAction] = useActionState<SurveyState, FormData>(
     saveSurveyQuestions,
@@ -175,7 +179,7 @@ export function SurveyBuilder({
 
   return (
     <div>
-      <ErrorBanner error={state.error} />
+      <ErrorBanner error={clientError ?? state.error} />
 
       <DndContext
         id={dndId}
@@ -206,7 +210,11 @@ export function SurveyBuilder({
             />
           </SortableContext>
 
+          {/* Keyed per question so an upload's "Uploading…" state (and its
+              disabled file picker) never carries over to the next question
+              the admin opens — FB-00024. */}
           <QuestionInspector
+            key={selected?.key ?? "none"}
             question={selected}
             editable={editable}
             layoutMode={layoutMode}
@@ -235,7 +243,23 @@ export function SurveyBuilder({
       </div>
 
       {editable && (
-        <form action={formAction} className="mt-6 flex items-center justify-end gap-3">
+        <form
+          action={formAction}
+          onSubmit={(e) => {
+            // Catch an invalid question here and open it, rather than a
+            // round trip that returns "Question N: …" with nothing on screen
+            // pointing at question N (FB-00027).
+            const problem = firstQuestionProblem(questions);
+            if (problem) {
+              e.preventDefault();
+              setClientError(problem.message);
+              setSelectedKey(problem.key);
+              return;
+            }
+            setClientError(null);
+          }}
+          className="mt-6 flex flex-wrap items-center justify-end gap-3"
+        >
           <input type="hidden" name="template_id" value={templateId} />
           <input
             type="hidden"

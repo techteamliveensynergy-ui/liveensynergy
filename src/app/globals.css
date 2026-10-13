@@ -169,6 +169,11 @@ h4,
 .survey-card {
   border-radius: 1rem;
   overflow: clip;
+  /* Re-resolve the body colour here: a question's own body_text_color only
+     redefines the variable on this card, and `color` inherited from
+     .survey-scope was already computed from the template's value — so
+     without this line a per-question body colour changed nothing (FB-00025). */
+  color: var(--survey-body-color, inherit);
 }
 
 /* Question prompt, sized by question_font_size / config.question_size (0062).

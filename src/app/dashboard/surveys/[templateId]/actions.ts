@@ -6,7 +6,12 @@ import { isSurveyClosedError } from "@/lib/survey-capacity";
 import { requireRole } from "@/lib/profile";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD, SURVEY_RATE_LIMITS } from "@/lib/survey-abuse-constants";
-import { callerIpHash, screenSurveySubmission } from "@/lib/survey-abuse";
+import {
+  BOT_SCREEN_UNAVAILABLE_MESSAGE,
+  botScreenUnavailable,
+  callerIpHash,
+  screenSurveySubmission,
+} from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
 
 export interface SurveyResponseState {
@@ -57,6 +62,20 @@ export async function submitSurveyResponse(
     });
     revalidatePath("/dashboard/participations");
     redirect("/dashboard/participations?notice=survey-submitted");
+  }
+
+  // A deployment missing its bot-check keys can't accept anything — say so
+  // plainly, log it once for the audit trail, and don't charge the attempt
+  // to the respondent's rate limit.
+  if (botScreenUnavailable()) {
+    console.error("[survey] Turnstile keys missing in production — submissions refused");
+    await supabase.rpc("log_survey_attempt", {
+      p_template_id: templateId,
+      p_ip_hash: ipHash,
+      p_outcome: "captcha_missing",
+      p_detail: "unconfigured",
+    });
+    return { error: BOT_SCREEN_UNAVAILABLE_MESSAGE };
   }
 
   // 2. Rate limit — per-account and per-IP, each over a short burst window
@@ -113,7 +132,10 @@ export async function submitSurveyResponse(
       p_outcome: botScreen.code === "missing" ? "captcha_missing" : "captcha_failed",
       p_detail: botScreen.detail,
     });
-    return { error: "We couldn't verify your browser. Please refresh the page and try again." };
+    return {
+      error:
+        "We couldn't verify your browser. Your answers are still here — wait a few seconds and press Submit again.",
+    };
   }
 
   const { data, error } = await supabase.rpc("submit_survey_response", {
