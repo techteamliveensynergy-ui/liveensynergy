@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Field } from "@/components/ui/Field";
-import { QuestionMedia } from "@/components/surveys/QuestionMedia";
-import { QuestionField } from "@/app/dashboard/surveys/[templateId]/fields";
-import { isAnswerEmpty, questionSpec } from "@/lib/surveys";
-import { accentColorVars, backgroundImageStyle, questionTypographyStyle } from "@/lib/survey-media";
+import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { isAnswerEmpty } from "@/lib/surveys";
+import { accentColorVars, backgroundImageStyle, type SurveyAppearance } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion } from "@/lib/types";
 
 /**
@@ -24,6 +22,7 @@ export function SteppedQuestions({
   isPending,
   footer,
   accentColor,
+  appearance,
   submitLabel = "Submit survey",
 }: {
   questions: SurveyQuestion[];
@@ -36,6 +35,7 @@ export function SteppedQuestions({
   isPending: boolean;
   footer?: ReactNode;
   accentColor?: string | null;
+  appearance?: SurveyAppearance;
   submitLabel?: string;
 }) {
   const [index, setIndex] = useState(0);
@@ -55,7 +55,6 @@ export function SteppedQuestions({
 
   if (!q) return null;
 
-  const spec = questionSpec(q.type);
   const isFirst = index === 0;
   const isLast = index === questions.length - 1;
 
@@ -80,10 +79,13 @@ export function SteppedQuestions({
   // set before the merge (see the note on it in SurveyQuestionConfig).
   const backgroundUrl =
     q.config.media_position === "background" ? q.config.media_url : q.config.background_image_url;
-  const stepBackground = backgroundImageStyle(backgroundUrl);
+  const stepBackground = backgroundImageStyle(backgroundUrl, appearance?.backgroundImageOpacity);
 
   return (
-    <div className={`space-y-4 ${stepBackground ? "p-4" : ""}`} style={stepBackground}>
+    <div
+      className={`space-y-4 ${stepBackground ? "p-4" : ""}`}
+      style={{ ...stepBackground, ...accentColorVars(accentColor) }}
+    >
       <div className="flex items-center gap-3 text-[0.75em] text-[var(--color-ink-soft)]">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/10">
           <div
@@ -96,23 +98,20 @@ export function SteppedQuestions({
         </span>
       </div>
 
-      <div className="card p-6 sm:p-10" data-question-id={q.id} style={questionTypographyStyle(q.config)}>
-        <QuestionMedia config={q.config}>
-          <Field label={q.prompt || spec.label} required={q.required} hint={q.help_text ?? undefined}>
-            <QuestionField
-              question={q}
-              value={values[q.id] ?? null}
-              onChange={(v) => {
-                setBlockedMessage(null);
-                onChange(q.id, v);
-              }}
-            />
-          </Field>
-        </QuestionMedia>
-        {blockedMessage && (
-          <p className="mt-2 text-[0.875em] text-[var(--color-accent)]">{blockedMessage}</p>
-        )}
-      </div>
+      <SurveyQuestionCard
+        key={q.id}
+        question={q}
+        value={values[q.id] ?? null}
+        onChange={(v) => {
+          setBlockedMessage(null);
+          onChange(q.id, v);
+        }}
+        appearance={appearance}
+        accentColor={accentColor}
+        footer={
+          blockedMessage && <p className="mt-3 text-[0.875em] text-[var(--color-accent)]">{blockedMessage}</p>
+        }
+      />
 
       {footer}
 

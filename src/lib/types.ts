@@ -653,6 +653,10 @@ export type SurveyTemplateKind = "pre_event" | "post_event";
 export type SurveyTemplateStatus = "draft" | "published" | "archived";
 export type SurveyTemplateLayoutMode = "single_page" | "stepped";
 export type SurveyMediaType = "image" | "video";
+/** Named prompt sizes (0062) — mapped to em sizes by `.survey-prompt` in globals.css. */
+export type SurveyQuestionFontSize = "sm" | "md" | "lg" | "xl";
+/** "landscape" = a normal 16:9 video, "portrait" = a 9:16 reel/short (0062). */
+export type SurveyVideoFormat = "landscape" | "portrait";
 /** "background" renders media_url as a decorative backdrop behind the whole
  *  step (stepped layout only) instead of inline content — see the note on
  *  SurveyQuestionConfig.background_image_url below. */
@@ -738,6 +742,18 @@ export interface SurveyQuestionConfig {
   /** Question-level override of SurveyTemplate.body_text_color, scoped to
    *  just this question's help text/options. 23 Sep client meeting. */
   body_text_color?: string;
+  /** Question-level override of SurveyTemplate.question_font_size (13 Oct
+   *  client notes). Unset inherits the template's size. */
+  question_size?: SurveyQuestionFontSize;
+  /** Question-level override of SurveyTemplate.card_background_color. */
+  card_background_color?: string;
+  /** Video only — "portrait" for a reel/short, "landscape" for a normal
+   *  video. Unset = detected from the link (videoFormatFor() in
+   *  src/lib/survey-media.ts). */
+  video_format?: SurveyVideoFormat;
+  /** Image only — "cover" (default) fills the media box edge to edge and
+   *  crops; "contain" shows the whole image, letterboxed in the card colour. */
+  media_fit?: "cover" | "contain";
 }
 
 export interface SurveyTemplate {
@@ -801,6 +817,15 @@ export interface SurveyTemplate {
    *  question can override this for itself via
    *  SurveyQuestionConfig.body_text_color. */
   body_text_color: string | null;
+  /** Default prompt size for every question (0062). A question can override
+   *  it via SurveyQuestionConfig.question_size. */
+  question_font_size: SurveyQuestionFontSize;
+  /** Hex fill for the question, welcome and thank-you cards (0062). Null = white. */
+  card_background_color: string | null;
+  /** 0-100: how visible a background image is behind the cards (0062). */
+  background_image_opacity: number;
+  /** Shape of the single-page cover video (0062). Null = detect from the link. */
+  cover_video_format: SurveyVideoFormat | null;
   created_by: string | null;
   published_at: string | null;
   created_at: string;

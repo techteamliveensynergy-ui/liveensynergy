@@ -160,6 +160,103 @@ h4,
   color: var(--survey-body-color, inherit);
 }
 
+/* A respondent-facing question card (SurveyQuestionCard). No padding of its
+   own — QuestionMedia pads only the text column so media can run to the
+   card's edges — and a slightly tighter corner than .card (13 Oct notes).
+   overflow: clip, not hidden: hidden would make the card a scroll container,
+   whose automatic minimum height is 0 — a slide card (aspect-ratio 16:9)
+   would then clip a long welcome message instead of growing to fit it. */
+.survey-card {
+  border-radius: 1rem;
+  overflow: clip;
+}
+
+/* Question prompt, sized by question_font_size / config.question_size (0062).
+   'md' (the default) is deliberately much larger than the old 0.85em label.
+   em-based so font_scale still multiplies it; the two big steps shrink on a
+   phone so a long prompt doesn't wrap into a wall. */
+.survey-prompt {
+  font-size: 1.375em;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--survey-question-color, var(--color-ink));
+}
+.survey-prompt[data-size="sm"] {
+  font-size: 1.125em;
+}
+.survey-prompt[data-size="lg"] {
+  font-size: 1.5em;
+}
+.survey-prompt[data-size="xl"] {
+  font-size: 1.75em;
+}
+@media (min-width: 640px) {
+  .survey-prompt[data-size="lg"] {
+    font-size: 1.75em;
+  }
+  .survey-prompt[data-size="xl"] {
+    font-size: 2.25em;
+  }
+}
+/* Help text sits directly under the prompt, before the options. */
+.survey-help {
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--survey-body-color, var(--color-ink-soft));
+}
+/* The gap between the question and its answer options. */
+.survey-answer {
+  margin-top: 1.75em;
+}
+
+/* Choice rows (single/multiple choice, yes/no, attention check) — a bordered
+   tile with a letter key, Typeform-style, instead of a bare radio. The real
+   input is visually hidden inside the label, so focus is drawn on the row. */
+.survey-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  /* currentColor-based, not fixed greys, so a dark card theme (light body
+     text) still gets visible borders and readable labels. */
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+  padding: 0.7em 0.9em;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease;
+}
+.survey-option:hover {
+  border-color: var(--color-brand);
+}
+.survey-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.survey-option[data-selected="true"] {
+  border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+.survey-option-key {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.6em;
+  height: 1.6em;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 0.35rem;
+  font-size: 0.8em;
+  font-weight: 700;
+}
+.survey-option[data-selected="true"] .survey-option-key {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: #fff;
+}
+
 /* Layered so Tailwind utilities can override these defaults. Unlayered CSS beats
    anything in @layer regardless of specificity, so while these lived outside a
    layer `width: 100%` silently defeated every `w-*`/`flex-1` utility written

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SurveyQuestionOption } from "@/lib/types";
 import { uploadQuestionOptionImage } from "../actions";
+import { RECOMMENDED_IMAGE_SIZES } from "@/lib/survey-media";
 
 function slugify(label: string, index: number): string {
   const base = label
@@ -152,6 +153,11 @@ export function OptionListEditor({
         ))}
       </div>
       {uploadError && <p className="mt-2 text-sm text-[var(--color-accent)]">{uploadError}</p>}
+      {options.some((o) => o.image_url) && (
+        <p className="field-hint">
+          Option images show as square tiles — best size {RECOMMENDED_IMAGE_SIZES.option}.
+        </p>
+      )}
       {editable && (
         <button type="button" className="btn btn-ghost mt-2 text-sm" onClick={add}>
           + Add option
