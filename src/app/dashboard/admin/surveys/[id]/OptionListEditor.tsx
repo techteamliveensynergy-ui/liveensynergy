@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SurveyQuestionOption } from "@/lib/types";
 import { uploadQuestionOptionImage } from "../actions";
+import { uploadImageFile } from "@/lib/image-upload";
 import { RECOMMENDED_IMAGE_SIZES } from "@/lib/survey-media";
 
 function slugify(label: string, index: number): string {
@@ -44,9 +45,7 @@ export function OptionListEditor({
     if (!file) return;
     setUploadingIndex(index);
     setUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadQuestionOptionImage(form);
+    const result = await uploadImageFile(file, uploadQuestionOptionImage);
     setUploadingIndex(null);
     if (result.error) {
       setUploadError(result.error);

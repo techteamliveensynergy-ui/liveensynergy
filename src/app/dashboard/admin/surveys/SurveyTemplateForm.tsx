@@ -14,6 +14,7 @@ import type {
   SurveyVideoFormat,
 } from "@/lib/types";
 import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
+import { uploadImageFile } from "@/lib/image-upload";
 import {
   DEFAULT_BACKGROUND_IMAGE_OPACITY,
   QUESTION_FONT_SIZE_OPTIONS,
@@ -105,9 +106,7 @@ export function SurveyTemplateForm({
     if (!file) return;
     setCoverUploading(true);
     setCoverUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadSurveyCoverMedia(form);
+    const result = await uploadImageFile(file, uploadSurveyCoverMedia);
     setCoverUploading(false);
     if (result.error) {
       setCoverUploadError(result.error);
@@ -120,9 +119,7 @@ export function SurveyTemplateForm({
     if (!file) return;
     setLogoUploading(true);
     setLogoUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadSurveyLogo(form);
+    const result = await uploadImageFile(file, uploadSurveyLogo);
     setLogoUploading(false);
     if (result.error) {
       setLogoUploadError(result.error);
@@ -135,9 +132,7 @@ export function SurveyTemplateForm({
     if (!file) return;
     setBgUploading(true);
     setBgUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadSurveyBackground(form);
+    const result = await uploadImageFile(file, uploadSurveyBackground);
     setBgUploading(false);
     if (result.error) {
       setBgUploadError(result.error);

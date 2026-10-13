@@ -119,7 +119,7 @@ export default async function AdminSponsoredDetailPage({
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp, capacity)",
+      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp, capacity, category)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -156,6 +156,7 @@ export default async function AdminSponsoredDetailPage({
         name: string;
         ticket_price_gbp: number | null;
         capacity: number | null;
+        category: string | null;
       } | null;
     }>();
   if (!event) notFound();
@@ -572,6 +573,7 @@ export default async function AdminSponsoredDetailPage({
                 attendance_method: event.attendance_method,
                 ticket_price_gbp: event.event_listings?.ticket_price_gbp ?? null,
                 capacity: event.event_listings?.capacity ?? null,
+                category: event.event_listings?.category ?? null,
                 listing_name: event.event_listings?.name ?? null,
               }}
             />

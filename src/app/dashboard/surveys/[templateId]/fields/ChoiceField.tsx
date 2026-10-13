@@ -88,7 +88,7 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
               >
                 {style.emoji}
               </span>
-              <span className="w-full break-words leading-tight text-[var(--color-ink-soft)] [hyphens:auto]">{o.label}</span>
+              <span className="w-full break-words leading-tight text-[var(--survey-body-color,var(--color-ink-soft))] [hyphens:auto]">{o.label}</span>
             </label>
           );
         })}

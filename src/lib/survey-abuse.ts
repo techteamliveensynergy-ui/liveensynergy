@@ -47,6 +47,22 @@ async function callerIpRaw(): Promise<string | null> {
   return callerIp(await headers());
 }
 
+/**
+ * True when the bot screen can't run at all in production (Turnstile keys
+ * missing from the deployment) — screenSurveySubmission() would refuse every
+ * submission. The actions check this BEFORE the rate limiter so a server
+ * misconfiguration is reported as what it is and never charged against the
+ * respondent's attempt allowance (FB-00033/34, 12 Oct: keys were unset in
+ * production, every submit failed as "couldn't verify your browser", and the
+ * retries then tripped the rate limit).
+ */
+export function botScreenUnavailable(): boolean {
+  return !turnstileConfigured() && process.env.VERCEL_ENV === "production";
+}
+
+export const BOT_SCREEN_UNAVAILABLE_MESSAGE =
+  "Survey submissions are temporarily unavailable on our side — not a problem with your answers or your browser. Please keep this page open and try again a little later.";
+
 export type BotScreenResult =
   | { ok: true }
   | { ok: false; code: "missing" | "failed"; detail: string | null };

@@ -509,6 +509,8 @@ export async function adminUpdateSponsoredEvent(
       .update({
         ticket_price_gbp: ticketPrice,
         capacity: capacity == null ? null : Math.round(capacity),
+        // FB-00004 — category is the listing's too.
+        category: String(formData.get("category") ?? "").trim() || null,
       })
       .eq("id", current.listing_id);
     if (listingError) return { error: listingError.message };

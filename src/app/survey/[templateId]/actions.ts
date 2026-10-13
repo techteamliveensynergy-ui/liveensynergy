@@ -9,7 +9,12 @@ import { notify } from "@/lib/notifications";
 import { TERMS_VERSION } from "@/lib/terms";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD, SURVEY_RATE_LIMITS } from "@/lib/survey-abuse-constants";
-import { callerIpHash, screenSurveySubmission } from "@/lib/survey-abuse";
+import {
+  BOT_SCREEN_UNAVAILABLE_MESSAGE,
+  botScreenUnavailable,
+  callerIpHash,
+  screenSurveySubmission,
+} from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
 
 function siteUrl() {
@@ -67,6 +72,20 @@ export async function submitPublicSurveyResponse(
     return { success: true };
   }
 
+  // A deployment missing its bot-check keys can't accept anything — say so
+  // plainly, log it once for the audit trail, and don't charge the attempt
+  // to the respondent's rate limit.
+  if (botScreenUnavailable()) {
+    console.error("[survey] Turnstile keys missing in production — submissions refused");
+    await supabase.rpc("log_survey_attempt", {
+      p_template_id: templateId,
+      p_ip_hash: ipHash,
+      p_outcome: "captcha_missing",
+      p_detail: "unconfigured",
+    });
+    return { error: BOT_SCREEN_UNAVAILABLE_MESSAGE };
+  }
+
   // 2. Rate limit — per-account (if signed in) and per-IP.
   const { data: gateData, error: gateError } = await supabase.rpc("survey_submission_gate", {
     p_template_id: templateId,
@@ -114,7 +133,10 @@ export async function submitPublicSurveyResponse(
       p_outcome: botScreen.code === "missing" ? "captcha_missing" : "captcha_failed",
       p_detail: botScreen.detail,
     });
-    return { error: "We couldn't verify your browser. Please refresh the page and try again." };
+    return {
+      error:
+        "We couldn't verify your browser. Your answers are still here — wait a few seconds and press Submit again.",
+    };
   }
 
   const phoneCountryCode = String(formData.get("phone_country_code") ?? "").trim();
@@ -250,6 +272,12 @@ export interface SurveyAccountState {
    *  account rather than block. A successful new-account call never reaches
    *  this — it redirect()s straight back into the authenticated survey. */
   alreadyRegistered?: boolean;
+  /** The account was created and signed in — the form moves straight on to
+   *  the questions and refreshes its server props (FB-00032). Returned
+   *  instead of redirect()ing back to this same URL: a same-page navigation
+   *  keeps the client form mounted with its old state, so the button sat on
+   *  "Creating your account…" and the questions never appeared. */
+  created?: boolean;
 }
 
 /**
@@ -275,9 +303,17 @@ export async function startSurveyAccount(
   const eventReference = String(formData.get("event_reference") ?? "").trim() || null;
   const consentAccepted = formData.get("consent_accepted") === "on";
   const residencyConfirmed = formData.get("residency_confirmed") === "on";
+  const phoneCountryCode = String(formData.get("phone_country_code") ?? "").trim() || "+44";
+  const phoneLocal = String(formData.get("phone") ?? "").replace(/[^\d]/g, "");
 
   if (!templateId || !firstName || !lastName || !email) {
     return { error: "Please fill in your name and email." };
+  }
+  // Mobile number is asked for here too (FB-00032) — an audience account is
+  // one person, one number (phone_in_use, 0023), and without it a survey
+  // sign-up skipped that rule until onboarding much later.
+  if (phoneLocal.length < 7 || phoneLocal.length > 15) {
+    return { error: "Please enter a valid mobile number." };
   }
   if (!consentAccepted || !residencyConfirmed) {
     return { error: "Please confirm residency and accept the Terms & Conditions first." };
@@ -308,6 +344,17 @@ export async function startSurveyAccount(
     return { error: "Too many attempts. Please wait a few minutes and try again." };
   }
 
+  const { data: phoneTaken } = await supabase.rpc("phone_in_use", {
+    p_phone: `${phoneCountryCode}${phoneLocal}`,
+    p_profile_id: null,
+  });
+  if (phoneTaken === true) {
+    return {
+      error:
+        "That mobile number is already registered to another audience account. If it's yours, sign in instead — each audience member needs their own number.",
+    };
+  }
+
   // Never returned to the client, never logged — spent immediately below to
   // mint a session, then never needed again (the respondent sets their own
   // password from the emailed reset link).
@@ -324,6 +371,9 @@ export async function startSurveyAccount(
       terms_accepted_at: new Date().toISOString(),
       terms_version: TERMS_VERSION,
       survey_account: true,
+      // Pre-fills audience onboarding later (src/app/onboarding/audience).
+      phone_country_code: phoneCountryCode,
+      phone: phoneLocal,
       ...(eventReference ? { pending_event_reference: eventReference } : {}),
     },
   });
@@ -366,5 +416,5 @@ export async function startSurveyAccount(
     .catch((err) => console.error("[startSurveyAccount] reset email failed", err));
 
   revalidatePath(`/survey/${templateId}`);
-  redirect(`/survey/${templateId}`);
+  return { created: true };
 }

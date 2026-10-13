@@ -13,6 +13,7 @@ import {
 import type { SurveyMediaPosition, SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
 import { uploadQuestionMedia } from "../actions";
+import { uploadImageFile } from "@/lib/image-upload";
 
 const NUMERIC_CONFIG_KEYS = new Set([
   "min",
@@ -69,9 +70,7 @@ export function QuestionInspector({
     if (!file) return;
     setUploading(true);
     setUploadError(null);
-    const form = new FormData();
-    form.set("file", file);
-    const result = await uploadQuestionMedia(form);
+    const result = await uploadImageFile(file, uploadQuestionMedia);
     setUploading(false);
     if (result.error) {
       setUploadError(result.error);

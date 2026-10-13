@@ -11,6 +11,8 @@ interface DragHandleProps {
 
 function CardBody({
   question,
+  number,
+  problem,
   selected,
   editable,
   dragHandleProps,
@@ -19,6 +21,9 @@ function CardBody({
   onRemove,
 }: {
   question: SurveyQuestionDraft;
+  /** 1-based position — the same number save errors quote (FB-00027). */
+  number?: number;
+  problem?: string | null;
   selected: boolean;
   editable: boolean;
   dragHandleProps?: DragHandleProps;
@@ -29,7 +34,9 @@ function CardBody({
   const spec = questionSpec(question.type);
   return (
     <div
-      className={`card flex items-center gap-3 p-3 ${selected ? "ring-2 ring-[var(--color-brand)]" : ""}`}
+      className={`card flex items-center gap-3 p-3 ${
+        selected ? "ring-2 ring-[var(--color-brand)]" : problem ? "ring-1 ring-[var(--color-accent)]/60" : ""
+      }`}
     >
       {editable && (
         <button
@@ -42,12 +49,18 @@ function CardBody({
           ⠿
         </button>
       )}
-      <button type="button" className="flex-1 text-left" onClick={onSelect}>
+      <button type="button" className="min-w-0 flex-1 text-left" onClick={onSelect}>
+        {number != null && (
+          <span className="mr-2 text-xs font-semibold tabular-nums text-[var(--color-ink-soft)]">Q{number}</span>
+        )}
         <span className="mr-2" aria-hidden>
           {spec.icon}
         </span>
         <span className="font-medium">{question.prompt || spec.label}</span>
         {question.required && <span className="chip ml-2">Required</span>}
+        {problem && (
+          <span className="mt-1 block text-xs font-semibold text-[var(--color-accent)]">⚠ {problem}</span>
+        )}
       </button>
       {editable && (
         <div className="flex items-center gap-1">
@@ -97,6 +110,8 @@ export function QuestionCardPreview({ question }: { question: SurveyQuestionDraf
 
 export function SortableQuestionCard({
   question,
+  number,
+  problem,
   selected,
   editable,
   onSelect,
@@ -104,6 +119,8 @@ export function SortableQuestionCard({
   onRemove,
 }: {
   question: SurveyQuestionDraft;
+  number?: number;
+  problem?: string | null;
   selected: boolean;
   editable: boolean;
   onSelect: () => void;
@@ -123,6 +140,8 @@ export function SortableQuestionCard({
     <div ref={setNodeRef} style={style}>
       <CardBody
         question={question}
+        number={number}
+        problem={problem}
         selected={selected}
         editable={editable}
         dragHandleProps={{ attributes, listeners }}

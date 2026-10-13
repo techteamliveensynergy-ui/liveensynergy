@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Field } from "@/components/ui/Field";
+import { COUNTRY_CODES } from "@/components/ui/PhoneInput";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
@@ -191,12 +193,21 @@ export function PublicSurveyForm({
   const [contactFirstName, setContactFirstName] = useState(prefill?.firstName ?? "");
   const [contactLastName, setContactLastName] = useState(prefill?.lastName ?? "");
   const [contactEmail, setContactEmail] = useState(prefill?.email ?? "");
+  const [contactPhoneCode, setContactPhoneCode] = useState("+44");
+  const [contactPhone, setContactPhone] = useState("");
   const [accountState, setAccountState] = useState<SurveyAccountState>({});
   const [accountPending, setAccountPending] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const router = useRouter();
 
   async function handleCreateAccount() {
     if (!contactFirstName.trim() || !contactLastName.trim() || !contactEmail.trim()) {
       setAccountState({ error: "Please fill in your name and email." });
+      return;
+    }
+    const digits = contactPhone.replace(/[^\d]/g, "");
+    if (digits.length < 7 || digits.length > 15) {
+      setAccountState({ error: "Please enter a valid mobile number." });
       return;
     }
     setAccountPending(true);
@@ -206,22 +217,25 @@ export function PublicSurveyForm({
     form.set("first_name", contactFirstName);
     form.set("last_name", contactLastName);
     form.set("email", contactEmail);
+    form.set("phone_country_code", contactPhoneCode);
+    form.set("phone", contactPhone);
     form.set("consent_accepted", consent.consentAccepted ? "on" : "");
     form.set("residency_confirmed", consent.residencyConfirmed ? "on" : "");
     if (event) form.set("event_reference", event.reference);
     try {
-      // A successful call redirect()s — Next re-throws that internally as a
-      // special digest-tagged error rather than resolving normally, so it
-      // must be re-thrown here rather than swallowed as a real failure (see
-      // the catch below). Only the "already registered" / validation-error
-      // branches actually return a state to show.
       const result = await startSurveyAccount({}, form);
       setAccountPending(false);
-      setAccountState(result);
-    } catch (err) {
-      if (typeof (err as { digest?: string })?.digest === "string" && (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")) {
-        throw err;
+      if (result.created) {
+        // Straight on to the first question (FB-00032), then pull the
+        // signed-in server props (needsPassword etc.) without remounting —
+        // a remount would reset this form back to the welcome screen.
+        setAccountCreated(true);
+        setStage("questions");
+        router.refresh();
+        return;
       }
+      setAccountState(result);
+    } catch {
       setAccountPending(false);
       setAccountState({
         error: "Something went wrong creating your account. Please try again in a moment.",
@@ -411,7 +425,37 @@ export function PublicSurveyForm({
                     onChange={(e) => setContactEmail(e.target.value)}
                   />
                 </Field>
+                <Field label="Mobile number" htmlFor="contact_phone" required>
+                  <div className="flex gap-2">
+                    <select
+                      aria-label="Country code"
+                      className="select w-[8rem] shrink-0"
+                      value={contactPhoneCode}
+                      onChange={(e) => setContactPhoneCode(e.target.value)}
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      id="contact_phone"
+                      type="tel"
+                      className="input flex-1"
+                      required
+                      placeholder="7911 123456"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                    />
+                  </div>
+                </Field>
               </div>
+              <p className="text-xs text-[var(--color-ink-soft)]">
+                We&apos;ll create your Live·En·Synergy account so your answers, events and rewards stay
+                together. You&apos;ll go straight on to the questions — we&apos;ll also email you a link to set
+                your password (it arrives titled &ldquo;Reset your password&rdquo;).
+              </p>
               <button
                 type="button"
                 className="btn btn-primary w-full"
@@ -462,7 +506,20 @@ export function PublicSurveyForm({
       <input type="hidden" name="first_name" value={contactFirstName} readOnly />
       <input type="hidden" name="last_name" value={contactLastName} readOnly />
       <input type="hidden" name="email" value={contactEmail} readOnly />
-      {prefill?.phone && <input type="hidden" name="phone" value={prefill.phone} readOnly />}
+      {prefill?.phone ? (
+        <input type="hidden" name="phone" value={prefill.phone} readOnly />
+      ) : contactPhone ? (
+        <>
+          <input type="hidden" name="phone_country_code" value={contactPhoneCode} readOnly />
+          <input type="hidden" name="phone" value={contactPhone.replace(/[^\d]/g, "")} readOnly />
+        </>
+      ) : null}
+      {accountCreated && (
+        <p className="rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm">
+          ✓ Your account is set up. We&apos;ve emailed <strong>{contactEmail}</strong> a link to set your
+          password — use it whenever you like.
+        </p>
+      )}
       <input
         type="hidden"
         name="consent_accepted"

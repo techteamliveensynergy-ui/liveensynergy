@@ -1,5 +1,5 @@
 /** Common dialling codes, UK first since most Live·En·Synergy audience members are UK-based. */
-const COUNTRY_CODES = [
+export const COUNTRY_CODES = [
   { code: "+44", label: "🇬🇧 +44 UK" },
   { code: "+353", label: "🇮🇪 +353 Ireland" },
   { code: "+1", label: "🇺🇸 +1 US/Canada" },

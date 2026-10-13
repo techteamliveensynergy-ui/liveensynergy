@@ -333,52 +333,72 @@ export function questionRowToDraft(
 }
 
 /**
+ * What's wrong with one question draft, or null when it's valid — without the
+ * "Question N" prefix, so the builder can show it on the card itself.
+ */
+export function questionProblem(d: SurveyQuestionDraft): string | null {
+  const spec = SURVEY_QUESTION_TYPES.find((s) => s.type === d.type);
+  if (!spec) return "Unknown question type.";
+  if (spec.hasPrompt && !d.prompt.trim()) {
+    return "Prompt is required.";
+  }
+  if (spec.hasOptions) {
+    const options = d.options.filter((o) => o.label.trim() && o.value.trim());
+    if (options.length < 2) {
+      return "Needs at least two options.";
+    }
+    const values = options.map((o) => o.value);
+    if (new Set(values).size !== values.length) {
+      return "Option values must be unique.";
+    }
+  }
+  if (d.type === "attention_check" && !d.config.expected_answer) {
+    return "Set the expected answer for the attention check.";
+  }
+  if (d.type === "scale" || d.type === "number") {
+    const min = d.config.min ?? (d.type === "scale" ? 1 : 0);
+    const max = d.config.max ?? (d.type === "scale" ? 5 : 10);
+    const step = d.config.step ?? 1;
+    if (max <= min) {
+      return "Maximum must be greater than minimum.";
+    }
+    if (step <= 0 || (max - min) % step !== 0) {
+      return "Step must divide evenly into the range (e.g. min 1, max 10, step 1).";
+    }
+  }
+  if (d.type === "hidden_field") {
+    const source = d.config.profile_field;
+    if (!source || !HIDDEN_FIELD_SOURCES.some((s) => s.value === source)) {
+      return "Pick which profile field this hidden field maps to.";
+    }
+  }
+  return null;
+}
+
+/** The first invalid draft, with its position — the builder selects it. */
+export function firstQuestionProblem(
+  drafts: SurveyQuestionDraft[],
+): { index: number; key: string; message: string } | null {
+  for (const [i, d] of drafts.entries()) {
+    const problem = questionProblem(d);
+    if (problem) {
+      const label = SURVEY_QUESTION_TYPES.find((s) => s.type === d.type)?.label ?? "question";
+      // Names the type as well as the number (FB-00027): "Question 4: prompt
+      // is required" alone read as being about the question just edited.
+      return { index: i, key: d.key, message: `Question ${i + 1} (${label}): ${problem}` };
+    }
+  }
+  return null;
+}
+
+/**
  * Shared by the client (inline warnings) and the server action (authoritative
  * — the save payload is client-authored JSON, so the server must not trust
  * it as-is). Returns the first problem found, or null if the draft is valid.
  */
 export function validateQuestions(drafts: SurveyQuestionDraft[]): string | null {
   if (drafts.length === 0) return "Add at least one question.";
-
-  for (const [i, d] of drafts.entries()) {
-    const n = i + 1;
-    const spec = SURVEY_QUESTION_TYPES.find((s) => s.type === d.type);
-    if (!spec) return `Question ${n}: unknown question type.`;
-    if (spec.hasPrompt && !d.prompt.trim()) {
-      return `Question ${n}: prompt is required.`;
-    }
-    if (spec.hasOptions) {
-      const options = d.options.filter((o) => o.label.trim() && o.value.trim());
-      if (options.length < 2) {
-        return `Question ${n}: needs at least two options.`;
-      }
-      const values = options.map((o) => o.value);
-      if (new Set(values).size !== values.length) {
-        return `Question ${n}: option values must be unique.`;
-      }
-    }
-    if (d.type === "attention_check" && !d.config.expected_answer) {
-      return `Question ${n}: set the expected answer for the attention check.`;
-    }
-    if (d.type === "scale" || d.type === "number") {
-      const min = d.config.min ?? (d.type === "scale" ? 1 : 0);
-      const max = d.config.max ?? (d.type === "scale" ? 5 : 10);
-      const step = d.config.step ?? 1;
-      if (max <= min) {
-        return `Question ${n}: maximum must be greater than minimum.`;
-      }
-      if (step <= 0 || (max - min) % step !== 0) {
-        return `Question ${n}: step must divide evenly into the range (e.g. min 1, max 10, step 1).`;
-      }
-    }
-    if (d.type === "hidden_field") {
-      const source = d.config.profile_field;
-      if (!source || !HIDDEN_FIELD_SOURCES.some((s) => s.value === source)) {
-        return `Question ${n}: pick which profile field this hidden field maps to.`;
-      }
-    }
-  }
-  return null;
+  return firstQuestionProblem(drafts)?.message ?? null;
 }
 
 /** The client-side answer shape while a participant is filling in a survey. */
