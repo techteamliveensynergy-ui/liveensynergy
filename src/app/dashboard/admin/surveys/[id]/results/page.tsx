@@ -109,6 +109,38 @@ export default async function SurveyResultsPage({
     ),
   );
 
+  // What respondents typed for "Other — please specify" (FB-00029): the
+  // latest few per question that offers it. Admin-only — admins read
+  // survey_answers directly; rejected responses are left out, like the
+  // open-text answers above.
+  const otherQuestions = questions.filter((q) => q.config?.allow_other);
+  const otherAnswers = new Map<string, TextAnswer[]>(
+    await Promise.all(
+      otherQuestions.map(async (q) => {
+        const { data } = await supabase
+          .from("survey_answers")
+          .select("other_text, survey_responses!inner(reference, submitted_at, quality_status)")
+          .eq("question_id", q.id)
+          .not("other_text", "is", null)
+          .neq("survey_responses.quality_status", "reject")
+          .order("submitted_at", { ascending: false, referencedTable: "survey_responses" })
+          .limit(10);
+        const rows = (data ?? []) as unknown as {
+          other_text: string;
+          survey_responses: { reference: string; submitted_at: string } | null;
+        }[];
+        return [
+          q.id,
+          rows.map((r) => ({
+            reference: r.survey_responses?.reference ?? "",
+            submitted_at: r.survey_responses?.submitted_at ?? "",
+            answer: r.other_text,
+          })),
+        ] as const;
+      }),
+    ),
+  );
+
   const avgDuration = averageSeconds(Number(stats.duration_sum_seconds), stats.duration_count);
   const typical = medianBucket(stats.duration_buckets ?? {});
   const limit = capacity?.response_limit ?? null;
@@ -270,6 +302,7 @@ export default async function SurveyResultsPage({
                 counted={counted}
                 textAnswers={textAnswers.get(q.id)}
                 moreTextHref={exportHref("answers")}
+                otherAnswers={otherAnswers.get(q.id)}
               />
             ))}
           </div>

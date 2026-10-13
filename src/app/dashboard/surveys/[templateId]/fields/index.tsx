@@ -12,16 +12,17 @@ import { RankingField } from "./RankingField";
 
 /** Type -> renderer dispatch, reusing the SURVEY_QUESTION_TYPES catalogue's
  *  answerShape via each field component rather than re-deriving it here. */
-export function QuestionField({ question, value, onChange }: FieldProps) {
+export function QuestionField(props: FieldProps) {
+  const { question, value, onChange } = props;
   switch (question.type) {
     case "single_choice":
     case "attention_check":
     case "yes_no":
-      return <ChoiceField question={question} value={value} onChange={onChange} />;
+      return <ChoiceField {...props} />;
     case "multiple_choice":
-      return <MultiChoiceField question={question} value={value} onChange={onChange} />;
+      return <MultiChoiceField {...props} />;
     case "dropdown":
-      return <DropdownField question={question} value={value} onChange={onChange} />;
+      return <DropdownField {...props} />;
     case "scale":
       return <ScaleField question={question} value={value} onChange={onChange} />;
     case "number":

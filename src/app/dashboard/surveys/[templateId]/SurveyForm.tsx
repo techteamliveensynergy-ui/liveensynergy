@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { CoverMedia } from "@/components/surveys/QuestionMedia";
-import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
@@ -16,7 +16,7 @@ import {
   type SurveyTypography,
 } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
-import { emptyAnswerFor } from "@/lib/surveys";
+import { choseOther, emptyAnswerFor, surveyBlocks } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import { submitSurveyResponse, type SurveyResponseState } from "./actions";
 import { TurnstileWidget } from "./TurnstileWidget";
@@ -75,6 +75,13 @@ export function SurveyForm({
     }
     return initial;
   });
+  // "Other — please specify" text per question (FB-00029), sent with the
+  // answers as other_text; only stored when Other is actually chosen.
+  const [otherTexts, setOtherTexts] = useState<Record<string, string>>({});
+  function handleOtherText(questionId: string, text: string) {
+    setOtherTexts((prev) => ({ ...prev, [questionId]: text }));
+  }
+  const blocks = useMemo(() => surveyBlocks(questions), [questions]);
   const [timings, setTimings] = useState<Record<string, Timing>>({});
   const mountedAt = useRef(new Date().toISOString());
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -186,6 +193,7 @@ export function SurveyForm({
     value: values[q.id] ?? null,
     shown_at: timings[q.id]?.shown_at ?? null,
     answered_at: timings[q.id]?.answered_at ?? null,
+    other_text: choseOther(values[q.id] ?? null) ? (otherTexts[q.id] ?? "").trim() || null : null,
   }));
 
   const footer = (
@@ -261,7 +269,9 @@ export function SurveyForm({
         <SteppedQuestions
           questions={questions}
           values={values}
+          otherTexts={otherTexts}
           onChange={handleChange}
+          onOtherTextChange={handleOtherText}
           onShown={markShown}
           isPending={isPending}
           footer={footer}
@@ -272,16 +282,18 @@ export function SurveyForm({
         <div className={`space-y-4 ${singlePageBackground ? "p-4" : ""}`} style={singlePageBackground}>
           <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => (
-            <SurveyQuestionCard
-              key={q.id}
-              question={q}
-              value={values[q.id] ?? null}
-              onChange={(v) => handleChange(q.id, v)}
+          {blocks.map((block) => (
+            <SurveyBlockCard
+              key={block.key}
+              block={block}
+              values={values}
+              otherTexts={otherTexts}
+              onChange={handleChange}
+              onOtherTextChange={handleOtherText}
               appearance={appearance}
               accentColor={accentColor}
-              cardRef={(el) => {
-                refs.current[q.id] = el;
+              registerRef={(id, el) => {
+                refs.current[id] = el as HTMLDivElement | null;
               }}
             />
           ))}

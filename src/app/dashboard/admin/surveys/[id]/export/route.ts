@@ -7,6 +7,7 @@ import {
   choiceBars,
   meanAndSd,
   QUESTION_TYPE_LABELS,
+  questionTitle,
   rankingRows,
   scaleBars,
   type SurveyQuestionStats,
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
   if (logError) console.error("audit log write failed (survey.export)", logError.message);
   const questions = (questionRows ?? []) as Question[];
-  const qLabel = (q: Question, i: number) => `Q${i + 1}. ${q.prompt ?? QUESTION_TYPE_LABELS[q.type]}`;
+  const qLabel = (q: Question, i: number) => `Q${i + 1}. ${questionTitle(q) || QUESTION_TYPE_LABELS[q.type]}`;
 
   const date = new Date().toISOString().slice(0, 10);
   const filename = `${slug(template.title)}-${file}${includeRejected ? "-incl-rejected" : ""}-${date}.csv`;
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     questions.forEach((q, i) => {
       const s = stats.get(q.id);
       const answered = s?.answered_count ?? 0;
-      const base = [`Q${i + 1}`, q.prompt ?? "", QUESTION_TYPE_LABELS[q.type], answered];
+      const base = [`Q${i + 1}`, questionTitle(q), QUESTION_TYPE_LABELS[q.type], answered];
       const avgTime = s && s.time_count > 0 ? (s.time_sum_ms / s.time_count / 1000).toFixed(1) : "";
       out += csvRow([...base, "Average seconds on question", "", "", avgTime]);
       if (CHOICE_TYPES.includes(q.type)) {
@@ -168,17 +169,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             r.reference, r.person_key, r.source, csvDateTime(r.started_at), csvDateTime(r.submitted_at),
             r.duration_seconds, r.questions_answered, questions.length, r.quality_status, r.quality_score,
             r.age_band, r.gender, r.country,
-            ...questions.map((q) => answerToText(q, r.answers[q.id])),
+            // "<id>:other" carries the typed "Other" text (survey_export_rows, 0065).
+            ...questions.map((q) => answerToText(q, r.answers[q.id], r.answers[`${q.id}:other`])),
             ...questions.map((q) => r.answer_seconds[q.id] ?? ""),
           ]);
         } else {
           questions.forEach((q, i) => {
             if (!(q.id in r.answers)) return;
-            const text = answerToText(q, r.answers[q.id]);
+            const text = answerToText(q, r.answers[q.id], r.answers[`${q.id}:other`]);
             if (text === "") return;
             chunk += csvRow([
               r.reference, r.person_key, csvDateTime(r.submitted_at), r.quality_status, `Q${i + 1}`,
-              q.prompt ?? "", QUESTION_TYPE_LABELS[q.type], text, r.answer_seconds[q.id] ?? "",
+              questionTitle(q), QUESTION_TYPE_LABELS[q.type], text, r.answer_seconds[q.id] ?? "",
             ]);
           });
         }

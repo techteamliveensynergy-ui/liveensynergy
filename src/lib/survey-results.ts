@@ -11,7 +11,7 @@
  * are live while a survey is open and settle as the review queue is worked.
  */
 
-import { SCALE_NA_VALUE } from "./surveys";
+import { otherLabel, SCALE_NA_VALUE, SURVEY_OTHER_VALUE } from "./surveys";
 import type { SurveyQuestion, SurveyQuestionType } from "./types";
 
 export interface SurveyTemplateStats {
@@ -123,15 +123,31 @@ export interface Bar {
  * value that is no longer an option (removed after responses came in) listed
  * after them so no answer silently disappears.
  */
-export function choiceBars(q: Pick<SurveyQuestion, "options">, counts: Record<string, number>, base: number): Bar[] {
+export function choiceBars(
+  q: Pick<SurveyQuestion, "options"> & { config?: SurveyQuestion["config"] | null },
+  counts: Record<string, number>,
+  base: number,
+): Bar[] {
   const options = q.options ?? [];
   const known = new Set(options.map((o) => o.value));
+  // "Other — please specify" (FB-00029): one more bar, after the options,
+  // whenever the question offers it or anyone picked it.
+  const otherCount = counts[SURVEY_OTHER_VALUE] ?? 0;
+  if (q.config?.allow_other || otherCount > 0) known.add(SURVEY_OTHER_VALUE);
   const bars: Bar[] = options.map((o) => ({
     key: o.value,
     label: o.label || o.value,
     count: counts[o.value] ?? 0,
     share: pct(counts[o.value] ?? 0, base),
   }));
+  if (known.has(SURVEY_OTHER_VALUE)) {
+    bars.push({
+      key: SURVEY_OTHER_VALUE,
+      label: otherLabel(q.config ?? {}),
+      count: otherCount,
+      share: pct(otherCount, base),
+    });
+  }
   for (const [value, count] of Object.entries(counts)) {
     if (!known.has(value) && count > 0) {
       bars.push({ key: value, label: `${value} (removed option)`, count, share: pct(count, base) });
@@ -182,10 +198,18 @@ export const TEXT_TYPES: SurveyQuestionType[] = ["short_text", "long_text"];
  * An answer as a spreadsheet cell: option labels instead of stored values,
  * multi-select joined with "; ", ranking in order joined with " > ".
  */
-export function answerToText(q: Pick<SurveyQuestion, "type" | "options" | "config">, value: unknown): string {
+export function answerToText(
+  q: Pick<SurveyQuestion, "type" | "options" | "config">,
+  value: unknown,
+  otherText?: unknown,
+): string {
   if (value == null) return "";
   const labelOf = (v: unknown) => {
     const s = String(v);
+    if (s === SURVEY_OTHER_VALUE) {
+      const typed = typeof otherText === "string" && otherText.trim() ? `: ${otherText.trim()}` : "";
+      return `${otherLabel(q.config ?? {})}${typed}`;
+    }
     return q.options?.find((o) => o.value === s)?.label || s;
   };
   if (Array.isArray(value)) {
@@ -196,6 +220,14 @@ export function answerToText(q: Pick<SurveyQuestion, "type" | "options" | "confi
   }
   if (CHOICE_TYPES.includes(q.type)) return labelOf(value);
   return String(value);
+}
+
+/** A question's title for results and exports — a rating group row is shown
+ *  with its group's question text so "Sound" alone isn't ambiguous (FB-00028). */
+export function questionTitle(q: Pick<SurveyQuestion, "prompt" | "config">): string {
+  const group = q.config?.group_prompt?.trim();
+  const prompt = q.prompt?.trim() ?? "";
+  return group ? `${group} — ${prompt}` : prompt;
 }
 
 export const QUESTION_TYPE_LABELS: Record<SurveyQuestionType, string> = {

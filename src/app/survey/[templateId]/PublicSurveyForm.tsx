@@ -10,7 +10,7 @@ import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
-import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
 import {
   accentColorVars,
@@ -21,7 +21,7 @@ import {
   type SurveyAppearance,
   type SurveyTypography,
 } from "@/lib/survey-media";
-import { emptyAnswerFor } from "@/lib/surveys";
+import { choseOther, emptyAnswerFor, surveyBlocks } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
@@ -251,6 +251,13 @@ export function PublicSurveyForm({
     }
     return initial;
   });
+  // "Other — please specify" text per question (FB-00029), sent with the
+  // answers as other_text; only stored when Other is actually chosen.
+  const [otherTexts, setOtherTexts] = useState<Record<string, string>>({});
+  function handleOtherText(questionId: string, text: string) {
+    setOtherTexts((prev) => ({ ...prev, [questionId]: text }));
+  }
+  const blocks = useMemo(() => surveyBlocks(questions), [questions]);
   const [timings, setTimings] = useState<Record<string, Timing>>({});
   const mountedAt = useRef(new Date().toISOString());
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -338,6 +345,7 @@ export function PublicSurveyForm({
     value: values[q.id] ?? null,
     shown_at: timings[q.id]?.shown_at ?? null,
     answered_at: timings[q.id]?.answered_at ?? null,
+    other_text: choseOther(values[q.id] ?? null) ? (otherTexts[q.id] ?? "").trim() || null : null,
   }));
 
   if (state.success) {
@@ -555,7 +563,9 @@ export function PublicSurveyForm({
         <SteppedQuestions
           questions={questions}
           values={values}
+          otherTexts={otherTexts}
           onChange={handleChange}
+          onOtherTextChange={handleOtherText}
           onShown={markShown}
           isPending={isPending}
           footer={
@@ -571,16 +581,18 @@ export function PublicSurveyForm({
         >
           <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => (
-            <SurveyQuestionCard
-              key={q.id}
-              question={q}
-              value={values[q.id] ?? null}
-              onChange={(v) => handleChange(q.id, v)}
+          {blocks.map((block) => (
+            <SurveyBlockCard
+              key={block.key}
+              block={block}
+              values={values}
+              otherTexts={otherTexts}
+              onChange={handleChange}
+              onOtherTextChange={handleOtherText}
               appearance={appearance}
               accentColor={accentColor}
-              cardRef={(el) => {
-                refs.current[q.id] = el;
+              registerRef={(id, el) => {
+                refs.current[id] = el as HTMLDivElement | null;
               }}
             />
           ))}

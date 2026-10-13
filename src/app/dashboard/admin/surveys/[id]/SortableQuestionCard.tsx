@@ -58,6 +58,11 @@ function CardBody({
         </span>
         <span className="font-medium">{question.prompt || spec.label}</span>
         {question.required && <span className="chip ml-2">Required</span>}
+        {question.type === "scale" && question.config.group_id && (
+          <span className="mt-0.5 block text-xs text-[var(--color-ink-soft)]">
+            📊 {question.config.group_prompt || "Rating group"}
+          </span>
+        )}
         {problem && (
           <span className="mt-1 block text-xs font-semibold text-[var(--color-accent)]">⚠ {problem}</span>
         )}

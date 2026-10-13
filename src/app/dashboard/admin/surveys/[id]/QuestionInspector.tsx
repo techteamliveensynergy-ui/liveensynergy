@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Field } from "@/components/ui/Field";
-import { HIDDEN_FIELD_SOURCES, questionSpec, type SurveyQuestionDraft } from "@/lib/surveys";
+import {
+  HIDDEN_FIELD_SOURCES,
+  OTHER_CAPABLE_TYPES,
+  questionSpec,
+  type SurveyQuestionDraft,
+} from "@/lib/surveys";
 import { SURVEY_FONT_OPTIONS } from "@/lib/survey-fonts";
 import {
   QUESTION_FONT_SIZE_OPTIONS,
@@ -29,11 +34,14 @@ export function QuestionInspector({
   editable,
   layoutMode,
   onChange,
+  onAddGroupRow,
 }: {
   question: SurveyQuestionDraft | null;
   editable: boolean;
   layoutMode: SurveyTemplateLayoutMode;
   onChange: (patch: Partial<SurveyQuestionDraft>) => void;
+  /** Adds another item to this question's rating group (FB-00028). */
+  onAddGroupRow?: () => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -105,8 +113,39 @@ export function QuestionInspector({
         <span>{spec.label}</span>
       </div>
 
+      {question.type === "scale" && question.config.group_id && (
+        <div className="space-y-2 rounded-lg border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5 p-3">
+          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">
+            📊 Rating group — this is one item. The question text, help text, scale and look below
+            apply to every item in the group; the item label and &ldquo;Required&rdquo; are per item.
+          </p>
+          <Field label="Group question" htmlFor="q-group-prompt" required>
+            <input
+              id="q-group-prompt"
+              className="input"
+              disabled={!editable}
+              value={question.config.group_prompt ?? ""}
+              onChange={(e) => setConfig("group_prompt", e.target.value)}
+            />
+          </Field>
+          {editable && onAddGroupRow && (
+            <button type="button" className="btn btn-ghost text-sm" onClick={onAddGroupRow}>
+              + Add another item
+            </button>
+          )}
+          <p className="field-hint">
+            Keep the items next to each other on the canvas — they show as one card only while they
+            sit together. Remove an item with its ✕ on the canvas.
+          </p>
+        </div>
+      )}
+
       {spec.hasPrompt && (
-        <Field label="Prompt" htmlFor="q-prompt" required>
+        <Field
+          label={question.type === "scale" && question.config.group_id ? "Item label" : "Prompt"}
+          htmlFor="q-prompt"
+          required
+        >
           <textarea
             id="q-prompt"
             className="textarea"
@@ -433,6 +472,45 @@ export function QuestionInspector({
           editable={editable}
           onChange={(options) => onChange({ options })}
         />
+      )}
+
+      {/* FB-00029 — not on the Likert preset, whose five faces are fixed. */}
+      {OTHER_CAPABLE_TYPES.includes(question.type) && question.config.display_style !== "likert" && (
+        <div className="space-y-2 rounded-lg border border-black/10 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              disabled={!editable}
+              checked={question.config.allow_other === true}
+              onChange={(e) => {
+                const next = { ...question.config } as Record<string, unknown>;
+                if (e.target.checked) next.allow_other = true;
+                else {
+                  delete next.allow_other;
+                  delete next.other_label;
+                }
+                onChange({ config: next as SurveyQuestionConfig });
+              }}
+            />
+            Add an &ldquo;Other — please specify&rdquo; option
+          </label>
+          {question.config.allow_other && (
+            <Field
+              label="Its label"
+              htmlFor="q-other-label"
+              hint="Shown as the last option; picking it opens a text box the respondent must fill in. You see what they typed in the results and the export — brands see only how many chose it."
+            >
+              <input
+                id="q-other-label"
+                className="input"
+                disabled={!editable}
+                placeholder="Other"
+                value={question.config.other_label ?? ""}
+                onChange={(e) => setConfig("other_label", e.target.value)}
+              />
+            </Field>
+          )}
+        </div>
       )}
 
       {spec.configFields.map((field) => {

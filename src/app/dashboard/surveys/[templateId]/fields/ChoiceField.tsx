@@ -2,6 +2,8 @@
 
 import type { FieldProps } from "./types";
 import { OptionRow } from "./OptionRow";
+import { OtherInput } from "./OtherInput";
+import { offersOther, otherLabel, SURVEY_OTHER_VALUE } from "@/lib/surveys";
 
 /** Fixed by position, not by option value/label — a Likert question's icons
  *  never change even when an admin edits the option text they sit under. */
@@ -17,12 +19,18 @@ const LIKERT_STYLE: readonly { emoji: string; bg: string }[] = [
  *  this single_choice question came from the "Likert (5-point)" palette
  *  preset (config.display_style === "likert"), which renders as five
  *  face-icon tiles instead. */
-export function ChoiceField({ question, value, onChange }: FieldProps) {
+export function ChoiceField({ question, value, onChange, otherText = "", onOtherTextChange }: FieldProps) {
   const options = question.options ?? [];
+  const other = offersOther(question);
+  const otherChosen = other && value === SURVEY_OTHER_VALUE;
+  const otherBox = otherChosen && onOtherTextChange && (
+    <OtherInput label={otherLabel(question.config)} value={otherText} onChange={onOtherTextChange} />
+  );
   const hasImages = options.some((o) => o.image_url);
 
   if (hasImages) {
     return (
+      <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {options.map((o) => {
           const selected = value === o.value;
@@ -58,7 +66,29 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
             </label>
           );
         })}
+        {other && (
+          <label className="flex flex-col gap-1.5">
+            <input
+              type="radio"
+              name={question.id}
+              className="sr-only"
+              checked={otherChosen}
+              onChange={() => onChange(SURVEY_OTHER_VALUE)}
+            />
+            <div
+              className={`flex aspect-square w-full items-center justify-center rounded-lg bg-[var(--color-mist)] text-[1.5em] text-[var(--color-ink-soft)] transition-transform ${
+                otherChosen ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
+              }`}
+              aria-hidden
+            >
+              …
+            </div>
+            <span className="text-center leading-tight">{otherLabel(question.config)}</span>
+          </label>
+        )}
       </div>
+      {otherBox}
+      </>
     );
   }
 
@@ -109,6 +139,17 @@ export function ChoiceField({ question, value, onChange }: FieldProps) {
           onToggle={() => onChange(o.value)}
         />
       ))}
+      {other && (
+        <OptionRow
+          type="radio"
+          name={question.id}
+          index={options.length}
+          label={otherLabel(question.config)}
+          checked={otherChosen}
+          onToggle={() => onChange(SURVEY_OTHER_VALUE)}
+        />
+      )}
+      {otherBox}
     </div>
   );
 }

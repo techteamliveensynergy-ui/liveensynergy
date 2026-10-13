@@ -757,6 +757,19 @@ export interface SurveyQuestionConfig {
   /** Image only — "cover" (default) fills the media box edge to edge and
    *  crops; "contain" shows the whole image, letterboxed in the card colour. */
   media_fit?: "cover" | "contain";
+  /** single_choice / multiple_choice / dropdown — adds an "Other — please
+   *  specify" option (FB-00029, 0065). Its answer value is SURVEY_OTHER_VALUE
+   *  ("__other__"); the typed text travels as the answer's other_text. */
+  allow_other?: boolean;
+  /** Label for that option. Defaults to "Other". */
+  other_label?: string;
+  /** Rating group (FB-00028): scale questions sharing a group_id render
+   *  together as one card / one step, each row being one rated item (the
+   *  question's own prompt is the item's label). No database change — every
+   *  row is an ordinary scale question for validation, stats and export. */
+  group_id?: string;
+  /** The shared question text shown above a rating group's rows. */
+  group_prompt?: string;
 }
 
 export interface SurveyTemplate {

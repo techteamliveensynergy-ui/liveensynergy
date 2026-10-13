@@ -44,10 +44,12 @@ function PaletteCard({
 export function QuestionPalette({
   onAdd,
   onAddLikert,
+  onAddRatingGroup,
   disabled,
 }: {
   onAdd: (type: SurveyQuestionType) => void;
   onAddLikert: () => void;
+  onAddRatingGroup: () => void;
   disabled: boolean;
 }) {
   return (
@@ -74,6 +76,22 @@ export function QuestionPalette({
           <span className="block font-medium">Likert (5-point)</span>
           <span className="block text-xs text-[var(--color-ink-soft)]">
             Strongly disagree → Strongly agree, with face icons.
+          </span>
+        </span>
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onAddRatingGroup}
+        className="card flex w-full items-start gap-2 p-3 text-left text-sm"
+      >
+        <span className="text-lg" aria-hidden>
+          📊
+        </span>
+        <span>
+          <span className="block font-medium">Rating group</span>
+          <span className="block text-xs text-[var(--color-ink-soft)]">
+            Several items rated on one scale — e.g. Sound, Lighting, Bar.
           </span>
         </span>
       </button>

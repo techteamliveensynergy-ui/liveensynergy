@@ -55,6 +55,7 @@ export function QuestionResultCard({
   counted,
   textAnswers,
   moreTextHref,
+  otherAnswers,
 }: {
   index: number;
   q: ResultQuestion;
@@ -62,6 +63,9 @@ export function QuestionResultCard({
   counted: number;
   textAnswers?: { reference: string; submitted_at: string; answer: string }[];
   moreTextHref?: string;
+  /** Typed "Other — please specify" answers — admin only (FB-00029); the
+   *  brand page never passes these, so it shows the Other count alone. */
+  otherAnswers?: { reference: string; submitted_at: string; answer: string }[];
 }) {
   const answered = s?.answered_count ?? 0;
   const avgTime = s && s.time_count != null && s.time_sum_ms != null ? averageSeconds(s.time_sum_ms / 1000, s.time_count) : null;
@@ -70,6 +74,9 @@ export function QuestionResultCard({
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
         Q{index + 1} · {QUESTION_TYPE_LABELS[q.type]}
       </p>
+      {typeof q.config?.group_prompt === "string" && q.config.group_prompt.trim() && (
+        <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{q.config.group_prompt}</p>
+      )}
       <h3 className="mt-1 font-semibold">{q.prompt || "Untitled question"}</h3>
       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
         {answered} answered ({formatPct(pct(answered, counted))} of responses)
@@ -82,6 +89,21 @@ export function QuestionResultCard({
             {choiceBars(q, s?.option_counts ?? {}, answered).map((b) => (
               <BarRow key={b.key} label={b.label} value={`${b.count} · ${formatPct(b.share)}`} share={b.share} />
             ))}
+            {otherAnswers && otherAnswers.length > 0 && (
+              <div className="rounded-xl bg-[var(--color-mist)] px-3 py-2">
+                <p className="text-xs font-semibold text-[var(--color-ink-soft)]">
+                  What people wrote for &ldquo;{(q.config?.other_label as string | undefined)?.trim() || "Other"}&rdquo;
+                </p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {otherAnswers.map((a) => (
+                    <li key={`${a.reference}-${a.answer}`} className="break-words">
+                      {a.answer}{" "}
+                      <span className="text-xs text-[var(--color-ink-soft)]">· {a.reference}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {q.type === "multiple_choice" && (
               <p className="text-xs text-[var(--color-ink-soft)]">
                 People could pick more than one, so these add up to more than 100%.

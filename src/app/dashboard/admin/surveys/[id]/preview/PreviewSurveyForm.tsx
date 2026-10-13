@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
-import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
+import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
 import {
   accentColorVars,
@@ -16,7 +16,13 @@ import {
   typographyVars,
 } from "@/lib/survey-media";
 import type { SurveyAnswerValue, SurveyQuestion, SurveyTemplate } from "@/lib/types";
-import { emptyAnswerFor, validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
+import {
+  choseOther,
+  emptyAnswerFor,
+  surveyBlocks,
+  validateAnswers,
+  type SurveyAnswerDraft,
+} from "@/lib/surveys";
 
 /**
  * Admin-only stand-in for the real SurveyForm — same field renderers, but
@@ -53,6 +59,13 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     }
     return initial;
   });
+  // "Other — please specify" text per question (FB-00029), sent with the
+  // answers as other_text; only stored when Other is actually chosen.
+  const [otherTexts, setOtherTexts] = useState<Record<string, string>>({});
+  function handleOtherText(questionId: string, text: string) {
+    setOtherTexts((prev) => ({ ...prev, [questionId]: text }));
+  }
+  const blocks = useMemo(() => surveyBlocks(questions), [questions]);
   const [error, setError] = useState<string | undefined>();
   const [finished, setFinished] = useState(false);
   const [gateCleared, setGateCleared] = useState(!showIntroGate);
@@ -68,6 +81,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         q.type === "ranking" ? (q.options ?? []).map((o) => o.value) : emptyAnswerFor(q.type);
     }
     setValues(initial);
+    setOtherTexts({});
     setError(undefined);
     setFinished(false);
   }
@@ -123,6 +137,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
           value: values[q.id] ?? null,
           shown_at: null,
           answered_at: null,
+          other_text: choseOther(values[q.id] ?? null) ? (otherTexts[q.id] ?? "").trim() || null : null,
         }));
         const problem = validateAnswers(questions, drafts);
         if (problem) {
@@ -148,7 +163,9 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         <SteppedQuestions
           questions={questions}
           values={values}
+          otherTexts={otherTexts}
           onChange={handleChange}
+          onOtherTextChange={handleOtherText}
           onShown={() => {}}
           isPending={false}
           footer={
@@ -165,12 +182,14 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         >
           <CoverMedia url={coverMediaUrl} type={coverMediaType} videoFormat={appearance.coverVideoFormat} />
 
-          {questions.map((q) => (
-            <SurveyQuestionCard
-              key={q.id}
-              question={q}
-              value={values[q.id] ?? null}
-              onChange={(v) => handleChange(q.id, v)}
+          {blocks.map((block) => (
+            <SurveyBlockCard
+              key={block.key}
+              block={block}
+              values={values}
+              otherTexts={otherTexts}
+              onChange={handleChange}
+              onOtherTextChange={handleOtherText}
               appearance={appearance}
               accentColor={accentColor}
             />

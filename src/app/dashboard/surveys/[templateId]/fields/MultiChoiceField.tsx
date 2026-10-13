@@ -2,10 +2,17 @@
 
 import type { FieldProps } from "./types";
 import { OptionRow } from "./OptionRow";
+import { OtherInput } from "./OtherInput";
+import { offersOther, otherLabel, SURVEY_OTHER_VALUE } from "@/lib/surveys";
 
-export function MultiChoiceField({ question, value, onChange }: FieldProps) {
+export function MultiChoiceField({ question, value, onChange, otherText = "", onOtherTextChange }: FieldProps) {
   const options = question.options ?? [];
   const selected = Array.isArray(value) ? value : [];
+  const other = offersOther(question);
+  const otherChosen = other && selected.includes(SURVEY_OTHER_VALUE);
+  const otherBox = otherChosen && onOtherTextChange && (
+    <OtherInput label={otherLabel(question.config)} value={otherText} onChange={onOtherTextChange} />
+  );
 
   function toggle(v: string, checked: boolean) {
     onChange(checked ? [...selected, v] : selected.filter((x) => x !== v));
@@ -15,6 +22,7 @@ export function MultiChoiceField({ question, value, onChange }: FieldProps) {
 
   if (hasImages) {
     return (
+      <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {options.map((o) => {
           const checked = selected.includes(o.value);
@@ -49,7 +57,28 @@ export function MultiChoiceField({ question, value, onChange }: FieldProps) {
             </label>
           );
         })}
+        {other && (
+          <label className="flex flex-col gap-1.5">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={otherChosen}
+              onChange={(e) => toggle(SURVEY_OTHER_VALUE, e.target.checked)}
+            />
+            <div
+              className={`flex aspect-square w-full items-center justify-center rounded-lg bg-[var(--color-mist)] text-[1.5em] text-[var(--color-ink-soft)] transition-transform ${
+                otherChosen ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
+              }`}
+              aria-hidden
+            >
+              …
+            </div>
+            <span className="text-center leading-tight">{otherLabel(question.config)}</span>
+          </label>
+        )}
       </div>
+      {otherBox}
+      </>
     );
   }
 
@@ -65,6 +94,16 @@ export function MultiChoiceField({ question, value, onChange }: FieldProps) {
           onToggle={(checked) => toggle(o.value, checked)}
         />
       ))}
+      {other && (
+        <OptionRow
+          type="checkbox"
+          index={options.length}
+          label={otherLabel(question.config)}
+          checked={otherChosen}
+          onToggle={(checked) => toggle(SURVEY_OTHER_VALUE, checked)}
+        />
+      )}
+      {otherBox}
     </div>
   );
 }
