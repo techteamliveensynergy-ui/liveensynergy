@@ -12,6 +12,7 @@ import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import { CAMPAIGN_STATUS_LABELS, campaignStage, closeReasonLabel } from "@/lib/campaign-stage";
 import { CampaignStatusActions } from "../CampaignStatusActions";
+import { campaignTitle } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaign · Admin" };
 
@@ -162,7 +163,7 @@ export default async function AdminCampaignPage({
     surveyPublished: templates.some((t) => t.status === "published"),
   });
   const brand = campaign.brands;
-  const title = campaign.target_name || `${brand?.brand_name ?? "Brand"} campaign`;
+  const title = campaignTitle(campaign, `${brand?.brand_name ?? "Brand"} campaign`);
   const messageHref = brand
     ? `/dashboard/messages/with/${brand.profile_id}?subject=${encodeURIComponent(`Campaign ${campaign.reference}`)}`
     : null;

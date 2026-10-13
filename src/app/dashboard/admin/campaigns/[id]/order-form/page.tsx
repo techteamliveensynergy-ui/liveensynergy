@@ -23,6 +23,7 @@ interface CampaignRow {
   description: string | null;
   preferred_timeline: string | null;
   target_name: string | null;
+  campaign_name: string | null;
   budget_gbp: number;
   campaign_package_id: string | null;
   manager_name: string | null;
@@ -59,7 +60,7 @@ export default async function AdminOrderFormPage({
       supabase
         .from("campaigns")
         .select(
-          "id, reference, description, preferred_timeline, target_name, budget_gbp, campaign_package_id, manager_name, manager_email, campaign_packages(name), brands(brand_name, company_address, manager_name, manager_email, billing_legal_name, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country)",
+          "id, reference, description, preferred_timeline, target_name, campaign_name, budget_gbp, campaign_package_id, manager_name, manager_email, campaign_packages(name), brands(brand_name, company_address, manager_name, manager_email, billing_legal_name, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country)",
         )
         .eq("id", id)
         .maybeSingle<CampaignRow>(),
@@ -123,7 +124,7 @@ export default async function AdminOrderFormPage({
     brand_address: b?.company_address || billingAddress || null,
     contact_name: campaign.manager_name || b?.manager_name || null,
     contact_email: campaign.manager_email || b?.manager_email || null,
-    campaign_name: campaign.target_name || `${b?.brand_name ?? "Brand"} campaign`,
+    campaign_name: campaign.campaign_name || campaign.target_name || `${b?.brand_name ?? "Brand"} campaign`,
     campaign_objective: campaign.description,
     campaign_timeline: campaign.preferred_timeline,
     campaign_package_id: campaign.campaign_package_id,

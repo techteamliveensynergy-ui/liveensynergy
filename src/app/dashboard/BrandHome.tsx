@@ -7,6 +7,7 @@ import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/type
 import { formatEventDateTime } from "@/lib/event-time";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStagesFor } from "@/lib/data/campaign-stages";
+import { campaignTitle } from "@/lib/campaign-requests";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
@@ -148,7 +149,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                   >
                     <div>
                       <p className="font-semibold text-[var(--color-ink)]">
-                        {c.target_name || c.category || "Sponsorship campaign"}
+                        {campaignTitle(c, "Sponsorship campaign")}
                       </p>
                       <p className="text-xs text-[var(--color-ink-soft)]">
                         Ref {c.reference}

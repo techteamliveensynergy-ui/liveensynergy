@@ -523,6 +523,7 @@ interface CampaignPackageRow {
 
 function campaignPayload(formData: FormData) {
   return {
+    campaign_name: str(formData.get("campaign_name"))?.slice(0, 120) ?? null,
     description: str(formData.get("description")),
     category: str(formData.get("category")),
     category_other: str(formData.get("category_other")),

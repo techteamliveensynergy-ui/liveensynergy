@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { waiveCampaignPayment } from "../marketplace-actions";
 import { CampaignStatusActions } from "./CampaignStatusActions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { campaignTitle } from "@/lib/campaign-requests";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import {
@@ -47,6 +48,8 @@ interface Row {
   payment_waived_reason: string | null;
   brand_id: string;
   target_name: string | null;
+  campaign_name: string | null;
+  category_other: string | null;
   brands: { brand_name: string; profile_id: string } | null;
 }
 
@@ -246,7 +249,7 @@ export default async function AdminCampaignsPage({
           return {
             id: c.id,
             reference: c.reference,
-            label: c.target_name || (c.description ?? "").slice(0, 60) || "Untitled campaign",
+            label: c.campaign_name || c.target_name || (c.description ?? "").slice(0, 60) || "Untitled campaign",
             brandId: c.brand_id,
             brandName: c.brands?.brand_name ?? "Unnamed brand",
             formStatus: f ? ORDER_FORM_STATUS_LABELS[f.status as OrderFormStatus] : null,
@@ -327,8 +330,11 @@ export default async function AdminCampaignsPage({
                         href={`/dashboard/admin/campaigns/${c.id}`}
                         className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
                       >
-                        {c.brands?.brand_name ?? "Unknown brand"}
+                        {campaignTitle(c, "Untitled campaign")}
                       </Link>
+                      <span className="text-sm text-[var(--color-ink-soft)]">
+                        · {c.brands?.brand_name ?? "Unknown brand"}
+                      </span>
                       <CampaignStageBadge stage={stageOf.get(c.id)!} />
                       {c.matched_listing_id ? (
                         <span className="rounded-full bg-[var(--color-sage)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-olive-deep)]">

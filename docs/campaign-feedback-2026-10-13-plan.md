@@ -40,6 +40,19 @@ campaigns had no page of their own — the list card was the whole view.
   which still lands on the right card in the list.
 - Both detail pages (request and campaign) have a "← Back" button.
 
+## Follow-up: campaign names and grouping (13 Oct, later)
+
+- **Campaign name** (0067). Requests and campaigns now carry their own name —
+  the brand enters it on the request (required), it carries over to the
+  campaign, and admin can edit it on the campaign form. Existing campaigns took
+  their order form's name. Every list and page uses `campaignTitle()` instead
+  of "artist/event in mind → category".
+- **Campaigns live grouping.** Each campaign is one boxed section: a header
+  (name, stage badge, reference, budget, View campaign), then Campaign details,
+  Order form & invoice, and Progress, separated by dividers. An order form
+  waiting for approval is also flagged at the top. Invoices not tied to a
+  campaign are listed under "Other invoices".
+
 ## Decisions to confirm with the client
 
 1. **Who acts on each step.** The checklist says the *artist* sets up discount codes and *our team* publishes the campaign survey (that's how the platform works today: admins publish surveys). The note could be read as "artist publishes the survey". Say if it should read differently.

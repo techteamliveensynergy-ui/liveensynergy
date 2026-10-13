@@ -223,6 +223,17 @@ export function CampaignAdminForm({
           </Field>
         </div>
 
+        <Field label="Campaign name" htmlFor="campaign_name">
+          <input
+            id="campaign_name"
+            name="campaign_name"
+            className="input"
+            maxLength={120}
+            placeholder="What the brand calls this campaign"
+            defaultValue={d?.campaign_name ?? i?.campaign_name ?? ""}
+          />
+        </Field>
+
         <Field label="Name of event / artist (if known)" htmlFor="target_name">
           <input
             id="target_name"

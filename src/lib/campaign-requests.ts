@@ -32,3 +32,15 @@ export function requestCategoryLabel(r: CategoryFields): string | null {
   const list = requestCategories(r);
   return list.length > 0 ? list.join(", ") : null;
 }
+
+/**
+ * A request's or campaign's display name (client feedback, 13 Oct: lists read
+ * "Conferences" because there was no name, only the category). Its own name
+ * first (0067), then the artist/event in mind, then the categories.
+ */
+export function campaignTitle(
+  c: CategoryFields & { campaign_name?: string | null; target_name?: string | null },
+  fallback: string,
+): string {
+  return c.campaign_name?.trim() || c.target_name?.trim() || requestCategoryLabel(c) || fallback;
+}

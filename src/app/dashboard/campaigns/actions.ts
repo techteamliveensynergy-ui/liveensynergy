@@ -50,6 +50,7 @@ function categories(formData: FormData): string[] {
 function payload(formData: FormData) {
   const cats = categories(formData);
   return {
+    campaign_name: str(formData.get("campaign_name"))?.slice(0, 120) ?? null,
     description: str(formData.get("description")),
     // Guidance only, not a committed figure — the real budget only exists
     // once admin assigns a package (or a custom amount) on conversion
@@ -91,6 +92,7 @@ function validate(
   p: ReturnType<typeof payload>,
   formData: FormData,
 ): string | null {
+  if (!p.campaign_name) return "Campaign name is required.";
   if (!p.description) return "Campaign description is required.";
   // A link that couldn't be parsed comes back null, which would otherwise be
   // indistinguishable from an empty field and silently drop what they typed.
