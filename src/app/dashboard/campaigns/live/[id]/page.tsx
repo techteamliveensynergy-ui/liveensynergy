@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import { formatGbp, invoiceDisplayStatus } from "@/lib/billing";
-import { requestCategoryLabel } from "@/lib/campaign-requests";
+import { campaignTitle, requestCategoryLabel } from "@/lib/campaign-requests";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import { CampaignProgress, type CampaignEventRow } from "@/components/campaigns/CampaignProgress";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
@@ -92,7 +92,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
   // Withdrawn proposals are history, not something the brand needs to act on.
   const visibleEvents = events.filter((e) => e.status !== "withdrawn");
 
-  const title = c.target_name || requestCategoryLabel(c) || "Sponsorship campaign";
+  const title = campaignTitle(c, "Sponsorship campaign");
 
   return (
     <div className="space-y-6">

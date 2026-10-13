@@ -118,6 +118,23 @@ export function CampaignForm({ intake }: { intake?: CampaignIntakeRequest }) {
 
       <FormSection title="Campaign proposal">
         <Field
+          label="Campaign name"
+          htmlFor="campaign_name"
+          required
+          hint="What you call this campaign — it's how it's listed for you and our team."
+        >
+          <input
+            id="campaign_name"
+            name="campaign_name"
+            className="input"
+            required
+            maxLength={120}
+            placeholder="For example: “Northwave Coffee — summer festivals”"
+            defaultValue={d?.campaign_name ?? ""}
+          />
+        </Field>
+
+        <Field
           label="Campaign description"
           htmlFor="description"
           required

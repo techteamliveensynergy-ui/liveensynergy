@@ -14,6 +14,7 @@ import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-form
 import { CampaignProgress, type CampaignEventRow } from "@/components/campaigns/CampaignProgress";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStage } from "@/lib/campaign-stage";
+import { campaignTitle } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaigns live" };
 
@@ -25,6 +26,11 @@ type InvoiceRow = Invoice & { campaigns: { reference: string } | null };
  * Campaigns live). Order forms, billing and invoices live here too — they only
  * exist once there's a campaign. Each campaign shows where it is as a
  * checklist (campaignSteps()) instead of just a status and a Contact button.
+ *
+ * Each campaign is one boxed section with its own order form and invoices
+ * inside it (client feedback, 13 Oct: details and order form of the same
+ * campaign should read as one group). Invoices not tied to a campaign are
+ * listed after.
  */
 export default async function CampaignsLivePage() {
   const { profile } = await requireRole(["brand"]);
@@ -56,13 +62,14 @@ export default async function CampaignsLivePage() {
         // Order forms the team has sent (RLS hides drafts) — 0054.
         supabase
           .from("campaign_order_forms")
-          .select("id, reference, status, campaign_name, total_gbp, sent_at, approved_at, campaigns(reference)")
+          .select("id, campaign_id, reference, status, campaign_name, total_gbp, sent_at, approved_at, campaigns(reference)")
           .eq("brand_id", brand.id)
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }];
   const orderForms = (orderFormData ?? []) as unknown as {
     id: string;
+    campaign_id: string;
     reference: string;
     status: OrderFormStatus;
     campaign_name: string | null;
@@ -114,35 +121,22 @@ export default async function CampaignsLivePage() {
         }
       />
 
-      {orderForms.length > 0 && (
-        <section className="mb-6 space-y-3">
-          {orderForms.map((f) => (
-            <Link
-              key={f.id}
-              href={`/order-forms/${f.id}`}
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4 ${
-                f.status === "sent"
-                  ? "bg-[var(--color-brand)] text-white"
-                  : "card"
-              }`}
-            >
-              <div>
-                <p className="font-semibold">
-                  {f.status === "sent" ? "Your order form is ready to review — " : "Order form "}
-                  {f.reference}
-                </p>
-                <p className={`text-sm ${f.status === "sent" ? "text-white/85" : "text-[var(--color-ink-soft)]"}`}>
-                  {f.campaign_name ?? "Campaign"} · {f.campaigns?.reference ?? ""}
-                  {f.total_gbp != null ? ` · ${formatGbp(f.total_gbp)} incl. VAT` : ""}
-                </p>
-              </div>
-              <span className={f.status === "sent" ? "btn btn-white text-sm" : "chip"}>
-                {f.status === "sent" ? "Review & approve →" : ORDER_FORM_STATUS_LABELS[f.status]}
-              </span>
-            </Link>
-          ))}
-        </section>
-      )}
+      {/* An order form waiting on the brand is the one thing here that blocks
+          progress, so it's flagged up top as well as inside its campaign. */}
+      {orderForms
+        .filter((f) => f.status === "sent")
+        .map((f) => (
+          <Link
+            key={f.id}
+            href={`/order-forms/${f.id}`}
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--color-brand)] px-5 py-4 text-white"
+          >
+            <span className="font-semibold">
+              Your order form for {f.campaign_name ?? f.campaigns?.reference ?? "your campaign"} is ready to review
+            </span>
+            <span className="btn btn-white text-sm">Review &amp; approve →</span>
+          </Link>
+        ))}
 
       {needsBilling && (
         <div className="mb-6 rounded-2xl bg-[var(--color-gold)]/40 px-5 py-4 text-sm text-[var(--color-ink)]">
@@ -162,9 +156,7 @@ export default async function CampaignsLivePage() {
         </div>
       )}
 
-      <h2 className="mb-3 font-display text-lg font-semibold">
-        Your campaigns
-      </h2>
+      <h2 className="mb-3 font-display text-lg font-semibold">Your campaigns</h2>
       {campaigns.length === 0 ? (
         <EmptyState
           icon="📣"
@@ -173,89 +165,153 @@ export default async function CampaignsLivePage() {
           cta={{ href: "/dashboard/campaigns", label: "See your requests" }}
         />
       ) : (
-        <>
-          <div className="space-y-3">
-            {campaigns.map((c) => (
-              <div
+        <div className="space-y-6">
+          {campaigns.map((c) => {
+            const mine = events.filter((e) => e.campaign_id === c.id);
+            const forms = orderForms.filter((f) => f.campaign_id === c.id);
+            const bills = invoices.filter((i) => i.campaign_id === c.id);
+            return (
+              <section
                 key={c.id}
                 id={`campaign-${c.id}`}
-                className="card flex scroll-mt-24 flex-wrap items-center justify-between gap-4 p-5 target:ring-2 target:ring-[var(--color-brand)]"
+                aria-labelledby={`campaign-title-${c.id}`}
+                className="card scroll-mt-24 overflow-hidden p-0 target:ring-2 target:ring-[var(--color-brand)]"
               >
-                <div className="max-w-xl">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">
-                      <Link href={`/dashboard/campaigns/live/${c.id}`} className="hover:underline">
-                        {c.target_name || c.category || "Sponsorship campaign"}
-                      </Link>
-                    </h3>
-                    <CampaignStageBadge
-                      stage={campaignStage({
-                        status: c.status,
-                        settled:
-                          events.find(
-                            (e) => e.campaign_id === c.id && (e.status === "confirmed" || e.status === "completed"),
-                          ) ?? null,
-                        openProposals: events.filter((e) => e.campaign_id === c.id && e.status === "in_progress").length,
-                        surveyPublished: surveyPublished.get(c.id) ?? false,
-                      })}
+                {/* Header: which campaign this group is about. */}
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-black/10 bg-[var(--color-mist)] px-5 py-4">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 id={`campaign-title-${c.id}`} className="font-display text-lg font-semibold">
+                        <Link href={`/dashboard/campaigns/live/${c.id}`} className="hover:underline">
+                          {campaignTitle(c, "Sponsorship campaign")}
+                        </Link>
+                      </h3>
+                      <CampaignStageBadge
+                        stage={campaignStage({
+                          status: c.status,
+                          settled: mine.find((e) => e.status === "confirmed" || e.status === "completed") ?? null,
+                          openProposals: mine.filter((e) => e.status === "in_progress").length,
+                          surveyPublished: surveyPublished.get(c.id) ?? false,
+                        })}
+                      />
+                    </div>
+                    <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
+                      Ref {c.reference} · Budget £{Number(c.budget_gbp).toLocaleString("en-GB")}
+                    </p>
+                  </div>
+                  <Link href={`/dashboard/campaigns/live/${c.id}`} className="btn btn-ghost bg-white text-sm">
+                    View campaign
+                  </Link>
+                </div>
+
+                <div className="divide-y divide-black/10">
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                      Campaign details
+                    </p>
+                    <p className="mt-1 line-clamp-3 text-sm text-[var(--color-ink)]">{c.description}</p>
+                  </div>
+
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                      Order form &amp; invoice
+                    </p>
+                    {forms.length === 0 && bills.length === 0 ? (
+                      <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                        Our team will send your order form here to approve; the invoice follows.
+                      </p>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {forms.map((f) => (
+                          <li key={f.id}>
+                            <Link
+                              href={`/order-forms/${f.id}`}
+                              className={`flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm transition ${
+                                f.status === "sent"
+                                  ? "bg-[var(--color-brand)] text-white"
+                                  : "bg-[var(--color-mist)] hover:bg-[var(--color-mist)]/70"
+                              }`}
+                            >
+                              <span>
+                                <span className="font-semibold">Order form {f.reference}</span>
+                                {f.total_gbp != null ? ` · ${formatGbp(f.total_gbp)} incl. VAT` : ""}
+                              </span>
+                              <span className={f.status === "sent" ? "font-semibold" : "chip"}>
+                                {f.status === "sent" ? "Review & approve →" : ORDER_FORM_STATUS_LABELS[f.status]}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                        {bills.map((inv) => (
+                          <li key={inv.id}>
+                            <Link
+                              href={`/dashboard/campaigns/invoices/${inv.id}`}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm transition hover:bg-[var(--color-mist)]/70"
+                            >
+                              <span>
+                                <span className="font-semibold">Invoice {inv.reference}</span> · {formatGbp(inv.amount_gbp)}
+                                {inv.vat_gbp != null ? " inc. VAT" : ""}
+                                {inv.due_date ? ` · due ${formatDate(inv.due_date)}` : ""}
+                              </span>
+                              <StatusBadge status={invoiceDisplayStatus(inv)} />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="px-5 py-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                      Progress
+                    </p>
+                    <CampaignProgress
+                      campaign={c}
+                      events={mine}
+                      surveyPublished={surveyPublished.get(c.id) ?? false}
+                      invoice={bills.find((i) => i.status === "sent" || i.status === "overdue")}
                     />
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-[var(--color-ink-soft)]">
-                    {c.description}
-                  </p>
-                  <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
-                    Ref {c.reference} · Budget £
-                    {Number(c.budget_gbp).toLocaleString("en-GB")}
-                  </p>
                 </div>
-                <Link href={`/dashboard/campaigns/live/${c.id}`} className="btn btn-ghost text-sm">
-                  View campaign
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Invoices not tied to one of the campaigns above (e.g. a one-off). */}
+      {invoices.some((i) => !campaigns.some((c) => c.id === i.campaign_id)) && (
+        <>
+          <h2 className="mb-3 mt-8 font-display text-lg font-semibold">Other invoices</h2>
+          <div className="space-y-2">
+            {invoices
+              .filter((i) => !campaigns.some((c) => c.id === i.campaign_id))
+              .map((inv) => (
+                <Link
+                  key={inv.id}
+                  href={`/dashboard/campaigns/invoices/${inv.id}`}
+                  className="card flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-[var(--color-mist)]"
+                >
+                  <div>
+                    <p className="text-sm font-semibold">{inv.reference}</p>
+                    <p className="text-xs text-[var(--color-ink-soft)]">
+                      {formatGbp(inv.amount_gbp)}
+                      {inv.vat_gbp != null ? " inc. VAT" : ""}
+                      {inv.due_date ? ` · due ${formatDate(inv.due_date)}` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge status={invoiceDisplayStatus(inv)} />
                 </Link>
-                <div className="w-full">
-                  <CampaignProgress
-                    campaign={c}
-                    events={events.filter((e) => e.campaign_id === c.id)}
-                    surveyPublished={surveyPublished.get(c.id) ?? false}
-                    invoice={invoices.find(
-                      (i) => i.campaign_id === c.id && (i.status === "sent" || i.status === "overdue"),
-                    )}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </>
       )}
 
       {invoices.length > 0 && (
-        <>
-          <h2 className="mb-3 mt-8 font-display text-lg font-semibold">
-            Your orders
-          </h2>
-          <p className="mb-3 text-sm text-[var(--color-ink-soft)]">
-            Payment is by bank transfer against the invoice reference below —
-            no card details are collected on the platform.
-          </p>
-          <div className="space-y-2">
-            {invoices.map((inv) => (
-              <Link
-                key={inv.id}
-                href={`/dashboard/campaigns/invoices/${inv.id}`}
-                className="card flex flex-wrap items-center justify-between gap-3 p-4 transition hover:bg-[var(--color-mist)]"
-              >
-                <div>
-                  <p className="text-sm font-semibold">{inv.reference}</p>
-                  <p className="text-xs text-[var(--color-ink-soft)]">
-                    {inv.campaigns?.reference ?? "—"} · {formatGbp(inv.amount_gbp)}
-                    {inv.vat_gbp != null ? " inc. VAT" : ""}
-                    {inv.due_date ? ` · due ${formatDate(inv.due_date)}` : ""}
-                  </p>
-                </div>
-                <StatusBadge status={invoiceDisplayStatus(inv)} />
-              </Link>
-            ))}
-          </div>
-        </>
+        <p className="mt-6 text-xs text-[var(--color-ink-soft)]">
+          Payment is by bank transfer against the invoice reference — no card details are collected on the
+          platform.
+        </p>
       )}
     </div>
   );

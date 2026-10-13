@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
-import { requestCategoryLabel } from "@/lib/campaign-requests";
+import { campaignTitle, requestCategoryLabel } from "@/lib/campaign-requests";
 import { DetailFact as Fact } from "@/components/campaigns/DetailFact";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { withdrawCampaignIntake } from "../../actions";
@@ -58,7 +58,7 @@ export default async function CampaignRequestPage({
         .maybeSingle<{ id: string; reference: string }>()
     : { data: null };
 
-  const title = r.target_name || requestCategoryLabel(r) || "Campaign request";
+  const title = campaignTitle(r, "Campaign request");
 
   return (
     <div className="space-y-6">

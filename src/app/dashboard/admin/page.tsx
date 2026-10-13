@@ -43,7 +43,7 @@ export default async function AdminPage() {
     count(supabase, "profiles"),
     supabase
       .from("campaigns")
-      .select("id, reference, description, target_name, status, matched_listing_id, created_at, brands(brand_name)")
+      .select("id, reference, description, target_name, campaign_name, status, matched_listing_id, created_at, brands(brand_name)")
       .order("created_at", { ascending: false }),
     supabase
       .from("sponsored_events")
@@ -336,7 +336,7 @@ export default async function AdminPage() {
                   className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-2.5 text-sm"
                 >
                   <span className="min-w-0 flex-1 truncate">
-                    {c.reference} — {c.description}
+                    {c.reference} — {c.campaign_name || c.description}
                   </span>
                   {recentStages.get(c.id) && <CampaignStageBadge stage={recentStages.get(c.id)!} />}
                   <span className="text-xs text-[var(--color-ink-soft)]">

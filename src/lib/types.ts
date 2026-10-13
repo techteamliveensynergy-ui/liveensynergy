@@ -280,6 +280,9 @@ export interface Campaign {
   manager_email: string | null;
   manager_phone: string | null;
   matched_listing_id: string | null;
+  /** The campaign's own name (0067); older rows may be null — show it via
+   *  campaignTitle(). */
+  campaign_name: string | null;
   status: CampaignStatus;
   payment_waived_at: string | null;
   payment_waived_reason: string | null;
@@ -309,6 +312,8 @@ export interface CampaignIntakeRequest {
   category: string | null;
   /** Every category the brand ticked (0063). */
   categories: string[];
+  /** What the brand calls its campaign (0067). */
+  campaign_name: string | null;
   category_other: string | null;
   preferred_location: string | null;
   preferred_timeline: string | null;

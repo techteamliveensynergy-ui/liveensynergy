@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
-import { requestCategoryLabel } from "@/lib/campaign-requests";
+import { campaignTitle } from "@/lib/campaign-requests";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { withdrawCampaignIntake } from "./actions";
 
@@ -87,7 +87,7 @@ export default async function CampaignRequestsPage() {
               <div className="max-w-xl">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/dashboard/campaigns/requests/${r.id}`} className="font-semibold hover:underline">
-                    {r.target_name || requestCategoryLabel(r) || "Campaign request"}
+                    {campaignTitle(r, "Campaign request")}
                   </Link>
                   <StatusBadge status={r.status} />
                 </div>

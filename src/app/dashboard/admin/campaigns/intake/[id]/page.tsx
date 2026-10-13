@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { campaignTitle } from "@/lib/campaign-requests";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -57,7 +58,7 @@ export default async function AdminCampaignRequestPage({ params }: { params: Pro
         ← Back to campaign requests
       </Link>
       <PageHeader
-        title={r.target_name || `${r.brands?.brand_name ?? "Brand"} campaign request`}
+        title={campaignTitle(r, `${r.brands?.brand_name ?? "Brand"} campaign request`)}
         subtitle={`Request ${r.reference} · ${r.brands?.brand_name ?? "Unknown brand"} · submitted ${formatDateTime(r.created_at)}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
