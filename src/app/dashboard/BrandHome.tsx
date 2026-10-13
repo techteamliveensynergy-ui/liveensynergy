@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { profileCompleteness } from "@/lib/profile";
 import { MetricTile } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
-import type { Campaign, EventListing, Profile, SponsoredEvent } from "@/lib/types";
+import type { Campaign, CampaignIntakeRequest, Invoice, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStagesFor } from "@/lib/data/campaign-stages";
-import { campaignTitle } from "@/lib/campaign-requests";
+import { CAMPAIGN_INTAKE_STATUS_LABELS, campaignTitle } from "@/lib/campaign-requests";
+import { formatGbp } from "@/lib/billing";
+import { formatDate } from "@/lib/format";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
@@ -21,11 +23,12 @@ export async function BrandHome({ profile }: { profile: Profile }) {
 
   let campaigns: Campaign[] = [];
   let sponsored: SponsoredEvent[] = [];
-  let suggested: EventListing[] = [];
-  let verifiedCount = 0;
+  let requests: CampaignIntakeRequest[] = [];
+  let openInvoices: Pick<Invoice, "id" | "amount_gbp" | "status" | "due_date">[] = [];
+  let checkedInCount = 0;
 
   if (brand) {
-    const [{ data: campaignData }, { data: sponsoredData }, { data: listingData }] =
+    const [{ data: campaignData }, { data: sponsoredData }, { data: requestData }, { data: invoiceData }] =
       await Promise.all([
         supabase
           .from("campaigns")
@@ -37,17 +40,24 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           .select("*")
           .eq("brand_id", brand.id)
           .order("created_at", { ascending: false }),
+        // Requests the team hasn't turned into a campaign yet.
         supabase
-          .from("event_listings")
+          .from("campaign_intake_requests")
           .select("*")
-          .eq("status", "available")
-          .order("created_at", { ascending: false })
-          .limit(3),
+          .eq("brand_id", brand.id)
+          .in("status", ["submitted", "in_review"])
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("invoices")
+          .select("id, amount_gbp, status, due_date")
+          .eq("brand_id", brand.id)
+          .in("status", ["sent", "overdue"]),
       ]);
 
     campaigns = (campaignData ?? []) as Campaign[];
     sponsored = (sponsoredData ?? []) as SponsoredEvent[];
-    suggested = (listingData ?? []) as EventListing[];
+    requests = (requestData ?? []) as CampaignIntakeRequest[];
+    openInvoices = (invoiceData ?? []) as typeof openInvoices;
 
     const sponsoredIds = sponsored.map((s) => s.id);
     if (sponsoredIds.length > 0) {
@@ -55,19 +65,19 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         .from("participations")
         .select("id", { count: "exact", head: true })
         .in("sponsored_event_id", sponsoredIds)
-        .in("status", ["attendance_verified", "reward_released"]);
-      verifiedCount = count ?? 0;
+        .not("attendance_verified_at", "is", null);
+      checkedInCount = count ?? 0;
     }
   }
 
-  const activeCampaigns = campaigns.filter((c) => c.status === "in_progress").length;
-  const stages = await campaignStagesFor(supabase, campaigns.slice(0, 4), "brand");
-  const confirmedEvents = sponsored.filter((s) => s.status === "confirmed");
-  const confirmed = confirmedEvents.length;
-  // What the brand has committed across its campaigns (package price). The
-  // old "available for rewards" pool belonged to the cash reward model —
-  // rewards are discount codes now (9 Oct standup).
-  const committedBudget = campaigns.reduce((sum, c) => sum + Number(c.budget_gbp ?? 0), 0);
+  // Dashboard cards corrected (General Notes, 13 Oct): "active" counts every
+  // campaign that isn't finished — awaiting payment included — and the list
+  // below shows only those; closed/completed ones live on Campaigns live.
+  const inFlight = campaigns.filter((c) => c.status === "awaiting_payment" || c.status === "in_progress");
+  const activeCampaigns = inFlight.length;
+  const stages = await campaignStagesFor(supabase, inFlight.slice(0, 4), "brand");
+  const liveEvents = sponsored.filter((s) => s.status === "confirmed");
+  const toPay = openInvoices.reduce((sum, i) => sum + Number(i.amount_gbp), 0);
 
   return (
     <div>
@@ -81,9 +91,13 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {!brand
             ? "Finish your brand profile to start requesting sponsorship campaigns."
-            : campaigns.length === 0
+            : campaigns.length === 0 && requests.length === 0
               ? "Request your first sponsorship campaign — the Live·En·Synergy team matches it with artists and events."
-              : `You have ${activeCampaigns} campaign${activeCampaigns === 1 ? "" : "s"} in progress.`}
+              : `You have ${activeCampaigns} active campaign${activeCampaigns === 1 ? "" : "s"}${
+                  requests.length > 0
+                    ? ` and ${requests.length} request${requests.length === 1 ? "" : "s"} with our team`
+                    : ""
+                }.`}
         </p>
       </div>
 
@@ -91,23 +105,31 @@ export async function BrandHome({ profile }: { profile: Profile }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
-          label="Active campaigns"
-          value={activeCampaigns}
+          label="Requests in review"
+          value={requests.length}
+          hint="with our team"
           tint="bg-[#faf5ee]"
         />
         <MetricTile
-          label="Confirmed sponsorships"
-          value={confirmed}
+          label="Active campaigns"
+          value={activeCampaigns}
+          hint="not yet completed or closed"
           tint="bg-[var(--color-lavender)]"
         />
         <MetricTile
-          label="Verified attendees"
-          value={verifiedCount}
+          label="Attendees checked in"
+          value={checkedInCount}
+          hint="across your events"
           tint="bg-[var(--color-sage)]"
         />
         <MetricTile
-          label="Committed budget"
-          value={`£${committedBudget.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
+          label="To pay"
+          value={formatGbp(toPay)}
+          hint={
+            openInvoices.length === 0
+              ? "no invoices due"
+              : `${openInvoices.length} invoice${openInvoices.length === 1 ? "" : "s"}`
+          }
           tint="bg-[#fbeadd]"
         />
       </div>
@@ -128,9 +150,9 @@ export async function BrandHome({ profile }: { profile: Profile }) {
               See all →
             </Link>
           </div>
-          {campaigns.length === 0 ? (
+          {inFlight.length === 0 ? (
             <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
-              No campaigns yet.{" "}
+              No active campaigns.{" "}
               <Link
                 href="/dashboard/campaigns/new"
                 className="font-semibold text-[var(--color-brand-dark)]"
@@ -140,7 +162,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
             </div>
           ) : (
             <div className="space-y-2">
-              {campaigns.slice(0, 4).map((c) => {
+              {inFlight.slice(0, 4).map((c) => {
                 return (
                   <Link
                     key={c.id}
@@ -169,35 +191,43 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           )}
         </div>
 
+        {/* Was "Suggested for you" — the three newest listings, the same for
+            every brand. Matching is done by the team now, so this shows the
+            brand's own requests waiting on us instead (13 Oct). */}
         <div className="card bg-[var(--color-lavender)] p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              Suggested for you
+              Requests with our team
             </h2>
-            <Link href="/dashboard/discover" className="text-sm font-semibold text-[var(--color-purple-deep)]">
-              Browse →
+            <Link href="/dashboard/campaigns" className="text-sm font-semibold text-[var(--color-purple-deep)]">
+              See all →
             </Link>
           </div>
-          {suggested.length === 0 ? (
+          {requests.length === 0 ? (
             <p className="text-sm text-[var(--color-ink)]/70">
-              No open events yet — check back soon.
+              Nothing waiting on us.{" "}
+              <Link href="/dashboard/campaigns/new" className="font-semibold text-[var(--color-purple-deep)]">
+                Request a campaign →
+              </Link>
             </p>
           ) : (
             <div className="space-y-2">
-              {suggested.map((l) => (
-                <div
-                  key={l.id}
-                  className="flex items-center justify-between rounded-2xl bg-white p-3.5"
+              {requests.slice(0, 4).map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/dashboard/campaigns/requests/${r.id}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3.5 transition hover:shadow-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--color-ink)]">
-                      {l.name}
+                      {campaignTitle(r, "Campaign request")}
                     </p>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">
-                      {[l.category, l.city, l.budget_range].filter(Boolean).join(" · ")}
+                      Sent {formatDate(r.created_at)}
                     </p>
                   </div>
-                </div>
+                  <span className="chip shrink-0">{CAMPAIGN_INTAKE_STATUS_LABELS[r.status]}</span>
+                </Link>
               ))}
             </div>
           )}
@@ -210,11 +240,11 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              Confirmed sponsorships
+              Your events
             </h2>
             <p className="text-xs text-[var(--color-ink-soft)]">
-              Deals both sides have agreed — open one for its live campaign:
-              surveys, participants and results.
+              Events agreed for your campaigns — open one for its surveys,
+              participants and discount codes.
             </p>
           </div>
           <Link
@@ -224,14 +254,14 @@ export async function BrandHome({ profile }: { profile: Profile }) {
             See all →
           </Link>
         </div>
-        {confirmedEvents.length === 0 ? (
+        {liveEvents.length === 0 ? (
           <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
-            No confirmed sponsorships yet — once you and the artist both agree
-            terms, the deal shows up here.
+            No events agreed yet — once our team has matched your campaign with
+            an event and it&apos;s agreed, it shows up here.
           </div>
         ) : (
           <div className="space-y-2">
-            {confirmedEvents.slice(0, 5).map((s) => (
+            {liveEvents.slice(0, 5).map((s) => (
               <Link
                 key={s.id}
                 href={`/dashboard/sponsored/${s.id}`}

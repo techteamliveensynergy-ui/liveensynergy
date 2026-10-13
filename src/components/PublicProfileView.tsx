@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { PublicProfile } from "@/lib/public-profiles";
+import type { PublicListing, PublicProfile } from "@/lib/public-profiles";
+import { formatEventDateTime } from "@/lib/event-time";
 import { toEmbed, videoList } from "@/lib/video-embeds";
 import { displayUrl } from "@/lib/urls";
 
@@ -29,8 +30,11 @@ export function PublicProfileView({
   profile,
   preview,
   showSponsorSections = false,
+  upcomingEvents = [],
 }: {
   profile: PublicProfile;
+  /** Upcoming events open for sponsorship (artists / organisers). */
+  upcomingEvents?: PublicListing[];
   /** Shows a banner explaining this is how others see the page. */
   preview?: boolean;
   /** Reveals the sponsor-only sections. See `canSeeSponsorSections`. */
@@ -115,6 +119,37 @@ export function PublicProfileView({
             <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
               {profile.sponsorValue}
             </p>
+          </section>
+        )}
+
+        {upcomingEvents.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 font-display text-lg font-semibold text-[var(--color-ink)]">
+              Upcoming events
+            </h2>
+            <ul className="space-y-2">
+              {upcomingEvents.map((e) => (
+                <li key={e.id}>
+                  <Link
+                    href={`/dashboard/events/${e.id}/view`}
+                    className="card flex flex-wrap items-center justify-between gap-2 p-4 text-sm transition hover:bg-[var(--color-mist)]"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-semibold text-[var(--color-ink)]">{e.name}</span>
+                      <span className="block text-xs text-[var(--color-ink-soft)]">
+                        {[
+                          formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone }),
+                          [e.venue_name, e.city].filter(Boolean).join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    {e.category && <span className="chip">{e.category}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

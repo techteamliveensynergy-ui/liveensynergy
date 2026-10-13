@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, MetricTile, StatusBadge } from "@/components/dashboard/ui";
-import { timeAgo } from "@/lib/format";
+import { formatDate, timeAgo, ukDayKey } from "@/lib/format";
+import { formatEventDateTime } from "@/lib/event-time";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStagesFor } from "@/lib/data/campaign-stages";
 import type { CampaignStatus } from "@/lib/types";
@@ -49,7 +50,10 @@ export default async function AdminPage() {
       .from("sponsored_events")
       .select("id, reference, name, status, brand_agreed, artist_agreed, campaign_id, event_date, created_at")
       .order("created_at", { ascending: false }),
-    supabase.from("event_listings").select("id, status"),
+    supabase
+      .from("event_listings")
+      .select("id, status, name, reference, event_date, start_time, timezone, venue_name, city")
+      .order("event_date", { ascending: true }),
     supabase.from("participations").select("id, status"),
     supabase.from("contact_messages").select("id, subject, name, handled_at, created_at"),
     Promise.all(
@@ -82,6 +86,12 @@ export default async function AdminPage() {
   );
   const sponsored = sponsoredRows.data ?? [];
   const listings = listingRows.data ?? [];
+  // Every listed event from today on, soonest first (General Notes, 13 Oct:
+  // the overview only showed a count).
+  const todayKey = ukDayKey(new Date());
+  const upcomingListings = listings.filter(
+    (l) => l.event_date && l.event_date >= todayKey && l.status !== "closed" && l.status !== "draft",
+  );
   const participations = participationRows.data ?? [];
   const enquiries = enquiryRows.data ?? [];
 
@@ -272,10 +282,43 @@ export default async function AdminPage() {
                     {c ? `${c.reference} · ${(c.brands as unknown as { brand_name: string } | null)?.brand_name ?? ""} — ` : ""}
                     {e.name}
                   </span>
-                  <span className="text-xs text-[var(--color-ink-soft)]">{e.event_date ?? ""}</span>
+                  <span className="text-xs text-[var(--color-ink-soft)]">{e.event_date ? formatDate(e.event_date) : ""}</span>
                 </Link>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="card min-w-0 p-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">Upcoming events</h2>
+          <Link href="/dashboard/admin/events" className="text-sm font-semibold text-[var(--color-brand-dark)]">
+            See all →
+          </Link>
+        </div>
+        {upcomingListings.length === 0 ? (
+          <p className="text-sm text-[var(--color-ink-soft)]">No published events from today on.</p>
+        ) : (
+          <div className="space-y-2">
+            {upcomingListings.slice(0, 8).map((l) => (
+              <Link
+                key={l.id}
+                href={`/dashboard/events/${l.id}/view`}
+                className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-2.5 text-sm transition hover:bg-white"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {l.name}
+                  {l.venue_name || l.city ? (
+                    <span className="text-[var(--color-ink-soft)]"> · {[l.venue_name, l.city].filter(Boolean).join(", ")}</span>
+                  ) : null}
+                </span>
+                <StatusBadge status={l.status} />
+                <span className="shrink-0 text-xs text-[var(--color-ink-soft)]">
+                  {formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone })}
+                </span>
+              </Link>
+            ))}
           </div>
         )}
       </section>

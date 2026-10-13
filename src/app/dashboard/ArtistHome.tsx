@@ -4,13 +4,15 @@ import { profileCompleteness } from "@/lib/profile";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import type { EventListing, Profile, SponsoredEvent } from "@/lib/types";
+import { formatEventDateTime } from "@/lib/event-time";
+import { ukDayKey } from "@/lib/format";
 
 export async function ArtistHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
   const isEvent = profile.role === "event";
   const completeness = await profileCompleteness(profile);
 
-  const [{ data: listingData }, { data: sponsoredData }, { count: enquiryCount }] =
+  const [{ data: listingData }, { data: sponsoredData }, { count: briefCount }] =
     await Promise.all([
       supabase
         .from("event_listings")
@@ -22,27 +24,35 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         .select("*")
         .eq("artist_profile_id", profile.id)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("conversations")
-        .select("id", { count: "exact", head: true })
-        .eq("partner_profile_id", profile.id),
+      // Approved order forms linked to this artist's events (view scoped
+      // to the artist — see campaign-briefs/page.tsx).
+      supabase.from("campaign_order_briefs").select("id", { count: "exact", head: true }),
     ]);
 
   const listings = (listingData ?? []) as EventListing[];
   const sponsored = (sponsoredData ?? []) as SponsoredEvent[];
-  const published = listings.filter((l) => l.status === "available").length;
-  const confirmed = sponsored.filter((s) => s.status === "confirmed").length;
-  const pendingOffers = sponsored.filter((s) => s.status === "in_progress" && !s.artist_agreed).length;
+  // Cards corrected (General Notes, 13 Oct): the old "sponsor offers" and
+  // "brand enquiries" described the direct brand↔artist marketplace (the
+  // enquiry count was every conversation, open or not). Now: events agreed,
+  // proposals waiting on the artist, discount codes still to confirm, and
+  // what's coming up.
+  const today = ukDayKey(new Date());
+  const upcoming = listings
+    .filter((l) => l.event_date && l.event_date >= today && l.status !== "closed")
+    .sort((a, b) => (a.event_date! < b.event_date! ? -1 : a.event_date! > b.event_date! ? 1 : 0));
+  const live = sponsored.filter((s) => s.status === "confirmed");
+  const awaitingYou = sponsored.filter((s) => s.status === "in_progress" && !s.artist_agreed);
+  const codesToConfirm = live.filter((s) => !s.reward_codes_confirmed_at);
 
-  let verifiedCount = 0;
+  let checkedInCount = 0;
   const sponsoredIds = sponsored.map((s) => s.id);
   if (sponsoredIds.length > 0) {
     const { count } = await supabase
       .from("participations")
       .select("id", { count: "exact", head: true })
       .in("sponsored_event_id", sponsoredIds)
-      .in("status", ["attendance_verified", "reward_released"]);
-    verifiedCount = count ?? 0;
+      .not("attendance_verified_at", "is", null);
+    checkedInCount = count ?? 0;
   }
 
   return (
@@ -57,26 +67,35 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {listings.length === 0
             ? "List your first event to open it up for sponsorship."
-            : pendingOffers > 0
-              ? `You have ${pendingOffers} sponsorship proposal${pendingOffers === 1 ? "" : "s"} awaiting your response.`
-              : "Your events are live — keep an eye on your offers inbox."}
+            : awaitingYou.length > 0
+              ? `${awaitingYou.length} sponsored event${awaitingYou.length === 1 ? " is" : "s are"} waiting for you to agree the terms.`
+              : codesToConfirm.length > 0
+                ? `Confirm the discount codes for ${codesToConfirm.length} sponsored event${codesToConfirm.length === 1 ? "" : "s"}.`
+                : upcoming.length > 0
+                  ? `Your next event is ${upcoming[0].name}.`
+                  : "List your next event so our team can match it with a sponsor."}
         </p>
       </div>
 
       <ProfileCompleteness completeness={completeness} className="mb-6" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricTile label="Published events" value={published} tint="bg-[var(--color-lavender)]" />
-        <MetricTile label="Sponsor offers pending" value={pendingOffers} tint="bg-[var(--color-gold)]" />
-        <MetricTile label="Confirmed sponsorships" value={confirmed} tint="bg-[var(--color-sage)]" />
-        <MetricTile label="Verified attendees" value={verifiedCount} tint="bg-[var(--color-pink)]" />
+        <MetricTile label="Upcoming events" value={upcoming.length} hint="from today" tint="bg-[var(--color-lavender)]" />
+        <MetricTile
+          label="Waiting on you"
+          value={awaitingYou.length + codesToConfirm.length}
+          hint="terms to agree + discount codes to confirm"
+          tint="bg-[var(--color-gold)]"
+        />
+        <MetricTile label="Sponsored events" value={live.length} hint="agreed with a brand" tint="bg-[var(--color-sage)]" />
+        <MetricTile label="Attendees checked in" value={checkedInCount} hint="across your sponsored events" tint="bg-[var(--color-pink)]" />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <div className="card p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              My events
+              Upcoming events
             </h2>
             <Link
               href="/dashboard/events"
@@ -85,9 +104,9 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
               See all →
             </Link>
           </div>
-          {listings.length === 0 ? (
+          {upcoming.length === 0 ? (
             <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
-              No events yet.{" "}
+              No upcoming events.{" "}
               <Link
                 href="/dashboard/events/new"
                 className="font-semibold text-[var(--color-brand-dark)]"
@@ -97,22 +116,22 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
             </div>
           ) : (
             <div className="space-y-2">
-              {listings.slice(0, 4).map((l) => (
+              {upcoming.slice(0, 4).map((l) => (
                 <Link
                   key={l.id}
-                  href={`/dashboard/events/${l.id}`}
+                  href={`/dashboard/events/${l.id}/view`}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4 transition hover:bg-white hover:shadow-sm"
                 >
                   <div>
                     <p className="font-semibold text-[var(--color-ink)]">{l.name}</p>
                     <p className="text-xs text-[var(--color-ink-soft)]">
-                      Ref {l.reference}
-                      {l.city ? ` · ${l.city}` : ""}
+                      {formatEventDateTime({ date: l.event_date, time: l.start_time, timeZone: l.timezone }, { weekday: true })}
+                      {l.venue_name || l.city ? ` · ${[l.venue_name, l.city].filter(Boolean).join(", ")}` : ""}
                     </p>
                   </div>
                   <StatusBadge status={l.status} />
                   <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
-                    Manage →
+                    View →
                   </span>
                 </Link>
               ))}
@@ -122,28 +141,45 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
 
         <div className="card bg-[var(--color-gold)]/40 p-6">
           <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-            Tip · sponsor value
+            Waiting on you
           </h2>
-          <p className="mt-2 text-sm text-[var(--color-ink)]/80">
-            The more specific your sponsor value details — social posts, onsite
-            branding, merch — the sharper the offers our team sends your way.
-          </p>
-          <Link
-            href="/dashboard/profile"
-            className="mt-4 inline-block text-sm font-semibold text-[var(--color-brand-dark)]"
-          >
-            Update your profile →
-          </Link>
-          {(enquiryCount ?? 0) > 0 && (
+          {awaitingYou.length === 0 && codesToConfirm.length === 0 ? (
+            <p className="mt-2 text-sm text-[var(--color-ink)]/80">
+              Nothing right now — we&apos;ll let you know when a sponsor&apos;s campaign needs you.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {awaitingYou.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/sponsored/${s.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white p-3.5 text-sm transition hover:shadow-sm"
+                >
+                  <span className="min-w-0 truncate">
+                    Agree the terms for <strong>{s.name}</strong>
+                  </span>
+                  <span className="shrink-0 font-semibold text-[var(--color-brand-dark)]">Review →</span>
+                </Link>
+              ))}
+              {codesToConfirm.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/sponsored/${s.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white p-3.5 text-sm transition hover:shadow-sm"
+                >
+                  <span className="min-w-0 truncate">
+                    Confirm discount codes for <strong>{s.name}</strong>
+                  </span>
+                  <span className="shrink-0 font-semibold text-[var(--color-brand-dark)]">Open →</span>
+                </Link>
+              ))}
+            </div>
+          )}
+          {(briefCount ?? 0) > 0 && (
             <div className="mt-5 flex items-center justify-between rounded-xl bg-white p-3.5 text-sm">
-              <span className="text-[var(--color-ink-soft)]">
-                Brand enquiries waiting
-              </span>
-              <Link
-                href="/dashboard/offers"
-                className="font-semibold text-[var(--color-brand-dark)]"
-              >
-                {enquiryCount} open →
+              <span className="text-[var(--color-ink-soft)]">Campaign briefs</span>
+              <Link href="/dashboard/campaign-briefs" className="font-semibold text-[var(--color-brand-dark)]">
+                {briefCount} to read →
               </Link>
             </div>
           )}
@@ -160,10 +196,10 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
             Open →
           </span>
         </Link>
-        <Link href="/dashboard/offers" className="card block p-5 transition hover:-translate-y-0.5">
-          <h3 className="font-semibold text-[var(--color-ink)]">Review sponsor offers</h3>
+        <Link href="/dashboard/campaign-briefs" className="card block p-5 transition hover:-translate-y-0.5">
+          <h3 className="font-semibold text-[var(--color-ink)]">Campaign briefs</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            See which brands want to partner with you.
+            What each sponsor&apos;s campaign at your event involves.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →
@@ -172,7 +208,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/profile" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">Polish your profile</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Add your bio, socials and sponsor value details.
+            Add your bio, photos, videos and socials.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →
