@@ -53,6 +53,11 @@ export default async function AdminReportsPage() {
       <PageHeader
         title="Reporting & analysis"
         subtitle="Every published survey's numbers in one place. Open a survey for question-by-question results and anonymised downloads."
+        action={
+          <Link href="/dashboard/admin/reports/analysis" className="btn btn-primary text-sm">
+            AI analysis playground
+          </Link>
+        }
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

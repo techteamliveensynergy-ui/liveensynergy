@@ -1,7 +1,26 @@
 # 14 Oct standup — agreed plan
 
 Source: Daily Standup 14 Oct 2026 (Gemini notes) plus Ketan's follow-up on
-15 Oct. Three pieces of work, in build order. Nothing here is built yet.
+15 Oct. Three pieces of work, in build order.
+
+## Status (15 Oct)
+
+| Part | Built | Migration | Still needed |
+|---|---|---|---|
+| 1. Upcoming → Open | ✅ | `0070_campaign_opening.sql` — dry-run on prod, **not applied** | Apply 0070, then deploy |
+| 2. Skip logic | ✅ | `0071_survey_skip_logic.sql` — dry-run on prod, **not applied** | Apply 0071, then deploy |
+| 3. Analysis playground | ✅ (figures, charts, PDF, Word) | `0072_analysis_reports.sql` — **not applied** | Apply 0072; `OPENAI_API_KEY` in Vercel for the write-up; privacy wording; Google Docs button (OAuth) later |
+
+What changed from the first draft below:
+- The open/close switch lives on the **campaign** (`campaigns.opens_at`), not
+  the sponsored event — surveys belong to campaigns, and public surveys
+  (Fire X, Northwave) run before any event is agreed.
+- Only **pre-event** surveys are gated. Post-event surveys are answered by
+  people already registered, and closing registration after the event must
+  not stop their feedback.
+- No "notify me when it opens" yet (needs a scheduled job for timed openings).
+- Google Docs: download the .docx and open it in Drive with Google Docs; a
+  one-click button needs a Google Cloud OAuth client.
 
 ---
 
