@@ -30,7 +30,7 @@ export interface SurveyLogicRule {
   op: SurveyLogicOp;
   /** equals / includes: an option value. */
   value?: string;
-  /** between (scale): inclusive range. */
+  /** between (scale / number): inclusive range. */
   min?: number;
   max?: number;
   /** A later question's id, or LOGIC_END. */
@@ -45,6 +45,7 @@ export const BRANCHING_TYPES: readonly SurveyQuestionType[] = [
   "dropdown",
   "multiple_choice",
   "scale",
+  "number",
 ];
 
 /** Rating-group rows and hidden fields never branch. */

@@ -38,7 +38,7 @@ export function FigureChart({ column, compact = false }: { column: ColumnFigures
       {column.counts && column.counts.length > 0 && (
         <ul className="mt-3 space-y-1.5">
           {(compact ? column.counts.slice(0, 8) : column.counts).map((c) => (
-            <li key={c.label} className="grid grid-cols-[minmax(0,10rem)_1fr_3.5rem] items-center gap-2 text-xs">
+            <li key={c.label} className="grid grid-cols-[minmax(0,10rem)_1fr_5.5rem] items-center gap-2 text-xs">
               <span className="truncate" title={c.label}>
                 {c.label}
               </span>

@@ -7,9 +7,9 @@ Source: Daily Standup 14 Oct 2026 (Gemini notes) plus Ketan's follow-up on
 
 | Part | Built | Migration | Still needed |
 |---|---|---|---|
-| 1. Upcoming → Open | ✅ | `0070_campaign_opening.sql` — dry-run on prod, **not applied** | Apply 0070, then deploy |
-| 2. Skip logic | ✅ | `0071_survey_skip_logic.sql` — dry-run on prod, **not applied** | Apply 0071, then deploy |
-| 3. Analysis playground | ✅ (figures, charts, PDF, Word) | `0072_analysis_reports.sql` — **not applied** | Apply 0072; `OPENAI_API_KEY` in Vercel for the write-up; privacy wording; Google Docs button (OAuth) later |
+| 1. Upcoming → Open | ✅ | `0070_campaign_opening.sql` — **applied 15 Oct** | Deploy |
+| 2. Skip logic | ✅ | `0071_survey_skip_logic.sql` — **applied 15 Oct** | Deploy |
+| 3. Analysis playground | ✅ (figures, charts, PDF, Word) | `0072_analysis_reports.sql` — **applied 15 Oct** | Deploy; `OPENAI_API_KEY` in Vercel for the write-up; privacy wording; Google Docs button (OAuth) later |
 
 What changed from the first draft below:
 - The open/close switch lives on the **campaign** (`campaigns.opens_at`), not

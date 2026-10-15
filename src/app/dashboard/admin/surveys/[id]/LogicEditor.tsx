@@ -91,8 +91,10 @@ export function LogicEditor({
     </select>
   );
 
-  const min = question.config.min ?? 1;
-  const max = question.config.max ?? 5;
+  // Scales and number questions branch on a range of the answer.
+  const ranged = question.type === "scale" || question.type === "number";
+  const min = question.config.min ?? (question.type === "scale" ? 1 : 0);
+  const max = question.config.max ?? (question.type === "scale" ? 5 : 10);
 
   return (
     <div className="card space-y-3 p-5">
@@ -128,7 +130,7 @@ export function LogicEditor({
         </p>
       )}
 
-      {question.type === "scale" && (
+      {ranged && (
         <div className="space-y-2">
           {ranges.map((r, n) => (
             <div key={n} className="flex flex-wrap items-center gap-1.5 text-sm">
@@ -197,7 +199,7 @@ export function LogicEditor({
 
       <label className="block text-sm">
         <span className="text-xs text-[var(--color-ink-soft)]">
-          {answerOptions.length || question.type === "scale" ? "Everyone else" : "After this question"}
+          {answerOptions.length || ranged ? "Everyone else" : "After this question"}
         </span>
         {targetSelect(always?.goto ?? NEXT, (v) => save({ always: v }), "Where everyone else goes")}
       </label>

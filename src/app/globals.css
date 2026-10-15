@@ -373,8 +373,9 @@ h4,
   body:has([data-print-report]) * {
     visibility: hidden;
   }
-  [data-print-report],
-  [data-print-report] * {
+  /* Same :has() prefix as the rule above, so this one wins on specificity. */
+  body:has([data-print-report]) [data-print-report],
+  body:has([data-print-report]) [data-print-report] * {
     visibility: visible;
   }
   [data-print-report] {
