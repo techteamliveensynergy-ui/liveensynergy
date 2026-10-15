@@ -1,7 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { questionProblem, type SurveyQuestionDraft } from "@/lib/surveys";
+import { logicSummary, questionProblemAt, type SurveyQuestionDraft } from "@/lib/surveys";
 import { SortableQuestionCard } from "./SortableQuestionCard";
 
 export function QuestionCanvas({
@@ -36,7 +36,8 @@ export function QuestionCanvas({
           <SortableQuestionCard
             key={q.key}
             number={i + 1}
-            problem={questionProblem(q)}
+            problem={questionProblemAt(questions, i)}
+            logic={logicSummary(questions, i)}
             question={q}
             selected={q.key === selectedKey}
             editable={editable}

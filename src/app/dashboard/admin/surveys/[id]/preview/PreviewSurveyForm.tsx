@@ -23,6 +23,7 @@ import {
   validateAnswers,
   type SurveyAnswerDraft,
 } from "@/lib/surveys";
+import { surveyPath } from "@/lib/survey-logic";
 
 /**
  * Admin-only stand-in for the real SurveyForm — same field renderers, but
@@ -65,7 +66,9 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
   function handleOtherText(questionId: string, text: string) {
     setOtherTexts((prev) => ({ ...prev, [questionId]: text }));
   }
-  const blocks = useMemo(() => surveyBlocks(questions), [questions]);
+  // Follows skip logic (0071) exactly as the live form does.
+  const pathQuestions = useMemo(() => surveyPath(questions, values), [questions, values]);
+  const blocks = useMemo(() => surveyBlocks(pathQuestions), [pathQuestions]);
   const [error, setError] = useState<string | undefined>();
   const [finished, setFinished] = useState(false);
   const [gateCleared, setGateCleared] = useState(!showIntroGate);
@@ -132,7 +135,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const drafts: SurveyAnswerDraft[] = questions.map((q) => ({
+        const drafts: SurveyAnswerDraft[] = pathQuestions.map((q) => ({
           question_id: q.id,
           value: values[q.id] ?? null,
           shown_at: null,
@@ -161,7 +164,7 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
 
       {layoutMode === "stepped" ? (
         <SteppedQuestions
-          questions={questions}
+          questions={pathQuestions}
           values={values}
           otherTexts={otherTexts}
           onChange={handleChange}

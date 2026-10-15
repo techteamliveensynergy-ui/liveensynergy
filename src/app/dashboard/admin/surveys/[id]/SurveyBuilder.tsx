@@ -37,6 +37,7 @@ import { saveSurveyQuestions, type SurveyState } from "../actions";
 import { QuestionPalette } from "./QuestionPalette";
 import { QuestionCanvas } from "./QuestionCanvas";
 import { QuestionInspector } from "./QuestionInspector";
+import { LogicEditor } from "./LogicEditor";
 import { QuestionCardPreview } from "./SortableQuestionCard";
 import { ContradictionRulesEditor } from "./ContradictionRulesEditor";
 
@@ -148,7 +149,20 @@ export function SurveyBuilder({
   }
 
   function removeQuestion(key: string) {
-    setQuestions((prev) => prev.filter((q) => q.key !== key));
+    // Jumps that landed on the removed question go back to "next question".
+    setQuestions((prev) =>
+      prev
+        .filter((q) => q.key !== key)
+        .map((q) => {
+          const logic = q.config.logic;
+          if (!logic?.some((r) => r.goto === key)) return q;
+          const kept = logic.filter((r) => r.goto !== key);
+          const config = { ...q.config };
+          if (kept.length) config.logic = kept;
+          else delete config.logic;
+          return { ...q, config };
+        }),
+    );
     setSelectedKey((current) => (current === key ? null : current));
     setRules((prev) => prev.filter((r) => r.questionAKey !== key && r.questionBKey !== key));
     setDirty(true);
@@ -260,14 +274,25 @@ export function SurveyBuilder({
           {/* Keyed per question so an upload's "Uploading…" state (and its
               disabled file picker) never carries over to the next question
               the admin opens — FB-00024. */}
-          <QuestionInspector
-            key={selected?.key ?? "none"}
-            question={selected}
-            editable={editable}
-            layoutMode={layoutMode}
-            onChange={(patch) => selected && updateQuestion(selected.key, patch)}
-            onAddGroupRow={() => selected && addGroupRow(selected.key)}
-          />
+          <div className="space-y-4">
+            <QuestionInspector
+              key={selected?.key ?? "none"}
+              question={selected}
+              editable={editable}
+              layoutMode={layoutMode}
+              onChange={(patch) => selected && updateQuestion(selected.key, patch)}
+              onAddGroupRow={() => selected && addGroupRow(selected.key)}
+            />
+            {selected && (
+              <LogicEditor
+                key={`logic-${selected.key}`}
+                questions={questions}
+                question={selected}
+                editable={editable}
+                onChange={(config) => updateQuestion(selected.key, { config })}
+              />
+            )}
+          </div>
         </div>
 
         <DragOverlay>

@@ -13,6 +13,7 @@ function CardBody({
   question,
   number,
   problem,
+  logic,
   selected,
   editable,
   dragHandleProps,
@@ -24,6 +25,8 @@ function CardBody({
   /** 1-based position — the same number save errors quote (FB-00027). */
   number?: number;
   problem?: string | null;
+  /** Skip-logic summary, e.g. "“No” → Q5" (0071). */
+  logic?: string | null;
   selected: boolean;
   editable: boolean;
   dragHandleProps?: DragHandleProps;
@@ -63,6 +66,7 @@ function CardBody({
             📊 {question.config.group_prompt || "Rating group"}
           </span>
         )}
+        {logic && <span className="mt-0.5 block text-xs text-[var(--color-purple-deep)]">↳ {logic}</span>}
         {problem && (
           <span className="mt-1 block text-xs font-semibold text-[var(--color-accent)]">⚠ {problem}</span>
         )}
@@ -117,6 +121,7 @@ export function SortableQuestionCard({
   question,
   number,
   problem,
+  logic,
   selected,
   editable,
   onSelect,
@@ -126,6 +131,7 @@ export function SortableQuestionCard({
   question: SurveyQuestionDraft;
   number?: number;
   problem?: string | null;
+  logic?: string | null;
   selected: boolean;
   editable: boolean;
   onSelect: () => void;
@@ -147,6 +153,7 @@ export function SortableQuestionCard({
         question={question}
         number={number}
         problem={problem}
+        logic={logic}
         selected={selected}
         editable={editable}
         dragHandleProps={{ attributes, listeners }}

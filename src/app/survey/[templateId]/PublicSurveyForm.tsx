@@ -22,6 +22,7 @@ import {
   type SurveyTypography,
 } from "@/lib/survey-media";
 import { choseOther, emptyAnswerFor, surveyBlocks } from "@/lib/surveys";
+import { surveyPath } from "@/lib/survey-logic";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
@@ -257,7 +258,12 @@ export function PublicSurveyForm({
   function handleOtherText(questionId: string, text: string) {
     setOtherTexts((prev) => ({ ...prev, [questionId]: text }));
   }
-  const blocks = useMemo(() => surveyBlocks(questions), [questions]);
+  // Skip logic (0071): only the questions on this respondent's path, given
+  // their answers so far. Jumps only go forward, so changing an answer never
+  // moves the step someone is on — only what comes after it.
+  const pathQuestions = useMemo(() => surveyPath(questions, values), [questions, values]);
+  const pathKey = pathQuestions.map((q) => q.id).join(",");
+  const blocks = useMemo(() => surveyBlocks(pathQuestions), [pathQuestions]);
   const [timings, setTimings] = useState<Record<string, Timing>>({});
   const mountedAt = useRef(new Date().toISOString());
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -279,7 +285,7 @@ export function PublicSurveyForm({
       const fallback = mountedAt.current;
       setTimings((prev) => {
         const next = { ...prev };
-        for (const q of questions) {
+        for (const q of pathQuestions) {
           next[q.id] = { shown_at: next[q.id]?.shown_at ?? fallback, answered_at: next[q.id]?.answered_at ?? null };
         }
         return next;
@@ -305,13 +311,13 @@ export function PublicSurveyForm({
       { threshold: 0.5 },
     );
 
-    for (const q of questions) {
+    for (const q of pathQuestions) {
       const el = refs.current[q.id];
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, layoutMode]);
+  }, [stage, layoutMode, pathKey]);
 
   function handleChange(questionId: string, value: SurveyAnswerValue) {
     setValues((prev) => ({ ...prev, [questionId]: value }));
@@ -340,7 +346,8 @@ export function PublicSurveyForm({
     return shownTimes[0] ?? mountedAt.current;
   }, [timings]);
 
-  const payload = questions.map((q) => ({
+  // Only answers on the path — the server refuses answers to skipped questions.
+  const payload = pathQuestions.map((q) => ({
     question_id: q.id,
     value: values[q.id] ?? null,
     shown_at: timings[q.id]?.shown_at ?? null,
@@ -561,7 +568,7 @@ export function PublicSurveyForm({
 
       {layoutMode === "stepped" ? (
         <SteppedQuestions
-          questions={questions}
+          questions={pathQuestions}
           values={values}
           otherTexts={otherTexts}
           onChange={handleChange}
