@@ -1,3 +1,5 @@
+import { isCampaignOpen } from "@/lib/campaign-progress";
+import { formatDate } from "@/lib/format";
 import type { CampaignStatus } from "@/lib/types";
 
 /**
@@ -29,6 +31,8 @@ export interface CampaignChecklistFacts {
     reward_codes_confirmed_at: string | null;
   }[];
   surveyPublished: boolean;
+  /** campaigns.opens_at (0070). */
+  opensAt: string | null;
 }
 
 export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
@@ -108,6 +112,17 @@ export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
     items.push({ key: "survey", state: "later", text: "Campaign survey — once paid" });
   } else {
     items.push({ key: "survey", state: "awaited", text: "Campaign survey not published — awaiting you" });
+  }
+
+  // Opening to the audience (0070)
+  if (isCampaignOpen(f.opensAt)) {
+    items.push({ key: "open", state: "done", text: `Open to the audience since ${formatDate(f.opensAt)}` });
+  } else if (f.opensAt) {
+    items.push({ key: "open", state: "done", text: `Scheduled to open ${formatDate(f.opensAt)}` });
+  } else if (unpaid || !settled) {
+    items.push({ key: "open", state: "later", text: "Registration and survey — open once the event is agreed and set up" });
+  } else {
+    items.push({ key: "open", state: "awaited", text: "Shown as upcoming — awaiting you to open registration and the survey" });
   }
 
   return items;

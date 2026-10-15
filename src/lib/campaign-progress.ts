@@ -1,3 +1,4 @@
+import { formatDate } from "./format";
 import type { CampaignStatus } from "./types";
 
 /**
@@ -11,7 +12,7 @@ import type { CampaignStatus } from "./types";
  * own, and the "current" step is simply the first one not yet done.
  */
 
-export type CampaignStepKey = "payment" | "match" | "codes" | "survey" | "live";
+export type CampaignStepKey = "payment" | "match" | "codes" | "survey" | "open" | "live";
 
 export interface CampaignStep {
   key: CampaignStepKey;
@@ -29,6 +30,14 @@ export interface CampaignProgressInput {
   openProposals: number;
   /** At least one of the campaign's surveys is published. */
   surveyPublished: boolean;
+  /** campaigns.opens_at (0070): when registration and the survey open to the
+   *  audience. Null = not opened yet; in the future = scheduled. */
+  opensAt: string | null;
+}
+
+/** Registration and the survey are open to the audience right now. */
+export function isCampaignOpen(opensAt: string | null, now: Date = new Date()): boolean {
+  return !!opensAt && new Date(opensAt).getTime() <= now.getTime();
 }
 
 export function campaignSteps(c: CampaignProgressInput): CampaignStep[] {
@@ -62,6 +71,17 @@ export function campaignSteps(c: CampaignProgressInput): CampaignStep[] {
       label: "Campaign survey published",
       done: c.surveyPublished,
       detail: "Our team is publishing the campaign survey.",
+    },
+    {
+      // 14 Oct standup: a paid, agreed event shows to the audience as
+      // "Upcoming" straight away, but registration and the survey open only
+      // when the team says so — timed to the event's promotion.
+      key: "open",
+      label: "Registrations open",
+      done: isCampaignOpen(c.opensAt),
+      detail: c.opensAt
+        ? `Registration and the survey open ${formatDate(c.opensAt)}. Until then the event shows to the audience as upcoming.`
+        : "The event already shows to the audience as upcoming. Our team opens registration and the survey to coincide with its promotion.",
     },
   ];
   const allDone = steps.every((s) => s.done);

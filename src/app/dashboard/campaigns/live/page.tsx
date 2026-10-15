@@ -192,6 +192,7 @@ export default async function CampaignsLivePage() {
                           settled: mine.find((e) => e.status === "confirmed" || e.status === "completed") ?? null,
                           openProposals: mine.filter((e) => e.status === "in_progress").length,
                           surveyPublished: surveyPublished.get(c.id) ?? false,
+                          opensAt: c.opens_at,
                         })}
                       />
                     </div>

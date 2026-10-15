@@ -109,6 +109,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
               settled: events.find((e) => e.status === "confirmed" || e.status === "completed") ?? null,
               openProposals: events.filter((e) => e.status === "in_progress").length,
               surveyPublished: surveys.some((s) => s.status === "published"),
+              opensAt: c.opens_at,
             })}
           />
         </div>

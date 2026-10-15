@@ -1,4 +1,5 @@
 import { campaignSteps, currentStep, type CampaignProgressInput } from "./campaign-progress";
+import { formatDate } from "./format";
 import type { CampaignStatus } from "./types";
 
 /**
@@ -10,7 +11,12 @@ import type { CampaignStatus } from "./types";
  * the platform already has — the same checklist brands see
  * (campaignSteps()) — and nobody has to remember to update it:
  *
- *   Awaiting payment → Needs matching → Awaiting artist → Awaiting survey → Live
+ *   Awaiting payment → Needs matching → Awaiting artist → Awaiting survey
+ *     → Ready to open → Live
+ *
+ * "Ready to open" (14 Oct standup, 0070): everything is in place but the team
+ * hasn't opened registration and the survey yet — or has scheduled it, when
+ * the badge reads "Opens <date>".
  *
  * Completed and Closed stay manual admin actions (admin_change_campaign_status,
  * 0066): Completed once the event and reporting are done (optional note),
@@ -22,6 +28,7 @@ export type CampaignStageKey =
   | "needs_matching"
   | "awaiting_artist"
   | "awaiting_survey"
+  | "ready_to_open"
   | "live"
   | "completed"
   | "closed";
@@ -36,6 +43,7 @@ export const CAMPAIGN_STAGE_LABELS: Record<CampaignStageKey, string> = {
   needs_matching: "Needs matching",
   awaiting_artist: "Awaiting artist",
   awaiting_survey: "Awaiting survey",
+  ready_to_open: "Ready to open",
   live: "Live",
   completed: "Completed",
   closed: "Closed",
@@ -48,6 +56,7 @@ export const CAMPAIGN_STAGE_STYLES: Record<CampaignStageKey, string> = {
   needs_matching: "bg-[var(--color-gold)] text-[var(--color-ink)]",
   awaiting_artist: "bg-[var(--color-gold)] text-[var(--color-ink)]",
   awaiting_survey: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  ready_to_open: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   live: "bg-[var(--color-olive)] text-[var(--color-ink)]",
   completed: "bg-[var(--color-olive-deep)] text-white",
   closed: "bg-black/10 text-[var(--color-ink-soft)]",
@@ -59,6 +68,7 @@ export const CAMPAIGN_STAGE_ORDER: CampaignStageKey[] = [
   "needs_matching",
   "awaiting_artist",
   "awaiting_survey",
+  "ready_to_open",
   "live",
   "completed",
   "closed",
@@ -82,8 +92,13 @@ export const CAMPAIGN_STAGE_HELP: Record<CampaignStageKey, { meaning: string; ho
     meaning: "Event and codes are in place; no campaign survey is published yet.",
     how: "Automatic, until a survey for this campaign is published.",
   },
+  ready_to_open: {
+    meaning:
+      "Paid, matched, codes confirmed and survey published. The event shows to the audience as upcoming, but registration and the survey aren't open yet.",
+    how: "Manual: Open now, or schedule an opening date, on the campaign page — usually timed to the event's promotion. Shows \"Opens <date>\" once scheduled.",
+  },
   live: {
-    meaning: "Paid, matched, codes confirmed and survey published — the campaign is running.",
+    meaning: "Open: the audience can register and take the survey — the campaign is running.",
     how: "Automatic. Stays Live until you mark it Completed.",
   },
   completed: {
@@ -98,6 +113,9 @@ export const CAMPAIGN_STAGE_HELP: Record<CampaignStageKey, { meaning: string; ho
 
 export function campaignStage(input: CampaignProgressInput): CampaignStage {
   const key = stageKey(input);
+  if (key === "ready_to_open" && input.opensAt) {
+    return { key, label: `Opens ${formatDate(input.opensAt)}` };
+  }
   return { key, label: CAMPAIGN_STAGE_LABELS[key] };
 }
 
@@ -115,6 +133,8 @@ function stageKey(input: CampaignProgressInput): CampaignStageKey {
       return "awaiting_artist";
     case "survey":
       return "awaiting_survey";
+    case "open":
+      return "ready_to_open";
     default:
       return "live";
   }

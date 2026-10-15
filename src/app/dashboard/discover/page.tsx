@@ -13,6 +13,7 @@ import { contactOrganiser } from "./actions";
 import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
 import { UK_TIME_ZONE } from "@/lib/format";
+import { eventOpenStates, opensLabel } from "@/lib/campaign-opening";
 
 export const metadata = { title: "Discover events" };
 
@@ -294,6 +295,10 @@ export default async function DiscoverPage({
       (!q.category || e.event_listings?.category === q.category) &&
       matchesMonth(e.event_date, q.month),
   );
+  // Upcoming → Open (0070): a paid, agreed event is listed straight away with
+  // its details, but registration opens only when the team opens it.
+  const openStates = await eventOpenStates(supabase, events.map((e) => e.id));
+  const isOpen = (id: string) => openStates.get(id)?.is_open ?? true;
 
   return (
     <div>
@@ -338,7 +343,7 @@ export default async function DiscoverPage({
           body={
             hasFilters
               ? "Try widening your search — clear a filter or pick a different month."
-              : "Sponsored events with rewards will appear here once they go live."
+              : "Sponsored events with rewards will appear here once they're announced."
           }
         />
       ) : (
@@ -358,7 +363,7 @@ export default async function DiscoverPage({
               })()}
               <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-center justify-between">
-                  <StatusBadge status={e.status} />
+                  {isOpen(e.id) ? <StatusBadge status={e.status} /> : <span className="chip">Upcoming</span>}
                   <span className="text-xs text-[var(--color-ink-soft)]">
                     {e.event_date
                       ? formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone })
@@ -404,6 +409,10 @@ export default async function DiscoverPage({
                       View my events
                     </Link>
                   </div>
+                ) : !isOpen(e.id) ? (
+                  <Link href={`/dashboard/discover/${e.id}`} className="btn btn-ghost mt-4 w-full">
+                    {opensLabel("Registration", openStates.get(e.id)?.opens_at ?? null)} · details
+                  </Link>
                 ) : (
                   // Goes to the details page rather than registering outright,
                   // so nobody signs up by accident or before reading the terms.
