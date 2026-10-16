@@ -421,8 +421,10 @@ export async function saveArtist(
 
   const artistName = str(formData.get("artist_name"));
   if (!artistName) return { error: "Artist name is required." };
+  // Required at set-up; on the profile page an account from before 0078 can
+  // still save other changes without answering it.
   const artistType = str(formData.get("artist_type"));
-  if (!artistType || !ARTIST_TYPES.some((t) => t.value === artistType)) {
+  if (artistType ? !ARTIST_TYPES.some((t) => t.value === artistType) : !isProfileMode(formData)) {
     return { error: "Please choose which applies to you — artist / group, promoter, organiser or venue." };
   }
 
@@ -458,7 +460,8 @@ export async function saveArtist(
       ...images,
       artist_name: artistName,
       stage_name: str(formData.get("stage_name")),
-      artist_type: str(formData.get("artist_type")),
+      // Left out when not answered, so a profile save never clears it.
+      ...(artistType ? { artist_type: artistType } : {}),
       bio: str(formData.get("bio")),
       video_urls: videos,
       // Kept in step so anything still reading the single column keeps working.

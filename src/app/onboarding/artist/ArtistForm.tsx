@@ -69,7 +69,8 @@ export function ArtistForm({
 
         <fieldset>
           <legend className="field-label">
-            Which applies to you? <span className="text-[var(--color-brand)]">*</span>
+            Which applies to you?{" "}
+            {mode === "onboarding" && <span className="text-[var(--color-brand)]">*</span>}
           </legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {ARTIST_TYPES.map((t) => (
@@ -81,7 +82,7 @@ export function ArtistForm({
                   type="radio"
                   name="artist_type"
                   value={t.value}
-                  required
+                  required={mode === "onboarding"}
                   defaultChecked={d.artist_type === t.value}
                   className="h-4 w-4"
                 />
