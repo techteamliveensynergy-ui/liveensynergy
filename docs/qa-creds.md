@@ -14,6 +14,8 @@ wired up in `.env.local` (project ref `oalqfzaejflgrtyfrrrb`).
 | Audience | `audience.tester@example.com`            | `TestPass123!`  | Priya Shah                  |
 | Admin    | `admin.tester@example.com`               | `TestPass123!`  | Sakshi Admin                |
 | Audience | `audience.demo@qa-liveensynergy.co.uk`   | `TestPass123!`  | Jordan Avery (walkthrough)  |
+| Audience | `ketan+qa1016aud1@appsigmaticai.com`     | `QaTest1016!`   | QA Audience Oct16 — signed up 16 Oct through the new flow; email verified, registered on SPE-00003, holds code QA1016-5 |
+| Audience | `ketan+qa1016aud2@appsigmaticai.com`     | `QaTest1016!`   | QA Mobile Oct16 — signed up 16 Oct, **email left unverified** to show the confirm-your-email overlay |
 
 The last one backs the audience walkthrough recording
 (`tests/audience-journey.spec.ts`). Re-run the seeding SQL below for that
