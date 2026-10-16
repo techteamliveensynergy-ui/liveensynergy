@@ -9,7 +9,7 @@ import { uploadImage } from "@/lib/storage";
 import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { isValidEmail, validateVatNumber } from "@/lib/billing";
-import { GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
+import { ARTIST_TYPES, GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
 
 export interface OnboardingState {
   error?: string;
@@ -421,6 +421,10 @@ export async function saveArtist(
 
   const artistName = str(formData.get("artist_name"));
   if (!artistName) return { error: "Artist name is required." };
+  const artistType = str(formData.get("artist_type"));
+  if (!artistType || !ARTIST_TYPES.some((t) => t.value === artistType)) {
+    return { error: "Please choose which applies to you — artist / group, promoter, organiser or venue." };
+  }
 
   const phoneError = requirePhone(
     formData.get("contact_phone"),
@@ -454,6 +458,7 @@ export async function saveArtist(
       ...images,
       artist_name: artistName,
       stage_name: str(formData.get("stage_name")),
+      artist_type: str(formData.get("artist_type")),
       bio: str(formData.get("bio")),
       video_urls: videos,
       // Kept in step so anything still reading the single column keeps working.

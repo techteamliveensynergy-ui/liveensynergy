@@ -56,6 +56,8 @@ export function QuestionResultCard({
   textAnswers,
   moreTextHref,
   otherAnswers,
+  shown,
+  skipNote,
 }: {
   index: number;
   q: ResultQuestion;
@@ -66,6 +68,11 @@ export function QuestionResultCard({
   /** Typed "Other — please specify" answers — admin only (FB-00029); the
    *  brand page never passes these, so it shows the Other count alone. */
   otherAnswers?: { reference: string; submitted_at: string; answer: string }[];
+  /** With skip logic (0073): how many counted respondents this question was
+   *  actually shown to — the base its response rate is measured against. */
+  shown?: number;
+  /** Which jumps skip it ("Skipped when Q1 is “No”"), admin only. */
+  skipNote?: string | null;
 }) {
   const answered = s?.answered_count ?? 0;
   const avgTime = s && s.time_count != null && s.time_sum_ms != null ? averageSeconds(s.time_sum_ms / 1000, s.time_count) : null;
@@ -79,9 +86,14 @@ export function QuestionResultCard({
       )}
       <h3 className="mt-1 font-semibold">{q.prompt || "Untitled question"}</h3>
       <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-        {answered} answered ({formatPct(pct(answered, counted))} of responses)
+        {shown != null && shown < counted
+          ? `Answered by ${answered} of ${shown} shown it (${formatPct(pct(answered, shown))}) · shown to ${formatPct(pct(shown, counted))} of respondents`
+          : `${answered} answered (${formatPct(pct(answered, counted))} of responses)`}
         {avgTime != null ? ` · about ${formatDuration(avgTime)} on this question` : ""}
       </p>
+      {shown != null && shown < counted && skipNote && (
+        <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">↳ {skipNote}</p>
+      )}
 
       <div className="mt-4 space-y-2.5">
         {CHOICE_TYPES.includes(q.type) && (

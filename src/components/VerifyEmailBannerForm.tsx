@@ -8,7 +8,7 @@ function Submit() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn btn-dark text-sm" disabled={pending}>
-      {pending ? "Sending…" : "Send the email again"}
+      {pending ? "Sending…" : "Send it again"}
     </button>
   );
 }

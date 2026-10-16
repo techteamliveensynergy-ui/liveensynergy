@@ -108,8 +108,7 @@ export function RegistrationForm({
           >
             terms &amp; conditions
           </Link>{" "}
-          for {eventName}, and understand I need to buy my own ticket and prove
-          I attended before any reward is released.
+          for {eventName}, and understand I need to buy my own ticket.
         </span>
       </label>
 

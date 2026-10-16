@@ -13,7 +13,7 @@ import {
 } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { AVATAR_HINT, BANNER_HINT, MAX_BIO_CHARS } from "@/lib/upload-limits";
-import { ARTIST_CATEGORIES } from "@/lib/constants";
+import { ARTIST_CATEGORIES, ARTIST_TYPES } from "@/lib/constants";
 import type { Artist } from "@/lib/types";
 import { saveArtist, type OnboardingState } from "../actions";
 
@@ -66,6 +66,30 @@ export function ArtistForm({
             />
           </Field>
         </div>
+
+        <fieldset>
+          <legend className="field-label">
+            Which applies to you? <span className="text-[var(--color-brand)]">*</span>
+          </legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {ARTIST_TYPES.map((t) => (
+              <label
+                key={t.value}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-black/10 px-3 py-2 text-sm has-[:checked]:border-[var(--color-brand)] has-[:checked]:bg-[var(--color-brand)]/10"
+              >
+                <input
+                  type="radio"
+                  name="artist_type"
+                  value={t.value}
+                  required
+                  defaultChecked={d.artist_type === t.value}
+                  className="h-4 w-4"
+                />
+                {t.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <Field
           label="Bio"

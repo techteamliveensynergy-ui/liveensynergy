@@ -29,7 +29,12 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
   await requireRole(["brand", "admin"]);
   const { templateId } = await params;
   const supabase = await createClient();
-  const { data } = await supabase.rpc("brand_survey_results", { p_template_id: templateId });
+  const [{ data }, { data: reachData }] = await Promise.all([
+    supabase.rpc("brand_survey_results", { p_template_id: templateId }),
+    // Per-question "shown to" counts when the survey branches (0073).
+    supabase.rpc("survey_question_reach", { p_template_id: templateId }),
+  ]);
+  const reach = (reachData ?? null) as Record<string, number> | null;
   const results = data as BrandResults | null;
   if (!results) notFound();
 
@@ -63,7 +68,14 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
       ) : (
         <div className="space-y-4">
           {results.questions.map((q, i) => (
-            <QuestionResultCard key={q.id} index={i} q={q} s={q} counted={results.counted} />
+            <QuestionResultCard
+              key={q.id}
+              index={i}
+              q={q}
+              s={q}
+              counted={results.counted}
+              shown={reach ? (reach[q.id] ?? 0) : undefined}
+            />
           ))}
         </div>
       )}

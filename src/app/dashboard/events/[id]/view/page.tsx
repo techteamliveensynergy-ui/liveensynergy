@@ -74,8 +74,12 @@ export default async function EventViewPage({
             {l.category && <span className="chip">{l.category}</span>}
           </div>
           <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
-            <DetailFact label="Date and time" value={when} />
+            <DetailFact
+              label="Date and time"
+              value={when ? (l.end_time ? `${when} – ${l.end_time.slice(0, 5)}` : when) : null}
+            />
             <DetailFact label="Venue" value={where || null} />
+            <DetailFact label="Event audience" value={l.audience_description ?? null} />
             <DetailFact
               label="Capacity"
               value={l.capacity != null ? Number(l.capacity).toLocaleString("en-GB") : null}

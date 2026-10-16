@@ -8,7 +8,7 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { PUBLIC_PROFILE_PATH } from "@/lib/public-profiles";
 import { Suspense } from "react";
 import { EmailConfirmedNotice } from "@/components/EmailConfirmedNotice";
-import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
+import { VerifyEmailOverlay } from "@/components/VerifyEmailOverlay";
 
 const WORKSPACE_TABLE: Partial<
   Record<string, { table: string; name: string; category: string }>
@@ -52,6 +52,12 @@ export default async function DashboardLayout({
   }
 
   if (!profile.onboarding_completed) redirect(`/onboarding/${profile.role}`);
+
+  // 0074: a non-admin account that hasn't opened its welcome email's link
+  // sees the overlay instead of any page (the middleware keeps it on
+  // /dashboard). `=== null` rather than falsy: an absent column means 0069
+  // isn't applied, not that everyone is unverified.
+  const emailUnverified = profile.role !== "admin" && profile.email_verified_at === null;
 
   const nav = navForRole(profile.role);
 
@@ -103,14 +109,13 @@ export default async function DashboardLayout({
           <Suspense fallback={null}>
             <EmailConfirmedNotice />
           </Suspense>
-          <VerifyEmailBanner />
-          {children}
+          {emailUnverified ? <VerifyEmailOverlay email={user.email ?? ""} /> : children}
         </main>
       </div>
       {/* Feedback tab on every dashboard page (3 Aug standup) — mounted in the
           layout rather than the root one so the public marketing pages, which
           are static and don't need it, stay that way. */}
-      <FeedbackWidget />
+      {!emailUnverified && <FeedbackWidget />}
     </div>
   );
 }

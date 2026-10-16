@@ -10,9 +10,10 @@ import {
 import { signedUrlFor } from "@/lib/storage";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
-import type { Participation, SponsoredEvent, SurveyTemplate } from "@/lib/types";
+import type { Participation, RewardCode, SponsoredEvent, SurveyTemplate } from "@/lib/types";
+import { platformLabel } from "@/lib/discount-codes";
 import { formatEventDateTime } from "@/lib/event-time";
-import { addDays, formatDateTime } from "@/lib/format";
+import { addDays, formatDateTime, UK_TIME_ZONE } from "@/lib/format";
 import {
   uploadTicketProof,
   provideConsent,
@@ -61,7 +62,8 @@ export default async function ParticipationsPage({
   const campaignIds = Array.from(
     new Set(allRows.map((r) => r.sponsored_events?.campaign_id).filter((id): id is string => Boolean(id))),
   );
-  const [{ data: surveyTemplateRows }, { data: surveyResponseRows }] = await Promise.all([
+  const participationIds = allRows.map((r) => r.id);
+  const [{ data: surveyTemplateRows }, { data: surveyResponseRows }, { data: codeRows }] = await Promise.all([
     campaignIds.length > 0
       ? supabase
           .from("survey_templates")
@@ -69,22 +71,38 @@ export default async function ParticipationsPage({
           .in("campaign_id", campaignIds)
           .eq("status", "published")
       : Promise.resolve({ data: [] as SurveyTemplate[] }),
-    allRows.length > 0
+    // Dashboard responses carry the participation; public-link ones (0043)
+    // only the respondent — readable by them since 0076.
+    supabase
+      .from("survey_responses")
+      .select("template_id, participation_id")
+      .or(
+        participationIds.length > 0
+          ? `participation_id.in.(${participationIds.join(",")}),respondent_profile_id.eq.${profile.id}`
+          : `respondent_profile_id.eq.${profile.id}`,
+      ),
+    // Codes are released as soon as a survey passes (0075), so they belong on
+    // the event card too — "they can see the discount code anytime" (16 Oct).
+    participationIds.length > 0
       ? supabase
-          .from("survey_responses")
-          .select("template_id, participation_id")
-          .in(
-            "participation_id",
-            allRows.map((r) => r.id),
-          )
-      : Promise.resolve({ data: [] as { template_id: string; participation_id: string }[] }),
+          .from("reward_codes")
+          .select("id, participation_id, code, value_label, code_type, redemption_platform, redemption_url, expires_at, status")
+          .in("participation_id", participationIds)
+          .neq("status", "void")
+      : Promise.resolve({ data: [] }),
   ]);
   const surveyTemplates = (surveyTemplateRows ?? []) as Pick<
     SurveyTemplate,
     "id" | "campaign_id" | "kind" | "title"
   >[];
-  const respondedKeys = new Set(
-    (surveyResponseRows ?? []).map((r) => `${r.template_id}:${r.participation_id}`),
+  const responses = (surveyResponseRows ?? []) as { template_id: string; participation_id: string | null }[];
+  const respondedKeys = new Set(responses.map((r) => `${r.template_id}:${r.participation_id}`));
+  const respondedPublicly = new Set(responses.filter((r) => !r.participation_id).map((r) => r.template_id));
+  const codeByParticipation = new Map(
+    ((codeRows ?? []) as Pick<
+      RewardCode,
+      "id" | "participation_id" | "code" | "value_label" | "code_type" | "redemption_platform" | "redemption_url" | "expires_at" | "status"
+    >[]).map((c) => [c.participation_id, c]),
   );
 
   // Ticket proofs sit in the private bucket — each thumbnail needs its own
@@ -280,13 +298,15 @@ export default async function ParticipationsPage({
                         p.status === "reward_released",
                     )
                     .map((t) => {
-                      const completed = respondedKeys.has(`${t.id}:${p.id}`);
+                      const completed = respondedKeys.has(`${t.id}:${p.id}`) || respondedPublicly.has(t.id);
                       return (
                         <div key={t.id} className="mt-4">
                           {completed ? (
                             <p className="text-sm text-[var(--color-olive-deep)]">
                               ✓ {t.kind === "pre_event" ? "Pre-event" : "Post-event"} survey
                               completed — thank you!
+                              {!codeByParticipation.has(p.id) &&
+                                " Your discount code appears here as soon as it's released."}
                             </p>
                           ) : (
                             <Link
@@ -300,6 +320,32 @@ export default async function ParticipationsPage({
                         </div>
                       );
                     })}
+
+                {(() => {
+                  const c = codeByParticipation.get(p.id);
+                  if (!c) return null;
+                  const platform = platformLabel(c.redemption_platform);
+                  const expired = c.status === "issued" && !!c.expires_at && new Date(c.expires_at) < new Date();
+                  return (
+                    <div className="mt-4 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3" data-testid="event-reward-code">
+                      <p className="text-sm font-semibold text-[var(--color-olive-deep)]">
+                        🎟 Your discount code{c.value_label ? ` · ${c.value_label}` : ""}
+                        {platform ? ` · redeem on ${platform}` : ""}
+                      </p>
+                      <p className="mt-2 inline-block max-w-full break-all rounded-lg bg-white px-3 py-1.5 font-mono text-lg tracking-wide">
+                        {c.code}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                        {c.status === "redeemed" ? "Marked as redeemed. " : ""}
+                        {c.expires_at &&
+                          `${expired ? "Expired" : "Use by"} ${new Date(c.expires_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })} · `}
+                        <Link href="/dashboard/rewards" className="underline">
+                          How to use it
+                        </Link>
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Not yet selected — nothing to do until the sponsor confirms who's in. */}
                 {p.status === "registered" && !p.selected && (
@@ -346,13 +392,13 @@ export default async function ParticipationsPage({
                   </p>
                 )}
 
-                {p.status === "attendance_verified" && (
+                {p.status === "attendance_verified" && !codeByParticipation.has(p.id) && (
                   <p className="mt-4 text-sm text-[var(--color-purple-deep)]">
-                    🎉 Attendance verified — complete the post-event survey to receive your discount code.
+                    🎉 Attendance verified — complete the survey to receive your discount code.
                   </p>
                 )}
 
-                {p.status === "reward_released" && (
+                {p.status === "reward_released" && !codeByParticipation.has(p.id) && (
                   <p className="mt-4 text-sm text-[var(--color-olive-deep)]">
                     🎟 Your discount code is ready —{" "}
                     <Link href="/dashboard/rewards" className="font-semibold underline">

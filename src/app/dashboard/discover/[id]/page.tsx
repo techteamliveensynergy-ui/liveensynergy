@@ -100,7 +100,11 @@ export default async function EventDetailsPage({
 
         <h2 className="mt-6 text-lg font-semibold">How it works</h2>
         <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-[var(--color-ink-soft)]">
-          <li>Register here to take part — answer the short pre-event survey if there is one.</li>
+          <li>Register here, then answer the event&apos;s short survey under <strong>My events</strong>.</li>
+          <li>
+            Once your answers pass our quality check, your discount code appears straight away under My events
+            and My rewards, and we email it to you.
+          </li>
           <li>The Live·En·Synergy team draws who takes part once registration closes.</li>
           <li>
             If you&apos;re selected, buy your ticket as you normally would and upload it under{" "}
@@ -111,7 +115,6 @@ export default async function EventDetailsPage({
               ? `On the day, check in at the venue: ${event.attendance_method}`
               : "On the day, scan the QR code at the venue to check in."}
           </li>
-          <li>Complete the post-event survey and your discount code appears in My rewards.</li>
         </ol>
 
         {event.participation_deadline && (

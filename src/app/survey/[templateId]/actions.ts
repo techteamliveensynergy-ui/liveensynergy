@@ -18,6 +18,8 @@ import {
 } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
 import { siteUrl } from "@/lib/site-url";
+import { sendVerificationEmail } from "@/lib/email-verification";
+import { ROLE_LABELS } from "@/lib/constants";
 
 export interface PublicSurveyResponseState {
   error?: string;
@@ -408,14 +410,12 @@ export async function startSurveyAccount(
     return { error: "Your account was created, but we couldn't sign you in. Please try signing in manually." };
   }
 
-  // Fire-and-forget — the real, delivered "set your password" email. Never
-  // fails the flow: they're already signed in and can finish the survey
-  // regardless of whether this send succeeds.
-  await supabase.auth
-    .resetPasswordForEmail(email, {
-      redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
-    })
-    .catch((err) => console.error("[startSurveyAccount] reset email failed", err));
+  // Our welcome / confirm-your-email message (0074) — not Supabase's reset-
+  // password email, whose link depended on Supabase's redirect settings and
+  // read as "someone reset your password" (16 Oct). Its link verifies the
+  // address and then asks them to choose a password (/auth/verify-email).
+  // Never fails the flow: they're already signed in and can finish the survey.
+  await sendVerificationEmail(supabase, created.user.id, ROLE_LABELS.audience);
 
   revalidatePath(`/survey/${templateId}`);
   return { created: true };

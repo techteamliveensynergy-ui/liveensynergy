@@ -115,6 +115,14 @@ export default async function MessagesPage({
       .eq("conversation_id", active.id)
       .order("created_at", { ascending: true });
     messages = (msgData ?? []) as Message[];
+    // Opening the thread reads what was sent to you (0077) — the sender sees
+    // "Seen" from now on. Done after the fetch, and best-effort.
+    if (messages.some((m) => !m.read_at && m.sender_profile_id !== profile!.id)) {
+      await supabase.rpc("mark_conversation_read", { p_conversation_id: active.id }).then(
+        () => undefined,
+        () => undefined,
+      );
+    }
     attachmentUrls = await Promise.all(
       messages.map((m) => signedUrlFor(m.attachment_url)),
     );
@@ -456,6 +464,20 @@ export default async function MessagesPage({
                               </a>
                             )}
                           </div>
+                          {/* Read receipt on our side's messages (0077):
+                              the viewer's own, or — for an admin — any of
+                              the team's, since the user reads them all. */}
+                          {(mine ||
+                            (!viewerIsParty &&
+                              m.sender_profile_id !== active.brand_profile_id &&
+                              m.sender_profile_id !== active.partner_profile_id)) && (
+                            <p
+                              className="mt-0.5 px-1 text-[11px] text-[var(--color-ink-soft)]"
+                              title={m.read_at ? `Seen ${formatDateTime(m.read_at)}` : "Delivered"}
+                            >
+                              {m.read_at ? `✓✓ Seen ${formatTime(m.read_at)}` : "✓ Sent"}
+                            </p>
+                          )}
                           </div>
                         </div>
                       );

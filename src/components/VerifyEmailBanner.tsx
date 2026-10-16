@@ -3,7 +3,7 @@ import { VerifyEmailBannerForm } from "./VerifyEmailBannerForm";
 
 /**
  * Top-of-page notice for an account that hasn't proved its email address yet
- * (survey sign-ups, 0069): what was sent, what's on hold until then, and a
+ * (0069/0074): what was sent, what's on hold until then, and a
  * resend button. Renders nothing once verified — or before 0069 is applied.
  */
 export async function VerifyEmailBanner({ required = false }: { required?: boolean }) {
@@ -28,9 +28,9 @@ export async function VerifyEmailBanner({ required = false }: { required?: boole
         {required ? "Please confirm your email address first" : "Confirm your email address"}
       </p>
       <p className="mt-1 text-sm">
-        We&apos;ve emailed a link to <strong className="break-all">{user.email}</strong>. Open it to confirm
-        this address is yours — it also lets you set your password. Until then you can update your profile
-        and settings; signing up for events, rewards and messages unlock once it&apos;s confirmed.
+        We&apos;ve sent a welcome email to <strong className="break-all">{user.email}</strong>. Open the link in
+        it to confirm this address is yours. You can finish setting up your profile now — your dashboard
+        unlocks once the address is confirmed. Link expired or can&apos;t find it? Send a new one.
       </p>
       <div className="mt-3">
         <VerifyEmailBannerForm />

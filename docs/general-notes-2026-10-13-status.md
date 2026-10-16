@@ -1,5 +1,8 @@
 # General Notes (13 Oct) — status and plan
 
+_Updated 16 Oct 2026: skip logic built (PR #28); email verification reworked
+(0074); discount codes now release automatically when a survey passes (0075)._
+
 Every item in the client's "General Notes" document, checked against the live
 site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly ·
 ❌ not done · ⚙️ needs a settings change, not code · ❓ needs a decision.
@@ -18,7 +21,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | Space between question and options; help text under the question | ✅ | PR #17 |
 | More background-image opacity; card colour / themes | ✅ | PR #17 |
 | Typeform look | 🟡 | Conventions applied; the video link couldn't be opened from the build environment |
-| Logic and branching | ❌ ❓ | Designed (`docs/survey-feedback-2026-10-13-plan.md` §1), waiting on the open client questions there |
+| Logic and branching | ✅ | PR #28 (0071): jump to a later question or the end on an answer / range, paths re-join; results show "answered by X of Y shown it" per branched question (0073, 16 Oct) |
 | "Other — please specify" | ✅ | PR #19 (0065) |
 | Rating question with several elements | ✅ | PR #19 (rating group) |
 
@@ -33,7 +36,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 | Real campaign name instead of "Conferences" | ✅ | PR #22, #24 (older test campaigns CMP-00001–00007 have no name; admin list flags them) |
 | Click into a campaign | ✅ | PR #20 |
 | Campaign statuses (Live, Completed + note, Closed + reason) | ✅ | PR #21, #24 (0066) |
-| Sidebar modules | 🟡 | **Invoices** added (PR #25). Still missing **Reporting & Analysis**; **Sponsored events** kept until decision 2 |
+| Sidebar modules | 🟡 | **Invoices** (PR #25) and **Reporting & analysis** (16 Oct: every campaign survey with its results) added; **Sponsored events** kept until decision 2 |
 | Invoices information in an Invoices module | ✅ | PR #25: `/dashboard/invoices` — to pay / overdue / paid totals, every invoice with campaign, dates, refunds, PDF and "View & pay" |
 | Correct information cards / clean-up of the brand dashboard | ✅ | PR #26 — see "Brand dashboard" below |
 
@@ -49,18 +52,18 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 
 | Item | Status | Notes |
 |---|---|---|
-| Confirm / reset-password emails go to localhost | ⚙️ | Code side fixed in PR #25: no localhost fallback (uses the request's own origin), callback accepts `?code=` and `?token_hash=`, failed links explain themselves on sign-in. Still needs the Supabase **Site URL / Redirect URLs** setting, and optionally the email-template change in `docs/email-setup.md` §2.6 so links work on another device. |
+| Confirm / reset-password emails go to localhost | ✅ | 16 Oct (0074): sign-up and survey sign-ups no longer use Supabase's emails at all — our own welcome email (Resend) carries a one-time verify link to `/auth/verify-email`; the dashboard is locked behind a "confirm your email" overlay with Send it again until it's opened. Supabase's Site URL still matters for the Forgot-password email. Earlier note: | Code side fixed in PR #25: no localhost fallback (uses the request's own origin), callback accepts `?code=` and `?token_hash=`, failed links explain themselves on sign-in. Still needs the Supabase **Site URL / Redirect URLs** setting, and optionally the email-template change in `docs/email-setup.md` §2.6 so links work on another device. |
 
 ### Artist
 
 | Item | Status | Notes |
 |---|---|---|
 | Welcome + profile set-up | ✅ | PR #23 |
-| "Which applies to you" (Artist/Group, Promoter/Management, Event Organiser, Venue Operator) | ❌ | Only an event-category select exists |
+| "Which applies to you" (Artist/Group, Promoter/Management, Event Organiser, Venue Operator) | ✅ | 16 Oct (0078): required choice on artist set-up and profile |
 | Remove DOB and sponsor value from set-up | ✅ | PR #25: no longer asked (artist and legacy organiser forms); existing answers stay on file for admins; sponsor value no longer shown on public profiles (decision 3 can bring it back) |
 | Save details and finish later (profile, event, campaign request) | 🟡 | Events can be saved as a draft; profile and campaign request can't |
 | View your profile + update your profile | ✅ | "Preview public profile" on the Profile page and in the sidebar |
-| Event end time; "Describe your event audience" | ❌ | Only a start time; no audience field |
+| Event end time; "Describe your event audience" | ✅ | 16 Oct (0078): on the event form and the event preview |
 | Click into an event to preview it | ✅ | PR #25: `/dashboard/events/<id>/view` — owner, admin and brands (where RLS allows); event names and a View button on My events |
 | Upcoming event cards on the dashboard (and admin dashboard) | ✅ | PR #26: artist home lists upcoming events with dates; admin overview has an "Upcoming events" list |
 | Unable to open event listing | ✅ | PR #25 fixed the thread's "Event details" link (now the read-only view) and the draft-reset bug (edit and Publish/Unpublish leave matched/closed listings alone). PR #26: the public Events page now lists real events open for sponsorship (it showed hard-coded samples), each opening the event page |
@@ -74,7 +77,7 @@ site and code on 13 Oct (after PRs #17–#24). ✅ done and live · 🟡 partly 
 
 | Item | Status | Notes |
 |---|---|---|
-| Read / delivered ticks in chat | ❌ | `messages.read_at` exists but is never written |
+| Read / delivered ticks in chat | ✅ | 16 Oct (0077): "✓ Sent" / "✓✓ Seen <time>" under your messages; opening a thread marks it read |
 | Recall a message sent by mistake | ❌ | |
 | Times one hour behind | ✅ | PR #25: every date/time helper, chat day headings, CSV exports and the participation-deadline inputs use UK time |
 | Can an event link be sent in chat and viewed by the brand? | ✅ | PR #25: links in messages are clickable; the event view page opens for brands |
@@ -147,7 +150,7 @@ Was:
 
 1. Save details and finish later — profile set-up, event, campaign request.
 2. Chat: read receipts ("Seen"), delivered state, and recall within a time window.
-3. Survey logic and branching (once the open questions are answered).
+3. ~~Survey logic and branching~~ — done in PR #28.
 
 ## Decisions needed
 
@@ -157,4 +160,4 @@ Was:
 4. **Recall:** how long after sending (e.g. 15 minutes)? Should admins still see recalled messages?
 5. **Worst-case discount cost:** relabel ("Maximum discount if every code is used") or hide from artists?
 6. **Password setting:** what was the question?
-7. **Survey branching:** the open questions in `docs/survey-feedback-2026-10-13-plan.md`.
+7. ~~**Survey branching**~~ — built (PR #28).

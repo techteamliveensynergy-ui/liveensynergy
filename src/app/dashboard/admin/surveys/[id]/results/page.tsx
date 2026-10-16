@@ -21,6 +21,7 @@ import {
 } from "@/lib/survey-results";
 import type { SurveyQuestion } from "@/lib/types";
 import { recalculateSurveyResults } from "../../actions";
+import { skipDescription } from "@/lib/survey-logic";
 import { BarRow, QuestionResultCard } from "@/components/surveys/QuestionResultCard";
 
 export const metadata = { title: "Survey results · Admin" };
@@ -67,7 +68,7 @@ export default async function SurveyResultsPage({
   const supabase = await createClient();
   const days = trendDays();
 
-  const [{ data: template }, { data: questionRows }, { data: tStats }, { data: qStatRows }, { data: dailyRows }, capacity] =
+  const [{ data: template }, { data: questionRows }, { data: tStats }, { data: qStatRows }, { data: dailyRows }, capacity, { data: reachData }] =
     await Promise.all([
       supabase
         .from("survey_templates")
@@ -89,6 +90,7 @@ export default async function SurveyResultsPage({
         .gte("day", days[0])
         .order("day"),
       surveyCapacity(supabase, id),
+      supabase.rpc("survey_question_reach", { p_template_id: id }),
     ]);
   if (!template) notFound();
 
@@ -97,6 +99,8 @@ export default async function SurveyResultsPage({
   const qStats = new Map(((qStatRows ?? []) as SurveyQuestionStats[]).map((s) => [s.question_id, s]));
   const daily = new Map(((dailyRows ?? []) as SurveyDailyStat[]).map((d) => [d.day, d.responses]));
   const counted = countedResponses(stats);
+  // Null when the survey has no skip logic — every question reached everyone.
+  const reach = (reachData ?? null) as Record<string, number> | null;
 
   // Open-text answers: the latest few per question (each a small, indexed query).
   const textQuestions = questions.filter((q) => TEXT_TYPES.includes(q.type));
@@ -303,6 +307,8 @@ export default async function SurveyResultsPage({
                 textAnswers={textAnswers.get(q.id)}
                 moreTextHref={exportHref("answers")}
                 otherAnswers={otherAnswers.get(q.id)}
+                shown={reach ? (reach[q.id] ?? 0) : undefined}
+                skipNote={reach ? skipDescription(questions, i) : null}
               />
             ))}
           </div>

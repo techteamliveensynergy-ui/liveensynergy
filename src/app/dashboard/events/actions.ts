@@ -50,6 +50,8 @@ function listingPayload(formData: FormData) {
       name: str(formData.get("name")),
       event_date: str(formData.get("event_date")),
       start_time: str(formData.get("start_time")),
+      end_time: str(formData.get("end_time")),
+      audience_description: str(formData.get("audience_description"))?.slice(0, 1000) ?? null,
       timezone: str(formData.get("timezone")) ?? DEFAULT_TIMEZONE,
       venue_name: str(formData.get("venue_name")),
       city: str(formData.get("city")),
