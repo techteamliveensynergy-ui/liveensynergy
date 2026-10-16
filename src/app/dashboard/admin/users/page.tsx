@@ -139,6 +139,11 @@ export default async function AdminUsersPage({
                       Pending onboarding
                     </span>
                   )}
+                  {u.role !== "admin" && u.email_verified_at === null && (
+                    <span className="rounded-full bg-[var(--color-gold)]/60 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-ink)]">
+                      Email not verified
+                    </span>
+                  )}
                 </div>
                 <p className="truncate text-sm text-[var(--color-ink-soft)]">
                   {u.email ?? "—"}

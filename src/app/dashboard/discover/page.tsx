@@ -304,7 +304,7 @@ export default async function DiscoverPage({
     <div>
       <PageHeader
         title="Discover events"
-        subtitle="Register for events with sponsor-funded rewards — attend, get verified, get rewarded."
+        subtitle="Register for sponsored events, answer a short survey and get a discount code."
       />
 
       <FilterBar

@@ -18,7 +18,11 @@ export default async function ArtistOnboardingPage() {
       name={profile.full_name}
       subtitle="Artist or event organiser — tell brands who you are and what you can offer as a sponsorship partner."
     >
-      <ArtistForm mode="onboarding" />
+      {/* Contact person starts as the account holder — editable. */}
+      <ArtistForm
+        mode="onboarding"
+        defaults={{ contact_name: profile.full_name ?? undefined, contact_email: profile.email ?? undefined }}
+      />
     </OnboardingShell>
   );
 }

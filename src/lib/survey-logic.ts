@@ -148,3 +148,35 @@ export function logicProblem(
   }
   return null;
 }
+
+/**
+ * Why a question isn't seen by everyone, for the results page: every rule on
+ * an earlier question that jumps past it ("Skipped when Q1 is “No”"). Null
+ * when no rule ever skips it. Describes the rules, not who actually took
+ * which path — the counts come from survey_question_reach() (0073).
+ */
+export function skipDescription<
+  Q extends Pick<SurveyQuestion, "id" | "type" | "options" | "config">,
+>(questions: Q[], index: number): string | null {
+  const pos = new Map(questions.map((q, i) => [q.id, i]));
+  const reasons: string[] = [];
+  for (let i = 0; i < index; i++) {
+    const q = questions[i];
+    if (!canBranch(q)) continue;
+    for (const r of logicRules(q)) {
+      const target = r.goto === LOGIC_END ? Infinity : pos.get(r.goto);
+      if (target == null || target <= index) continue;
+      const label = (v: string) => q.options?.find((o) => o.value === v)?.label || v;
+      const when =
+        r.op === "always"
+          ? `after Q${i + 1}`
+          : r.op === "between"
+            ? `when Q${i + 1} is ${r.min}–${r.max}`
+            : r.op === "includes"
+              ? `when Q${i + 1} includes “${label(r.value ?? "")}”`
+              : `when Q${i + 1} is “${label(r.value ?? "")}”`;
+      reasons.push(when);
+    }
+  }
+  return reasons.length > 0 ? `Skipped ${reasons.join(", or ")}` : null;
+}

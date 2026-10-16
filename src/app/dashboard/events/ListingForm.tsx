@@ -50,7 +50,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             defaultValue={d?.name ?? ""}
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Event date" htmlFor="event_date">
             <input
               id="event_date"
@@ -67,6 +67,15 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
               type="time"
               className="input"
               defaultValue={d?.start_time?.slice(0, 5) ?? ""}
+            />
+          </Field>
+          <Field label="End time" htmlFor="end_time" hint="Optional.">
+            <input
+              id="end_time"
+              name="end_time"
+              type="time"
+              className="input"
+              defaultValue={d?.end_time?.slice(0, 5) ?? ""}
             />
           </Field>
           <Field
@@ -105,6 +114,19 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             </select>
           </Field>
         </div>
+        <Field
+          label="Describe your event audience"
+          htmlFor="audience_description"
+          hint="Who comes — age range, interests, typical crowd size. Helps brands judge the fit."
+        >
+          <textarea
+            id="audience_description"
+            name="audience_description"
+            className="textarea"
+            maxLength={1000}
+            defaultValue={d?.audience_description ?? ""}
+          />
+        </Field>
         <Field
           label="Event image"
           htmlFor="image"

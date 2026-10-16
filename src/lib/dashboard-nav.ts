@@ -40,6 +40,14 @@ const BY_ROLE: Record<Role, NavItem[]> = {
       icon: "🧾",
       alsoActiveFor: ["/dashboard/campaigns/invoices"],
     },
+    // Survey results across every campaign (13 Oct sidebar modules); a
+    // survey's own results page lights this item.
+    {
+      href: "/dashboard/reports",
+      label: "Reporting & analysis",
+      icon: "📈",
+      alsoActiveFor: ["/dashboard/survey-results"],
+    },
   ],
   artist: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },

@@ -27,7 +27,12 @@ export default async function AudienceOnboardingPage() {
     >
       {/* A survey sign-up already gave us a mobile number (FB-00032) —
           don't make them type it twice. */}
-      <AudienceForm mode="onboarding" defaults={surveyPhoneDefaults(user.user_metadata)} />
+      {/* …nor their name, typed at sign-up a moment ago (16 Oct: an empty
+          required name field made "Finish" look like it did nothing). */}
+      <AudienceForm
+        mode="onboarding"
+        defaults={{ full_name: profile.full_name ?? undefined, ...surveyPhoneDefaults(user.user_metadata) }}
+      />
     </OnboardingShell>
   );
 }

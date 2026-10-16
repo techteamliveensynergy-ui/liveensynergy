@@ -5,9 +5,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
 import { siteUrl } from "@/lib/site-url";
-import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type SignupRole } from "@/lib/constants";
+import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type Role, type SignupRole } from "@/lib/constants";
 import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendVerificationEmail } from "@/lib/email-verification";
+import { callerIpHash } from "@/lib/survey-abuse";
 
 export interface AuthState {
   error?: string;
@@ -56,6 +59,64 @@ export async function signUp(
   }
 
   const supabase = await createClient();
+  const metadata = {
+    full_name: fullName,
+    role,
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: TERMS_VERSION,
+    ...(pendingEventReference ? { pending_event_reference: pendingEventReference } : {}),
+  };
+
+  // The usual path (16 Oct): the account is usable at once and our own
+  // welcome email carries the confirm-your-email link (0074). Created through
+  // the Admin API so Supabase neither holds the sign-in back nor sends its
+  // own email; until the link is opened the dashboard is covered by the
+  // verify overlay. Without the service-role key (a local checkout) we fall
+  // through to Supabase's confirmation flow below.
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const { data: allowed } = await supabase.rpc("signup_gate", { p_ip_hash: await callerIpHash() });
+    if (allowed === false) {
+      return { error: "Too many sign-ups from this connection. Please try again in an hour." };
+    }
+
+    const admin = createAdminClient();
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { ...metadata, verify_by_link: true },
+    });
+    if (createError || !created.user) {
+      const code = (createError as { code?: string } | null)?.code;
+      if (code === "email_exists" || /already.*registered/i.test(createError?.message ?? "")) {
+        return { error: "An account with this email already exists. Sign in instead, or reset your password." };
+      }
+      if (code === "weak_password") return { error: createError?.message ?? "Please choose a stronger password." };
+      return { error: createError?.message ?? "Something went wrong creating your account. Please try again." };
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      return { error: "Your account was created, but we couldn't sign you in. Please sign in." };
+    }
+
+    await sendVerificationEmail(supabase, created.user.id, ROLE_LABELS[role]);
+    await notify({
+      eventKey: "account.welcome",
+      recipientProfileId: created.user.id,
+      link: "/onboarding",
+      variables: { user_name: fullName, role_label: ROLE_LABELS[role] },
+    });
+    await notifyAdmins({
+      eventKey: "admin.new_signup",
+      link: "/dashboard/admin/users",
+      variables: { user_name: fullName, role_label: ROLE_LABELS[role] },
+    });
+
+    revalidatePath("/", "layout");
+    redirect("/onboarding");
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -64,13 +125,7 @@ export async function signUp(
       // The profile row is created by the `handle_new_user` trigger, not here,
       // so the terms acceptance travels with the sign-up metadata — there's no
       // session to write with yet when email confirmation is on (0021).
-      data: {
-        full_name: fullName,
-        role,
-        terms_accepted_at: new Date().toISOString(),
-        terms_version: TERMS_VERSION,
-        ...(pendingEventReference ? { pending_event_reference: pendingEventReference } : {}),
-      },
+      data: metadata,
     },
   });
 
@@ -146,9 +201,9 @@ export async function signIn(
   if (data.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_active, suspended_until")
+      .select("is_active, suspended_until, role, email_verified_at")
       .eq("id", data.user.id)
-      .maybeSingle();
+      .maybeSingle<{ is_active: boolean; suspended_until: string | null; role: Role; email_verified_at: string | null }>();
 
     // An automatic no-show suspension that has run its course lifts here too
     // — otherwise someone whose year was up could never sign back in, since
@@ -165,6 +220,13 @@ export async function signIn(
         error:
           "This account has been blocked. Please contact the Live·En·Synergy team if you think this is a mistake.",
       };
+    }
+
+    // Not confirmed yet and no live link out there (an account from before
+    // 0074, or the link expired): send the welcome email now.
+    if (profile && profile.role !== "admin" && profile.email_verified_at === null) {
+      const { data: pending } = await supabase.rpc("email_verification_pending");
+      if (pending === false) await sendVerificationEmail(supabase, data.user.id, ROLE_LABELS[profile.role]);
     }
   }
 
@@ -199,10 +261,9 @@ export async function resendConfirmation(
 }
 
 /**
- * Banner button for a signed-in account whose email isn't proved yet (0069).
- * A survey-created account was confirmed on creation, so Supabase won't send
- * it a sign-up confirmation; the set-your-password email does the same job —
- * opening its link marks the address verified (/auth/callback).
+ * "Send it again" on the verify overlay / banner, for a signed-in account
+ * whose email isn't proved yet. Sends our own welcome email with a fresh
+ * one-time link (0074) — the previous link stops working.
  */
 export async function resendVerification(
   _prev: AuthState,
@@ -223,19 +284,19 @@ export async function resendVerification(
     return { error: "We've sent a few already — please check your inbox (and spam) and try again in 10 minutes." };
   }
 
-  const { error } = user.email_confirmed_at
-    ? await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
-      })
-    : await supabase.auth.resend({
-        type: "signup",
-        email: user.email,
-        options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` },
-      });
-  if (error) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, email_verified_at")
+    .eq("id", user.id)
+    .maybeSingle<{ role: Role; email_verified_at: string | null }>();
+  if (profile?.email_verified_at) {
+    return { message: "Your email is already confirmed — refresh the page." };
+  }
+  const sent = await sendVerificationEmail(supabase, user.id, ROLE_LABELS[profile?.role ?? "audience"]);
+  if (!sent) {
     return { error: "We couldn't send the email just now. Please try again in a few minutes." };
   }
-  return { message: `Sent — check ${user.email} (and your spam folder).` };
+  return { message: `Sent — check ${user.email} (and your spam folder). The new link replaces the old one.` };
 }
 
 export async function signOut() {

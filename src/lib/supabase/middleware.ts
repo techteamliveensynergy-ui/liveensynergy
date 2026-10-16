@@ -1,12 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Pages an account may use before it has confirmed its email address. */
-const OPEN_BEFORE_VERIFIED = ["/dashboard/profile", "/dashboard/settings", "/dashboard/notifications"];
-
+/**
+ * Before an account has confirmed its email (0074) it can finish onboarding
+ * and answer a survey, and it sees /dashboard — covered by the "confirm your
+ * email" overlay (dashboard/layout.tsx). Every other dashboard page, and QR
+ * check-in, waits for the link (client, 16 Oct: "he cannot click anything,
+ * he has to verify his account first, but we let him complete onboarding").
+ */
 function needsVerifiedEmail(pathname: string) {
   if (pathname === "/dashboard") return false;
-  if (OPEN_BEFORE_VERIFIED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return false;
   return pathname.startsWith("/dashboard/") || pathname.startsWith("/attend/");
 }
 
@@ -132,10 +135,9 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Email not yet proved (survey-created accounts, 0069): the profile,
-    // settings and surveys stay open — everything else waits for the link in
-    // our email (client, 13 Oct: all communication is by email, so the
-    // address must be real before anything else happens).
+    // Email not yet proved (0069/0074): everything past the dashboard home
+    // waits for the link in our welcome email (client, 13 Oct: all
+    // communication is by email, so the address must be real first).
     if (
       profile &&
       profile.role !== "admin" &&

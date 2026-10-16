@@ -20,40 +20,45 @@ export default async function RewardsPage() {
     .from("participations")
     .select("*, sponsored_events(*)")
     .eq("audience_profile_id", profile.id)
-    .in("status", ["attendance_verified", "reward_released"])
+    .neq("status", "rejected")
     .order("created_at", { ascending: false });
-  const rows = (data ?? []) as Row[];
+  const allRows = (data ?? []) as Row[];
 
   const { data: codeData } =
-    rows.length > 0
+    allRows.length > 0
       ? await supabase
           .from("reward_codes")
           .select("*, sponsored_events(name)")
           .in(
             "participation_id",
-            rows.map((r) => r.id),
+            allRows.map((r) => r.id),
           )
           .order("issued_at", { ascending: false })
       : { data: [] };
   const codes = (codeData ?? []) as CodeRow[];
 
-  // Rewards are discount codes (9 Oct standup). A checked-in event with no
-  // code yet is waiting on the post-event survey (or the team issuing codes).
+  // Rewards are discount codes (9 Oct standup), released as soon as a survey
+  // passes (0075) — before the event as often as after, so every
+  // registration's codes are listed. A checked-in event with no code yet is
+  // still waiting on its survey (or the team issuing codes).
   const codedParticipations = new Set(codes.filter((c) => c.status !== "void").map((c) => c.participation_id));
+  const rows = allRows.filter(
+    (r) => codedParticipations.has(r.id) || r.status === "attendance_verified" || r.status === "reward_released",
+  );
   const waiting = rows.filter((r) => !codedParticipations.has(r.id));
 
   return (
     <div>
       <PageHeader
         title="My rewards"
-        subtitle="Discount codes from events you attended."
+        subtitle="Your discount codes — released as soon as your event survey is complete."
       />
 
       {rows.length === 0 && (
         <EmptyState
           icon="🎁"
           title="No rewards yet"
-          body="Register for an event, check in at the venue and complete the post-event survey to receive a discount code."
+          body="Register for an event and complete its survey to receive a discount code."
           cta={{ href: "/dashboard/discover", label: "Discover events" }}
         />
       )}
@@ -67,8 +72,8 @@ export default async function RewardsPage() {
                 <div className="min-w-0">
                   <h3 className="font-semibold">{r.sponsored_events?.name ?? "Event"}</h3>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                    You&apos;re checked in. Complete the post-event survey in My events — your code is issued once
-                    it&apos;s reviewed.
+                    You&apos;re checked in. Complete the survey in My events — your code is issued once it&apos;s
+                    checked.
                   </p>
                 </div>
                 <Link href="/dashboard/participations" className="btn btn-ghost text-sm">

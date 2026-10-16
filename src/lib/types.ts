@@ -36,6 +36,8 @@ export interface Profile {
   /** When the person proved they own their email address (0069). Null =
    *  not yet; the middleware keeps such an account to profile/settings/surveys. */
   email_verified_at?: string | null;
+  /** Generated from email_verified_at (0074). */
+  email_verified?: boolean;
   /** Stamped by middleware, throttled to ~once every 5 minutes. */
   last_seen_at: string | null;
   plan_id: string | null;
@@ -181,6 +183,8 @@ export interface Artist {
   profile_id: string;
   artist_name: string;
   stage_name: string | null;
+  /** "Which applies to you" (0078); null for accounts set up before it. */
+  artist_type?: string | null;
   bio: string | null;
   profile_image_url: string | null;
   banner_url: string | null;
@@ -391,6 +395,10 @@ export interface EventListing {
   event_date: string | null;
   /** Local clock time at the venue, e.g. "19:30:00" (0013). */
   start_time: string | null;
+  /** Local clock time the event ends (0078). */
+  end_time?: string | null;
+  /** "Describe your event audience" (0078). */
+  audience_description?: string | null;
   /** IANA zone that `start_time` is expressed in, e.g. "Europe/London". */
   timezone: string;
   venue_name: string | null;

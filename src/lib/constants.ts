@@ -102,6 +102,15 @@ export const ARTIST_CATEGORIES = [
 ] as const;
 
 /** Event categories */
+/** "Which applies to you" on artist / organiser set-up (13 Oct notes, 0078). */
+export const ARTIST_TYPES = [
+  { value: "artist_group", label: "Artist / Group" },
+  { value: "promoter_management", label: "Promoter / Management" },
+  { value: "event_organiser", label: "Event organiser" },
+  { value: "venue_operator", label: "Venue operator" },
+] as const;
+export type ArtistType = (typeof ARTIST_TYPES)[number]["value"];
+
 export const EVENT_CATEGORIES = [
   "Music",
   "Comedy",
