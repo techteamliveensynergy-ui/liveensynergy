@@ -26,6 +26,7 @@ import {
   REDEMPTION_PLATFORMS,
 } from "@/lib/discount-codes";
 import { requireAdmin } from "@/lib/profile";
+import { formatDateTime, ukLocalInputToIso } from "@/lib/format";
 import { normaliseUrl } from "@/lib/urls";
 import { isBillingComplete, type BillingFields } from "@/lib/billing";
 import { draftCampaignInvoice, redraftCampaignInvoice } from "@/lib/billing-server";
@@ -416,6 +417,69 @@ export async function changeCampaignStatus(formData: FormData) {
   revalidatePath("/dashboard/sponsored", "layout");
   revalidatePath("/dashboard/discover-campaigns");
   redirect(`${back}?status_updated=${result.to}`);
+}
+
+/**
+ * Opens a campaign to the audience — registration and its surveys — now, on a
+ * scheduled date, or shuts it again (0070, 14 Oct standup). Until then its
+ * agreed event shows to the audience as "Upcoming". The database checks the
+ * codes are confirmed and a survey is published, unless a reason is given.
+ */
+export async function setCampaignOpening(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  const action = str(formData.get("action"));
+  const reason = str(formData.get("reason"));
+  if (!id) redirect("/dashboard/admin/campaigns");
+  const back = campaignReturnPath(str(formData.get("return_to")), id!);
+  const fail = (message: string): never =>
+    redirect(`${back}?action_error=${encodeURIComponent(message.slice(0, 300))}`);
+  if (action !== "open" && action !== "schedule" && action !== "close") fail("Unknown action.");
+
+  const opensAt = action === "schedule" ? ukLocalInputToIso(str(formData.get("opens_at"))) : null;
+  if (action === "schedule" && !opensAt) fail("Pick the date and time it should open.");
+
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("brands(profile_id)")
+    .eq("id", id!)
+    .maybeSingle<{ brands: { profile_id: string } | null }>();
+  if (!campaign) fail("Campaign not found.");
+
+  const { data, error } = await supabase.rpc("admin_set_campaign_opening", {
+    p_campaign_id: id,
+    p_action: action,
+    p_opens_at: opensAt,
+    p_reason: reason,
+  });
+  if (error) fail(error.message);
+  const result = data as {
+    opens_at: string | null;
+    event: { id: string; name: string; artist_profile_id: string | null } | null;
+  };
+
+  if (result.opens_at && result.event) {
+    const opensOn = action === "open" ? "now" : `on ${formatDateTime(result.opens_at)}`;
+    const recipients = [
+      { profileId: campaign!.brands?.profile_id, link: `/dashboard/campaigns/live/${id}` },
+      { profileId: result.event.artist_profile_id, link: `/dashboard/sponsored/${result.event.id}` },
+    ];
+    for (const r of recipients) {
+      if (!r.profileId) continue;
+      await notify({
+        eventKey: "campaign.registrations_open",
+        recipientProfileId: r.profileId,
+        link: r.link,
+        variables: { event_name: result.event.name, opens_on: opensOn },
+      });
+    }
+  }
+
+  revalidatePath("/dashboard/admin/campaigns", "layout");
+  revalidatePath("/dashboard/campaigns", "layout");
+  revalidatePath("/dashboard/sponsored", "layout");
+  revalidatePath("/dashboard/discover", "layout");
+  redirect(`${back}?status_updated=${action === "close" ? "closed_registrations" : "opened"}`);
 }
 
 /**

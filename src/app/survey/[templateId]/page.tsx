@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacity } from "@/lib/survey-capacity";
 import { createClient } from "@/lib/supabase/server";
+import { SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody, surveyOpenState } from "@/lib/campaign-opening";
 import { Logo } from "@/components/ui/Logo";
 import { formatDateTime } from "@/lib/format";
 import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
@@ -75,6 +76,23 @@ export default async function PublicSurveyPage({
   // Response cap (#8): checked up front so nobody fills in a form that can't
   // be submitted. Someone who already answered still sees "already completed".
   const full = (await surveyCapacity(supabase, templateId))?.is_full ?? false;
+
+  // Upcoming → Open (0070): until the team opens the campaign, the survey
+  // shows when it opens instead of a form the database would refuse. Admins
+  // can still try it out (the database lets them through too).
+  const openState = await surveyOpenState(supabase, templateId);
+  if (!openState.is_open) {
+    const { data: viewer } = user
+      ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: string }>()
+      : { data: null };
+    if (viewer?.role !== "admin") {
+      return (
+        <Shell>
+          <StatusCard title={SURVEY_NOT_OPEN_TITLE} body={surveyNotOpenBody(openState.opens_at)} />
+        </Shell>
+      );
+    }
+  }
 
   let event: PublicSurveyEvent | null = null;
   if (tpl.campaign_id) {

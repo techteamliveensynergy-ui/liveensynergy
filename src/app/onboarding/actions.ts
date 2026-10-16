@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications";
+import { isRegistrationNotOpenError } from "@/lib/campaign-opening";
 import { uploadImage } from "@/lib/storage";
 import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
@@ -288,7 +289,11 @@ async function registerPendingEvent(userId: string): Promise<string | null> {
   // 23505 = already registered (e.g. a retried onboarding submit) — fine,
   // just nothing new to notify.
   if (error) {
-    if (error.code !== "23505") console.error("[registerPendingEvent] insert failed", error);
+    // REGISTRATION_NOT_OPEN (0070): the event is still upcoming — nothing to
+    // do; they can register from Discover once it opens.
+    if (error.code !== "23505" && !isRegistrationNotOpenError(error.message)) {
+      console.error("[registerPendingEvent] insert failed", error);
+    }
     return error.code === "23505" ? event.id : null;
   }
 

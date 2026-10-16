@@ -7,6 +7,7 @@ import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
 import type { AudienceMember, Participation, SponsoredEvent } from "@/lib/types";
 import { RegistrationForm } from "./RegistrationForm";
+import { eventOpenStates, opensLabel } from "@/lib/campaign-opening";
 import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Event details" };
@@ -48,6 +49,9 @@ export default async function EventDetailsPage({
 
   if (!ev) notFound();
   const event = ev as SponsoredEvent;
+  // Upcoming → Open (0070): shown with all its details, but registration
+  // waits until the team opens the campaign.
+  const openState = (await eventOpenStates(supabase, [event.id])).get(event.id) ?? { is_open: true, opens_at: null };
 
   const deadlinePassed =
     event.participation_deadline != null &&
@@ -133,6 +137,14 @@ export default async function EventDetailsPage({
           >
             Go to my events
           </Link>
+        </div>
+      ) : !openState.is_open ? (
+        <div className="card p-6 text-center">
+          <span className="chip">Upcoming</span>
+          <p className="mt-3 text-lg font-semibold">{opensLabel("Registration", openState.opens_at)}</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            You&apos;ll be able to register and take the pre-event survey here once it opens.
+          </p>
         </div>
       ) : deadlinePassed ? (
         <div className="card p-6">

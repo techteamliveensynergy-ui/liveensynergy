@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isSurveyClosedError } from "@/lib/survey-capacity";
+import { isSurveyNotOpenError, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { requireRole } from "@/lib/profile";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
 import { SURVEY_HONEYPOT_FIELD, SURVEY_RATE_LIMITS } from "@/lib/survey-abuse-constants";
@@ -145,6 +146,7 @@ export async function submitSurveyResponse(
   });
   if (error) {
     if (isSurveyClosedError(error.message)) redirect("/dashboard/participations?notice=survey-closed");
+    if (isSurveyNotOpenError(error.message)) return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
     return { error: error.message };
   }
 

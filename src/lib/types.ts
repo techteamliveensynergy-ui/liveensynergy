@@ -294,6 +294,11 @@ export interface Campaign {
    * package's own margin is edited later. */
   package_platform_margin_gbp: number | null;
   package_participant_count: number | null;
+  /** When registration and the survey open to the audience (0070). Null =
+   *  not open yet ("Upcoming"); a future value = scheduled. */
+  opens_at: string | null;
+  /** Why it was opened before the codes/survey were ready (admin-only use). */
+  open_override_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -778,6 +783,9 @@ export interface SurveyQuestionConfig {
   group_id?: string;
   /** The shared question text shown above a rating group's rows. */
   group_prompt?: string;
+  /** Skip logic (0071): "if the answer is X, go to question N / the end".
+   *  See src/lib/survey-logic.ts. Absent = carry on to the next question. */
+  logic?: import("./survey-logic").SurveyLogicRule[];
 }
 
 export interface SurveyTemplate {

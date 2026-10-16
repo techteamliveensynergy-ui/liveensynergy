@@ -8,6 +8,7 @@ import type {
   SurveyQuestionType,
 } from "./types";
 import type { FieldSpec } from "./admin-user-fields";
+import { describeRule, LOGIC_END, logicProblem, logicRules, surveyPath } from "./survey-logic";
 
 /**
  * Declarative catalogue of question types, mirroring the pattern
@@ -443,12 +444,44 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
   return null;
 }
 
+/** questionProblem() plus this question's skip logic (0071), which needs to
+ *  know what comes after it. */
+export function questionProblemAt(drafts: SurveyQuestionDraft[], i: number): string | null {
+  const d = drafts[i];
+  return (
+    questionProblem(d) ??
+    logicProblem(
+      d,
+      drafts.slice(i + 1).map((x) => x.key),
+    )
+  );
+}
+
+/** "“Yes” → Q5 · Always → End" for a question card. */
+export function logicSummary(drafts: SurveyQuestionDraft[], i: number): string | null {
+  const d = drafts[i];
+  const rules = logicRules(d);
+  if (rules.length === 0) return null;
+  const position = new Map(drafts.map((x, n) => [x.key, n + 1]));
+  return rules
+    .map((r) =>
+      describeRule(
+        r,
+        (value) =>
+          value === SURVEY_OTHER_VALUE ? otherLabel(d.config) : d.options.find((o) => o.value === value)?.label ?? value,
+        (goto) => (goto === LOGIC_END ? "End" : position.has(goto) ? `Q${position.get(goto)}` : "?"),
+      ),
+    )
+    .join(" · ");
+}
+
 /** The first invalid draft, with its position — the builder selects it. */
 export function firstQuestionProblem(
   drafts: SurveyQuestionDraft[],
 ): { index: number; key: string; message: string } | null {
-  for (const [i, d] of drafts.entries()) {
-    const problem = questionProblem(d);
+  for (const [i] of drafts.entries()) {
+    const d = drafts[i];
+    const problem = questionProblemAt(drafts, i);
     if (problem) {
       const label = SURVEY_QUESTION_TYPES.find((s) => s.type === d.type)?.label ?? "question";
       // Names the type as well as the number (FB-00027): "Question 4: prompt
@@ -580,7 +613,18 @@ export function validateAnswers(
 ): string | null {
   const byId = new Map(answers.map((a) => [a.question_id, a]));
 
+  // Skip logic (0071): only the questions on this respondent's path are
+  // required, and an answer to a skipped question is refused — same rule as
+  // survey_path_question_ids() in the submit functions.
+  const onPath = new Set(
+    surveyPath(questions, Object.fromEntries(answers.map((a) => [a.question_id, a.value]))).map((q) => q.id),
+  );
+  if (answers.some((a) => !onPath.has(a.question_id) && !isAnswerEmpty(a.value))) {
+    return "An answer was sent for a question your earlier answers skipped. Please go back and check.";
+  }
+
   for (const [i, q] of questions.entries()) {
+    if (!onPath.has(q.id)) continue;
     // Name the question as well as its number — a rating group's rows and a
     // stepped survey don't show numbers to the respondent.
     const n = q.prompt ? `${i + 1} ("${q.prompt.length > 60 ? `${q.prompt.slice(0, 57)}…` : q.prompt}")` : `${i + 1}`;

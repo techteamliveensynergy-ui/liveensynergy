@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { isRegistrationNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE } from "@/lib/campaign-opening";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -132,6 +133,7 @@ export async function confirmRegistration(
     // 23505 = already registered for this event; treat it as success so a
     // double submit lands them on the registration they already have.
     if (insertError.code !== "23505") {
+      if (isRegistrationNotOpenError(insertError.message)) return { error: REGISTRATION_NOT_OPEN_MESSAGE };
       console.error("[confirmRegistration] insert failed", insertError);
       return { error: insertError.message };
     }

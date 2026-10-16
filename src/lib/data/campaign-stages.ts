@@ -11,7 +11,7 @@ import type { CampaignStatus } from "@/lib/types";
  */
 export async function campaignStagesFor(
   supabase: SupabaseClient,
-  campaigns: { id: string; status: CampaignStatus }[],
+  campaigns: { id: string; status: CampaignStatus; opens_at: string | null }[],
   viewer: "admin" | "brand",
 ): Promise<Map<string, CampaignStage>> {
   const ids = campaigns.map((c) => c.id);
@@ -55,6 +55,7 @@ export async function campaignStagesFor(
           settled: mine.find((e) => e.status === "confirmed" || e.status === "completed") ?? null,
           openProposals: mine.filter((e) => e.status === "in_progress").length,
           surveyPublished: published.has(c.id),
+          opensAt: c.opens_at,
         }),
       ];
     }),

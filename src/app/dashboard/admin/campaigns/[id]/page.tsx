@@ -13,6 +13,7 @@ import { CampaignChecklist } from "@/components/campaigns/CampaignChecklist";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import { CAMPAIGN_STATUS_LABELS, campaignStage, closeReasonLabel } from "@/lib/campaign-stage";
 import { CampaignStatusActions } from "../CampaignStatusActions";
+import { CampaignOpeningActions } from "../CampaignOpeningActions";
 import { campaignTitle } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaign · Admin" };
@@ -162,6 +163,7 @@ export default async function AdminCampaignPage({
     settled: live,
     openProposals: sponsorships.filter((s) => s.status === "in_progress").length,
     surveyPublished: templates.some((t) => t.status === "published"),
+    opensAt: campaign.opens_at,
   });
   const brand = campaign.brands;
   const title = campaignTitle(campaign, `${brand?.brand_name ?? "Brand"} campaign`);
@@ -304,6 +306,17 @@ export default async function AdminCampaignPage({
         adminLinks={live ? [{ href: `/dashboard/admin/events/sponsored/${live.id}`, label: "Who received which code →" }] : []}
       />
 
+      <CampaignOpeningActions
+        campaignId={campaign.id}
+        reference={campaign.reference}
+        status={campaign.status}
+        opensAt={campaign.opens_at}
+        overrideReason={campaign.open_override_reason}
+        settledEvent={live}
+        surveyPublished={templates.some((t) => t.status === "published")}
+        returnTo={`/dashboard/admin/campaigns/${campaign.id}`}
+      />
+
       {templates.some((t) => t.status === "draft") && (
         <p className="text-sm text-[var(--color-ink-soft)]">
           Draft surveys for this campaign:{" "}
@@ -339,6 +352,7 @@ export default async function AdminCampaignPage({
                   invoice: invoice ?? null,
                   events: sponsorships,
                   surveyPublished: templates.some((t) => t.status === "published"),
+                  opensAt: campaign.opens_at,
                 }}
               />
             </div>

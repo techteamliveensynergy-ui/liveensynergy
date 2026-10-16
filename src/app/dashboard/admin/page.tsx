@@ -44,7 +44,7 @@ export default async function AdminPage() {
     count(supabase, "profiles"),
     supabase
       .from("campaigns")
-      .select("id, reference, description, target_name, campaign_name, status, matched_listing_id, created_at, brands(brand_name)")
+      .select("id, reference, description, target_name, campaign_name, status, opens_at, matched_listing_id, created_at, brands(brand_name)")
       .order("created_at", { ascending: false }),
     supabase
       .from("sponsored_events")
@@ -81,7 +81,7 @@ export default async function AdminPage() {
   const campaigns = campaignRows.data ?? [];
   const recentStages = await campaignStagesFor(
     supabase,
-    (campaigns as { id: string; status: CampaignStatus }[]).slice(0, 5),
+    (campaigns as { id: string; status: CampaignStatus; opens_at: string | null }[]).slice(0, 5),
     "admin",
   );
   const sponsored = sponsoredRows.data ?? [];

@@ -1,6 +1,7 @@
 "use server";
 
 import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE } from "@/lib/survey-capacity";
+import { isRegistrationNotOpenError, isSurveyNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -156,6 +157,9 @@ export async function submitPublicSurveyResponse(
     if (isSurveyClosedError(error.message)) {
       return { error: `${SURVEY_CLOSED_TITLE}. ${SURVEY_CLOSED_BODY}` };
     }
+    if (isSurveyNotOpenError(error.message)) {
+      return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
+    }
     return { error: error.message };
   }
 
@@ -245,6 +249,7 @@ export async function registerForEventAfterSurvey(
   });
   // 23505 = already registered — treat as success, same as confirmRegistration().
   if (error && error.code !== "23505") {
+    if (isRegistrationNotOpenError(error.message)) return { error: REGISTRATION_NOT_OPEN_MESSAGE };
     return { error: error.message };
   }
 

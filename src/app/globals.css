@@ -365,3 +365,27 @@ h4,
   font-weight: 600;
   padding: 0.3rem 0.75rem;
 }
+
+/* Printing a report (analysis playground, 14 Oct standup): "Download PDF" is
+   the browser's print-to-PDF, so only the report itself prints — not the
+   sidebar, banners or the feedback tab. */
+@media print {
+  body:has([data-print-report]) * {
+    visibility: hidden;
+  }
+  /* Same :has() prefix as the rule above, so this one wins on specificity. */
+  body:has([data-print-report]) [data-print-report],
+  body:has([data-print-report]) [data-print-report] * {
+    visibility: visible;
+  }
+  [data-print-report] {
+    position: absolute;
+    inset: 0 0 auto 0;
+  }
+  [data-print-report] .no-print {
+    display: none;
+  }
+  [data-print-report] .print-avoid-break {
+    break-inside: avoid;
+  }
+}

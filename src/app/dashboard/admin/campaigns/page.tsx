@@ -51,6 +51,7 @@ interface Row {
   target_name: string | null;
   campaign_name: string | null;
   category_other: string | null;
+  opens_at: string | null;
   brands: { brand_name: string; profile_id: string } | null;
 }
 
@@ -199,6 +200,7 @@ export default async function AdminCampaignsPage({
           settled,
           openProposals: mine.filter((s) => s.status === "in_progress").length,
           surveyPublished: publishedSurvey.has(c.id),
+          opensAt: c.opens_at,
         }),
       ];
     }),
@@ -378,6 +380,7 @@ export default async function AdminCampaignsPage({
                           invoice: invoiceFor(c.id) ?? null,
                           events: suggestionsFor(c.id),
                           surveyPublished: publishedSurvey.has(c.id),
+                          opensAt: c.opens_at,
                         }}
                       />
                     </div>

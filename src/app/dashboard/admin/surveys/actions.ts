@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminOrNull, requireAdmin } from "@/lib/profile";
@@ -11,6 +12,17 @@ import {
   type ContradictionRuleDraft,
   type SurveyQuestionDraft,
 } from "@/lib/surveys";
+import { LOGIC_END } from "@/lib/survey-logic";
+import type { SurveyQuestionConfig } from "@/lib/types";
+
+/** Rewrites skip-logic jump targets from builder keys to saved question ids. */
+function withLogicTargets(config: SurveyQuestionConfig, idByKey: Map<string, string>): SurveyQuestionConfig {
+  if (!config.logic?.length) return config;
+  return {
+    ...config,
+    logic: config.logic.map((r) => (r.goto === LOGIC_END ? r : { ...r, goto: idByKey.get(r.goto) ?? r.goto })),
+  };
+}
 
 export interface SurveyState {
   error?: string;
@@ -225,14 +237,19 @@ export async function saveSurveyQuestions(
   const questionKeys = new Set(drafts.map((d) => d.key));
   const rules = validContradictionRules(ruleDrafts, questionKeys);
 
+  // Ids are chosen here rather than by the database so skip-logic jumps
+  // (config.logic[].goto, 0071), which the builder holds as draft keys, can be
+  // rewritten to the new rows' ids in the same insert.
+  const newIdByKey = new Map(drafts.map((d) => [d.key, randomUUID()]));
   const rows = drafts.map((d, i) => ({
+    id: newIdByKey.get(d.key)!,
     template_id: templateId,
     order_index: i,
     type: d.type,
     prompt: d.prompt || null,
     help_text: d.help_text || null,
     options: d.options.length ? d.options : null,
-    config: d.config ?? {},
+    config: withLogicTargets(d.config ?? {}, newIdByKey),
     required: d.required,
   }));
 
