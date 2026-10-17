@@ -13,7 +13,7 @@ export type RewardGateCode = "open" | "pass" | "missing" | "pending" | "review" 
 const GATE_NOTES: Record<RewardGateCode, string> = {
   open: "No survey on this campaign — issuing is admin discretion.",
   pass: "Survey passed.",
-  missing: "No post-event survey response yet — nothing to check.",
+  missing: "No survey response yet — nothing to check.",
   pending: "Survey submitted but not scored yet. Try again shortly.",
   review: "Survey is in the review queue — approve or reject it there first.",
   reject: "Survey failed the quality check — no reward code.",
@@ -47,6 +47,15 @@ export function decideRewardGate(args: {
 
   if (!requiredKind) {
     return { code: "open", allowed: true, kind: null, responseId: null, note: GATE_NOTES.open };
+  }
+
+  // Any passed survey on the campaign qualifies — the same rule the
+  // automatic issue applies (0075), which hands the code out on a pre-event
+  // pass. Requiring the post-event one here showed "survey missing" next to
+  // people who already held their code (17 Oct end-to-end run).
+  const passed = responses.find((r) => r.quality_status === "pass");
+  if (passed) {
+    return { code: "pass", allowed: true, kind: passed.kind, responseId: passed.id, note: GATE_NOTES.pass };
   }
 
   const response = responses.find((r) => r.kind === requiredKind);
@@ -108,10 +117,22 @@ export async function rewardGateFor(args: {
   if (!requiredKind) return decideRewardGate({ requiredKind: null, responses: [] });
 
   const kindByTemplateId = new Map(templates.map((t) => [t.id, t.kind]));
+  // Dashboard answers carry the participation; public-link answers only the
+  // respondent's profile (0043) — 0075 counts both, so does this.
+  const { data: part } = await supabase
+    .from("participations")
+    .select("audience_profile_id")
+    .eq("id", participationId)
+    .maybeSingle<{ audience_profile_id: string }>();
   const { data: responseRows } = await supabase
     .from("survey_responses")
     .select("id, template_id, quality_status")
-    .eq("participation_id", participationId);
+    .in("template_id", [...kindByTemplateId.keys()])
+    .or(
+      part
+        ? `participation_id.eq.${participationId},respondent_profile_id.eq.${part.audience_profile_id}`
+        : `participation_id.eq.${participationId}`,
+    );
 
   const responses: GateResponse[] = (
     (responseRows ?? []) as { id: string; template_id: string; quality_status: SurveyQualityStatus }[]
@@ -153,23 +174,40 @@ export async function rewardGatesForEvent(args: {
   }
 
   const kindByTemplateId = new Map(templates.map((t) => [t.id, t.kind]));
+  // As rewardGateFor(): a public-link answer is matched by profile.
+  const { data: partRows } = await supabase
+    .from("participations")
+    .select("id, audience_profile_id")
+    .in("id", participationIds);
+  const participationByProfile = new Map<string, string[]>();
+  for (const p of (partRows ?? []) as { id: string; audience_profile_id: string }[]) {
+    participationByProfile.set(p.audience_profile_id, [...(participationByProfile.get(p.audience_profile_id) ?? []), p.id]);
+  }
+
   const { data: responseRows } = await supabase
     .from("survey_responses")
-    .select("id, template_id, participation_id, quality_status")
-    .in("participation_id", participationIds);
+    .select("id, template_id, participation_id, respondent_profile_id, quality_status")
+    .in("template_id", [...kindByTemplateId.keys()]);
 
   const responsesByParticipation = new Map<string, GateResponse[]>();
   for (const r of (responseRows ?? []) as {
     id: string;
     template_id: string;
-    participation_id: string;
+    participation_id: string | null;
+    respondent_profile_id: string | null;
     quality_status: SurveyQualityStatus;
   }[]) {
     const kind = kindByTemplateId.get(r.template_id);
     if (!kind) continue;
-    const list = responsesByParticipation.get(r.participation_id) ?? [];
-    list.push({ id: r.id, kind, quality_status: r.quality_status });
-    responsesByParticipation.set(r.participation_id, list);
+    const owners = r.participation_id
+      ? [r.participation_id]
+      : (r.respondent_profile_id && participationByProfile.get(r.respondent_profile_id)) || [];
+    for (const owner of owners) {
+      if (!participationIds.includes(owner)) continue;
+      const list = responsesByParticipation.get(owner) ?? [];
+      list.push({ id: r.id, kind, quality_status: r.quality_status });
+      responsesByParticipation.set(owner, list);
+    }
   }
 
   for (const id of participationIds) {

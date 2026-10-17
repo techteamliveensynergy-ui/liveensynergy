@@ -950,6 +950,43 @@ export interface SurveyResponse {
   updated_at: string;
 }
 
+/** One consent given or withdrawn (0080) — append-only, written by
+ *  database triggers, readable by admins and by the person themselves. */
+export type ConsentType =
+  | "platform_terms"
+  | "privacy_policy"
+  | "email_verified"
+  | "event_terms"
+  | "sponsor_marketing"
+  | "survey_terms"
+  | "residency_confirmed"
+  | "order_form_details"
+  | "order_form_terms";
+
+export type ConsentSource =
+  | "sign_up"
+  | "survey_sign_up"
+  | "verify_link"
+  | "event_registration"
+  | "my_events"
+  | "public_survey"
+  | "dashboard_survey"
+  | "order_form";
+
+export interface ConsentRecord {
+  id: string;
+  profile_id: string | null;
+  subject_email: string | null;
+  consent_type: ConsentType;
+  granted: boolean;
+  version: string | null;
+  source: ConsentSource;
+  /** What it was about: event / survey / order form ids, references, names. */
+  context: Record<string, string | boolean | null>;
+  recorded_at: string;
+  backfilled: boolean;
+}
+
 export interface SurveyAnswer {
   id: string;
   response_id: string;

@@ -173,6 +173,11 @@ export async function submitSurveyResponse(
     });
     if (scoreError) console.error("score_survey_response failed:", scoreError.message);
   }
+  // The intro gate's Terms & Privacy tick (0080). Never blocks the redirect.
+  if (formData.get("consent_accepted") === "on") {
+    const { error: consentError } = await supabase.rpc("record_survey_consent", { p_template_id: templateId });
+    if (consentError) console.error("record_survey_consent failed:", consentError.message);
+  }
 
   revalidatePath("/dashboard/participations");
   redirect("/dashboard/participations?notice=survey-submitted");
