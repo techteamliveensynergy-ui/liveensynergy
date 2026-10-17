@@ -205,6 +205,22 @@ export default defineConfig({
       },
     },
     {
+      // 17 Oct 2026 full end-to-end run, every role, Stripe TEST payment on
+      // the hosted invoice page. Local build only; NOT read-only — see
+      // tests/e2e-lifecycle.spec.ts.
+      name: "e2e-video",
+      testMatch: /e2e-lifecycle\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.WALKTHROUGH_URL ?? "http://localhost:3000",
+        video: { mode: "on", size: { width: 1280, height: 800 } },
+        viewport: { width: 1280, height: 800 },
+        actionTimeout: 45_000,
+        navigationTimeout: 90_000,
+        launchOptions: { slowMo: 150 },
+      },
+    },
+    {
       // Walkthrough recording of the audience journey. Deliberately signed out
       // — the whole point is to start from account creation — so no
       // storageState, and no dependency on the setup project.
