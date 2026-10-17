@@ -55,7 +55,7 @@ function statusesFrom(current: string) {
  * never produced by decideRewardGate() itself.
  */
 const GATE_NOTICES: Record<string, string> = {
-  missing: "No post-event survey response yet — nothing to check.",
+  missing: "No survey response yet — nothing to check.",
   pending: "Survey submitted but not scored yet. Try again shortly.",
   review: "Survey is in the review queue — approve or reject it there first.",
   reject: "Survey failed the quality check — no reward code.",
