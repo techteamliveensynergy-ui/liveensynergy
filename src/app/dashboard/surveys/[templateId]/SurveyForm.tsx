@@ -60,10 +60,10 @@ export function SurveyForm({
 }) {
   // A registered participant already agreed to the platform's own T&Cs at
   // sign-up (participations.terms_accepted_at/profiles.terms_accepted_at) —
-  // this gate is UI-only re-confirmation for THIS survey (requirement 5,
-  // 17 Sep standup), not a new consent record. submit_survey_response()
-  // takes no consent parameter; adding one would create a Postgres function
-  // overload for a UI-only requirement, which isn't worth the weight.
+  // this gate re-confirms them for THIS survey (requirement 5, 17 Sep
+  // standup). submit_survey_response() takes no consent parameter; the tick
+  // travels as `consent_accepted` and the action records it in the consent
+  // log (record_survey_consent, 0080).
   const [gateCleared, setGateCleared] = useState(!showIntroGate);
 
   const [values, setValues] = useState<Record<string, SurveyAnswerValue>>(() => {
@@ -249,6 +249,7 @@ export function SurveyForm({
       <ErrorBanner error={state.error} />
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
+      {showIntroGate && <input type="hidden" name="consent_accepted" value="on" />}
       <input type="hidden" name="answers" value={JSON.stringify(payload)} readOnly />
 
       {/* Honeypot (build plan §03 stage 1). Deliberately NOT display:none —

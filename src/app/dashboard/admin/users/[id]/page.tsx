@@ -6,10 +6,11 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { ROLE_PROFILE_SPECS } from "@/lib/admin-user-fields";
 import { formatDateTime, timeAgo, UK_TIME_ZONE } from "@/lib/format";
 import { calculateAge } from "@/lib/age";
-import type { Plan, Profile } from "@/lib/types";
+import type { ConsentRecord, Plan, Profile } from "@/lib/types";
 import { toggleUserActive } from "../../actions";
 import { AccountForm } from "./AccountForm";
 import { RoleProfileForm } from "./RoleProfileForm";
+import { ConsentsSection } from "./ConsentsSection";
 
 export const metadata = { title: "User · Admin" };
 
@@ -32,7 +33,7 @@ export default async function AdminUserDetailPage({
 
   const spec = ROLE_PROFILE_SPECS[user.role];
 
-  const [{ data: planRows }, { data: authRows }, roleRecordResult] =
+  const [{ data: planRows }, { data: authRows }, roleRecordResult, { data: consentRows }] =
     await Promise.all([
       supabase.from("plans").select("*").order("sort_order"),
       supabase.rpc("admin_auth_activity"),
@@ -43,6 +44,17 @@ export default async function AdminUserDetailPage({
             .eq("profile_id", id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      // Their consent log (0080), plus anything given on a public survey
+      // under the same address before they had an account.
+      supabase
+        .from("consent_records")
+        .select("*")
+        .or(
+          user.email
+            ? `profile_id.eq.${id},subject_email.eq."${user.email.replace(/"/g, "")}"`
+            : `profile_id.eq.${id}`,
+        )
+        .order("recorded_at", { ascending: false }),
     ]);
 
   const plans = (planRows ?? []) as Plan[];
@@ -107,16 +119,6 @@ export default async function AdminUserDetailPage({
             label: "Onboarding",
             value: user.onboarding_completed ? "Complete" : "Pending",
           },
-          // Which revision of the role-specific terms they accepted, and when
-          // (0021). Blank for accounts created before the checkbox existed.
-          {
-            label: "Terms accepted",
-            value: user.terms_accepted_at
-              ? `${new Date(user.terms_accepted_at).toLocaleDateString("en-GB", { timeZone: UK_TIME_ZONE })}${
-                  user.terms_version ? ` · v${user.terms_version}` : ""
-                }`
-              : "Not recorded",
-          },
           ...(age != null ? [{ label: "Age", value: `${age}` }] : []),
         ].map((s) => (
           <div
@@ -130,6 +132,8 @@ export default async function AdminUserDetailPage({
           </div>
         ))}
       </div>
+
+      <ConsentsSection records={(consentRows ?? []) as ConsentRecord[]} isAudience={user.role === "audience"} />
 
       {/* Profile links */}
       {(websiteUrl || (socials && Object.keys(socials).length > 0)) && (
