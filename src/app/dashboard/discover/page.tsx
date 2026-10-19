@@ -31,6 +31,10 @@ interface Search {
   location?: string;
   category?: string;
   month?: string;
+  /** Set by contactOrganiser: the listing just enquired about, and the
+   *  brand's thread with the team it was posted to. */
+  enquiry?: string;
+  thread?: string;
 }
 
 export default async function DiscoverPage({
@@ -44,19 +48,13 @@ export default async function DiscoverPage({
   const hasFilters = Boolean(q.name || q.location || q.category || q.month);
 
   if (profile.role === "brand") {
-    const [{ data }, { data: convData }, { data: brandRow }, { data: sponsData }] =
+    const [{ data }, { data: brandRow }, { data: sponsData }] =
       await Promise.all([
         supabase
           .from("event_listings")
           .select("*")
           .eq("status", "available")
           .order("event_date", { ascending: true }),
-        // Which listings this brand has already reached out about, so the card
-        // shows the live conversation instead of offering to start another.
-        supabase
-          .from("conversations")
-          .select("id, listing_id")
-          .eq("brand_profile_id", profile.id),
         supabase
           .from("brands")
           .select("id")
@@ -72,14 +70,6 @@ export default async function DiscoverPage({
           .select("id, listing_id, brand_id")
           .not("listing_id", "is", null),
       ]);
-
-    const conversationByListing = new Map<string, string>();
-    for (const c of (convData ?? []) as {
-      id: string;
-      listing_id: string | null;
-    }[]) {
-      if (c.listing_id) conversationByListing.set(c.listing_id, c.id);
-    }
 
     const myBrandId = brandRow?.id ?? null;
     const sponsorshipByListing = new Map<string, { id: string; mine: boolean }>();
@@ -112,6 +102,35 @@ export default async function DiscoverPage({
           title="Discover events"
           subtitle="Events currently open for sponsorship. Reach out and our team will be in touch within 48 hours."
         />
+
+        {/* Confirmation after "Enquire with our team" — the brand stays on
+            Discover, so without this nothing visibly happened (19 Oct). */}
+        {q.enquiry && (
+          <div
+            role="status"
+            className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]"
+          >
+            <p className="font-semibold">
+              ✓ Enquiry sent to the Live·En·Synergy team
+              {listings.find((l) => l.id === q.enquiry)?.name
+                ? ` about ${listings.find((l) => l.id === q.enquiry)!.name}`
+                : ""}
+              .
+            </p>
+            <p className="mt-1">
+              We&apos;ll review the match with the organiser and get back to you within 48
+              hours.{" "}
+              {q.thread && (
+                <Link
+                  href={`/dashboard/messages?c=${encodeURIComponent(q.thread)}`}
+                  className="font-semibold underline"
+                >
+                  View your thread with our team →
+                </Link>
+              )}
+            </p>
+          </div>
+        )}
 
         <FilterBar
           action="/dashboard/discover"
@@ -228,23 +247,15 @@ export default async function DiscoverPage({
                     >
                       Open your sponsorship
                     </Link>
-                  ) : conversationByListing.has(l.id) ? (
-                    <div className="mt-4">
-                      <p className="rounded-lg bg-[var(--color-sage)] px-3 py-2 text-center text-sm font-semibold text-[var(--color-olive-deep)]">
-                        ✓ Enquiry sent
-                      </p>
-                      <Link
-                        href={`/dashboard/messages?c=${conversationByListing.get(l.id)}`}
-                        className="btn btn-ghost mt-2 w-full"
-                      >
-                        Open conversation
-                      </Link>
-                    </div>
                   ) : (
+                    // Always the enquiry to our team. The "Enquiry sent / Open
+                    // conversation" state this used to show only ever matched
+                    // the direct brand↔organiser threads from before 26 Aug,
+                    // so it reopened a chat with the artist (19 Oct).
                     <form action={contactOrganiser} className="mt-4">
                       <input type="hidden" name="listing_id" value={l.id} />
                       <button type="submit" className="btn btn-primary w-full">
-                        Contact organiser
+                        Enquire with our team
                       </button>
                       <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
                         Our team reviews every match and responds within 48

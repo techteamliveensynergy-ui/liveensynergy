@@ -45,7 +45,15 @@ export default async function MessagesPage({
     .from("conversations")
     .select("*, event_listings(id, name), campaigns(id, reference, campaign_name)")
     .order("created_at", { ascending: false });
-  const all = (convData ?? []) as ConversationRow[];
+  const isAdmin = profile!.role === "admin";
+  // Direct brand↔artist chats ("partner" threads) stopped on 26 Aug — the
+  // database already refuses either party's messages in them. Brands and
+  // artists only see their thread with the team now; admins keep the old
+  // ones as a read-only archive (19 Oct: an old enquiry card was still
+  // reopening a chat with the artist).
+  const all = ((convData ?? []) as ConversationRow[]).filter(
+    (c) => isAdmin || c.kind === "support",
+  );
 
   const partnerThreads = all.filter((c) => c.kind !== "support");
   const supportThreads = all.filter((c) => c.kind === "support");
@@ -53,11 +61,13 @@ export default async function MessagesPage({
   // A deep link to a specific conversation should select the right tab too.
   const linked = activeId ? all.find((x) => x.id === activeId) : null;
   const tab: Tab =
-    linked?.kind === "support"
+    !isAdmin || linked?.kind === "support"
       ? "support"
-      : rawTab === "support"
-        ? "support"
-        : "partner";
+      : linked
+        ? "partner"
+        : rawTab === "partner"
+          ? "partner"
+          : "support";
 
   const conversations = tab === "support" ? supportThreads : partnerThreads;
   const active = linked ?? conversations[0] ?? null;
@@ -131,7 +141,6 @@ export default async function MessagesPage({
   // Everyone an admin can start a conversation with. Admins are excluded —
   // the thread shape is "a user and the team", so an admin-to-admin one would
   // land in the wrong inbox at both ends.
-  const isAdmin = profile!.role === "admin";
   const { data: contactRows } = isAdmin
     ? await supabase
         .from("profiles")
@@ -229,15 +238,13 @@ export default async function MessagesPage({
     <div>
       <PageHeader
         title="Messages"
-        subtitle="Chat with sponsors, artists and organisers — or with the Live·En·Synergy team."
+        subtitle={
+          isAdmin
+            ? "Every user's thread with the team, plus the archived direct chats from before 26 Aug."
+            : "Your conversations with the Live·En·Synergy team — we relay anything between you and brands or artists."
+        }
       />
 
-      {notice === "enquiry" && (
-        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-          Enquiry sent. Our team reviews every match and will be in touch within
-          48 hours — you can keep chatting here in the meantime.
-        </p>
-      )}
       {notice === "support" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
           You&apos;re now in a thread with the Live·En·Synergy team. We respond
@@ -253,20 +260,22 @@ export default async function MessagesPage({
 
       {isAdmin && <NewAdminThread people={contacts} />}
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        <TabLink
-          href="/dashboard/messages"
-          label="With artists & sponsors"
-          count={partnerThreads.length}
-          active={tab === "partner"}
-        />
-        <TabLink
-          href="/dashboard/messages?tab=support"
-          label="With Live·En·Synergy team"
-          count={supportThreads.length}
-          active={tab === "support"}
-        />
-      </div>
+      {isAdmin && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          <TabLink
+            href="/dashboard/messages"
+            label="With Live·En·Synergy team"
+            count={supportThreads.length}
+            active={tab === "support"}
+          />
+          <TabLink
+            href="/dashboard/messages?tab=partner"
+            label="Old direct chats (archive)"
+            count={partnerThreads.length}
+            active={tab === "partner"}
+          />
+        </div>
+      )}
 
       {conversations.length === 0 ? (
         tab === "support" ? (
@@ -485,7 +494,15 @@ export default async function MessagesPage({
                   )}
                 </div>
 
-                <Composer conversationId={active.id} />
+                {active.kind === "support" ? (
+                  <Composer conversationId={active.id} />
+                ) : (
+                  <p className="border-t border-black/10 px-5 py-3 text-sm text-[var(--color-ink-soft)]">
+                    Archived — direct chats between brands and artists closed on 26 Aug,
+                    and neither party can reply here. Message them in their own thread
+                    with the team instead.
+                  </p>
+                )}
               </>
             ) : (
               <div className="grid flex-1 place-items-center text-sm text-[var(--color-ink-soft)]">

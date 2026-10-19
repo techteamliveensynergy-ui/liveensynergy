@@ -67,8 +67,9 @@ export async function contactOrganiser(formData: FormData) {
   });
 
   // The match is reviewed by the team before anything is confirmed, so set the
-  // expectation up front rather than leaving the brand waiting on a reply.
-  redirect(`/dashboard/messages?c=${conversationId}&notice=enquiry`);
+  // expectation up front: back on Discover with a confirmation banner, so
+  // the brand sees the click did something (19 Oct).
+  redirect(`/dashboard/discover?enquiry=${listingId}&thread=${conversationId}`);
 }
 
 export interface RegistrationState {
