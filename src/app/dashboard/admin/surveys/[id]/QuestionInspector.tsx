@@ -359,7 +359,7 @@ export function QuestionInspector({
               <div className="space-y-2">
                 {mediaUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={mediaUrl} alt="" className="h-24 w-full rounded-lg object-cover" />
+                  <img src={mediaUrl} alt="" className="h-24 w-full rounded-lg bg-[var(--color-mist)] object-contain" />
                 )}
                 <input
                   type="file"
@@ -442,17 +442,17 @@ export function QuestionInspector({
                   mediaPosition === "left" || mediaPosition === "right"
                     ? RECOMMENDED_IMAGE_SIZES.side
                     : RECOMMENDED_IMAGE_SIZES.topBottom
-                } — an image that shape fills the space exactly with either setting.`}
+                } — only matters for "Fill the space", where an image that shape isn't cropped.`}
               >
                 <select
                   id="q-media-fit"
                   className="select"
                   disabled={!editable}
-                  value={question.config.media_fit ?? "cover"}
-                  onChange={(e) => setConfig("media_fit", e.target.value === "cover" ? "" : e.target.value)}
+                  value={question.config.media_fit === "cover" ? "cover" : ""}
+                  onChange={(e) => setConfig("media_fit", e.target.value)}
                 >
+                  <option value="">As uploaded — same shape, never cropped</option>
                   <option value="cover">Fill the space (edges may be cropped)</option>
-                  <option value="contain">Show the whole image (may leave bands)</option>
                 </select>
               </Field>
             )}

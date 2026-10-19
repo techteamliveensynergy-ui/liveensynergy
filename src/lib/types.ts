@@ -777,8 +777,10 @@ export interface SurveyQuestionConfig {
    *  video. Unset = detected from the link (videoFormatFor() in
    *  src/lib/survey-media.ts). */
   video_format?: SurveyVideoFormat;
-  /** Image only — "cover" (default) fills the media box edge to edge and
-   *  crops; "contain" shows the whole image, letterboxed in the card colour. */
+  /** Image only. Unset (the default since 19 Oct) shows the image as
+   *  uploaded — own aspect ratio, never cropped; "cover" fills a fixed-shape
+   *  box edge to edge and crops. "contain" is the older explicit "whole
+   *  image" choice and now behaves like unset. See imageFit(). */
   media_fit?: "cover" | "contain";
   /** single_choice / multiple_choice / dropdown — adds an "Other — please
    *  specify" option (FB-00029, 0065). Its answer value is SURVEY_OTHER_VALUE

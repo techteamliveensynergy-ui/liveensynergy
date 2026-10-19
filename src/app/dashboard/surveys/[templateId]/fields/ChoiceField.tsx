@@ -48,7 +48,7 @@ export function ChoiceField({ question, value, onChange, otherText = "", onOther
                 <img
                   src={o.image_url}
                   alt=""
-                  className={`aspect-square w-full rounded-lg object-cover transition-transform ${
+                  className={`aspect-square w-full rounded-lg bg-[var(--color-mist)] object-contain transition-transform ${
                     selected ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                 />

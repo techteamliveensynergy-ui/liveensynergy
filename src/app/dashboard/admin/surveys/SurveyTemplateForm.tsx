@@ -335,7 +335,7 @@ export function SurveyTemplateForm({
                 <div className="space-y-2">
                   {coverMediaUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={coverMediaUrl} alt="" className="h-32 w-full rounded-lg object-cover" />
+                    <img src={coverMediaUrl} alt="" className="h-32 w-full rounded-lg bg-[var(--color-mist)] object-contain" />
                   )}
                   <input
                     type="file"
@@ -400,7 +400,7 @@ export function SurveyTemplateForm({
                 <img
                   src={backgroundImageUrl}
                   alt=""
-                  className="h-24 w-full rounded-lg object-cover"
+                  className="h-24 w-full rounded-lg bg-[var(--color-mist)] object-contain"
                 />
               )}
               <input

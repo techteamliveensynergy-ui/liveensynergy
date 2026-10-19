@@ -46,25 +46,36 @@ function VideoBox({ url, format, side }: { url: string; format: SurveyVideoForma
   );
 }
 
-function ImageBox({ url, fit, side }: { url: string; fit: "cover" | "contain"; side: boolean }) {
-  // A fixed-shape box (2:1 above/below, full card height at the side) so an
-  // image at RECOMMENDED_IMAGE_SIZES is shown uncropped and anything else is
-  // cropped predictably — never stretched. A side image stacks above the
-  // question on a phone; it keeps its recommended 4:5 shape there (capped by
-  // the viewport) rather than a 2:1 strip that cut away most of a portrait
-  // image (FB-00035).
+function ImageBox({ url, fit, side }: { url: string; fit: "natural" | "cover"; side: boolean }) {
+  if (fit === "cover") {
+    // Opted into by the admin ("Fill the space"): a fixed-shape box — 2:1
+    // above/below, full card height at the side, 4:5 when a side image stacks
+    // on a phone — so the image fills it, cropping the edges, never stretched.
+    return (
+      <div
+        className={`relative w-full ${side ? "aspect-[4/5] max-h-[65svh] sm:aspect-auto sm:h-full sm:max-h-none sm:min-h-[26rem]" : "aspect-[2/1]"}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      </div>
+    );
+  }
+  // The default (19 Oct client feedback): the image exactly as uploaded —
+  // its own aspect ratio at every position and screen size, nothing cropped.
+  // It spans the width it's given; a very tall one is capped by the viewport
+  // and scales down proportionally (centred) instead of being cut.
   return (
-    <div
-      className={`relative w-full ${side ? "aspect-[4/5] max-h-[65svh] sm:aspect-auto sm:h-full sm:max-h-none sm:min-h-[26rem]" : "aspect-[2/1]"}`}
-    >
+    <div className={`flex w-full items-center justify-center ${side ? "sm:h-full" : ""}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={url}
-        alt=""
-        className={`absolute inset-0 h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`}
-      />
+      <img src={url} alt="" className="block h-auto max-h-[75svh] w-auto max-w-full" />
     </div>
   );
+}
+
+/** "cover" only when the admin chose "Fill the space"; unset (the default)
+ *  and the older "contain" both mean the image as uploaded. */
+export function imageFit(config: SurveyQuestionConfig): "natural" | "cover" {
+  return config.media_fit === "cover" ? "cover" : "natural";
 }
 
 export function MediaBox({ config, side }: { config: SurveyQuestionConfig; side: boolean }) {
@@ -72,7 +83,7 @@ export function MediaBox({ config, side }: { config: SurveyQuestionConfig; side:
   if (config.media_type === "video") {
     return <VideoBox url={config.media_url} format={videoFormatFor(config.media_url, config.video_format)} side={side} />;
   }
-  return <ImageBox url={config.media_url} fit={config.media_fit ?? "cover"} side={side} />;
+  return <ImageBox url={config.media_url} fit={imageFit(config)} side={side} />;
 }
 
 /** Width of the media column for a left/right placement — wider for a

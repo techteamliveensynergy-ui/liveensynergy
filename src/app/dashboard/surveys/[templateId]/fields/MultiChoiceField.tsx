@@ -39,7 +39,7 @@ export function MultiChoiceField({ question, value, onChange, otherText = "", on
                 <img
                   src={o.image_url}
                   alt=""
-                  className={`aspect-square w-full rounded-lg object-cover transition-transform ${
+                  className={`aspect-square w-full rounded-lg bg-[var(--color-mist)] object-contain transition-transform ${
                     checked ? "scale-105 ring-2 ring-[var(--color-ink)]" : ""
                   }`}
                 />
