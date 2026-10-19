@@ -190,8 +190,10 @@ test("B-PROF-01 profile logo + banner upload", async ({ page }) => {
 
 test("B-MSG-01 chat split into partner / team threads", async ({ page }) => {
   await page.goto("/dashboard/messages");
-  await expect(page.getByText("With artists & sponsors")).toBeVisible();
-  await expect(page.getByText("With Live·En·Synergy team")).toBeVisible();
+  // Direct brand↔artist chats are archived (admin-only) since 19 Oct; a
+  // brand/artist sees only their threads with the team.
+  await expect(page.getByText(/Your conversations with the Live·En·Synergy team/)).toBeVisible();
+  await expect(page.getByText("With artists & sponsors")).toHaveCount(0);
   await capture(page, "B-MSG-01", "Messages — split into two categories", {
     fullPage: true,
   });

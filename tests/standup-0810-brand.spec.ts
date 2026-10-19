@@ -222,46 +222,34 @@ test("B4 link fields don't fill themselves with https://", async ({ page }) => {
 });
 
 /**
- * D1 — the `getOrCreateConversation` lookup.
+ * D1 — an enquiry goes to the team, never to the organiser directly.
  *
- * Discover hides "Contact organiser" once a thread exists and offers "Open
- * conversation" instead, so the double-click path isn't reachable from this
- * page — which is why the broken lookup went unnoticed. What this checks is
- * the guarantee that survives: the enquiry opens a thread, and coming back
- * resolves to *that* thread rather than a second one. The reuse branch itself
- * is what the campaign relay depends on (A3/R2).
+ * Since 19 Oct Discover always offers "Enquire with our team" (the old
+ * "Open conversation" state reopened the pre-26 Aug direct chats) and lands
+ * back on Discover with a confirmation banner. Enquiring twice must resolve to
+ * the same team thread rather than a second one — the reuse branch the
+ * campaign relay depends on (A3/R2).
  */
-test("D1 an enquiry opens one thread, and Discover points back at it", async ({
+test("D1 an enquiry is confirmed on Discover and reuses one team thread", async ({
   page,
 }) => {
-  await page.goto("/dashboard/discover");
+  const threadOf = async () => {
+    await page.goto("/dashboard/discover");
+    await page.getByRole("button", { name: /Enquire with our team/i }).first().click();
+    await page.waitForURL(/\/dashboard\/discover\?enquiry=/, { timeout: 30_000 });
+    await expect(page.getByRole("status")).toContainText("Enquiry sent to the Live·En·Synergy team");
+    return new URL(page.url()).searchParams.get("thread");
+  };
 
-  const contact = page.getByRole("button", { name: /Contact organiser/i }).first();
-  const alreadySent = page.getByText(/✓ Enquiry sent/).first();
+  const first = await threadOf();
+  expect(first).toBeTruthy();
+  await shot(page, "D1a-confirmed", "An enquiry is confirmed on Discover");
 
-  let conversationId: string | null = null;
+  const second = await threadOf();
+  expect(second).toBe(first);
 
-  if (await contact.count()) {
-    await contact.click();
-    await page.waitForURL(/\/dashboard\/messages/, { timeout: 30_000 });
-    conversationId = new URL(page.url()).searchParams.get("c");
-    expect(conversationId).toBeTruthy();
-    await shot(page, "D1a-first", "An enquiry opens a thread");
-  } else {
-    await expect(alreadySent).toBeVisible();
-    await shot(page, "D1a-already", "A listing already enquired on");
-  }
-
-  // Back on Discover the button is replaced by a link to the existing thread.
-  await page.goto("/dashboard/discover");
-  const open = page.getByRole("link", { name: /Open conversation/i }).first();
-  await expect(open).toBeVisible();
-  const href = await open.getAttribute("href");
-  if (conversationId) expect(href).toContain(conversationId);
-  await shot(page, "D1b-same-thread", "Discover points back at the same thread");
-
-  await open.click();
+  await page.getByRole("link", { name: /View your thread with our team/i }).click();
   await page.waitForURL(/\/dashboard\/messages\?c=/);
   await expect(page.locator("section.card")).toBeVisible();
-  await shot(page, "D1c-thread", "…and it opens");
+  await shot(page, "D1b-thread", "…and the link opens the team thread");
 });

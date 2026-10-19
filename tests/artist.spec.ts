@@ -74,8 +74,10 @@ test("A-DC-01 discover campaigns with filters", async ({ page }) => {
 
 test("A-MSG-01 chat split + attachments", async ({ page }) => {
   await page.goto("/dashboard/messages");
-  await expect(page.getByText("With artists & sponsors")).toBeVisible();
-  await expect(page.getByText("With Live·En·Synergy team")).toBeVisible();
+  // Direct brand↔artist chats are archived (admin-only) since 19 Oct; a
+  // brand/artist sees only their threads with the team.
+  await expect(page.getByText(/Your conversations with the Live·En·Synergy team/)).toBeVisible();
+  await expect(page.getByText("With artists & sponsors")).toHaveCount(0);
   await capture(page, "A-MSG-01", "Artist messages — split threads", {
     fullPage: true,
   });
