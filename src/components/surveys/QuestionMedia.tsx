@@ -49,9 +49,14 @@ function VideoBox({ url, format, side }: { url: string; format: SurveyVideoForma
 function ImageBox({ url, fit, side }: { url: string; fit: "cover" | "contain"; side: boolean }) {
   // A fixed-shape box (2:1 above/below, full card height at the side) so an
   // image at RECOMMENDED_IMAGE_SIZES is shown uncropped and anything else is
-  // cropped predictably — never stretched.
+  // cropped predictably — never stretched. A side image stacks above the
+  // question on a phone; it keeps its recommended 4:5 shape there (capped by
+  // the viewport) rather than a 2:1 strip that cut away most of a portrait
+  // image (FB-00035).
   return (
-    <div className={`relative w-full ${side ? "aspect-[2/1] sm:aspect-auto sm:h-full sm:min-h-[26rem]" : "aspect-[2/1]"}`}>
+    <div
+      className={`relative w-full ${side ? "aspect-[4/5] max-h-[65svh] sm:aspect-auto sm:h-full sm:max-h-none sm:min-h-[26rem]" : "aspect-[2/1]"}`}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}

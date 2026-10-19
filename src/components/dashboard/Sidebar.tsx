@@ -57,7 +57,10 @@ export function Sidebar({
   const isActive = (href: string) => href === activeHref;
 
   const navList = (
-    <nav className="flex-1 space-y-1 px-3">
+    // min-h-0 + overflow so a long nav (artist: 11 items) scrolls inside the
+    // rail instead of pushing the account block — and its Sign out button —
+    // below the fold or, in the phone drawer, off the screen entirely.
+    <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3">
       {nav.map((item) => (
         <Link
           key={item.href}
@@ -182,7 +185,7 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-black/10 bg-white shadow-[2px_0_12px_-6px_rgba(44,36,34,0.18)] transition-transform md:static md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-black/10 bg-white shadow-[2px_0_12px_-6px_rgba(44,36,34,0.18)] transition-transform md:sticky md:top-0 md:z-auto md:h-screen md:shrink-0 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
