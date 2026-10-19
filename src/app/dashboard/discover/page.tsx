@@ -10,6 +10,8 @@ import {
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { contactOrganiser } from "./actions";
+import { EnquireButton } from "./EnquireButton";
+import { FlashToast } from "@/components/ui/FlashToast";
 import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
 import { UK_TIME_ZONE } from "@/lib/format";
@@ -103,33 +105,24 @@ export default async function DiscoverPage({
           subtitle="Events currently open for sponsorship. Reach out and our team will be in touch within 48 hours."
         />
 
-        {/* Confirmation after "Enquire with our team" — the brand stays on
-            Discover, so without this nothing visibly happened (19 Oct). */}
+        {/* Confirmation after "Enquire with our team" — floats over the page
+            because the brand is usually scrolled down to the card they
+            clicked, where an inline banner up here went unseen (19 Oct). */}
         {q.enquiry && (
-          <div
-            role="status"
-            className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]"
-          >
-            <p className="font-semibold">
-              ✓ Enquiry sent to the Live·En·Synergy team
-              {listings.find((l) => l.id === q.enquiry)?.name
-                ? ` about ${listings.find((l) => l.id === q.enquiry)!.name}`
-                : ""}
-              .
-            </p>
-            <p className="mt-1">
-              We&apos;ll review the match with the organiser and get back to you within 48
-              hours.{" "}
-              {q.thread && (
-                <Link
-                  href={`/dashboard/messages?c=${encodeURIComponent(q.thread)}`}
-                  className="font-semibold underline"
-                >
-                  View your thread with our team →
-                </Link>
-              )}
-            </p>
-          </div>
+          <FlashToast
+            title="Request raised with our team"
+            detail={`${
+              listings.find((l) => l.id === q.enquiry)?.name
+                ? `Your interest in ${listings.find((l) => l.id === q.enquiry)!.name} has been sent. `
+                : ""
+            }We'll review the match with the organiser and get back to you within 48 hours.`}
+            link={
+              q.thread
+                ? { href: `/dashboard/messages?c=${encodeURIComponent(q.thread)}`, label: "View your thread with our team →" }
+                : undefined
+            }
+            clearParams={["enquiry", "thread"]}
+          />
         )}
 
         <FilterBar
@@ -254,9 +247,7 @@ export default async function DiscoverPage({
                     // so it reopened a chat with the artist (19 Oct).
                     <form action={contactOrganiser} className="mt-4">
                       <input type="hidden" name="listing_id" value={l.id} />
-                      <button type="submit" className="btn btn-primary w-full">
-                        Enquire with our team
-                      </button>
+                      <EnquireButton />
                       <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
                         Our team reviews every match and responds within 48
                         hours.
