@@ -33,6 +33,7 @@ import type {
   SponsoredEventRewardTier,
   TicketSalesReport,
 } from "@/lib/types";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Sponsored event · Admin" };
 
@@ -119,7 +120,7 @@ export default async function AdminSponsoredDetailPage({
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, description), event_listings(name, ticket_price_gbp, capacity, category)",
+      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -151,7 +152,7 @@ export default async function AdminSponsoredDetailPage({
       artist_remainder_released_at: string | null;
       reward_codes_confirmed_at: string | null;
       brands: { brand_name: string; profile_id: string } | null;
-      campaigns: { reference: string; description: string } | null;
+      campaigns: { reference: string; campaign_name: string | null; description: string } | null;
       event_listings: {
         name: string;
         ticket_price_gbp: number | null;
@@ -455,7 +456,7 @@ export default async function AdminSponsoredDetailPage({
 
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           {[
-            ["Campaign", event.campaigns?.reference ?? "—"],
+            ["Campaign", event.campaigns ? campaignLabel(event.campaigns) : "—"],
             ["Listing", event.event_listings?.name ?? "—"],
             ["Venue", event.venue_details ?? "—"],
             [

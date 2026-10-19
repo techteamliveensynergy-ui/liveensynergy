@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EmptyState, MetricTile, PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
 import { averageSeconds, countedResponses, formatDuration, type SurveyTemplateStats } from "@/lib/survey-results";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Reporting & analysis · Admin" };
 
@@ -13,7 +14,7 @@ interface TemplateRow {
   kind: string;
   status: string;
   expected_participants: number | null;
-  campaigns: { id: string; reference: string; brands: { brand_name: string } | null } | null;
+  campaigns: { id: string; reference: string; campaign_name: string | null; brands: { brand_name: string } | null } | null;
 }
 
 /**
@@ -29,7 +30,7 @@ export default async function AdminReportsPage() {
   const [{ data: templateRows }, { data: statRows }] = await Promise.all([
     supabase
       .from("survey_templates")
-      .select("id, title, kind, status, expected_participants, campaigns(id, reference, brands(brand_name))")
+      .select("id, title, kind, status, expected_participants, campaigns(id, reference, campaign_name, brands(brand_name))")
       .neq("status", "draft")
       .order("created_at", { ascending: false }),
     supabase.from("survey_template_stats").select("*"),
@@ -98,7 +99,7 @@ export default async function AdminReportsPage() {
                     <td className="px-4 py-3">
                       {t.campaigns ? (
                         <Link href={`/dashboard/admin/campaigns/${t.campaigns.id}`} className="underline">
-                          {t.campaigns.reference}
+                          {campaignLabel(t.campaigns)}
                         </Link>
                       ) : (
                         "—"

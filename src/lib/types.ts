@@ -370,6 +370,8 @@ export interface OpenCampaign {
   brand_name: string;
   brand_logo_url: string | null;
   brand_category: string | null;
+  /** Added to the view in 0081; absent on a database without it. */
+  campaign_name?: string | null;
 }
 
 /**

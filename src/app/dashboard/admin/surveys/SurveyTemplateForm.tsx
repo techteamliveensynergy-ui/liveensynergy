@@ -31,6 +31,7 @@ import {
   uploadSurveyLogo,
   type SurveyState,
 } from "./actions";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 const DEFAULT_ACCENT = "#ed9a4e";
 
@@ -46,6 +47,7 @@ function Submit({ label }: { label: string }) {
 export interface CampaignOption {
   id: string;
   reference: string;
+  campaign_name: string | null;
   brand_name: string | null;
 }
 
@@ -186,7 +188,7 @@ export function SurveyTemplateForm({
             <option value="">No campaign linked yet</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.reference}
+                {campaignLabel(c)}
                 {c.brand_name ? ` · ${c.brand_name}` : ""}
               </option>
             ))}

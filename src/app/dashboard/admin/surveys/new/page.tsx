@@ -11,12 +11,13 @@ export default async function NewSurveyPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("campaigns")
-    .select("id, reference, brands(brand_name)")
+    .select("id, reference, campaign_name, brands(brand_name)")
     .order("created_at", { ascending: false });
 
   const campaigns = (data ?? []) as unknown as {
     id: string;
     reference: string;
+    campaign_name: string | null;
     brands: { brand_name: string } | null;
   }[];
 
@@ -33,6 +34,7 @@ export default async function NewSurveyPage() {
         campaigns={campaigns.map<CampaignOption>((c) => ({
           id: c.id,
           reference: c.reference,
+          campaign_name: c.campaign_name,
           brand_name: c.brands?.brand_name ?? null,
         }))}
       />

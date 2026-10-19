@@ -15,6 +15,7 @@ import { SurveyTemplateForm, type CampaignOption } from "../SurveyTemplateForm";
 import { SurveyBuilder } from "./SurveyBuilder";
 import { CopyLinkButton } from "./preview/CopyLinkButton";
 import { formatEventDateTime } from "@/lib/event-time";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Edit survey · Admin" };
 
@@ -37,7 +38,7 @@ export default async function EditSurveyPage({
         .order("order_index"),
       supabase
         .from("campaigns")
-        .select("id, reference, brands(brand_name)")
+        .select("id, reference, campaign_name, brands(brand_name)")
         .order("created_at", { ascending: false }),
       supabase.from("survey_contradiction_rules").select("*").eq("template_id", id),
     ]);
@@ -49,6 +50,7 @@ export default async function EditSurveyPage({
   const campaigns = (campaignRows ?? []) as unknown as {
     id: string;
     reference: string;
+    campaign_name: string | null;
     brands: { brand_name: string } | null;
   }[];
 
@@ -138,7 +140,7 @@ export default async function EditSurveyPage({
         <p className="font-medium text-[var(--color-ink)]">
           {campaign ? (
             <>
-              {campaign.reference}
+              {campaignLabel(campaign)}
               {campaign.brands?.brand_name ? ` · ${campaign.brands.brand_name}` : ""}
             </>
           ) : (
@@ -190,6 +192,7 @@ export default async function EditSurveyPage({
             campaigns={campaigns.map<CampaignOption>((c) => ({
               id: c.id,
               reference: c.reference,
+              campaign_name: c.campaign_name ?? null,
               brand_name: c.brands?.brand_name ?? null,
             }))}
           />

@@ -158,7 +158,11 @@ export default async function DiscoverCampaignsPage({
                     Ref {c.reference}
                   </span>
                 </div>
-                <h3 className="mt-3 font-semibold">{c.brand_name}</h3>
+                {/* Campaign name first, brand underneath (19 Oct). */}
+                <h3 className="mt-3 font-semibold">{c.campaign_name?.trim() || c.brand_name}</h3>
+                {c.campaign_name?.trim() && (
+                  <p className="text-sm font-medium text-[var(--color-ink-soft)]">{c.brand_name}</p>
+                )}
                 <p className="mt-1 line-clamp-4 text-sm text-[var(--color-ink-soft)]">
                   {c.description}
                 </p>

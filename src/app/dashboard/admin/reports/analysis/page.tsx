@@ -7,6 +7,7 @@ import { campaignTitle } from "@/lib/campaign-requests";
 import { isAnalysisConfigured } from "@/lib/analysis/narrative";
 import type { Campaign } from "@/lib/types";
 import { NewReportForm } from "./NewReportForm";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Analysis playground · Admin" };
 
@@ -16,7 +17,7 @@ interface ReportRow {
   row_count: number;
   status: "complete" | "figures_only";
   created_at: string;
-  campaigns: { reference: string } | null;
+  campaigns: { reference: string; campaign_name: string | null } | null;
 }
 
 /**
@@ -37,7 +38,7 @@ export default async function AnalysisPlaygroundPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("analysis_reports")
-      .select("id, title, row_count, status, created_at, campaigns(reference)")
+      .select("id, title, row_count, status, created_at, campaigns(reference, campaign_name)")
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
@@ -74,7 +75,7 @@ export default async function AnalysisPlaygroundPage() {
                   {r.title}
                 </Link>
                 <span className="text-xs text-[var(--color-ink-soft)]">
-                  {r.campaigns?.reference ? `${r.campaigns.reference} · ` : ""}
+                  {r.campaigns ? `${campaignLabel(r.campaigns)} · ` : ""}
                   {r.row_count.toLocaleString("en-GB")} responses · {formatDateTime(r.created_at)}
                   {r.status === "figures_only" ? " · figures only" : ""}
                 </span>

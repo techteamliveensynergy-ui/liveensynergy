@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import type { Campaign, EventListing } from "@/lib/types";
 import { SponsoredEventForm, type ListingOption } from "./SponsoredEventForm";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "New sponsored event" };
 
@@ -51,7 +52,7 @@ export default async function NewSponsoredEventPage() {
       ? brand
         ? supabase
             .from("campaigns")
-            .select("id, reference, description, budget_gbp")
+            .select("id, reference, campaign_name, description, budget_gbp")
             .eq("brand_id", brand.id)
             // Not open until paid — see the payment gate (0049).
             .neq("status", "awaiting_payment")
@@ -59,7 +60,7 @@ export default async function NewSponsoredEventPage() {
         : Promise.resolve({ data: [] as Campaign[] })
       : supabase
           .from("open_campaigns")
-          .select("id, reference, description, budget_gbp, brand_name, brand_id")
+          .select("id, reference, campaign_name, description, budget_gbp, brand_name, brand_id")
           .order("created_at", { ascending: false }),
   ]);
 
@@ -135,13 +136,18 @@ export default async function NewSponsoredEventPage() {
   const campaigns = (
     (campaignRows ?? []) as (Pick<
       Campaign,
-      "id" | "reference" | "description" | "budget_gbp"
+      "id" | "reference" | "campaign_name" | "description" | "budget_gbp"
     > & { brand_name?: string })[]
   ).map((c) => ({
     id: c.id,
+    // Named by the campaign where it has one (19 Oct), else the old label.
     label: isBrand
-      ? `${c.reference} — ${c.description.slice(0, 40)}`
-      : `${c.brand_name} — ${c.description.slice(0, 40)}`,
+      ? c.campaign_name?.trim()
+        ? campaignLabel(c)
+        : `${c.reference} — ${c.description.slice(0, 40)}`
+      : c.campaign_name?.trim()
+        ? `${c.campaign_name.trim()} · ${c.brand_name}`
+        : `${c.brand_name} — ${c.description.slice(0, 40)}`,
     budget: c.budget_gbp,
   }));
 

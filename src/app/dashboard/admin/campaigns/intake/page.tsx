@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { reviewCampaignIntake } from "../../marketplace-actions";
-import { CAMPAIGN_INTAKE_STATUS_LABELS, requestCategoryLabel } from "@/lib/campaign-requests";
+import { CAMPAIGN_INTAKE_STATUS_LABELS, campaignTitle, requestCategoryLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Campaign requests · Admin" };
 
@@ -69,10 +69,15 @@ export default async function AdminCampaignIntakePage({
                       href={`/dashboard/admin/campaigns/intake/${r.id}`}
                       className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
                     >
-                      {r.brands?.brand_name ?? "Unknown brand"}
+                      {campaignTitle(r, "Untitled request")}
                     </Link>
                     <StatusBadge status={r.status} />
                   </div>
+                  {/* Named by the campaign, brand underneath (19 Oct: the card
+                      only said which brand, not which request). */}
+                  <p className="text-sm font-medium text-[var(--color-ink-soft)]">
+                    {r.brands?.brand_name ?? "Unknown brand"}
+                  </p>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                     {r.description}
                   </p>

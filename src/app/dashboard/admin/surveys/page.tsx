@@ -9,6 +9,7 @@ import {
   archiveSurveyTemplate,
   unarchiveSurveyTemplate,
 } from "./actions";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Surveys · Admin" };
 
@@ -19,7 +20,7 @@ interface Row {
   status: string;
   is_public: boolean;
   created_at: string;
-  campaigns: { reference: string; brands: { brand_name: string } | null } | null;
+  campaigns: { reference: string; campaign_name: string | null; brands: { brand_name: string } | null } | null;
 }
 
 export default async function AdminSurveysPage() {
@@ -29,7 +30,7 @@ export default async function AdminSurveysPage() {
   const [{ data: templateRows }, { data: questionRows }] = await Promise.all([
     supabase
       .from("survey_templates")
-      .select("id, title, kind, status, is_public, created_at, campaigns(reference, brands(brand_name))")
+      .select("id, title, kind, status, is_public, created_at, campaigns(reference, campaign_name, brands(brand_name))")
       .order("created_at", { ascending: false }),
     supabase.from("survey_questions").select("template_id"),
   ]);
@@ -99,7 +100,7 @@ export default async function AdminSurveysPage() {
                 })()}
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                   {t.campaigns
-                    ? `${t.campaigns.reference}${t.campaigns.brands ? ` · ${t.campaigns.brands.brand_name}` : ""}`
+                    ? `${campaignLabel(t.campaigns)}${t.campaigns.brands ? ` · ${t.campaigns.brands.brand_name}` : ""}`
                     : "No campaign linked yet"}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-black/10 pt-3">

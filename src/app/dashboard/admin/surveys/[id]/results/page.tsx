@@ -23,6 +23,7 @@ import type { SurveyQuestion } from "@/lib/types";
 import { recalculateSurveyResults } from "../../actions";
 import { skipDescription } from "@/lib/survey-logic";
 import { BarRow, QuestionResultCard } from "@/components/surveys/QuestionResultCard";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Survey results · Admin" };
 
@@ -35,7 +36,7 @@ interface TemplateRow {
   status: string;
   is_public: boolean;
   expected_participants: number | null;
-  campaigns: { reference: string; brands: { brand_name: string } | null } | null;
+  campaigns: { reference: string; campaign_name: string | null; brands: { brand_name: string } | null } | null;
 }
 
 interface TextAnswer {
@@ -72,7 +73,7 @@ export default async function SurveyResultsPage({
     await Promise.all([
       supabase
         .from("survey_templates")
-        .select("id, title, kind, status, is_public, expected_participants, campaigns(reference, brands(brand_name))")
+        .select("id, title, kind, status, is_public, expected_participants, campaigns(reference, campaign_name, brands(brand_name))")
         .eq("id", id)
         .maybeSingle<TemplateRow>(),
       supabase
@@ -161,7 +162,7 @@ export default async function SurveyResultsPage({
           template.kind === "pre_event" ? "Pre-event survey" : "Post-event survey",
           template.is_public ? "public link" : null,
           template.campaigns
-            ? `${template.campaigns.reference}${template.campaigns.brands ? ` · ${template.campaigns.brands.brand_name}` : ""}`
+            ? `${campaignLabel(template.campaigns)}${template.campaigns.brands ? ` · ${template.campaigns.brands.brand_name}` : ""}`
             : null,
         ]
           .filter(Boolean)

@@ -24,6 +24,7 @@ import {
   refundInvoice,
   draftInvoiceForCampaign,
 } from "../actions";
+import { campaignLabel } from "@/lib/campaign-requests";
 
 export const metadata = { title: "Invoice · Admin" };
 
@@ -53,7 +54,7 @@ interface Row {
   billing_snapshot: BillingSnapshot | null;
   brands: ({ id: string; brand_name: string; profile_id: string } & BillingFields) | null;
   sponsored_events: { name: string } | null;
-  campaigns: { reference: string } | null;
+  campaigns: { reference: string; campaign_name: string | null } | null;
 }
 
 function AddressBlock({ b }: { b: BillingSnapshot }) {
@@ -92,7 +93,7 @@ export default async function InvoiceDetailPage({
   const { data: invoice } = await supabase
     .from("invoices")
     .select(
-      "*, brands(id, brand_name, profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number), sponsored_events(name), campaigns(reference)",
+      "*, brands(id, brand_name, profile_id, billing_legal_name, billing_email, billing_address_line1, billing_address_line2, billing_city, billing_postcode, billing_country, vat_number), sponsored_events(name), campaigns(reference, campaign_name)",
     )
     .eq("id", id)
     .maybeSingle<Row>();
@@ -285,7 +286,7 @@ export default async function InvoiceDetailPage({
           </div>
           <div>
             <dt className="field-label">Campaign</dt>
-            <dd className="text-sm">{invoice.campaigns?.reference ?? "—"}</dd>
+            <dd className="text-sm">{invoice.campaigns ? campaignLabel(invoice.campaigns) : "—"}</dd>
           </div>
           <div>
             <dt className="field-label">Due date</dt>
