@@ -15,6 +15,11 @@ export const CONSENT_LABELS: Record<ConsentType, string> = {
   residency_confirmed: "18 or over and a UK resident",
   order_form_details: "Order form: details approved",
   order_form_terms: "Order form: terms accepted",
+  reward_codes_confirmed: "Discount codes confirmed",
+  reward_codes_notice: "Will tell LES promptly about code redemption problems",
+  fulfilment_publish: "Fulfilment form: will publish the agreed communications",
+  fulfilment_materials: "Fulfilment form: will use LES-approved materials",
+  fulfilment_terms: "Fulfilment form: Terms & Conditions and Privacy Policy",
 };
 
 export const CONSENT_SOURCE_LABELS: Record<ConsentSource, string> = {
@@ -26,6 +31,8 @@ export const CONSENT_SOURCE_LABELS: Record<ConsentSource, string> = {
   public_survey: "Public survey link",
   dashboard_survey: "Survey (signed in)",
   order_form: "Order form approval",
+  discount_codes: "Discount codes confirmation",
+  fulfilment_form: "Fulfilment form",
 };
 
 /** Account-wide consents — one current state each, latest record wins. */

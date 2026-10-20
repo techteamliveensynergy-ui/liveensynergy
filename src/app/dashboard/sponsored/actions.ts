@@ -12,6 +12,8 @@ import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { codeBatchText, insertPoolCodes, invalidCodesMessage } from "@/lib/data/reward-codes";
 import { parseCodeBatch } from "@/lib/discount-codes";
 import { ukLocalInputToIso } from "@/lib/format";
+import { normaliseUrl } from "@/lib/urls";
+import { TERMS_VERSION } from "@/lib/terms";
 
 export interface SponsoredState {
   error?: string;
@@ -550,6 +552,8 @@ async function loadPartyEvent(
   return { event, isBrand, isArtist };
 }
 
+const MAX_PROOF_FILES = 5;
+
 const PROOF_PURPOSE: Record<string, string> = {
   social_mention: "sponsored-proof-social",
   onsite_branding: "sponsored-proof-branding",
@@ -569,17 +573,35 @@ export async function uploadEventProof(
   const party = await loadPartyEvent(supabase, eventId, userId);
   if (!party) return { error: "You're not a party to this sponsorship." };
 
-  const upload = await uploadImage(formData.get("file"), PROOF_PURPOSE[proofType]);
-  if (upload.error) return { error: upload.error };
-  if (!upload.url) return { error: "Choose a file to upload." };
+  // Several screenshots in one go, and/or a link to the live post — the
+  // fulfilment brief asks for room to add more than one proof (20 Oct).
+  const files = formData
+    .getAll("file")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, MAX_PROOF_FILES);
+  const normalised = normaliseUrl(formData.get("post_url"), "The post link");
+  if (normalised.error) return { error: normalised.error };
+  const link = normalised.url;
+  if (files.length === 0 && !link) return { error: "Choose a file to upload, or paste a link to the post." };
 
-  const { error } = await supabase.from("sponsored_event_proofs").insert({
-    sponsored_event_id: eventId,
-    proof_type: proofType,
-    url: upload.url,
-    description: str(formData.get("description")),
-    uploaded_by: userId,
-  });
+  const urls: string[] = [];
+  for (const file of files) {
+    const upload = await uploadImage(file, PROOF_PURPOSE[proofType]);
+    if (upload.error) return { error: `${file.name}: ${upload.error}` };
+    if (upload.url) urls.push(upload.url);
+  }
+  if (link) urls.push(link);
+
+  const description = str(formData.get("description"));
+  const { error } = await supabase.from("sponsored_event_proofs").insert(
+    urls.map((url) => ({
+      sponsored_event_id: eventId,
+      proof_type: proofType,
+      url,
+      description,
+      uploaded_by: userId,
+    })),
+  );
   if (error) return { error: error.message };
 
   await notifyAdmins({
@@ -805,6 +827,7 @@ const CONFIRM_REFUSALS: Record<string, string> = {
   no_tiers: "The team hasn't set up any discount codes for this event yet.",
   shared_code_missing: "A shared-code tier has no code yet — the team needs to add it before you confirm.",
   pool_empty: "A unique-code tier has no codes yet — add your codes (or ask the team to generate them) first.",
+  notice_required: "Tick both boxes to confirm these discount codes.",
 };
 
 /** The artist's formal consent. After this the setup is frozen and codes can
@@ -815,14 +838,16 @@ export async function confirmRewardCodes(
 ): Promise<DiscountCodeState> {
   const eventId = str(formData.get("event_id"));
   if (!eventId) return { error: "Missing sponsorship." };
-  if (formData.get("consent") !== "on") {
-    return { error: "Tick the box to confirm you agree to these discount codes." };
+  if (formData.get("consent") !== "on" || formData.get("redemption_notice") !== "on") {
+    return { error: "Tick both boxes to confirm these discount codes." };
   }
   const ctx = await requireEventArtist(eventId);
   if (!ctx) return { error: CONFIRM_REFUSALS.forbidden };
 
+  // Both consents are logged in consent_records by the function (0082).
   const { data: outcome, error } = await ctx.supabase.rpc("confirm_reward_codes", {
     p_event_id: eventId,
+    p_redemption_notice: true,
   });
   if (error) return { error: error.message };
   if (outcome !== "confirmed") {
@@ -838,4 +863,178 @@ export async function confirmRewardCodes(
   revalidatePath(`/dashboard/sponsored/${eventId}`);
   revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
   return { message: "Confirmed — the team can now issue these codes to qualifying participants." };
+}
+
+// ---------------------------------------------------------------------------
+// Artist / Organiser Fulfilment Form (0082). The artist has no UPDATE policy
+// on the form, so submit / request changes / payment details are definer
+// RPCs; invoices are their own rows, insertable only into the artist's own
+// storage namespace.
+// ---------------------------------------------------------------------------
+
+export interface FulfilmentState {
+  error?: string;
+  message?: string;
+}
+
+/** The artist's form for this event, and the names admin notifications use. */
+async function requireFulfilmentArtist(formId: string | null) {
+  if (!formId) return null;
+  const { supabase, userId } = await requireUser();
+  const { data: form } = await supabase
+    .from("artist_fulfilment_forms")
+    .select("id, status, sponsored_event_id, sponsored_events(name, reference, artist_profile_id)")
+    .eq("id", formId)
+    .maybeSingle<{
+      id: string;
+      status: string;
+      sponsored_event_id: string;
+      sponsored_events: { name: string; reference: string; artist_profile_id: string | null } | null;
+    }>();
+  if (!form?.sponsored_events || form.sponsored_events.artist_profile_id !== userId) return null;
+  const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();
+  return {
+    supabase,
+    userId,
+    form,
+    eventId: form.sponsored_event_id,
+    vars: {
+      event_name: form.sponsored_events.name,
+      reference: form.sponsored_events.reference,
+      artist_name: me?.full_name ?? "The artist",
+    },
+  };
+}
+
+function revalidateFulfilment(eventId: string) {
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+export async function submitFulfilmentForm(
+  _prev: FulfilmentState,
+  formData: FormData,
+): Promise<FulfilmentState> {
+  const ctx = await requireFulfilmentArtist(str(formData.get("form_id")));
+  if (!ctx) return { error: "Only the artist or organiser on this event can complete its fulfilment form." };
+
+  const { data, error } = await ctx.supabase.rpc("submit_artist_fulfilment_form", {
+    p_form_id: ctx.form.id,
+    p_publish: formData.get("consent_publish") === "on",
+    p_materials: formData.get("consent_materials") === "on",
+    p_terms_privacy: formData.get("consent_terms_privacy") === "on",
+    p_payment_details: str(formData.get("payment_details")),
+    p_terms_version: TERMS_VERSION,
+  });
+  if (error) return { error: error.message };
+
+  if (!(data as { already?: boolean } | null)?.already) {
+    await notifyAdmins({
+      eventKey: "admin.fulfilment_submitted",
+      link: `/dashboard/admin/events/sponsored/${ctx.eventId}#fulfilment`,
+      variables: ctx.vars,
+    });
+  }
+
+  revalidateFulfilment(ctx.eventId);
+  return { message: "Thank you — your fulfilment form has been submitted to the Live·En·Synergy team." };
+}
+
+export async function requestFulfilmentChanges(
+  _prev: FulfilmentState,
+  formData: FormData,
+): Promise<FulfilmentState> {
+  const ctx = await requireFulfilmentArtist(str(formData.get("form_id")));
+  if (!ctx) return { error: "Only the artist or organiser on this event can request changes." };
+  const note = str(formData.get("note"));
+  if (!note) return { error: "Tell us what you would like changed." };
+
+  const { error } = await ctx.supabase.rpc("request_artist_fulfilment_changes", {
+    p_form_id: ctx.form.id,
+    p_note: note,
+  });
+  if (error) return { error: error.message };
+
+  await notifyAdmins({
+    eventKey: "admin.fulfilment_changes_requested",
+    link: `/dashboard/admin/events/sponsored/${ctx.eventId}#fulfilment`,
+    variables: { ...ctx.vars, note: note.slice(0, 500) },
+  });
+
+  revalidateFulfilment(ctx.eventId);
+  return { message: "Sent — the team will update the form and send it back to you." };
+}
+
+export async function saveFulfilmentPaymentDetails(
+  _prev: FulfilmentState,
+  formData: FormData,
+): Promise<FulfilmentState> {
+  const ctx = await requireFulfilmentArtist(str(formData.get("form_id")));
+  if (!ctx) return { error: "Only the artist or organiser on this event can update its payment details." };
+
+  const { error } = await ctx.supabase.rpc("save_artist_fulfilment_payment_details", {
+    p_form_id: ctx.form.id,
+    p_details: str(formData.get("payment_details")),
+  });
+  if (error) return { error: error.message };
+
+  revalidateFulfilment(ctx.eventId);
+  return { message: "Payment details saved." };
+}
+
+export async function uploadFulfilmentInvoice(
+  _prev: FulfilmentState,
+  formData: FormData,
+): Promise<FulfilmentState> {
+  const ctx = await requireFulfilmentArtist(str(formData.get("form_id")));
+  if (!ctx) return { error: "Only the artist or organiser on this event can upload its invoice." };
+  if (ctx.form.status === "draft") return { error: "This form hasn't been sent to you yet." };
+
+  const upload = await uploadPrivateFile(formData.get("file"), "fulfilment-invoice", {
+    supabase: ctx.supabase,
+    userId: ctx.userId,
+  });
+  if (upload.error) return { error: upload.error };
+  if (!upload.path) return { error: "Choose a file to upload." };
+
+  const { error } = await ctx.supabase.from("artist_fulfilment_invoices").insert({
+    form_id: ctx.form.id,
+    file_path: upload.path,
+    file_name: upload.name ?? null,
+    uploaded_by: ctx.userId,
+  });
+  if (error) {
+    // Don't leave an orphaned object behind a refused row.
+    await ctx.supabase.storage.from("private-uploads").remove([upload.path]);
+    return { error: error.message };
+  }
+
+  await notifyAdmins({
+    eventKey: "admin.fulfilment_invoice_uploaded",
+    link: `/dashboard/admin/events/sponsored/${ctx.eventId}#fulfilment`,
+    variables: ctx.vars,
+  });
+
+  revalidateFulfilment(ctx.eventId);
+  return { message: "Invoice uploaded." };
+}
+
+export async function removeFulfilmentInvoice(formData: FormData) {
+  const ctx = await requireFulfilmentArtist(str(formData.get("form_id")));
+  const invoiceId = str(formData.get("invoice_id"));
+  if (!ctx || !invoiceId) return;
+
+  // RLS lets an artist delete only the rows they uploaded themselves.
+  const { data: removed } = await ctx.supabase
+    .from("artist_fulfilment_invoices")
+    .delete()
+    .eq("id", invoiceId)
+    .eq("form_id", ctx.form.id)
+    .select("file_path")
+    .maybeSingle<{ file_path: string }>();
+  if (removed?.file_path) {
+    await ctx.supabase.storage.from("private-uploads").remove([removed.file_path]);
+  }
+
+  revalidateFulfilment(ctx.eventId);
 }

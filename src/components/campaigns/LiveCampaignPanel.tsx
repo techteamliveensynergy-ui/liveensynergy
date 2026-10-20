@@ -36,6 +36,8 @@ export interface LiveCampaignPanelProps {
   participants: { total: number; verified: number; surveysCompleted?: number | null };
   codes: { issued: number; redeemed: number; tiers: number; consented: boolean } | null;
   checkIn?: { href: string; note?: string } | null;
+  /** Admin only: where the artist's fulfilment form (0082) stands. */
+  fulfilment?: { href: string; state: "done" | "awaited"; text: string } | null;
   /** Admin-only extras, e.g. links to the per-person code list. */
   adminLinks?: { href: string; label: string }[];
 }
@@ -47,6 +49,7 @@ const WHO: Record<string, string> = {
   codes: "Brand and artist see counts; which participant got which code is admin-only",
   results: "Brand only (aggregated, anonymised)",
   checkin: "Artist and audience",
+  fulfilment: "Artist only — the brand can't see it (it holds payment details)",
 };
 
 function Item({
@@ -117,7 +120,7 @@ function SurveyBlock({
 }
 
 export function LiveCampaignPanel(props: LiveCampaignPanelProps) {
-  const { viewer, siteUrl, orderForm, surveys, participants, codes, checkIn, adminLinks } = props;
+  const { viewer, siteUrl, orderForm, surveys, participants, codes, checkIn, fulfilment, adminLinks } = props;
   const showWho = viewer === "admin";
   const pre = surveys.find((s) => s.kind === "pre_event");
   const post = surveys.find((s) => s.kind === "post_event");
@@ -143,6 +146,24 @@ export function LiveCampaignPanel(props: LiveCampaignPanelProps) {
             <p className="text-[var(--color-ink-soft)]">No order form yet.</p>
           )}
         </Item>
+
+        {viewer === "admin" && fulfilment !== undefined && (
+          <Item title="Artist fulfilment form" who={WHO.fulfilment} showWho={showWho}>
+            {fulfilment ? (
+              <>
+                <p className={fulfilment.state === "done" ? "font-medium text-[var(--color-olive-deep)]" : "font-medium"}>
+                  {fulfilment.state === "done" ? "✓ " : ""}
+                  {fulfilment.text}
+                </p>
+                <Link href={fulfilment.href} className="mt-1 inline-block text-xs font-semibold text-[var(--color-brand-dark)] underline">
+                  Open the form →
+                </Link>
+              </>
+            ) : (
+              <p className="text-[var(--color-ink-soft)]">Once an event is agreed.</p>
+            )}
+          </Item>
+        )}
 
         <Item title="Pre-event survey" who={WHO.survey} showWho={showWho}>
           <SurveyBlock label="Pre-event survey" survey={pre} siteUrl={siteUrl} viewer={viewer} />

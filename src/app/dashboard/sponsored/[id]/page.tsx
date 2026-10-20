@@ -6,7 +6,9 @@ import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { Field } from "@/components/ui/Field";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
 import type {
+  Artist,
   EventListing,
+  EventOrganiser,
   Participation,
   SponsoredEvent,
   SponsoredEventAsset,
@@ -31,6 +33,18 @@ import {
   updateParticipation,
 } from "../actions";
 import { ProofUploadSection } from "./ProofUploadSection";
+import {
+  FinalConsentCard,
+  FulfilmentIntro,
+  PaymentCard,
+  PromotionalCommitmentsCard,
+  SpecialTermsCard,
+  YourDetailsCard,
+  type ArtistDetails,
+  type ArtistInvoice,
+} from "./ArtistFulfilment";
+import type { ArtistFulfilmentForm, ArtistFulfilmentInvoice } from "@/lib/fulfilment-forms";
+import { signedUrlFor } from "@/lib/storage";
 import { RewardEngineDisplay } from "./RewardEngineDisplay";
 import { ChangeRequestSection } from "./ChangeRequestSection";
 import { UK_TIME_ZONE, ukLocalInputValue } from "@/lib/format";
@@ -198,6 +212,68 @@ export default async function SponsoredEventPage({
   // public to signed-in users.
   if (!isBrand && !isArtist) notFound();
 
+  // Fulfilment form (0082): the artist reads it once sent (RLS hides drafts,
+  // and the brand can't read it at all). Their details come live from their
+  // own profile row — artist, or a pre-merge event organiser.
+  let activeForm: ArtistFulfilmentForm | null = null;
+  let fulfilmentInvoices: ArtistInvoice[] = [];
+  let artistDetails: ArtistDetails | null = null;
+  if (isArtist) {
+    const [{ data: formRow }, { data: artistRow }, { data: organiserRow }] = await Promise.all([
+      supabase
+        .from("artist_fulfilment_forms")
+        .select("*, artist_fulfilment_invoices(*)")
+        .eq("sponsored_event_id", id)
+        .maybeSingle<ArtistFulfilmentForm & { artist_fulfilment_invoices: ArtistFulfilmentInvoice[] }>(),
+      supabase
+        .from("artists")
+        .select("artist_name, stage_name, contact_name, contact_email, contact_phone, address, website_url")
+        .eq("profile_id", profile.id)
+        .maybeSingle<Pick<Artist, "artist_name" | "stage_name" | "contact_name" | "contact_email" | "contact_phone" | "address" | "website_url">>(),
+      profile.role === "event"
+        ? supabase
+            .from("event_organisers")
+            .select("event_name, contact_name, contact_email, contact_phone, company_address, website_url")
+            .eq("profile_id", profile.id)
+            .maybeSingle<Pick<EventOrganiser, "event_name" | "contact_name" | "contact_email" | "contact_phone" | "company_address" | "website_url">>()
+        : Promise.resolve({ data: null }),
+    ]);
+    if (formRow && formRow.status !== "draft" && event.status !== "withdrawn") {
+      const { artist_fulfilment_invoices: invoiceRows = [], ...rest } = formRow;
+      activeForm = rest as ArtistFulfilmentForm;
+      fulfilmentInvoices = await Promise.all(
+        [...invoiceRows]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .map(async (inv) => ({
+            id: inv.id,
+            file_name: inv.file_name,
+            created_at: inv.created_at,
+            url: await signedUrlFor(inv.file_path),
+            mine: inv.uploaded_by === profile.id,
+          })),
+      );
+    }
+    artistDetails = artistRow
+      ? {
+          name: artistRow.stage_name || artistRow.artist_name,
+          contact_name: artistRow.contact_name,
+          contact_email: artistRow.contact_email,
+          contact_phone: artistRow.contact_phone,
+          address: artistRow.address,
+          website_url: artistRow.website_url,
+        }
+      : organiserRow
+        ? {
+            name: organiserRow.event_name,
+            contact_name: organiserRow.contact_name,
+            contact_email: organiserRow.contact_email,
+            contact_phone: organiserRow.contact_phone,
+            address: organiserRow.company_address,
+            website_url: organiserRow.website_url,
+          }
+        : null;
+  }
+
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
@@ -232,116 +308,10 @@ export default async function SponsoredEventPage({
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
 
-  return (
-    <div className="space-y-6">
-      <Link
-        href="/dashboard/sponsored"
-        className="inline-block text-sm text-[var(--color-brand)]"
-      >
-        ← Back to sponsored events
-      </Link>
-
-      <PageHeader
-        title={event.name}
-        subtitle={
-          event.artist_display_name
-            ? `Sponsorship ref ${event.reference} · with ${event.artist_display_name}`
-            : `Sponsorship ref ${event.reference}`
-        }
-        action={<StatusBadge status={event.status} />}
-      />
-
-      {/* An agreement that couldn't be honoured — the campaign was settled on
-          another event, or this listing is already committed elsewhere. Says
-          so plainly rather than appearing to do nothing (0022). */}
-      {(notice === "conflict" || notice === "locked") && (
-        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
-          <p className="font-semibold">This couldn&apos;t be confirmed</p>
-          <p className="mt-1">
-            {reason ||
-              "Another event has already been confirmed for this campaign."}
-          </p>
-        </div>
-      )}
-      {notice === "agree-failed" && (
-        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
-          Something went wrong recording your agreement. Please try again, or
-          contact the Live·En·Synergy team.
-        </div>
-      )}
-
-      {event.campaign_id && (
-        <LiveCampaignPanel
-          viewer={isBrand ? "brand" : "artist"}
-          siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? ""}
-          orderForm={
-            isBrand
-              ? brandOrderForm
-                ? {
-                    href: `/order-forms/${brandOrderForm.id}`,
-                    label: "View order form",
-                    note: ORDER_FORM_STATUS_LABELS[brandOrderForm.status as OrderFormStatus] ?? undefined,
-                  }
-                : null
-              : {
-                  href: "/dashboard/campaign-briefs",
-                  label: "Campaign brief",
-                  note: "The order form sections shared with you, once the brand approves it",
-                }
-          }
-          surveys={partySurveys.map((s) => ({
-            ...s,
-            resultsHref: isBrand ? `/dashboard/survey-results/${s.id}` : null,
-          }))}
-          participants={{
-            total: participations.length,
-            verified: participations.filter((p) => p.status === "attendance_verified" || p.status === "reward_released").length,
-            surveysCompleted: completedParticipations.size,
-          }}
-          codes={{
-            issued: rewardCodes.filter((c) => c.status !== "void").length,
-            redeemed: rewardCodes.filter((c) => c.status === "redeemed").length,
-            tiers: rewardTiers.length,
-            consented: !!event.reward_codes_confirmed_at,
-          }}
-          checkIn={isArtist && checkInQr ? { href: "#check-in", note: "Display it at the venue" } : null}
-        />
-      )}
-
-      {event.banner_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={event.banner_url}
-          alt=""
-          className="h-48 w-full rounded-2xl object-cover"
-        />
-      )}
-
-      {/* Sponsorship management */}
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold">Sponsorship at a glance</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {isBrand && (
-            <Stat label="Campaign budget" value={money(event.budget_gbp)} hint="what you committed" />
-          )}
-          <Stat label="Registered" value={registeredCount.toLocaleString("en-GB")} hint="audience sign-ups" />
-          <Stat label="Selected" value={selectedCount.toLocaleString("en-GB")} hint="chosen in the draw" />
-          <Stat label="Checked in" value={checkedInCount.toLocaleString("en-GB")} hint="at the venue" />
-          <Stat
-            label="Participation deadline"
-            value={
-              event.participation_deadline
-                ? new Date(event.participation_deadline).toLocaleString("en-GB", {
-                    timeZone: UK_TIME_ZONE,
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })
-                : "—"
-            }
-          />
-        </div>
-      </div>
-
+  // Each section as a block, so the artist's fulfilment form (0082) can lay
+  // them out in the brief's order without duplicating any of them.
+  const eventDetailsCard = (
+    <>
       {/* Full event details — previously you had to leave the page for these. */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Event details</h2>
@@ -409,7 +379,10 @@ export default async function SponsoredEventPage({
           </div>
         )}
       </div>
-
+    </>
+  );
+  const brandingCard = (
+    <>
       {/* Branding */}
       {(event.branding_guidelines || assets.length > 0) && (
         <div className="card p-6">
@@ -440,7 +413,10 @@ export default async function SponsoredEventPage({
           )}
         </div>
       )}
-
+    </>
+  );
+  const termsCard = (
+    <>
       {/* Terms & agreement */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Terms &amp; confirmation</h2>
@@ -608,22 +584,168 @@ export default async function SponsoredEventPage({
           </div>
         )}
       </div>
-
+    </>
+  );
+  const proofsCard = (
+    <>
       {(isBrand || isArtist) && (
         <ProofUploadSection eventId={event.id} proofs={proofs} />
       )}
+    </>
+  );
+  const codesCard = (
+    <RewardEngineDisplay
+      eventId={event.id}
+      eventReference={event.reference}
+      tiers={rewardTiers}
+      pool={rewardPool}
+      codes={rewardCodes}
+      isArtist={isArtist}
+      confirmedAt={event.reward_codes_confirmed_at}
+      ticketPrice={ticketPrice}
+      viewerId={profile.id}
+      codesDeadline={activeForm?.codes_deadline ?? null}
+    />
+  );
 
-      <RewardEngineDisplay
-        eventId={event.id}
-        eventReference={event.reference}
-        tiers={rewardTiers}
-        pool={rewardPool}
-        codes={rewardCodes}
-        isArtist={isArtist}
-        confirmedAt={event.reward_codes_confirmed_at}
-        ticketPrice={ticketPrice}
-        viewerId={profile.id}
+  return (
+    <div className="space-y-6">
+      <Link
+        href="/dashboard/sponsored"
+        className="inline-block text-sm text-[var(--color-brand)]"
+      >
+        ← Back to sponsored events
+      </Link>
+
+      <PageHeader
+        title={event.name}
+        subtitle={
+          event.artist_display_name
+            ? `Sponsorship ref ${event.reference} · with ${event.artist_display_name}`
+            : `Sponsorship ref ${event.reference}`
+        }
+        action={<StatusBadge status={event.status} />}
       />
+
+      {/* An agreement that couldn't be honoured — the campaign was settled on
+          another event, or this listing is already committed elsewhere. Says
+          so plainly rather than appearing to do nothing (0022). */}
+      {(notice === "conflict" || notice === "locked") && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          <p className="font-semibold">This couldn&apos;t be confirmed</p>
+          <p className="mt-1">
+            {reason ||
+              "Another event has already been confirmed for this campaign."}
+          </p>
+        </div>
+      )}
+      {notice === "agree-failed" && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Something went wrong recording your agreement. Please try again, or
+          contact the Live·En·Synergy team.
+        </div>
+      )}
+
+      {event.campaign_id && (
+        <LiveCampaignPanel
+          viewer={isBrand ? "brand" : "artist"}
+          siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? ""}
+          orderForm={
+            isBrand
+              ? brandOrderForm
+                ? {
+                    href: `/order-forms/${brandOrderForm.id}`,
+                    label: "View order form",
+                    note: ORDER_FORM_STATUS_LABELS[brandOrderForm.status as OrderFormStatus] ?? undefined,
+                  }
+                : null
+              : {
+                  href: "/dashboard/campaign-briefs",
+                  label: "Campaign brief",
+                  note: "The order form sections shared with you, once the brand approves it",
+                }
+          }
+          surveys={partySurveys.map((s) => ({
+            ...s,
+            resultsHref: isBrand ? `/dashboard/survey-results/${s.id}` : null,
+          }))}
+          participants={{
+            total: participations.length,
+            verified: participations.filter((p) => p.status === "attendance_verified" || p.status === "reward_released").length,
+            surveysCompleted: completedParticipations.size,
+          }}
+          codes={{
+            issued: rewardCodes.filter((c) => c.status !== "void").length,
+            redeemed: rewardCodes.filter((c) => c.status === "redeemed").length,
+            tiers: rewardTiers.length,
+            consented: !!event.reward_codes_confirmed_at,
+          }}
+          checkIn={isArtist && checkInQr ? { href: "#check-in", note: "Display it at the venue" } : null}
+        />
+      )}
+
+      {event.banner_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={event.banner_url}
+          alt=""
+          className="h-48 w-full rounded-2xl object-cover"
+        />
+      )}
+
+      {/* Sponsorship management */}
+      <div className="card p-6">
+        <h2 className="text-lg font-semibold">Sponsorship at a glance</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {isBrand && (
+            <Stat label="Campaign budget" value={money(event.budget_gbp)} hint="what you committed" />
+          )}
+          <Stat label="Registered" value={registeredCount.toLocaleString("en-GB")} hint="audience sign-ups" />
+          <Stat label="Selected" value={selectedCount.toLocaleString("en-GB")} hint="chosen in the draw" />
+          <Stat label="Checked in" value={checkedInCount.toLocaleString("en-GB")} hint="at the venue" />
+          <Stat
+            label="Participation deadline"
+            value={
+              event.participation_deadline
+                ? new Date(event.participation_deadline).toLocaleString("en-GB", {
+                    timeZone: UK_TIME_ZONE,
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "—"
+            }
+          />
+        </div>
+      </div>
+
+      {activeForm && isArtist ? (
+        <>
+          {termsCard}
+          {brandingCard}
+          <FulfilmentIntro form={activeForm} />
+          <YourDetailsCard details={artistDetails} />
+          {eventDetailsCard}
+          {codesCard}
+          <PromotionalCommitmentsCard form={activeForm} />
+          <SpecialTermsCard form={activeForm} />
+          {proofsCard}
+          <PaymentCard form={activeForm} invoices={fulfilmentInvoices} />
+          <FinalConsentCard
+            form={activeForm}
+            codesConfirmed={!!event.reward_codes_confirmed_at}
+            hasCodes={rewardTiers.length > 0}
+          />
+        </>
+      ) : (
+        <>
+          {eventDetailsCard}
+          {brandingCard}
+          {termsCard}
+          {/* Codes above proofs (20 Oct brief). */}
+          {codesCard}
+          {proofsCard}
+        </>
+      )}
 
       {locked && (isBrand || isArtist) && (
         <ChangeRequestSection

@@ -376,6 +376,7 @@ test("end to end: campaign → payment → artist → codes → survey → audie
     await caption(page, "10 · Artist confirms the discount codes", "Codes can only be issued once the artist agrees.");
     await beat(page);
     await s.locator('[name="consent"]').check();
+    await s.locator('[name="redemption_notice"]').check();
     await s.getByRole("button", { name: "Confirm discount codes" }).click();
     await expect(page.getByText("Confirmed — the team can now issue")).toBeVisible({ timeout: 60_000 });
     await beat(page, 1500);

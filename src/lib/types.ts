@@ -965,7 +965,12 @@ export type ConsentType =
   | "survey_terms"
   | "residency_confirmed"
   | "order_form_details"
-  | "order_form_terms";
+  | "order_form_terms"
+  | "reward_codes_confirmed"
+  | "reward_codes_notice"
+  | "fulfilment_publish"
+  | "fulfilment_materials"
+  | "fulfilment_terms";
 
 export type ConsentSource =
   | "sign_up"
@@ -975,7 +980,9 @@ export type ConsentSource =
   | "my_events"
   | "public_survey"
   | "dashboard_survey"
-  | "order_form";
+  | "order_form"
+  | "discount_codes"
+  | "fulfilment_form";
 
 export interface ConsentRecord {
   id: string;
