@@ -115,12 +115,13 @@ test("discount codes: setup → consent → issue → redeem", async ({ browser 
   await aTier.getByRole("button", { name: "Add codes" }).click();
   await expect(aTier.getByText("Added 1 code.")).toBeVisible();
 
-  // Consent needs the box ticked.
+  // Consent needs both boxes ticked (the redemption-notice consent, 0082).
   await aSection.getByRole("button", { name: "Confirm discount codes" }).click();
-  await expect(aSection.getByText("Tick the box")).toBeVisible();
+  await expect(aSection.getByText("Tick both boxes")).toBeVisible();
   await shot(artist, "03-artist-review", "Artist: reviews the setup, adds own code + ID number");
 
   await aSection.locator('[name="consent"]').check();
+  await aSection.locator('[name="redemption_notice"]').check();
   await aSection.getByRole("button", { name: "Confirm discount codes" }).click();
   await expect(artist.getByText("Confirmed — the team can now issue")).toBeVisible();
   await artist.reload();

@@ -24,6 +24,8 @@ import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
+import { FulfilmentFormSection, type AdminFulfilmentInvoice } from "./FulfilmentFormSection";
+import type { ArtistFulfilmentForm, ArtistFulfilmentInvoice } from "@/lib/fulfilment-forms";
 import type {
   Invoice,
   RewardCode,
@@ -220,6 +222,34 @@ export default async function AdminSponsoredDetailPage({
     .select("*")
     .eq("sponsored_event_id", id)
     .order("created_at", { ascending: false });
+
+  // Fulfilment form (0082) and its invoices; the order form's social-media
+  // details seed a new form's "other promotional requirements".
+  const [{ data: fulfilmentRow }, { data: orderFormRow }] = await Promise.all([
+    supabase
+      .from("artist_fulfilment_forms")
+      .select("*, artist_fulfilment_invoices(*)")
+      .eq("sponsored_event_id", id)
+      .maybeSingle<ArtistFulfilmentForm & { artist_fulfilment_invoices: ArtistFulfilmentInvoice[] }>(),
+    event.campaign_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("social_media_details")
+          .eq("campaign_id", event.campaign_id)
+          .maybeSingle<{ social_media_details: string | null }>()
+      : Promise.resolve({ data: null }),
+  ]);
+  const { artist_fulfilment_invoices: fulfilmentInvoiceRows = [], ...fulfilmentForm } = fulfilmentRow ?? {};
+  const fulfilmentInvoices: AdminFulfilmentInvoice[] = await Promise.all(
+    [...fulfilmentInvoiceRows]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(async (inv) => ({
+        id: inv.id,
+        file_name: inv.file_name,
+        created_at: inv.created_at,
+        url: await signedUrlFor(inv.file_path),
+      })),
+  );
 
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
@@ -494,6 +524,25 @@ export default async function AdminSponsoredDetailPage({
           </div>
         )}
       </div>
+
+      {notice?.startsWith("fulfilment_") && (
+        <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          {notice === "fulfilment_sent"
+            ? "✓ Fulfilment form sent — the artist has been emailed."
+            : notice === "fulfilment_reopened"
+              ? "Fulfilment form reopened for editing. Send it again when it's ready."
+              : "✓ Fulfilment form saved as a draft."}
+        </p>
+      )}
+
+      <FulfilmentFormSection
+        eventId={event.id}
+        form={fulfilmentRow ? (fulfilmentForm as ArtistFulfilmentForm) : null}
+        invoices={fulfilmentInvoices}
+        hasArtist={!!event.artist_profile_id}
+        codesConfirmedAt={event.reward_codes_confirmed_at}
+        prefillRequirements={orderFormRow?.social_media_details ?? null}
+      />
 
       <ProofsSection eventId={event.id} proofs={proofs} />
 

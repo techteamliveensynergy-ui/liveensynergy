@@ -4,6 +4,12 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { LiveCampaignPanel, type LiveCampaignSurvey } from "@/components/campaigns/LiveCampaignPanel";
+import {
+  FULFILMENT_EMBED,
+  fulfilmentOf,
+  fulfilmentStatusText,
+  type FulfilmentSummary,
+} from "@/lib/fulfilment-forms";
 import { formatDate } from "@/lib/format";
 import { invoiceDisplayStatus } from "@/lib/billing";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
@@ -33,6 +39,7 @@ interface SponsorshipRow {
   reward_codes_confirmed_at: string | null;
   brand_agreed: boolean;
   artist_agreed: boolean;
+  artist_fulfilment_forms: FulfilmentSummary | FulfilmentSummary[] | null;
 }
 
 const money = (n: number | null | undefined) =>
@@ -87,7 +94,7 @@ export default async function AdminCampaignPage({
         .maybeSingle<{ id: string; reference: string; status: string; due_date: string | null }>(),
       supabase
         .from("sponsored_events")
-        .select("id, reference, name, status, event_date, artist_display_name, reward_codes_confirmed_at, brand_agreed, artist_agreed")
+        .select(`id, reference, name, status, event_date, artist_display_name, reward_codes_confirmed_at, brand_agreed, artist_agreed, ${FULFILMENT_EMBED}`)
         .eq("campaign_id", id)
         .order("created_at", { ascending: true }),
       supabase
@@ -302,6 +309,14 @@ export default async function AdminCampaignPage({
               }
             : null
         }
+        fulfilment={
+          live
+            ? {
+                href: `/dashboard/admin/events/sponsored/${live.id}#fulfilment`,
+                ...fulfilmentStatusText(fulfilmentOf(live.artist_fulfilment_forms), !!live.reward_codes_confirmed_at),
+              }
+            : null
+        }
         checkIn={live ? { href: `/dashboard/admin/events/sponsored/${live.id}`, note: "QR and participant check-ins on the event page" } : null}
         adminLinks={live ? [{ href: `/dashboard/admin/events/sponsored/${live.id}`, label: "Who received which code →" }] : []}
       />
@@ -353,6 +368,7 @@ export default async function AdminCampaignPage({
                   events: sponsorships,
                   surveyPublished: templates.some((t) => t.status === "published"),
                   opensAt: campaign.opens_at,
+                  fulfilmentTracked: true,
                 }}
               />
             </div>

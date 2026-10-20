@@ -16,7 +16,7 @@ function Submit() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn btn-ghost text-sm" disabled={pending}>
-      {pending ? "Uploading…" : "Upload proof"}
+      {pending ? "Uploading…" : "Add proof"}
     </button>
   );
 }
@@ -35,10 +35,11 @@ export function ProofUploadSection({
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-semibold">Proof of terms</h2>
+      <h2 className="text-lg font-semibold">Proof of social media &amp; terms</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        Upload evidence for the social-media mentions and onsite branding
-        owed under this sponsorship — the team reviews each one.
+        Once each agreed post or piece of branding is live, add screenshots or
+        photos (up to 5 at a time) and/or a link to the post — the team reviews
+        each one. Add as many as you need.
       </p>
 
       {state.error && (
@@ -61,13 +62,19 @@ export function ProofUploadSection({
             <span className="field-label">Note (optional)</span>
             <input name="description" className="input mt-1" />
           </label>
+          <label className="text-sm sm:col-span-2">
+            <span className="field-label">Link to the post (optional)</span>
+            <input name="post_url" className="input mt-1" placeholder="instagram.com/p/…" />
+          </label>
         </div>
         <Submit />
         <div className="sm:col-span-2">
           <FileDrop
             name="file"
             hint={IMAGE_HINT}
-            label="Drag a screenshot or photo here, or click to browse"
+            label="Drag screenshots or photos here, or click to browse"
+            multiple
+            maxFiles={5}
           />
         </div>
       </form>
@@ -79,10 +86,10 @@ export function ProofUploadSection({
               key={p.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-black/10 px-3 py-2 text-sm"
             >
-              <span>
+              <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                 {LABELS[p.proof_type] ?? p.proof_type}
-                {p.description ? ` — ${p.description}` : ""}
-              </span>
+                {p.description ? ` — ${p.description}` : ""} ↗
+              </a>
               <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--color-ink-soft)]">
                 {p.status}
               </span>

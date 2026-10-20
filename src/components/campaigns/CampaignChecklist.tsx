@@ -1,6 +1,7 @@
 import { isCampaignOpen } from "@/lib/campaign-progress";
 import { formatDate } from "@/lib/format";
 import type { CampaignStatus } from "@/lib/types";
+import { fulfilmentOf, fulfilmentStatusText, type FulfilmentSummary } from "@/lib/fulfilment-forms";
 
 /**
  * The facts behind a campaign's stage, each spelled out as done (✓), awaited
@@ -29,7 +30,12 @@ export interface CampaignChecklistFacts {
     brand_agreed: boolean;
     artist_agreed: boolean;
     reward_codes_confirmed_at: string | null;
+    /** Embedded fulfilment form (0082), when `fulfilmentTracked`. */
+    artist_fulfilment_forms?: FulfilmentSummary | FulfilmentSummary[] | null;
   }[];
+  /** The events above were loaded with their fulfilment forms. Off, the
+   *  checklist skips that step rather than claiming nothing was started. */
+  fulfilmentTracked?: boolean;
   surveyPublished: boolean;
   /** campaigns.opens_at (0070). */
   opensAt: string | null;
@@ -103,6 +109,17 @@ export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
     items.push({ key: "codes", state: "awaited", text: "Discount codes — awaiting artist to confirm" });
   } else {
     items.push({ key: "codes", state: "later", text: "Discount codes — once an event is agreed" });
+  }
+
+  // Artist / organiser fulfilment form (0082)
+  if (f.fulfilmentTracked && settled) {
+    const { state, text } = fulfilmentStatusText(
+      fulfilmentOf(settled.artist_fulfilment_forms),
+      !!settled.reward_codes_confirmed_at,
+    );
+    items.push({ key: "fulfilment", state, text });
+  } else if (f.fulfilmentTracked) {
+    items.push({ key: "fulfilment", state: "later", text: "Artist fulfilment form — once an event is agreed" });
   }
 
   // Survey

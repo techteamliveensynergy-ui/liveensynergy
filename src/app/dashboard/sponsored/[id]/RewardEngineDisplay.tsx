@@ -20,7 +20,8 @@ import {
   confirmRewardCodes,
   type DiscountCodeState,
 } from "../actions";
-import { UK_TIME_ZONE } from "@/lib/format";
+import { UK_TIME_ZONE, formatDate } from "@/lib/format";
+import { CODES_NOTICE_CONSENT, codesDeadlinePassed } from "@/lib/fulfilment-forms";
 
 function Submit({ label, pending, className = "btn btn-primary text-sm" }: {
   label: string;
@@ -55,6 +56,7 @@ export function RewardEngineDisplay({
   confirmedAt,
   ticketPrice,
   viewerId,
+  codesDeadline = null,
 }: {
   eventId: string;
   eventReference: string;
@@ -65,13 +67,42 @@ export function RewardEngineDisplay({
   confirmedAt: string | null;
   ticketPrice: number | null;
   viewerId: string;
+  /** From the fulfilment form (0082): when the artist must have the codes
+   *  set up and confirmed by. */
+  codesDeadline?: string | null;
 }) {
   const [consentState, consentAction] = useActionState<DiscountCodeState, FormData>(
     confirmRewardCodes,
     {},
   );
-  if (tiers.length === 0) return null;
   const frozen = !!confirmedAt;
+  const overdue = !frozen && codesDeadlinePassed(codesDeadline);
+  const deadlineNote = codesDeadline && !frozen && (
+    <p
+      className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+        overdue ? "bg-[var(--color-pink)] text-[var(--color-accent)]" : "bg-[var(--color-mist)]"
+      }`}
+    >
+      {overdue
+        ? `These codes were due to be confirmed by ${formatDate(codesDeadline)}. Please confirm them as soon as you can, or message the team.`
+        : `Please have these codes set up and confirmed by ${formatDate(codesDeadline)}.`}
+    </p>
+  );
+
+  if (tiers.length === 0) {
+    // Inside the fulfilment form the section keeps its place even before the
+    // team has set the codes up, so the artist knows what's coming.
+    if (!isArtist || !codesDeadline) return null;
+    return (
+      <div id="discount-codes" className="card scroll-mt-24 p-6">
+        <h2 className="text-lg font-semibold">Reward engine · discount codes</h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          The team is setting up the discount codes for this event. You&apos;ll review and confirm them here.
+        </p>
+        {deadlineNote}
+      </div>
+    );
+  }
 
   return (
     <div id="discount-codes" className="card scroll-mt-24 p-6">
@@ -92,6 +123,8 @@ export function RewardEngineDisplay({
             : "Awaiting the artist's confirmation"}
         </span>
       </div>
+
+      {isArtist && deadlineNote}
 
       <div className="mt-4 space-y-3">
         {tiers.map((t) => {
@@ -205,6 +238,10 @@ export function RewardEngineDisplay({
               I&apos;ve reviewed these discount codes. They&apos;re set up on my ticketing platform (or
               will be before the event), and I agree to honour them for qualifying participants.
             </span>
+          </label>
+          <label className="mt-2 flex items-start gap-2 text-sm">
+            <input type="checkbox" name="redemption_notice" className="mt-1" />
+            <span>{CODES_NOTICE_CONSENT}</span>
           </label>
           {consentState.error && (
             <p className="mt-2 text-sm text-[var(--color-accent)]">{consentState.error}</p>

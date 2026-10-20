@@ -18,6 +18,10 @@ interface FileDropProps {
   maxBytes?: number;
   /** MIME allow-list, or `null` to accept any type within `maxBytes`. */
   allowedTypes?: string[] | null;
+  /** Accept several files at once (each checked against the limits), up to
+   *  `maxFiles`. The server action reads them with `formData.getAll(name)`. */
+  multiple?: boolean;
+  maxFiles?: number;
 }
 
 /**
@@ -40,6 +44,8 @@ export function FileDrop({
   label = "Drag a file here, or click to browse",
   maxBytes = MAX_IMAGE_BYTES,
   allowedTypes = IMAGE_TYPES,
+  multiple = false,
+  maxFiles = 5,
 }: FileDropProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -61,15 +67,23 @@ export function FileDrop({
     const file = files?.[0];
     if (!file) return false;
 
-    const problem = fileError(file, { maxBytes, allowedTypes });
-    if (problem) {
+    const picked = multiple ? Array.from(files!) : [file];
+    if (picked.length > maxFiles) {
       reset();
-      setError(problem);
+      setError(`Choose up to ${maxFiles} files at a time.`);
       return false;
+    }
+    for (const f of picked) {
+      const problem = fileError(f, { maxBytes, allowedTypes });
+      if (problem) {
+        reset();
+        setError(picked.length > 1 ? `${f.name}: ${problem}` : problem);
+        return false;
+      }
     }
 
     setError(null);
-    setFileName(file.name);
+    setFileName(picked.length > 1 ? `${picked.length} files selected` : file.name);
     if (preview && file.type.startsWith("image/")) {
       setPreviewUrl((old) => {
         if (old) URL.revokeObjectURL(old);
@@ -149,6 +163,7 @@ export function FileDrop({
         type="file"
         name={name}
         accept={accept}
+        multiple={multiple}
         className="sr-only"
         aria-invalid={error ? true : undefined}
         onChange={(e) => adopt(e.target.files)}

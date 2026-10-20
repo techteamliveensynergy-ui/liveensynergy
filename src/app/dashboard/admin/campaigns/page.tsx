@@ -11,6 +11,7 @@ import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { campaignTitle } from "@/lib/campaign-requests";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { CampaignChecklist } from "@/components/campaigns/CampaignChecklist";
+import { FULFILMENT_EMBED } from "@/lib/fulfilment-forms";
 import { CampaignStatusLegend } from "@/components/campaigns/CampaignStatusLegend";
 import {
   CAMPAIGN_STAGE_LABELS,
@@ -128,7 +129,7 @@ export default async function AdminCampaignsPage({
       supabase
         .from("sponsored_events")
         .select(
-          "id, name, status, campaign_id, brand_agreed, artist_agreed, event_date, reward_codes_confirmed_at",
+          `id, name, status, campaign_id, brand_agreed, artist_agreed, event_date, reward_codes_confirmed_at, ${FULFILMENT_EMBED}`,
         )
         .not("campaign_id", "is", null)
         .order("created_at", { ascending: true }),
@@ -381,6 +382,7 @@ export default async function AdminCampaignsPage({
                           events: suggestionsFor(c.id),
                           surveyPublished: publishedSurvey.has(c.id),
                           opensAt: c.opens_at,
+                          fulfilmentTracked: true,
                         }}
                       />
                     </div>
