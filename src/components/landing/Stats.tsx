@@ -1,8 +1,8 @@
 const STATS = [
   { value: "3-sided", label: "Marketplace model" },
-  { value: "Verified", label: "Two-step attendance" },
-  { value: "9% + VAT", label: "Flat platform fee" },
-  { value: "£0", label: "Minimum sponsorship budget" },
+  { value: "Every response", label: "Quality-checked before rewards" },
+  { value: "QR check-in", label: "Verified attendance" },
+  { value: "End to end", label: "Campaigns run by our team" },
 ];
 
 export function Stats() {

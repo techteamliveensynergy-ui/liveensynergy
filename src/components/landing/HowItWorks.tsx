@@ -1,18 +1,18 @@
 const STEPS = [
   {
     n: "01",
-    title: "Brands set a campaign",
-    body: "A brand creates a sponsorship campaign — budget, target audience and reward rules (e.g. first 20 sign-ups). Our team matches it to a fitting artist or event.",
+    title: "A brand chooses a package",
+    body: "The brand picks a campaign package and tells us its objective, target audience, location and what it wants to learn. Our team sets up the campaign and its research survey.",
   },
   {
     n: "02",
-    title: "Artists list their events",
-    body: "Artists and organisers list upcoming events open for sponsorship, and describe the branding value they can offer in return.",
+    title: "We match it to live events",
+    body: "We select suitable artists' and organisers' events and audiences. The artist delivers the agreed branding, such as social media mentions and onsite presence.",
   },
   {
     n: "03",
-    title: "Audiences show up",
-    body: "Fans register, buy their ticket and attend. Once attendance is verified, the sponsor-funded reward — like a ticket reimbursement — is released.",
+    title: "Audiences take part",
+    body: "Ticket holders answer the sponsor's survey and check in at the venue. Responses that pass our quality check earn a discount code, and the brand gets the insights.",
   },
 ];
 
@@ -22,12 +22,12 @@ export function HowItWorks() {
       <div className="max-w-2xl">
         <span className="chip">How it works</span>
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
-          A performance-based sponsorship ecosystem
+          Sponsorship that comes back with answers
         </h2>
         <p className="mt-4 text-lg text-[var(--color-ink-soft)]">
-          Instead of sponsorship flowing straight from brand to artist, we bring
-          the audience into the loop — so every pound spent drives real,
-          verifiable engagement.
+          Instead of a logo on a poster, a sponsor gets a conversation with the
+          audience: verified participants, quality-checked research and a
+          campaign report at the end.
         </p>
       </div>
 
