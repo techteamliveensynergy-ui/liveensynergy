@@ -1,20 +1,22 @@
+// New-model copy (#37), from the Brand Portal and Packages Details briefs in
+// docs/New-model. Needs Sakshi's sign-off before it goes live.
 const CARDS = [
   {
     eyebrow: "For brands",
-    title: "Measurable engagement, verified outcomes.",
-    body: "Set your budget and reward rules. Only pay for attendance you can prove — no wasted spend on empty seats.",
+    title: "Real audiences, real answers.",
+    body: "Choose a campaign package and tell us who you want to reach. We put your brand in front of live-event audiences and come back with research, insights and a performance report.",
     bg: "bg-[var(--color-gold)]",
   },
   {
-    eyebrow: "For artists",
-    title: "Funding & guaranteed seats.",
-    body: "List an open event, get matched with a brand, and confirm the room before the doors open.",
+    eyebrow: "For artists & organisers",
+    title: "Sponsorship for your events.",
+    body: "List your upcoming events. When a brand campaign fits, we match it to you: you deliver the agreed branding, like social mentions and onsite presence, and get paid for it.",
     bg: "bg-[var(--color-lavender)]",
   },
   {
-    eyebrow: "For audience",
-    title: "Show up, get rewarded.",
-    body: "Ticket reimbursements and sponsor-funded perks for verified attendance at events you'd love anyway.",
+    eyebrow: "For audiences",
+    title: "Share your view, get a reward.",
+    body: "Go to events you'd love anyway and answer the sponsor's short survey. Once your response passes our quality check, you get a discount code.",
     bg: "bg-[var(--color-sage)]",
   },
 ];
