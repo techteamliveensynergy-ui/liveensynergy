@@ -293,7 +293,7 @@ export function SponsoredEventForm({
         <Field
           label="Budget (GBP)"
           htmlFor="budget_gbp"
-          hint="The gross amount committed to this sponsorship. Audience rewards are discount codes, issued by Live·En·Synergy."
+          hint="The amount committed to this sponsorship. Audience rewards are discount codes, issued by Live·En·Synergy."
         >
           <input
             id="budget_gbp"

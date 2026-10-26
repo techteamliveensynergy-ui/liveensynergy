@@ -5,7 +5,7 @@ import {
   FilterBar,
   matchesText,
 } from "@/components/dashboard/FilterBar";
-import { ARTIST_CATEGORIES, computePlatformFee } from "@/lib/constants";
+import { ARTIST_CATEGORIES } from "@/lib/constants";
 import type { OpenCampaign } from "@/lib/types";
 import { registerInterest } from "./actions";
 import { UK_TIME_ZONE } from "@/lib/format";
@@ -149,7 +149,6 @@ export default async function DiscoverCampaignsPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {campaigns.map((c) => {
-            const fee = computePlatformFee(Number(c.budget_gbp));
             return (
               <div key={c.id} className="card flex flex-col p-5">
                 <div className="flex items-center justify-between">
@@ -209,14 +208,9 @@ export default async function DiscoverCampaignsPage({
                   <dd className="text-right">{c.preferred_location ?? "Flexible"}</dd>
                   <dt className="text-[var(--color-ink-soft)]">Timeline</dt>
                   <dd className="text-right">{c.preferred_timeline ?? "Flexible"}</dd>
-                  <dt className="text-[var(--color-ink-soft)]">Available</dt>
-                  <dd className="text-right font-semibold text-[var(--color-brand-dark)]">
-                    £
-                    {Math.max(0, fee.availableForSponsorship).toLocaleString(
-                      "en-GB",
-                      { maximumFractionDigits: 0 },
-                    )}
-                  </dd>
+                  {/* No £ figure: the old "Available" number was the budget
+                      less the pre-package platform fee, wrong for package
+                      campaigns and the platform's own business (#45). */}
                 </dl>
 
                 {registeredOn.has(c.id) ? (

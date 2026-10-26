@@ -13,6 +13,7 @@ import { campaignStage } from "@/lib/campaign-stage";
 import { DetailFact as Fact } from "@/components/campaigns/DetailFact";
 import type { LiveCampaignSurvey } from "@/components/campaigns/LiveCampaignPanel";
 import type { Campaign, Invoice } from "@/lib/types";
+import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 export const metadata = { title: "Campaign" };
 
@@ -47,7 +48,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
   const { data: brand } = await supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle();
   // Scoped by brand as well as by RLS, so another brand's id is a plain 404.
   const { data } = brand
-    ? await supabase.from("campaigns").select("*").eq("id", id).eq("brand_id", brand.id).maybeSingle()
+    ? await supabase.from("campaigns").select(CAMPAIGN_COLUMNS).eq("id", id).eq("brand_id", brand.id).maybeSingle<Campaign>()
     : { data: null };
   if (!data) notFound();
   const c = data as Campaign;

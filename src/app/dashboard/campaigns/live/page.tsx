@@ -15,6 +15,7 @@ import { CampaignProgress, type CampaignEventRow } from "@/components/campaigns/
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStage } from "@/lib/campaign-stage";
 import { campaignTitle } from "@/lib/campaign-requests";
+import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 export const metadata = { title: "Campaigns live" };
 
@@ -48,9 +49,10 @@ export default async function CampaignsLivePage() {
     ? await Promise.all([
         supabase
           .from("campaigns")
-          .select("*")
+          .select(CAMPAIGN_COLUMNS)
           .eq("brand_id", brand.id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .overrideTypes<Campaign[], { merge: false }>(),
         // Drafts are an admin's working copy — a brand only ever sees an
         // invoice once it has been sent. (RLS enforces this too, since 0047.)
         supabase

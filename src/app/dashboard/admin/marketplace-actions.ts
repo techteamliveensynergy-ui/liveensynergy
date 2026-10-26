@@ -100,8 +100,9 @@ export async function matchCampaign(
   }
 
   const [{ data: campaign }, { data: listingRows }] = await Promise.all([
+    // Admin RPC: the margin isn't readable on the table (0086, #45).
     supabase
-      .from("campaigns")
+      .rpc("admin_campaigns")
       .select(
         "id, reference, campaign_name, status, brand_id, budget_gbp, package_platform_margin_gbp, reward_rules, suggested_event_note, suggested_event_url, brands(profile_id, brand_name)",
       )
@@ -805,7 +806,7 @@ export async function updateCampaignAdmin(
   // document for the old figures, so the campaign must not drift away from it.
   // (Cancel the invoice first, then edit and re-draft.) A DRAFT is rebuilt below.
   const { data: current } = await supabase
-    .from("campaigns")
+    .rpc("admin_campaigns")
     .select("budget_gbp, campaign_package_id, package_platform_margin_gbp")
     .eq("id", id)
     .maybeSingle<{

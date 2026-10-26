@@ -60,8 +60,9 @@ export async function saveOrderForm(
   const intent = str(formData.get("intent")) === "send" ? "send" : "save";
   if (!campaignId) return { error: "Missing campaign." };
 
+  // Admin RPC: the margin isn't readable on the table (0086, #45).
   const { data: campaign } = await supabase
-    .from("campaigns")
+    .rpc("admin_campaigns")
     .select("id, reference, brand_id, budget_gbp, campaign_package_id, package_platform_margin_gbp, campaign_packages(name), brands(profile_id)")
     .eq("id", campaignId)
     .maybeSingle<{

@@ -101,15 +101,13 @@ export default async function SponsoredEventPage({
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: true }),
       // Only readable by the brand (campaigns RLS is brand-owner-or-admin) —
-      // an artist viewer gets null here and the fee display below falls back
-      // to the pre-package global formula, same as before packages existed.
+      // an artist viewer gets null here and the places count below is left off.
       event.campaign_id
         ? supabase
             .from("campaigns")
-            .select("package_platform_margin_gbp, package_participant_count")
+            .select("package_participant_count")
             .eq("id", event.campaign_id)
             .maybeSingle<{
-              package_platform_margin_gbp: number | null;
               package_participant_count: number | null;
             }>()
         : Promise.resolve({ data: null }),

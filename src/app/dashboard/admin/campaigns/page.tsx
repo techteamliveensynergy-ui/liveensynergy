@@ -114,8 +114,9 @@ export default async function AdminCampaignsPage({
     { data: statusEventRows },
   ] =
     await Promise.all([
+      // Admin RPC, so the package margin comes back (0085/0086, GitHub #45).
       supabase
-        .from("campaigns")
+        .rpc("admin_campaigns")
         .select("*, brands(brand_name, profile_id)")
         .order("created_at", { ascending: false }),
       supabase
