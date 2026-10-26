@@ -27,6 +27,8 @@ export function SteppedQuestions({
   accentColor,
   appearance,
   submitLabel = "Submit survey",
+  onStepChange,
+  notice,
 }: {
   questions: SurveyQuestion[];
   values: Record<string, SurveyAnswerValue>;
@@ -42,11 +44,17 @@ export function SteppedQuestions({
   accentColor?: string | null;
   appearance?: SurveyAppearance;
   submitLabel?: string;
+  /** Called after each move to another step (not on first render) — the
+   *  live availability re-check hangs off it (#53). */
+  onStepChange?: () => void;
+  /** Shown above the current card, e.g. "codes have run out" (#53). */
+  notice?: ReactNode;
 }) {
   const blocks = useMemo(() => surveyBlocks(questions), [questions]);
   const [index, setIndex] = useState(0);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
+  const firstStepRef = useRef(true);
 
   const block = blocks[index];
 
@@ -61,6 +69,16 @@ export function SteppedQuestions({
     // active step should re-trigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [block?.key]);
+
+  useEffect(() => {
+    if (firstStepRef.current) {
+      firstStepRef.current = false;
+      return;
+    }
+    onStepChange?.();
+    // Only a step move should trigger it, not a new callback identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
 
   if (!block) return null;
 
@@ -108,6 +126,8 @@ export function SteppedQuestions({
           {index + 1} / {blocks.length}
         </span>
       </div>
+
+      {notice}
 
       <SurveyBlockCard
         key={block.key}

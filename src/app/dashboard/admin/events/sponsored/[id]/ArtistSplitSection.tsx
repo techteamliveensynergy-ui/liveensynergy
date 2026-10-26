@@ -30,7 +30,10 @@ export async function ArtistSplitSection({
   const reportsWithLinks = await Promise.all(
     reports.map(async (r) => ({
       ...r,
-      href: await signedUrlFor(r.report_file_path),
+      // Original name since 0087; older rows get a readable fallback (#51).
+      href: await signedUrlFor(r.report_file_path, undefined, {
+        downloadName: r.report_file_name ?? "ticket-sales-report",
+      }),
     })),
   );
   const hasReviewedReport = reports.some((r) => r.status === "reviewed");

@@ -19,8 +19,10 @@ export async function draftCampaignInvoice(
   supabase: SupabaseClient,
   campaignId: string,
 ): Promise<{ ok: true; invoiceId: string | null } | { ok: false; error: string }> {
+  // Admin RPC (also open to the service role, which drafts after a brand
+  // approves an order form): the margin isn't readable on the table (0086).
   const { data: campaign, error: loadError } = await supabase
-    .from("campaigns")
+    .rpc("admin_campaigns")
     .select(
       "id, reference, brand_id, budget_gbp, package_platform_margin_gbp, campaign_packages(name)",
     )
@@ -94,7 +96,7 @@ export async function redraftCampaignInvoice(
   if (!draft) return { ok: true };
 
   const { data: campaign } = await supabase
-    .from("campaigns")
+    .rpc("admin_campaigns")
     .select(
       "reference, budget_gbp, package_platform_margin_gbp, campaign_packages(name)",
     )

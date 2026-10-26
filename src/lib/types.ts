@@ -295,8 +295,9 @@ export interface Campaign {
   payment_waived_reason: string | null;
   campaign_package_id: string | null;
   /** Snapshotted from campaign_packages at creation — doesn't move if the
-   * package's own margin is edited later. */
-  package_platform_margin_gbp: number | null;
+   * package's own margin is edited later. Admin-only: present on rows from
+   * admin_campaigns() (0085), never on a brand's read (0086, #45). */
+  package_platform_margin_gbp?: number | null;
   package_participant_count: number | null;
   /** When registration and the survey open to the audience (0070). Null =
    *  not open yet ("Upcoming"); a future value = scheduled. */
@@ -575,6 +576,8 @@ export interface TicketSalesReport {
   tickets_sold: number | null;
   gross_revenue_gbp: number | null;
   report_file_path: string | null;
+  /** The uploaded file's original name, for the download (0087). */
+  report_file_name: string | null;
   notes: string | null;
   status: "submitted" | "reviewed";
   reviewed_by: string | null;

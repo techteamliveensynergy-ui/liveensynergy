@@ -12,7 +12,6 @@ import {
   describeTierValue,
   estimateTierCost,
   platformLabel,
-  REWARD_ADMIN_MARGIN,
 } from "@/lib/discount-codes";
 import {
   artistRemovePoolCode,
@@ -157,15 +156,10 @@ export function RewardEngineDisplay({
                   <div className="sm:col-span-2">
                     <dt className="inline font-medium text-[var(--color-ink)]">Maximum discount if every code is used: </dt>
                     <dd className="inline">
+                      {/* The discount cost only. The admin margin on top
+                          is the platform's figure, shown on the admin
+                          screen alone (#45). */}
                       {money(est.base)}
-                      {/* The admin margin is between the platform and the
-                          brand; the artist sees the discount cost only. */}
-                      {!isArtist && (
-                        <>
-                          {" "}
-                          ({money(est.withMargin)} incl. {Math.round(REWARD_ADMIN_MARGIN * 100)}% admin margin)
-                        </>
-                      )}
                     </dd>
                   </div>
                 )}

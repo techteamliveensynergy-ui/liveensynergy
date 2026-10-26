@@ -11,6 +11,7 @@ import { notify, notifyAdmins } from "@/lib/notifications";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { callerIpHash } from "@/lib/survey-abuse";
+import { passwordProblem } from "@/lib/password";
 
 export interface AuthState {
   error?: string;
@@ -48,9 +49,8 @@ export async function signUp(
         "Please choose whether you're a brand, an artist / event organiser, or an audience member.",
     };
   }
-  if (password.length < 8) {
-    return { error: "Your password must be at least 8 characters." };
-  }
+  const passwordError = passwordProblem(password);
+  if (passwordError) return { error: passwordError };
   if (String(formData.get("terms_accepted") ?? "") !== "on") {
     return {
       error:
@@ -338,9 +338,8 @@ export async function updatePassword(
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (password.length < 8) {
-    return { error: "Your password must be at least 8 characters." };
-  }
+  const passwordError = passwordProblem(password);
+  if (passwordError) return { error: passwordError };
   if (password !== confirm) {
     return { error: "Those passwords don't match." };
   }

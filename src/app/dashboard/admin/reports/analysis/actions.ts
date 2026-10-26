@@ -14,6 +14,7 @@ import {
 } from "@/lib/analysis/narrative";
 import { campaignTitle } from "@/lib/campaign-requests";
 import type { Campaign } from "@/lib/types";
+import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 export interface AnalysisState {
   error?: string;
@@ -65,9 +66,11 @@ export async function createAnalysisReport(_prev: AnalysisState, formData: FormD
   };
   if (campaignId) {
     const [{ data: c }, { data: ev }] = await Promise.all([
+      // Explicit columns: the package margin is the platform's own figure and
+      // has no business in an AI prompt (#45).
       supabase
         .from("campaigns")
-        .select("*, brands(brand_name)")
+        .select(`${CAMPAIGN_COLUMNS}, brands(brand_name)`)
         .eq("id", campaignId)
         .maybeSingle<Campaign & { brands: { brand_name: string } | null }>(),
       supabase

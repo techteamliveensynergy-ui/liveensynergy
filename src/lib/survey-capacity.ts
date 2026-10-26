@@ -79,3 +79,18 @@ export async function surveyCapacityState(
 /** True when a submit RPC failed because the cap was reached (the 0056 trigger's message). */
 export const isSurveyClosedError = (message: string | null | undefined) =>
   !!message && message.includes("SURVEY_CLOSED");
+
+/**
+ * Mid-survey re-check (GitHub #53, migration 0088). The page load shows
+ * CapacityNotice; while someone moves through a stepped survey the form
+ * asks again and, if the survey filled up or the codes ran out since,
+ * shows one of these. Advice only — the server still decides at submit.
+ */
+export type SurveyAvailability = "open" | "nearly_full" | "full" | "codes_out";
+
+export const SURVEY_FILLED_MID_TITLE = "This survey has just reached its participant limit";
+export const SURVEY_FILLED_MID_BODY =
+  "You can still finish. Your answers will be reviewed, but a discount code isn't guaranteed.";
+export const SURVEY_CODES_OUT_TITLE = "All discount codes for this survey have now been claimed";
+export const SURVEY_CODES_OUT_BODY =
+  "You can still finish and your answers still count, but a discount code isn't guaranteed.";

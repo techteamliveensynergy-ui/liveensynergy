@@ -118,15 +118,14 @@ export async function createSponsoredEvent(
   // Artist-initiated: the artist is the caller, and the brand comes from the
   // chosen brief — resolved server-side so a posted brand_id can't spoof it.
   let artistProfileId = listingOwnerId;
-  let packagePlatformMarginGbp: number | null = null;
 
   if (initiatedByBrand && campaignId) {
     const { data: campaign } = await supabase
       .from("campaigns")
-      .select("package_platform_margin_gbp, status")
+      .select("status")
       .eq("id", campaignId)
       .eq("brand_id", brandId)
-      .maybeSingle<{ package_platform_margin_gbp: number | null; status: string }>();
+      .maybeSingle<{ status: string }>();
     // A campaign still awaiting payment isn't open yet. (The database refuses
     // this too — sponsored_events trigger, 0049 — this is the readable version.)
     if (campaign?.status === "awaiting_payment") {
@@ -135,7 +134,6 @@ export async function createSponsoredEvent(
           "This campaign opens once its invoice has been paid, so you can't propose an event against it yet.",
       };
     }
-    packagePlatformMarginGbp = campaign?.package_platform_margin_gbp ?? null;
   }
 
   if (!initiatedByBrand) {
@@ -152,12 +150,11 @@ export async function createSponsoredEvent(
 
     const { data: campaign } = await supabase
       .from("open_campaigns")
-      .select("brand_id, brand_profile_id, package_platform_margin_gbp")
+      .select("brand_id, brand_profile_id")
       .eq("id", campaignId)
       .maybeSingle<{
         brand_id: string;
         brand_profile_id: string;
-        package_platform_margin_gbp: number | null;
       }>();
     if (!campaign) {
       return { error: "That campaign is no longer open for proposals." };
@@ -166,7 +163,6 @@ export async function createSponsoredEvent(
     // Taken from the view because `brands` is owner-only under RLS — an artist
     // querying it directly gets nothing back.
     brandProfileId = campaign.brand_profile_id;
-    packagePlatformMarginGbp = campaign.package_platform_margin_gbp;
   }
 
   if (!brandId) redirect("/onboarding");
@@ -189,13 +185,12 @@ export async function createSponsoredEvent(
       venue_details: str(formData.get("venue_details")),
       location: str(formData.get("location")),
       budget_gbp: budget,
-      // Net of the package margin if this came from one, otherwise the
-      // global platform fee inc VAT — the gross budget is never what's
-      // available to pay out in rewards (3 Aug standup).
-      remaining_budget_gbp: netForCampaign({
-        budget_gbp: budget,
-        package_platform_margin_gbp: packagePlatformMarginGbp,
-      }),
+      // Net of the global platform fee inc VAT — the gross budget is never
+      // what's available to pay out in rewards (3 Aug standup). A campaign
+      // with a package margin has this replaced in the database by the
+      // sponsored_events_net_budget trigger (0085): the margin isn't
+      // readable from a brand or artist session (#45).
+      remaining_budget_gbp: netForCampaign({ budget_gbp: budget }),
       reward_rules: str(formData.get("reward_rules")),
       terms: str(formData.get("terms")),
       banner_url: banner.url ?? null,
@@ -662,6 +657,7 @@ export async function submitTicketSalesReport(
     tickets_sold: num(formData.get("tickets_sold")),
     gross_revenue_gbp: num(formData.get("gross_revenue_gbp")),
     report_file_path: upload.path ?? null,
+    report_file_name: upload.name ?? null,
     notes: str(formData.get("notes")),
   });
   if (error) return { error: error.message };

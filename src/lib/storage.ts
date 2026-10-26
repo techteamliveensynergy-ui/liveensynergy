@@ -122,19 +122,55 @@ export async function uploadPrivateFile(
   return { path, name: file.name, type: file.type };
 }
 
+const DOWNLOAD_NAME_MAX = 120;
+
 /**
- * Signs a private object for viewing. Short expiry — links are generated per
- * page render, so there's no reason for them to outlive the session.
+ * The name a private file downloads under. Objects are stored as
+ * `{profileId}/{purpose}/{uuid}.{ext}` (the storage policies need that
+ * layout), so without one the browser saves `3f2a…c9.pdf` (GitHub #51).
+ *
+ * The extension always comes from the stored path, never from the user's
+ * name, so a renamed file can't be presented as a different type. Path
+ * separators, control characters and double quotes are stripped (it ends up
+ * in a Content-Disposition header); Unicode is kept. Capped at 120
+ * characters, extension included.
+ */
+export function safeDownloadName(name: string | null | undefined, path: string): string {
+  const stored = path.split("/").pop() ?? "";
+  const dot = stored.lastIndexOf(".");
+  const ext = dot > 0 ? stored.slice(dot + 1).toLowerCase() : "";
+
+  let base = (name ?? "").split(/[\\/]/).pop() ?? "";
+  base = base.replace(/[\u0000-\u001f\u007f"]/g, "").trim();
+  const nameDot = base.lastIndexOf(".");
+  if (nameDot > 0) base = base.slice(0, nameDot).trim();
+  if (!base) base = "download";
+
+  const suffix = ext ? `.${ext}` : "";
+  return base.slice(0, DOWNLOAD_NAME_MAX - suffix.length).trim() + suffix;
+}
+
+/**
+ * Signs a private object. Short expiry — links are generated per page
+ * render, so there's no reason for them to outlive the session.
+ *
+ * Pass `downloadName` for a file someone saves (chat attachments, reports):
+ * the link then downloads under that name instead of the stored uuid. Leave
+ * it off for anything shown inline (`<img>` thumbnails, ticket proofs opened
+ * in a tab) — a download link would make the browser save it instead.
  */
 export async function signedUrlFor(
   path: string | null | undefined,
   expiresInSeconds = 60 * 60,
+  options: { downloadName?: string | null } = {},
 ): Promise<string | null> {
   if (!path) return null;
   const supabase = await createClient();
+  const download =
+    "downloadName" in options ? safeDownloadName(options.downloadName, path) : undefined;
   const { data, error } = await supabase.storage
     .from(PRIVATE_BUCKET)
-    .createSignedUrl(path, expiresInSeconds);
+    .createSignedUrl(path, expiresInSeconds, download ? { download } : undefined);
   if (error) return null;
   return data.signedUrl;
 }

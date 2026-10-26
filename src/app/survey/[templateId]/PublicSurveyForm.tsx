@@ -9,6 +9,7 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
+import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
@@ -162,6 +163,7 @@ export function PublicSurveyForm({
   backgroundImageUrl,
   typography,
   appearance = DEFAULT_SURVEY_APPEARANCE,
+  initiallyFull = false,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -182,7 +184,12 @@ export function PublicSurveyForm({
   backgroundImageUrl?: string | null;
   typography?: SurveyTypography;
   appearance?: SurveyAppearance;
+  /** The page already said the survey is over its limit (CapacityNotice). */
+  initiallyFull?: boolean;
 }) {
+  // Re-checks places and codes as the respondent moves through a stepped
+  // survey, so they hear codes have run out before the last question (#53).
+  const live = useLiveAvailability(templateId, initiallyFull);
   const [stage, setStage] = useState<Stage>(() => {
     if (showIntroGate) return "gate";
     return prefill ? "questions" : "contact";
@@ -581,6 +588,8 @@ export function PublicSurveyForm({
           }
           accentColor={accentColor}
           appearance={appearance}
+          onStepChange={live.check}
+          notice={live.notice}
         />
       ) : (
         <div

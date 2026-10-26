@@ -10,6 +10,7 @@ import { campaignStagesFor } from "@/lib/data/campaign-stages";
 import { CAMPAIGN_INTAKE_STATUS_LABELS, campaignTitle } from "@/lib/campaign-requests";
 import { formatGbp } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
+import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
@@ -32,9 +33,10 @@ export async function BrandHome({ profile }: { profile: Profile }) {
       await Promise.all([
         supabase
           .from("campaigns")
-          .select("*")
+          .select(CAMPAIGN_COLUMNS)
           .eq("brand_id", brand.id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .overrideTypes<Campaign[], { merge: false }>(),
         supabase
           .from("sponsored_events")
           .select("*")

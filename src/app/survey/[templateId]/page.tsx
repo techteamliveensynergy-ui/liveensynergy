@@ -163,6 +163,7 @@ export default async function PublicSurveyPage({
           </div>
           <CapacityNotice capacity={capacity} />
           <SurveyForm
+            initiallyFull={Boolean(capacity?.is_full)}
             templateId={tpl.id}
             questions={questions}
             introMessage={tpl.intro_message}
@@ -255,6 +256,7 @@ export default async function PublicSurveyPage({
       </div>
       <CapacityNotice capacity={capacity} />
       <PublicSurveyForm
+        initiallyFull={Boolean(capacity?.is_full)}
         templateId={tpl.id}
         questions={publicQuestions}
         introMessage={tpl.intro_message}

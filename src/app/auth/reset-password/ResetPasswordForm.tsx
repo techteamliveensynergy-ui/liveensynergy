@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { updatePassword, type AuthState } from "../actions";
+import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "@/lib/password";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -33,13 +34,13 @@ export function ResetPasswordForm() {
         label="New password"
         htmlFor="password"
         required
-        hint="At least 8 characters."
+        hint={PASSWORD_HINT}
       >
         <PasswordInput
           id="password"
           name="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           required
         />
       </Field>
@@ -49,7 +50,7 @@ export function ResetPasswordForm() {
           id="confirm"
           name="confirm"
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           required
         />
       </Field>

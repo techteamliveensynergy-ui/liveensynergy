@@ -6,6 +6,7 @@ import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
+import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
 import {
   accentColorVars,
@@ -42,6 +43,7 @@ export function SurveyForm({
   backgroundImageUrl,
   typography,
   appearance = DEFAULT_SURVEY_APPEARANCE,
+  initiallyFull = false,
 }: {
   templateId: string;
   questions: SurveyQuestion[];
@@ -57,7 +59,12 @@ export function SurveyForm({
   backgroundImageUrl?: string | null;
   typography?: SurveyTypography;
   appearance?: SurveyAppearance;
+  /** The page already said the survey is over its limit (CapacityNotice). */
+  initiallyFull?: boolean;
 }) {
+  // Re-checks places and codes as the respondent moves through a stepped
+  // survey, so they hear codes have run out before the last question (#53).
+  const live = useLiveAvailability(templateId, initiallyFull);
   // A registered participant already agreed to the platform's own T&Cs at
   // sign-up (participations.terms_accepted_at/profiles.terms_accepted_at) —
   // this gate re-confirms them for THIS survey (requirement 5, 17 Sep
@@ -286,6 +293,8 @@ export function SurveyForm({
           footer={footer}
           accentColor={accentColor}
           appearance={appearance}
+          onStepChange={live.check}
+          notice={live.notice}
         />
       ) : (
         <div className={`space-y-4 ${singlePageBackground ? "p-4" : ""}`} style={singlePageBackground}>

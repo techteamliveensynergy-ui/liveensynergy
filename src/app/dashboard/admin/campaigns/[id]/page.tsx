@@ -66,8 +66,9 @@ export default async function AdminCampaignPage({
     { data: historyRows },
   ] =
     await Promise.all([
+      // Admin RPC, so the package margin comes back (0085/0086, GitHub #45).
       supabase
-        .from("campaigns")
+        .rpc("admin_campaigns")
         .select("*, brands(brand_name, profile_id), campaign_packages(name)")
         .eq("id", id)
         .maybeSingle<CampaignRow>(),
