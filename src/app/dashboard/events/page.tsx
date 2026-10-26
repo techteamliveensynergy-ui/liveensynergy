@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
-import { netSponsorshipBudget } from "@/lib/constants";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { toggleListingStatus, deleteListing } from "./actions";
 import { formatEventDateTime } from "@/lib/event-time";
@@ -187,9 +186,6 @@ export default async function EventsPage({
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
                   Sponsorship ref {e.reference}
-                  {netSponsorshipBudget(e.budget_gbp) != null
-                    ? ` · £${netSponsorshipBudget(e.budget_gbp)!.toLocaleString("en-GB")} for rewards`
-                    : ""}
                 </p>
               </div>
               <span className="text-sm font-semibold text-[var(--color-brand-dark)]">
