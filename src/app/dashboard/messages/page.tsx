@@ -3,7 +3,7 @@ import { requireProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/dashboard/ui";
 import { signedUrlFor } from "@/lib/storage";
-import { ROLE_LABELS, type Role } from "@/lib/constants";
+import { MESSAGE_RECALL_WINDOW_MS, ROLE_LABELS, type Role } from "@/lib/constants";
 import {
   formatDateTime,
   formatDayLabel,
@@ -11,11 +11,12 @@ import {
   timeAgo,
   ukDayKey,
 } from "@/lib/format";
-import type { Conversation, Message } from "@/lib/types";
+import type { Conversation, Message, MessageRecall } from "@/lib/types";
 import { startSupportThread } from "./actions";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { Composer } from "./Composer";
 import { NewAdminThread } from "./NewAdminThread";
+import { RecallButton } from "./RecallButton";
 
 export const metadata = { title: "Messages" };
 
@@ -118,6 +119,8 @@ export default async function MessagesPage({
 
   let messages: Message[] = [];
   let attachmentUrls: (string | null)[] = [];
+  // Originals of recalled messages, for admins only (RLS, 0089).
+  const recalls = new Map<string, MessageRecall>();
   if (active) {
     const { data: msgData } = await supabase
       .from("messages")
@@ -132,6 +135,14 @@ export default async function MessagesPage({
         () => undefined,
         () => undefined,
       );
+    }
+    const recalledIds = messages.filter((m) => m.recalled_at).map((m) => m.id);
+    if (isAdmin && recalledIds.length) {
+      const { data: recallRows } = await supabase
+        .from("message_recalls")
+        .select("message_id, original_body, attachment_name, recalled_at")
+        .in("message_id", recalledIds);
+      for (const r of (recallRows ?? []) as MessageRecall[]) recalls.set(r.message_id, r);
     }
     attachmentUrls = await Promise.all(
       // Downloads under the name it was sent with, not the stored uuid (#51).
@@ -432,6 +443,13 @@ export default async function MessagesPage({
                       const right = viewerIsParty
                         ? mine
                         : m.sender_profile_id === active.brand_profile_id;
+                      // Recall (#56): the sender's own, unrecalled message,
+                      // for 15 minutes. Disabled once it has been seen.
+                      const recallable =
+                        mine &&
+                        !m.recalled_at &&
+                        Date.now() - new Date(m.created_at).getTime() < MESSAGE_RECALL_WINDOW_MS;
+                      const original = m.recalled_at ? recalls.get(m.id) : undefined;
                       return (
                         <div key={m.id}>
                           {newDay && (
@@ -455,6 +473,24 @@ export default async function MessagesPage({
                               {formatTime(m.created_at)}
                             </span>
                           </p>
+                          {m.recalled_at ? (
+                            <div className="max-w-[75%] rounded-2xl border border-dashed border-black/15 px-4 py-2 text-sm italic text-[var(--color-ink-soft)]">
+                              Message recalled
+                              {/* Admins keep the original for moderation
+                                  and disputes; the parties never get it. */}
+                              {original && (
+                                <details className="mt-1 not-italic">
+                                  <summary className="cursor-pointer text-xs">Original (team only)</summary>
+                                  <p className="mt-1 whitespace-pre-wrap break-words text-[var(--color-ink)]">
+                                    {original.original_body}
+                                  </p>
+                                  {original.attachment_name && (
+                                    <p className="mt-1 text-xs">📎 {original.attachment_name} (file deleted)</p>
+                                  )}
+                                </details>
+                              )}
+                            </div>
+                          ) : (
                           <div
                             className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
                               right
@@ -478,19 +514,27 @@ export default async function MessagesPage({
                               </a>
                             )}
                           </div>
+                          )}
                           {/* Read receipt on our side's messages (0077):
                               the viewer's own, or — for an admin — any of
                               the team's, since the user reads them all. */}
-                          {(mine ||
-                            (!viewerIsParty &&
-                              m.sender_profile_id !== active.brand_profile_id &&
-                              m.sender_profile_id !== active.partner_profile_id)) && (
-                            <p
-                              className="mt-0.5 px-1 text-[11px] text-[var(--color-ink-soft)]"
-                              title={m.read_at ? `Seen ${formatDateTime(m.read_at)}` : "Delivered"}
-                            >
-                              {m.read_at ? `✓✓ Seen ${formatTime(m.read_at)}` : "✓ Sent"}
-                            </p>
+                          {!m.recalled_at &&
+                            (mine ||
+                              (!viewerIsParty &&
+                                m.sender_profile_id !== active.brand_profile_id &&
+                                m.sender_profile_id !== active.partner_profile_id)) && (
+                            // A div, not a p: RecallButton is a <form>.
+                            <div className="mt-0.5 px-1 text-[11px] text-[var(--color-ink-soft)]">
+                              <span title={m.read_at ? `Seen ${formatDateTime(m.read_at)}` : "Delivered"}>
+                                {m.read_at ? `✓✓ Seen ${formatTime(m.read_at)}` : "✓ Sent"}
+                              </span>
+                              {recallable && (
+                                <>
+                                  {" · "}
+                                  <RecallButton messageId={m.id} seen={!!m.read_at} />
+                                </>
+                              )}
+                            </div>
                           )}
                           </div>
                         </div>

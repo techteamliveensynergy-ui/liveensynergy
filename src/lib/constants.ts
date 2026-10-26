@@ -276,3 +276,7 @@ export function netForCampaign(campaign: {
   }
   return netSponsorshipBudget(gross);
 }
+
+/** How long a sender can recall an unread message (#56). Enforced by
+ *  recall_message() in 0089 — keep the two in step. */
+export const MESSAGE_RECALL_WINDOW_MS = 15 * 60 * 1000;

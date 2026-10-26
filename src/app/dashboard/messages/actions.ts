@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
-import { uploadPrivateFile } from "@/lib/storage";
+import { removePrivateFile, uploadPrivateFile } from "@/lib/storage";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 
 export interface MessageState {
@@ -107,6 +107,35 @@ export async function sendMessage(
       });
     }
   }
+
+  revalidatePath("/dashboard/messages");
+  return {};
+}
+
+/**
+ * Recalls (unsends) the caller's own message (#56). recall_message() (0089)
+ * checks it's theirs, unread and under 15 minutes old, clears it and keeps
+ * the original for admins. The attachment, if any, is then deleted from
+ * storage as the sender; if that fails the file is orphaned but unreachable,
+ * since no message points at it any more.
+ */
+export async function recallMessage(
+  _prev: MessageState,
+  formData: FormData,
+): Promise<MessageState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/sign-in");
+
+  const messageId = String(formData.get("message_id") ?? "");
+  if (!messageId) return { error: "No message selected." };
+
+  const { data, error } = await supabase.rpc("recall_message", { p_message_id: messageId });
+  if (error) return { error: error.message };
+
+  await removePrivateFile((data as { attachment_url?: string | null } | null)?.attachment_url);
 
   revalidatePath("/dashboard/messages");
   return {};
