@@ -657,6 +657,7 @@ export async function submitTicketSalesReport(
     tickets_sold: num(formData.get("tickets_sold")),
     gross_revenue_gbp: num(formData.get("gross_revenue_gbp")),
     report_file_path: upload.path ?? null,
+    report_file_name: upload.name ?? null,
     notes: str(formData.get("notes")),
   });
   if (error) return { error: error.message };

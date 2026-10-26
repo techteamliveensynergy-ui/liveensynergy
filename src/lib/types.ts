@@ -576,6 +576,8 @@ export interface TicketSalesReport {
   tickets_sold: number | null;
   gross_revenue_gbp: number | null;
   report_file_path: string | null;
+  /** The uploaded file's original name, for the download (0087). */
+  report_file_name: string | null;
   notes: string | null;
   status: "submitted" | "reviewed";
   reviewed_by: string | null;

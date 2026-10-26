@@ -134,7 +134,12 @@ export default async function MessagesPage({
       );
     }
     attachmentUrls = await Promise.all(
-      messages.map((m) => signedUrlFor(m.attachment_url)),
+      // Downloads under the name it was sent with, not the stored uuid (#51).
+      messages.map((m) =>
+        signedUrlFor(m.attachment_url, undefined, {
+          downloadName: m.attachment_name ?? "attachment",
+        }),
+      ),
     );
   }
 
