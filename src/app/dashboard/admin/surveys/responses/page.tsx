@@ -55,6 +55,19 @@ export default async function SurveyResponsesPage({
 
   const rows = (data ?? []) as unknown as Row[];
 
+  // Responses that arrived after the survey's participant limit (#34, 0083)
+  // wait here for a decision. Read separately so the list still loads on a
+  // database that doesn't have the column yet.
+  const overCapacity = new Set<string>();
+  if (rows.length > 0) {
+    const { data: overRows, error: overError } = await supabase
+      .from("survey_responses")
+      .select("id")
+      .in("id", rows.map((r) => r.id))
+      .eq("over_capacity", true);
+    if (!overError) for (const r of (overRows ?? []) as { id: string }[]) overCapacity.add(r.id);
+  }
+
   const { data: countRows } = await supabase
     .from("survey_responses")
     .select("quality_status");
@@ -109,6 +122,7 @@ export default async function SurveyResponsesPage({
                     </Link>
                     <StatusBadge status={r.quality_status} />
                     {r.duplicate_of && <span className="chip">possible duplicate</span>}
+                    {overCapacity.has(r.id) && <span className="chip">after limit</span>}
                     {!r.participations && <span className="chip">public</span>}
                   </div>
                   <p className="truncate text-sm text-[var(--color-ink-soft)]">

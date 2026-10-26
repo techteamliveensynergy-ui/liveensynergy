@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isSurveyClosedError } from "@/lib/survey-capacity";
+import { isSurveyClosedError, surveyCapacityState } from "@/lib/survey-capacity";
 import { isSurveyNotOpenError, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { requireRole } from "@/lib/profile";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
@@ -139,6 +139,12 @@ export async function submitSurveyResponse(
     };
   }
 
+  // Past the limit the response is accepted but held for an admin (0083), so
+  // the thank-you says so. Read just before submitting: a response that tips
+  // the survey over the limit by a hair gets the plain thank-you, and is
+  // still held correctly by the database.
+  const heldForReview = Boolean((await surveyCapacityState(supabase, templateId))?.is_full);
+
   const { data, error } = await supabase.rpc("submit_survey_response", {
     p_template_id: templateId,
     p_started_at: startedAt,
@@ -180,5 +186,5 @@ export async function submitSurveyResponse(
   }
 
   revalidatePath("/dashboard/participations");
-  redirect("/dashboard/participations?notice=survey-submitted");
+  redirect(`/dashboard/participations?notice=${heldForReview ? "survey-held" : "survey-submitted"}`);
 }

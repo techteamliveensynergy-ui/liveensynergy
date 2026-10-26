@@ -25,6 +25,57 @@ export async function surveyCapacity(
   return ((data ?? []) as SurveyCapacity[])[0] ?? null;
 }
 
+/**
+ * 19 Oct standup (GitHub #34, migration 0083): the cap no longer closes a
+ * survey. At 90% of the expected participants respondents are warned that
+ * codes may run out; past the cap they can still answer, and the response
+ * waits in the admin review queue instead of issuing a code automatically.
+ */
+export const SURVEY_NEARLY_FULL_TITLE = "Places are filling up";
+export const SURVEY_NEARLY_FULL_BODY =
+  "This survey has almost reached the number of participants it needs, so discount codes may run out. You can still take part.";
+export const SURVEY_OVER_CAPACITY_TITLE = "This survey has reached its participant limit";
+export const SURVEY_OVER_CAPACITY_BODY =
+  "You can still answer. Our team reviews responses that arrive after the limit, and a discount code is only issued if one is still available.";
+/** Shown after an over-the-limit response is submitted. */
+export const SURVEY_HELD_FOR_REVIEW_MESSAGE =
+  "Your response has been recorded. As it arrived after the participant limit was reached, our team will review it before any discount code is issued.";
+
+export interface SurveyCapacityState {
+  expected_participants: number | null;
+  response_limit: number | null;
+  responses: number;
+  nearly_full: boolean;
+  is_full: boolean;
+}
+
+/**
+ * Capacity for a survey page: the 0083 RPC when it exists, otherwise the
+ * 0056 one (no warning, and `is_full` then means the database will still
+ * refuse the submission — callers keep the "closed" screen for that case
+ * via `refusesWhenFull`).
+ */
+export async function surveyCapacityState(
+  supabase: SupabaseClient,
+  templateId: string,
+): Promise<(SurveyCapacityState & { refusesWhenFull: boolean }) | null> {
+  const { data, error } = await supabase.rpc("survey_capacity_state", { p_template_id: templateId });
+  if (!error) {
+    const row = ((data ?? []) as SurveyCapacityState[])[0];
+    return row ? { ...row, refusesWhenFull: false } : null;
+  }
+  const legacy = await surveyCapacity(supabase, templateId);
+  if (!legacy) return null;
+  return {
+    expected_participants: null,
+    response_limit: legacy.response_limit,
+    responses: legacy.responses,
+    nearly_full: false,
+    is_full: legacy.is_full,
+    refusesWhenFull: true,
+  };
+}
+
 /** True when a submit RPC failed because the cap was reached (the 0056 trigger's message). */
 export const isSurveyClosedError = (message: string | null | undefined) =>
   !!message && message.includes("SURVEY_CLOSED");

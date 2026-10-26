@@ -12,6 +12,7 @@ import { FileDrop } from "@/components/ui/FileDrop";
 import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import type { Participation, RewardCode, SponsoredEvent, SurveyTemplate } from "@/lib/types";
 import { platformLabel } from "@/lib/discount-codes";
+import { SURVEY_HELD_FOR_REVIEW_MESSAGE } from "@/lib/survey-capacity";
 import { formatEventDateTime } from "@/lib/event-time";
 import { addDays, formatDateTime, UK_TIME_ZONE } from "@/lib/format";
 import {
@@ -170,6 +171,11 @@ export default async function ParticipationsPage({
       {notice === "survey-submitted" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
           ✓ Thanks — your survey response has been recorded.
+        </p>
+      )}
+      {notice === "survey-held" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+          {SURVEY_HELD_FOR_REVIEW_MESSAGE}
         </p>
       )}
       {notice === "survey-closed" && (
