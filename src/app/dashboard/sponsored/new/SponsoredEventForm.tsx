@@ -8,11 +8,7 @@ import { ErrorBanner } from "@/components/onboarding/parts";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { BANNER_HINT, IMAGE_HINT } from "@/lib/upload-limits";
 import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
-import {
-  computePlatformFee,
-  netSponsorshipBudget,
-  SPONSORED_ASSET_SLOTS,
-} from "@/lib/constants";
+import { SPONSORED_ASSET_SLOTS } from "@/lib/constants";
 import { createSponsoredEvent, type SponsoredState } from "../actions";
 
 export interface ListingOption {
@@ -64,7 +60,6 @@ export function SponsoredEventForm({
 
   const [listingId, setListingId] = useState("");
   const [budget, setBudget] = useState<number | "">("");
-  const [ticketPrice, setTicketPrice] = useState<number | "">("");
 
   const listing = useMemo(
     () => listings.find((l) => l.id === listingId) ?? null,
@@ -76,18 +71,6 @@ export function SponsoredEventForm({
    * inputs and picks up the new defaultValue — otherwise the old value sticks.
    */
   const fillKey = listing?.id ?? "blank";
-
-  const effectiveTicket =
-    ticketPrice === "" ? (listing?.ticketPrice ?? null) : Number(ticketPrice);
-
-  // The service fee comes off the top, so the reward pot — and everything
-  // derived from it — works off the net figure, never the gross budget.
-  const fee = budget !== "" && budget > 0 ? computePlatformFee(Number(budget)) : null;
-  const netBudget = budget === "" ? null : netSponsorshipBudget(Number(budget));
-  const sponsorableCount =
-    netBudget != null && effectiveTicket != null && effectiveTicket > 0
-      ? Math.floor(netBudget / effectiveTicket)
-      : null;
 
   return (
     <form action={formAction} className="space-y-6">
@@ -210,7 +193,7 @@ export function SponsoredEventForm({
           <Field
             label="Ticket price (GBP)"
             htmlFor="ticket_price_gbp"
-            hint="Used to work out how many people the budget can cover."
+            hint="Used to estimate what the discount codes will cost."
           >
             <input
               key={`ticket-${fillKey}`}
@@ -221,11 +204,6 @@ export function SponsoredEventForm({
               step="0.01"
               className="input"
               defaultValue={listing?.ticketPrice ?? ""}
-              onChange={(e) =>
-                setTicketPrice(
-                  e.target.value === "" ? "" : Number(e.target.value),
-                )
-              }
             />
           </Field>
         </div>
@@ -315,7 +293,7 @@ export function SponsoredEventForm({
         <Field
           label="Budget (GBP)"
           htmlFor="budget_gbp"
-          hint="The gross amount committed. The Live·En·Synergy service fee comes out of this — the breakdown below shows what's left for audience rewards."
+          hint="The gross amount committed to this sponsorship. Audience rewards are discount codes, issued by Live·En·Synergy."
         >
           <input
             id="budget_gbp"
@@ -331,33 +309,10 @@ export function SponsoredEventForm({
           />
         </Field>
 
-        {fee && netBudget != null && (
-          <div className="rounded-xl bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-            <p>
-              Service fee{" "}
-              <span className="font-semibold">£{fee.feeIncVat.toLocaleString("en-GB", { maximumFractionDigits: 0 })}</span>{" "}
-              inc. VAT · available for rewards{" "}
-              <span className="font-semibold">
-                £{netBudget.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
-              </span>
-            </p>
-            {sponsorableCount != null && (
-              <p className="mt-1">
-                At £{effectiveTicket!.toLocaleString("en-GB")} a ticket, that
-                covers roughly{" "}
-                <span className="font-semibold">
-                  {sponsorableCount.toLocaleString("en-GB")}
-                </span>{" "}
-                {sponsorableCount === 1 ? "person" : "people"}.
-              </p>
-            )}
-          </div>
-        )}
-
         <Field
           label="Reward rules"
           htmlFor="reward_rules"
-          hint="e.g. first 50 sign-ups get a full ticket refund"
+          hint="e.g. which ticket holders qualify for a discount code"
         >
           <textarea id="reward_rules" name="reward_rules" className="textarea" />
         </Field>

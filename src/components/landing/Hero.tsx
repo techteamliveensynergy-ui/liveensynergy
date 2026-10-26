@@ -25,9 +25,9 @@ export function Hero() {
             audiences <span className="font-serif font-normal">meet</span>.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-ink-soft)]">
-            Fund the shows you love, fill the seats you sell, and get rewarded
-            for showing up — a sponsorship engine that pays everyone back with
-            proof.
+            Brands reach real live-event audiences and learn what they think.
+            Artists get sponsored. Fans share their view and get a discount
+            code for it.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href="/auth/sign-up?role=brand" className="btn btn-primary">
@@ -48,8 +48,8 @@ export function Hero() {
         <div className="mx-auto mt-16 grid max-w-4xl gap-8 sm:grid-cols-3">
           {[
             { k: "3-way", v: "value exchange" },
-            { k: "Verified", v: "attendance & outcomes" },
-            { k: "£0", v: "minimum budget" },
+            { k: "Quality-checked", v: "survey responses" },
+            { k: "Verified", v: "attendance at the venue" },
           ].map((s) => (
             <div key={s.k} className="text-center">
               <div className="font-display text-3xl font-semibold text-[var(--color-ink)]">
@@ -65,7 +65,7 @@ export function Hero() {
             <div className="flex items-center justify-between">
               <span className="chip">Summer Beats Festival</span>
               <span className="text-xs font-semibold text-[var(--color-brand-dark)]">
-                Available for sponsorship
+                Sponsored campaign
               </span>
             </div>
             <div className="grid h-32 place-items-center rounded-xl bg-[var(--color-lavender)] font-serif text-[var(--color-purple-deep)]">
@@ -74,25 +74,25 @@ export function Hero() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm font-semibold text-[var(--color-ink)]">
-                  Reward rule
+                  Your reward
                 </p>
                 <p className="text-sm text-[var(--color-ink-soft)]">
-                  First 50 sign-ups get a full ticket refund.
+                  A discount code once your survey passes our quality check.
                 </p>
               </div>
               <div className="flex items-center justify-between rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm sm:block sm:text-right">
-                <span className="text-[var(--color-ink-soft)]">Sponsor budget</span>
-                <span className="font-semibold text-[var(--color-ink)]">
-                  £5,000 – £10,000
+                <span className="text-[var(--color-ink-soft)]">Check-in</span>
+                <span className="font-semibold text-[var(--color-ink)] sm:block">
+                  QR code at the venue
                 </span>
               </div>
             </div>
           </div>
           <div className="card absolute -bottom-6 -left-6 hidden w-48 p-4 text-sm md:block">
             <p className="font-semibold text-[var(--color-olive-deep)]">
-              Attendance verified ✓
+              Survey passed ✓
             </p>
-            <p className="text-[var(--color-ink-soft)]">Reward released</p>
+            <p className="text-[var(--color-ink-soft)]">Discount code issued</p>
           </div>
         </div>
       </div>

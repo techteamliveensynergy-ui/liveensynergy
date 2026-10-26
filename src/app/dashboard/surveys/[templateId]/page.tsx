@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacity } from "@/lib/survey-capacity";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
+import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -82,8 +83,10 @@ export default async function TakeSurveyPage({
     );
   }
 
-  const capacity = await surveyCapacity(supabase, templateId);
-  if (capacity?.is_full) {
+  // Past the limit the form stays open and the response waits for an admin
+  // (#34, 0083); only a database without 0083 still refuses it.
+  const capacity = await surveyCapacityState(supabase, templateId);
+  if (capacity?.is_full && capacity.refusesWhenFull) {
     return (
       <div>
         <PageHeader title={tpl.title} />
@@ -109,6 +112,7 @@ export default async function TakeSurveyPage({
   return (
     <div>
       <PageHeader title={tpl.title} subtitle={tpl.description ?? undefined} />
+      <CapacityNotice capacity={capacity} />
       <SurveyForm
         templateId={tpl.id}
         questions={questions}

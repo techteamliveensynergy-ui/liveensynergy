@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
-import { netSponsorshipBudget } from "@/lib/constants";
+import { formatEventDateTime } from "@/lib/event-time";
 import type { SponsoredEvent } from "@/lib/types";
 
 export const metadata = { title: "Sponsor offers" };
@@ -62,9 +62,13 @@ export default async function OffersPage() {
                         <StatusBadge status={e.status} />
                       </div>
                       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                        {netSponsorshipBudget(e.budget_gbp) != null
-                          ? `£${netSponsorshipBudget(e.budget_gbp)!.toLocaleString("en-GB")} available for rewards`
-                          : "Budget TBC"}
+                        {[
+                          e.event_date &&
+                            formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone }),
+                          e.location,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Date to be confirmed"}
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-[var(--color-brand)]">

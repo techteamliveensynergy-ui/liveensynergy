@@ -55,7 +55,8 @@ export async function LiveSponsoredEvents() {
             Sponsored events you can join
           </h2>
           <p className="mt-3 text-[var(--color-ink-soft)]">
-            Register, go along, and claim a sponsor-funded reward on your ticket.
+            Register, answer the sponsor&apos;s short survey and go along. Your
+            discount code arrives once your response passes our quality check.
           </p>
         </div>
         <Link href="/auth/sign-up" className="btn btn-primary">

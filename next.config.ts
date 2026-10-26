@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
      * posts a banner plus 5 branding assets at MAX_IMAGE_BYTES (5 MB) each,
      * so 30 MB, and chat/feedback attachments are capped at
      * MAX_ATTACHMENT_BYTES (25 MB). Keep in step with `@/lib/upload-limits`.
+     *
+     * On Vercel the platform's own ~4.5 MB request cap applies first, so
+     * FileDrop now keeps each form under SAFE_UPLOAD_BYTES (#35). This value
+     * only matters off Vercel.
      */
     serverActions: {
       bodySizeLimit: "32mb",

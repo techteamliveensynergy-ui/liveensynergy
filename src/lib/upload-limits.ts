@@ -14,19 +14,30 @@ export const IMAGE_TYPES = [
   "image/avif",
 ];
 
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
-export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+/**
+ * Vercel refuses a function request body over ~4.5 MB before our code runs,
+ * whatever next.config's serverActions.bodySizeLimit says (#35). Every upload
+ * here goes through a Server Action, so 4 MB is the ceiling for one file and
+ * for all the files in one form together, with room for the other fields.
+ * The buckets in 0009 allow more; that's harmless.
+ */
+export const SAFE_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 MB
+
+export const MAX_IMAGE_BYTES = SAFE_UPLOAD_BYTES;
+export const MAX_ATTACHMENT_BYTES = SAFE_UPLOAD_BYTES;
 
 /** Recommended artwork dimensions, quoted in form hints. */
 export const BANNER_DIMENSIONS = "1600 × 600";
 export const EVENT_IMAGE_DIMENSIONS = "1200 × 630";
 export const AVATAR_DIMENSIONS = "600 × 600";
 
-export const IMAGE_HINT = `JPG, PNG, WebP, GIF or AVIF · up to 5 MB · ${EVENT_IMAGE_DIMENSIONS}px or larger works best`;
-export const BANNER_HINT = `JPG, PNG or WebP · up to 5 MB · ${BANNER_DIMENSIONS}px recommended`;
-export const AVATAR_HINT = `JPG, PNG or WebP · up to 5 MB · square, ${AVATAR_DIMENSIONS}px recommended`;
+// Large photos are resized in the browser before upload (FileDrop), so the
+// image hints don't quote a size most people will never hit.
+export const IMAGE_HINT = `JPG, PNG, WebP, GIF or AVIF · large photos are resized for you · ${EVENT_IMAGE_DIMENSIONS}px or larger works best`;
+export const BANNER_HINT = `JPG, PNG or WebP · large photos are resized for you · ${BANNER_DIMENSIONS}px recommended`;
+export const AVATAR_HINT = `JPG, PNG or WebP · large photos are resized for you · square, ${AVATAR_DIMENSIONS}px recommended`;
 export const ATTACHMENT_HINT =
-  "Images, PDFs, docs or short video clips · up to 25 MB per file";
+  "Images, PDFs or docs · up to 4 MB per file · photos are resized for you";
 
 /**
  * Bio / description ceiling. The forms say "up to 500 words"; at ~6 characters
