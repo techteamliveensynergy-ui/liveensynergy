@@ -114,6 +114,7 @@ export default async function TakeSurveyPage({
       <PageHeader title={tpl.title} subtitle={tpl.description ?? undefined} />
       <CapacityNotice capacity={capacity} />
       <SurveyForm
+        initiallyFull={Boolean(capacity?.is_full)}
         templateId={tpl.id}
         questions={questions}
         introMessage={tpl.intro_message}

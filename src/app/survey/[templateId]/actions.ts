@@ -1,6 +1,6 @@
 "use server";
 
-import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
+import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState, type SurveyAvailability } from "@/lib/survey-capacity";
 import { isRegistrationNotOpenError, isSurveyNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -424,4 +424,25 @@ export async function startSurveyAccount(
 
   revalidatePath(`/survey/${templateId}`);
   return { created: true };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Asked by the stepped survey as the respondent moves between steps (#53).
+ * Returns a state, never the counts behind it. Any failure — including a
+ * database without 0088 yet — reads as "open", so the banner only ever
+ * appears on a definite answer.
+ */
+export async function surveyAvailability(templateId: string): Promise<SurveyAvailability> {
+  if (!UUID_RE.test(templateId)) return "open";
+  const supabase = await createClient();
+  const [capacity, codes] = await Promise.all([
+    surveyCapacityState(supabase, templateId),
+    supabase.rpc("survey_codes_state", { p_template_id: templateId }),
+  ]);
+  if (!codes.error && codes.data === "exhausted") return "codes_out";
+  if (capacity?.is_full) return "full";
+  if (capacity?.nearly_full) return "nearly_full";
+  return "open";
 }
