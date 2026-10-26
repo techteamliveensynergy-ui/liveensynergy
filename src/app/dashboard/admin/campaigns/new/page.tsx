@@ -19,10 +19,8 @@ export default async function NewCampaignAdminPage({
 
   const [{ data: packageRows }, { data: brandRows }, intakeResult] =
     await Promise.all([
-      supabase
-        .from("campaign_packages")
-        .select("*")
-        .order("sort_order"),
+      // Admin RPC, so each package's margin comes back (0084, GitHub #43).
+      supabase.rpc("admin_campaign_packages").order("sort_order"),
       supabase.from("brands").select("id, brand_name").order("brand_name"),
       from_intake
         ? supabase

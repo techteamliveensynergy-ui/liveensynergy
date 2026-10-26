@@ -10,9 +10,10 @@ export const metadata = { title: "Packages · Admin" };
 export default async function AdminPackagesPage() {
   await requireRole(["admin"]);
   const supabase = await createClient();
+  // Through the admin RPC: the table itself no longer lets anyone read
+  // platform_margin_gbp (0084, GitHub #43).
   const { data } = await supabase
-    .from("campaign_packages")
-    .select("*")
+    .rpc("admin_campaign_packages")
     .order("sort_order");
   const packages = (data ?? []) as CampaignPackage[];
 

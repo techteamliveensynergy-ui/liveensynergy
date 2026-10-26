@@ -16,9 +16,9 @@ export default async function EditPackagePage({
   const { id } = await params;
   await requireRole(["admin"]);
   const supabase = await createClient();
+  // Admin RPC, so the margin comes back (0084, GitHub #43).
   const { data } = await supabase
-    .from("campaign_packages")
-    .select("*")
+    .rpc("admin_campaign_packages")
     .eq("id", id)
     .maybeSingle();
   if (!data) notFound();
