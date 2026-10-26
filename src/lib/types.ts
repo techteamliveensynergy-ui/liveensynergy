@@ -650,7 +650,18 @@ export interface Message {
   attachment_name: string | null;
   attachment_type: string | null;
   read_at: string | null;
+  /** Set when the sender recalled it (0089); body and attachment are then
+   *  empty and the original is in message_recalls (admin-only). */
+  recalled_at: string | null;
   created_at: string;
+}
+
+/** The original of a recalled message, admin-only (0089). */
+export interface MessageRecall {
+  message_id: string;
+  original_body: string;
+  attachment_name: string | null;
+  recalled_at: string;
 }
 
 export type FeedbackKind = "bug" | "idea" | "improvement" | "text_change";

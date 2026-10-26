@@ -151,6 +151,19 @@ export function safeDownloadName(name: string | null | undefined, path: string):
 }
 
 /**
+ * Deletes a private object. Storage policies only let the uploader (or an
+ * admin) do it, so call it from the uploader's session. Best-effort: false
+ * on failure, never throws.
+ */
+export async function removePrivateFile(path: string | null | undefined): Promise<boolean> {
+  if (!path) return true;
+  const supabase = await createClient();
+  const { error } = await supabase.storage.from(PRIVATE_BUCKET).remove([path]);
+  if (error) console.error("[storage] remove failed", path, error.message);
+  return !error;
+}
+
+/**
  * Signs a private object. Short expiry — links are generated per page
  * render, so there's no reason for them to outlive the session.
  *
