@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacity } from "@/lib/survey-capacity";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
+import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { createClient } from "@/lib/supabase/server";
 import { SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody, surveyOpenState } from "@/lib/campaign-opening";
 import { Logo } from "@/components/ui/Logo";
@@ -73,9 +74,12 @@ export default async function PublicSurveyPage({
     );
   }
 
-  // Response cap (#8): checked up front so nobody fills in a form that can't
-  // be submitted. Someone who already answered still sees "already completed".
-  const full = (await surveyCapacity(supabase, templateId))?.is_full ?? false;
+  // Response cap (#8, #34): past the limit the form stays open with a notice
+  // and the response waits for an admin (0083). Only a database without 0083
+  // still refuses it, so only then is the closed screen shown up front.
+  // Someone who already answered still sees "already completed".
+  const capacity = await surveyCapacityState(supabase, templateId);
+  const full = Boolean(capacity?.is_full && capacity.refusesWhenFull);
 
   // Upcoming → Open (0070): until the team opens the campaign, the survey
   // shows when it opens instead of a form the database would refuse. Admins
@@ -157,6 +161,7 @@ export default async function PublicSurveyPage({
               <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{tpl.description}</p>
             )}
           </div>
+          <CapacityNotice capacity={capacity} />
           <SurveyForm
             templateId={tpl.id}
             questions={questions}
@@ -248,6 +253,7 @@ export default async function PublicSurveyPage({
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{tpl.description}</p>
         )}
       </div>
+      <CapacityNotice capacity={capacity} />
       <PublicSurveyForm
         templateId={tpl.id}
         questions={publicQuestions}

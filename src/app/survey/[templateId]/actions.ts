@@ -1,6 +1,6 @@
 "use server";
 
-import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE } from "@/lib/survey-capacity";
+import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
 import { isRegistrationNotOpenError, isSurveyNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -24,6 +24,8 @@ import { ROLE_LABELS } from "@/lib/constants";
 export interface PublicSurveyResponseState {
   error?: string;
   success?: boolean;
+  /** Submitted past the participant limit: held for an admin (#34, 0083). */
+  heldForReview?: boolean;
 }
 
 interface SubmitOutcome {
@@ -143,6 +145,9 @@ export async function submitPublicSurveyResponse(
   const phoneLocal = String(formData.get("phone") ?? "").trim();
   const phone = phoneLocal ? `${phoneCountryCode}${phoneLocal}` : null;
 
+  // Past the limit the response is accepted but held for an admin (0083).
+  const heldForReview = Boolean((await surveyCapacityState(supabase, templateId))?.is_full);
+
   const { data, error } = await supabase.rpc("submit_public_survey_response", {
     p_template_id: templateId,
     p_started_at: startedAt,
@@ -206,7 +211,7 @@ export async function submitPublicSurveyResponse(
     }
   }
 
-  return { success: true };
+  return { success: true, heldForReview };
 }
 
 export interface RegisterAfterSurveyState {
