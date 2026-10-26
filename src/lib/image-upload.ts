@@ -1,6 +1,8 @@
 "use client";
 
-import { formatBytes } from "@/lib/upload-limits";
+import { SAFE_UPLOAD_BYTES, formatBytes } from "@/lib/upload-limits";
+
+export { SAFE_UPLOAD_BYTES };
 
 /**
  * Browser-side helpers for the upload-on-select image pickers (survey
@@ -20,8 +22,6 @@ import { formatBytes } from "@/lib/upload-limits";
 
 /** Longest edge kept — comfortably more than any survey placement shows. */
 const MAX_EDGE_PX = 2400;
-/** Below Vercel's ~4.5 MB request cap, with room for the multipart envelope. */
-export const SAFE_UPLOAD_BYTES = 4 * 1024 * 1024;
 /** Files already this small are sent untouched (keeps PNG/GIF exactly as made). */
 const SHRINK_ABOVE_BYTES = 1.5 * 1024 * 1024;
 
