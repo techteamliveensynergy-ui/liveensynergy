@@ -20,7 +20,8 @@ export default async function EditCampaignAdminPage({
   const [{ data: campaignRow }, { data: packageRows }, { data: brandRows }] =
     await Promise.all([
       supabase.from("campaigns").select("*").eq("id", id).maybeSingle(),
-      supabase.from("campaign_packages").select("*").order("sort_order"),
+      // Admin RPC, so each package's margin comes back (0084, GitHub #43).
+      supabase.rpc("admin_campaign_packages").order("sort_order"),
       supabase.from("brands").select("id, brand_name").order("brand_name"),
     ]);
   if (!campaignRow) notFound();

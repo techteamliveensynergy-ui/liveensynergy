@@ -638,8 +638,9 @@ async function resolveCampaignMoney(
     };
   }
 
+  // Admin RPC: platform_margin_gbp isn't readable on the table (0084, #43).
   const { data: pkg } = await supabase
-    .from("campaign_packages")
+    .rpc("admin_campaign_packages")
     .select("id, price_gbp, is_custom_price, min_price_gbp, price_increment_gbp, platform_margin_gbp, participant_count")
     .eq("id", packageId)
     .maybeSingle<CampaignPackageRow>();
