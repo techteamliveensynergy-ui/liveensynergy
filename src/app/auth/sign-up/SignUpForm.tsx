@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
 import { termsForRole } from "@/lib/terms";
+import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "@/lib/password";
 import { signUp, type AuthState } from "../actions";
 
 function isRole(value: string | undefined): value is Role {
@@ -147,13 +148,13 @@ export function SignUpForm({
         label="Password"
         htmlFor="password"
         required
-        hint="At least 8 characters."
+        hint={PASSWORD_HINT}
       >
         <PasswordInput
           id="password"
           name="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           required
         />
       </Field>
