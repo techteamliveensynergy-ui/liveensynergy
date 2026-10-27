@@ -1,6 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { renderEmailHtml } from "./layout";
+import { loadEmailBranding, renderEmailText } from "./branding";
 import { sendViaResend } from "./resend";
 
 const MAX_ATTEMPTS = 5;
@@ -78,6 +79,9 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
     ]),
   );
 
+  // Admin email branding (#66), read once per batch; {} on any failure.
+  const branding = await loadEmailBranding(supabase);
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
 
@@ -102,8 +106,8 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
       bcc: redirectTo && !isProduction ? null : (row.bcc ?? []).filter(keep),
       subject:
         redirectTo && !isProduction ? `[preview → ${row.to_email}] ${subject}` : subject,
-      text,
-      html: renderEmailHtml({ subject, body: text }),
+      text: renderEmailText(text, branding),
+      html: renderEmailHtml({ subject, body: text }, branding),
     });
 
     if (outcome.ok) {
