@@ -117,13 +117,14 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
         <Field
           label="Describe your event audience"
           htmlFor="audience_description"
-          hint="Who comes — age range, interests, typical crowd size. Helps brands judge the fit."
+          hint="Who comes: age range, interests, typical crowd size. For example: tech professionals, music festival enthusiasts, party-goers, health and wellness conscious, local families."
         >
           <textarea
             id="audience_description"
             name="audience_description"
             className="textarea"
             maxLength={1000}
+            placeholder="e.g. tech professionals, music festival enthusiasts, party-goers, health and wellness conscious, local families"
             defaultValue={d?.audience_description ?? ""}
           />
         </Field>
