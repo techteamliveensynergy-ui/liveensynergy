@@ -1463,6 +1463,30 @@ export async function sendRewardCodesForReview(formData: FormData) {
   redirect(`/dashboard/admin/events/sponsored/${eventId}?notice=codes_sent#discount-codes`);
 }
 
+/**
+ * Moves (or clears) the artist's discount-code set-up deadline (0091, #58).
+ * Resets both reminder stamps so the new date gets its own reminder and
+ * alert. Only admins can write it; the trigger refuses everyone else.
+ */
+export async function setCodesDeadline(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+  const dueAt = ukLocalInputToIso(str(formData.get("codes_due_at")));
+  await supabase
+    .from("sponsored_events")
+    .update({ codes_due_at: dueAt, codes_reminder_sent_at: null, codes_overdue_alert_sent_at: null })
+    .eq("id", eventId);
+  await supabase.rpc("log_admin_action", {
+    p_action: "sponsorship.codes_deadline",
+    p_target_type: "sponsored_event",
+    p_target_id: eventId,
+    p_detail: { codes_due_at: dueAt },
+  });
+  revalidateRewardPages(eventId);
+  redirect(`/dashboard/admin/events/sponsored/${eventId}?notice=codes_deadline#discount-codes`);
+}
+
 /** Withdraws the artist's consent so the setup can be edited again. */
 export async function reopenRewardCodes(formData: FormData) {
   const { supabase } = await requireAdmin();

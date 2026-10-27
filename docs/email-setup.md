@@ -74,6 +74,21 @@ Safety properties worth knowing:
    ```
 
    Check it with `select * from cron.job_run_details order by start_time desc limit 5;`
+
+   The discount-code deadline reminders (GitHub #58, migration 0091) use the
+   same secret, once a day:
+
+   ```sql
+   select cron.schedule('code-deadlines', '0 8 * * *', $$
+     select net.http_get(
+       url     := 'https://<production-origin>/api/cron/code-deadlines',
+       headers := jsonb_build_object(
+         'Authorization',
+         'Bearer ' || (select decrypted_secret from vault.decrypted_secrets
+                        where name = 'cron_secret'))
+     );
+   $$);
+   ```
    (Vercel Hobby has no sub-daily cron, hence pg_cron.)
 4. **Auth emails** (sign-up confirmation, password reset) are a separate path
    through Supabase's own mailer, capped at a few per hour. Auth → SMTP

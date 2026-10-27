@@ -4,13 +4,15 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
 import { computePlatformFee } from "@/lib/constants";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, ukDayKey, ukLocalInputValue } from "@/lib/format";
+import { codesDeadlineState } from "@/lib/codes-deadline";
 import type { Participation } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
 import {
   adminUpdateParticipation,
   adminMarkNoShow,
   issueRewardCode,
+  setCodesDeadline,
 } from "../../../marketplace-actions";
 import { rewardGatesForEvent, type RewardGate } from "@/lib/data/reward-gate";
 import { ISSUE_REFUSALS } from "@/lib/discount-codes";
@@ -151,6 +153,7 @@ export default async function AdminSponsoredDetailPage({
       artist_remainder_gbp: number | null;
       artist_remainder_released_at: string | null;
       reward_codes_confirmed_at: string | null;
+      codes_due_at?: string | null;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: { reference: string; campaign_name: string | null; description: string } | null;
       event_listings: {
@@ -502,6 +505,11 @@ export default async function AdminSponsoredDetailPage({
           ✓ Sent to the artist — they&apos;ll review the discount codes and confirm them.
         </p>
       )}
+      {notice === "codes_deadline" && (
+        <p className="rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          ✓ Discount code deadline saved. The artist gets a fresh reminder two days before it.
+        </p>
+      )}
       {notice === "codes_reopened" && (
         <p className="rounded-lg bg-[var(--color-gold)]/50 px-4 py-3 text-sm">
           Discount codes reopened for editing. The artist will need to confirm them again.
@@ -513,6 +521,15 @@ export default async function AdminSponsoredDetailPage({
           {Number(held) > 0 && ` ${held} held back by the survey check.`}
           {Number(unplaced) > 0 && ` ${unplaced} couldn't be placed — every tier is full or out of codes.`}
         </p>
+      )}
+
+      {event.artist_profile_id && (
+        <CodesDeadlineForm
+          eventId={event.id}
+          dueAt={event.codes_due_at ?? null}
+          confirmedAt={event.reward_codes_confirmed_at}
+          eventDate={event.event_date}
+        />
       )}
 
       <RewardEngineSection
@@ -851,5 +868,64 @@ function AdminBtn({
         {label}
       </button>
     </form>
+  );
+}
+
+/**
+ * The artist's discount-code set-up deadline (#58, 0091): one week from
+ * creation by default, capped two days before the event. Admin can move or
+ * clear it; a late confirmation is recorded, never blocked.
+ */
+function CodesDeadlineForm({
+  eventId,
+  dueAt,
+  confirmedAt,
+  eventDate,
+}: {
+  eventId: string;
+  dueAt: string | null;
+  confirmedAt: string | null;
+  eventDate: string | null;
+}) {
+  const state = codesDeadlineState(dueAt, confirmedAt);
+  // Less than two days before the event leaves no time to load the codes
+  // into the ticketing platform.
+  const latestSensible = eventDate
+    ? new Date(Date.parse(`${eventDate}T00:00:00Z`) - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : null;
+  const tooLate = !!dueAt && !!latestSensible && ukDayKey(dueAt) > latestSensible;
+  return (
+    <div className="card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">Discount codes deadline</h2>
+        <span className="text-sm text-[var(--color-ink-soft)]">
+          {state.kind === "none" && "No deadline set"}
+          {state.kind === "due" && `Due ${formatDateTime(state.dueAt)} · ${state.daysLeft} day${state.daysLeft === 1 ? "" : "s"} left`}
+          {state.kind === "overdue" && `Overdue since ${formatDateTime(state.dueAt)}`}
+          {state.kind === "confirmed" && (state.late ? "Confirmed after the deadline" : "Confirmed on time")}
+        </span>
+      </div>
+      {tooLate && !confirmedAt && (
+        <p className="mt-2 rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
+          This is less than two days before the event — there may not be time to load the codes into the ticketing platform.
+        </p>
+      )}
+      <form action={setCodesDeadline} className="mt-3 flex flex-wrap items-end gap-3">
+        <input type="hidden" name="event_id" value={eventId} />
+        <label className="text-sm">
+          <span className="field-label">Codes confirmed by (UK time)</span>
+          <input
+            type="datetime-local"
+            name="codes_due_at"
+            defaultValue={ukLocalInputValue(dueAt)}
+            className="input mt-1 w-auto"
+          />
+        </label>
+        <button type="submit" className="btn btn-ghost text-sm">
+          Save deadline
+        </button>
+        <span className="text-xs text-[var(--color-ink-soft)]">Leave empty to remove the deadline.</span>
+      </form>
+    </div>
   );
 }
