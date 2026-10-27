@@ -175,7 +175,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                   >
                     <div>
                       <p className="font-semibold text-[var(--color-ink)]">
-                        {campaignTitle(c, "Sponsorship campaign")}
+                        {campaignTitle(c, `Campaign ${c.reference}`)}
                       </p>
                       <p className="text-xs text-[var(--color-ink-soft)]">
                         Ref {c.reference}
@@ -224,7 +224,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--color-ink)]">
-                      {campaignTitle(r, "Campaign request")}
+                      {campaignTitle(r, `Request ${r.reference}`)}
                     </p>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">
                       Sent {formatDate(r.created_at)}

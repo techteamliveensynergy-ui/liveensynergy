@@ -87,7 +87,7 @@ export default async function CampaignRequestsPage() {
               <div className="max-w-xl">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/dashboard/campaigns/requests/${r.id}`} className="font-semibold hover:underline">
-                    {campaignTitle(r, "Campaign request")}
+                    {campaignTitle(r, `Request ${r.reference}`)}
                   </Link>
                   <StatusBadge status={r.status} />
                 </div>

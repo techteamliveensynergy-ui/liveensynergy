@@ -34,15 +34,20 @@ export function requestCategoryLabel(r: CategoryFields): string | null {
 }
 
 /**
- * A request's or campaign's display name (client feedback, 13 Oct: lists read
- * "Conferences" because there was no name, only the category). Its own name
- * first (0067), then the artist/event in mind, then the categories.
+ * A request's or campaign's display name. Its own name first (0067), then
+ * the artist/event in mind, then the caller's fallback — callers pass one
+ * built from the reference ("Campaign CMP-00012").
+ *
+ * The category is deliberately not a fallback any more: lists read
+ * "Conferences" for every unnamed campaign (13 Oct, again 26 Oct, #75).
+ * It still shows as its own chip where cards show it. Admins find unnamed
+ * campaigns through the "No name yet" filter and name them.
  */
 export function campaignTitle(
   c: CategoryFields & { campaign_name?: string | null; target_name?: string | null },
   fallback: string,
 ): string {
-  return c.campaign_name?.trim() || c.target_name?.trim() || requestCategoryLabel(c) || fallback;
+  return c.campaign_name?.trim() || c.target_name?.trim() || fallback;
 }
 
 /**
