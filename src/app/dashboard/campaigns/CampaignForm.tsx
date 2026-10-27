@@ -10,6 +10,8 @@ import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
 import { IMAGE_HINT } from "@/lib/upload-limits";
 import { ARTIST_CATEGORIES } from "@/lib/constants";
 import type { CampaignIntakeRequest } from "@/lib/types";
+import type { FormDraft } from "@/lib/drafts";
+import { SaveDraftButton } from "@/components/ui/SaveDraftButton";
 import {
   submitCampaignIntake,
   updateCampaignIntake,
@@ -88,7 +90,7 @@ function CategoryPicker({ initial, initialOther }: { initial: string[]; initialO
   );
 }
 
-export function CampaignForm({ intake }: { intake?: CampaignIntakeRequest }) {
+export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest; draft?: FormDraft | null }) {
   const editing = Boolean(intake);
   const action = editing ? updateCampaignIntake : submitCampaignIntake;
   const [state, formAction] = useActionState<CampaignState, FormData>(
@@ -328,7 +330,10 @@ export function CampaignForm({ intake }: { intake?: CampaignIntakeRequest }) {
         </Field>
       </FormSection>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {/* Only a new request can be a draft (#79); a submitted one is
+            already with the team. */}
+        {!editing && <SaveDraftButton kind="campaign_request" draft={draft} />}
         <Submit label={editing ? "Save changes" : "Submit request"} />
       </div>
     </form>

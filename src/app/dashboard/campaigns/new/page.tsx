@@ -3,11 +3,20 @@ import { requireRole, profileCompleteness } from "@/lib/profile";
 import { PageHeader } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import { CampaignForm } from "../CampaignForm";
+import { createClient } from "@/lib/supabase/server";
+import { loadDraft } from "@/lib/drafts";
 
 export const metadata = { title: "New campaign" };
 
-export default async function NewCampaignPage() {
+export default async function NewCampaignPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ draft?: string }>;
+}) {
   const { profile } = await requireRole(["brand"]);
+  const { draft: draftId } = await searchParams;
+  // Continuing a saved draft (#79); RLS keeps it to its owner.
+  const draft = draftId ? await loadDraft(await createClient(), profile.id, "campaign_request", draftId) : null;
   const completeness = await profileCompleteness(profile);
   const blocked = completeness.blocking.length > 0;
 
@@ -28,7 +37,7 @@ export default async function NewCampaignPage() {
       ) : (
         <>
           <ProfileCompleteness completeness={completeness} className="mb-5" />
-          <CampaignForm />
+          <CampaignForm draft={draft} />
         </>
       )}
     </div>

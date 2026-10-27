@@ -1,5 +1,7 @@
 "use client";
 
+import type { FormDraft } from "@/lib/drafts";
+import { SaveDraftButton } from "@/components/ui/SaveDraftButton";
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
@@ -22,9 +24,12 @@ type Mode = "onboarding" | "profile";
 export function EventForm({
   mode = "onboarding",
   defaults,
+  draft,
 }: {
   mode?: Mode;
   defaults?: Partial<EventOrganiser>;
+  /** A saved set-up draft to restore (#79). */
+  draft?: FormDraft | null;
 }) {
   const [state, formAction] = useActionState<OnboardingState, FormData>(
     saveEvent,
@@ -212,6 +217,11 @@ export function EventForm({
       <OnboardingSubmit
         label={mode === "profile" ? "Save changes" : "Finish & go to dashboard"}
         confirmSave={mode === "profile"}
+        draftSlot={
+          mode === "onboarding" ? (
+            <SaveDraftButton kind="onboarding_event" draft={draft} label="Save and finish later" />
+          ) : undefined
+        }
       />
     </form>
   );

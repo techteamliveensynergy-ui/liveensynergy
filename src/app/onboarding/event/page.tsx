@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { OnboardingShell } from "@/components/OnboardingShell";
 import { requireProfile } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/server";
+import { loadDraft } from "@/lib/drafts";
 import { EventForm } from "./EventForm";
 import { OnboardingNotices } from "@/components/OnboardingNotices";
 
@@ -10,6 +12,8 @@ export default async function EventOnboardingPage() {
   const { profile } = await requireProfile();
   if (!profile) redirect("/dashboard");
   if (profile.role !== "event") redirect(`/onboarding/${profile.role}`);
+  // "Save and finish later" (#79) brings them back to what they'd typed.
+  const draft = await loadDraft(await createClient(), profile.id, "onboarding_event");
 
   return (
     <OnboardingShell
@@ -18,7 +22,7 @@ export default async function EventOnboardingPage() {
       name={profile.full_name}
       subtitle="Tell brands about your event and what you can offer as a sponsorship partner."
     >
-      <EventForm mode="onboarding" />
+      <EventForm mode="onboarding" draft={draft} />
     </OnboardingShell>
   );
 }

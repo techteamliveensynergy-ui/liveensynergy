@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { UrlInput } from "@/components/ui/UrlInput";
@@ -17,9 +18,12 @@ import { UnsavedChangesGuard } from "@/components/ui/UnsavedChangesGuard";
 export function OnboardingSubmit({
   label,
   confirmSave = false,
+  draftSlot,
 }: {
   label: string;
   confirmSave?: boolean;
+  /** "Save and finish later" on first-time set-up (#79). */
+  draftSlot?: ReactNode;
 }) {
   const { pending } = useFormStatus();
 
@@ -38,7 +42,8 @@ export function OnboardingSubmit({
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      {draftSlot}
       <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? "Saving…" : label}
       </button>

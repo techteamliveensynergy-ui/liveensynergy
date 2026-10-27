@@ -1,5 +1,6 @@
 "use server";
 
+import { clearDraft } from "@/lib/drafts";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -234,6 +235,12 @@ async function completeOnboarding(userId: string) {
     .eq("id", userId)
     .select("role")
     .maybeSingle();
+
+  // A "Save and finish later" draft (#79) has done its job.
+  const role = profile?.role as string | undefined;
+  if (role === "brand" || role === "artist" || role === "event") {
+    await clearDraft(supabase, userId, `onboarding_${role}`);
+  }
 
   await notify({
     eventKey: "account.onboarding_completed",
