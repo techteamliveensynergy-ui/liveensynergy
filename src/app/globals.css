@@ -23,6 +23,11 @@
   --color-mint: #ecf3f2;
   --color-pink: #ffecf1;
 
+  /* role tints for the admin inbox (#52) — light enough for ink text */
+  --color-role-brand: #d9f1ee; /* light teal */
+  --color-role-artist: #ffe2da; /* light coral */
+  --color-role-audience: #eaf5cc; /* light lime */
+
   --font-sans: var(--font-albert-sans), ui-sans-serif, system-ui,
     -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: var(--font-dm-sans), var(--font-sans);
