@@ -6,6 +6,7 @@ import {
   netSponsorshipBudget,
   netForCampaign,
   roundMoney,
+  TEAM_SENDER_NAME,
 } from "@/lib/constants";
 import { notify } from "@/lib/notifications";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
@@ -285,7 +286,7 @@ export async function matchCampaign(
         recipientProfileId: listing.owner_profile_id,
         link: `/dashboard/messages?c=${conversationId}`,
         variables: {
-          sender_name: "The Live·En·Synergy team",
+          sender_name: TEAM_SENDER_NAME,
           event_name: listing.name,
         },
       });

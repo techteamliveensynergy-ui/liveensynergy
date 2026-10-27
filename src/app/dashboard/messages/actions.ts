@@ -6,9 +6,34 @@ import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { removePrivateFile, uploadPrivateFile } from "@/lib/storage";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { TEAM_SENDER_NAME } from "@/lib/constants";
 
 export interface MessageState {
   error?: string;
+}
+
+/** The brand, act or organiser a profile represents, from the public
+ *  profile views (readable by any signed-in user). Null for the audience. */
+async function organisationName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profileId: string,
+  role: string | undefined,
+): Promise<string | null> {
+  const source =
+    role === "brand"
+      ? { view: "public_brand_profiles", column: "brand_name" }
+      : role === "artist"
+        ? { view: "public_artist_profiles", column: "artist_name" }
+        : role === "event"
+          ? { view: "public_organiser_profiles", column: "event_name" }
+          : null;
+  if (!source) return null;
+  const { data } = await supabase
+    .from(source.view)
+    .select(source.column)
+    .eq("profile_id", profileId)
+    .maybeSingle<Record<string, string | null>>();
+  return data?.[source.column]?.trim() || null;
 }
 
 /**
@@ -81,12 +106,17 @@ export async function sendMessage(
 
     const { data: sender } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, role")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<{ full_name: string | null; role: string }>();
 
+    // An admin writes as the team, never under their own name (#67); a user
+    // is named by the brand or act they represent, which the team can place.
     const variables = {
-      sender_name: sender?.full_name ?? "Someone",
+      sender_name:
+        sender?.role === "admin"
+          ? TEAM_SENDER_NAME
+          : (await organisationName(supabase, user.id, sender?.role)) ?? sender?.full_name ?? "Someone",
       event_name: conversation.event_listings?.name ?? undefined,
     };
 
