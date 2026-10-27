@@ -7,6 +7,7 @@ import type { EventListing, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 import { ukDayKey } from "@/lib/format";
 
+import { ProfileLinks } from "@/components/dashboard/ProfileLinks";
 export async function ArtistHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
   const isEvent = profile.role === "event";
@@ -75,6 +76,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
                   ? `Your next event is ${upcoming[0].name}.`
                   : "List your next event so our team can match it with a sponsor."}
         </p>
+        <ProfileLinks role={profile.role} profileId={profile.id} />
       </div>
 
       <ProfileCompleteness completeness={completeness} className="mb-6" />

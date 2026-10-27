@@ -12,6 +12,7 @@ import { formatGbp } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
+import { ProfileLinks } from "@/components/dashboard/ProfileLinks";
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
   const completeness = await profileCompleteness(profile);
@@ -101,6 +102,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                     : ""
                 }.`}
         </p>
+        <ProfileLinks role={profile.role} profileId={profile.id} />
       </div>
 
       <ProfileCompleteness completeness={completeness} className="mb-6" />
