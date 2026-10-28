@@ -12,6 +12,7 @@ import { formatGbp } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
+import { ProfileLinks } from "@/components/dashboard/ProfileLinks";
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
   const completeness = await profileCompleteness(profile);
@@ -101,6 +102,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                     : ""
                 }.`}
         </p>
+        <ProfileLinks role={profile.role} profileId={profile.id} />
       </div>
 
       <ProfileCompleteness completeness={completeness} className="mb-6" />
@@ -173,7 +175,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                   >
                     <div>
                       <p className="font-semibold text-[var(--color-ink)]">
-                        {campaignTitle(c, "Sponsorship campaign")}
+                        {campaignTitle(c, `Campaign ${c.reference}`)}
                       </p>
                       <p className="text-xs text-[var(--color-ink-soft)]">
                         Ref {c.reference}
@@ -222,7 +224,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--color-ink)]">
-                      {campaignTitle(r, "Campaign request")}
+                      {campaignTitle(r, `Request ${r.reference}`)}
                     </p>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">
                       Sent {formatDate(r.created_at)}

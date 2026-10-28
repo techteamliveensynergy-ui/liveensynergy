@@ -280,3 +280,8 @@ export function netForCampaign(campaign: {
 /** How long a sender can recall an unread message (#56). Enforced by
  *  recall_message() in 0089 — keep the two in step. */
 export const MESSAGE_RECALL_WINDOW_MS = 15 * 60 * 1000;
+
+/** How a message from any admin is announced to brands, artists and the
+ *  audience (#67): conversations are with the team, not a named member of
+ *  staff. Used as {{sender_name}} mid-sentence ("New message from …"). */
+export const TEAM_SENDER_NAME = "the Live·En·Synergy team";

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { campaignTitle } from "@/lib/campaign-requests";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { withdrawCampaignIntake } from "./actions";
+import { deleteFormDraft } from "@/app/drafts/actions";
 
 export const metadata = { title: "Campaign requests" };
 
@@ -37,6 +38,14 @@ export default async function CampaignRequestsPage() {
       ])
     : [{ data: [] }, { count: 0 }, { count: 0 }];
   const requests = (intakeData ?? []) as CampaignIntakeRequest[];
+  // Saved drafts (#79, 0092): the brand's own, never seen by the team.
+  const { data: draftRows } = await supabase
+    .from("form_drafts")
+    .select("id, title, updated_at")
+    .eq("profile_id", profile.id)
+    .eq("kind", "campaign_request")
+    .order("updated_at", { ascending: false });
+  const drafts = (draftRows ?? []) as { id: string; title: string | null; updated_at: string }[];
 
   return (
     <div>
@@ -73,7 +82,39 @@ export default async function CampaignRequestsPage() {
         </p>
       ) : null}
 
-      {requests.length === 0 ? (
+      {drafts.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {drafts.map((d) => (
+            <div
+              key={d.id}
+              className="card flex flex-wrap items-center justify-between gap-4 border-dashed bg-[var(--color-mist)] p-5"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{d.title?.trim() || "Untitled request"}</span>
+                  <span className="chip text-xs">Draft</span>
+                </div>
+                <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
+                  Saved {formatDateTime(d.updated_at)} · only you can see this until you submit it
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/dashboard/campaigns/new?draft=${d.id}`} className="btn btn-primary text-sm">
+                  Continue
+                </Link>
+                <form action={deleteFormDraft}>
+                  <input type="hidden" name="draft_id" value={d.id} />
+                  <button type="submit" className="btn btn-ghost text-sm text-[var(--color-accent)]">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {requests.length === 0 && drafts.length > 0 ? null : requests.length === 0 ? (
         <EmptyState
           icon="📣"
           title="No requests yet"
@@ -87,7 +128,7 @@ export default async function CampaignRequestsPage() {
               <div className="max-w-xl">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/dashboard/campaigns/requests/${r.id}`} className="font-semibold hover:underline">
-                    {campaignTitle(r, "Campaign request")}
+                    {campaignTitle(r, `Request ${r.reference}`)}
                   </Link>
                   <StatusBadge status={r.status} />
                 </div>

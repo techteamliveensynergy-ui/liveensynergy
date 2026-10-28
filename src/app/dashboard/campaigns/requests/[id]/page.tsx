@@ -58,7 +58,7 @@ export default async function CampaignRequestPage({
         .maybeSingle<{ id: string; reference: string }>()
     : { data: null };
 
-  const title = campaignTitle(r, "Campaign request");
+  const title = campaignTitle(r, `Request ${r.reference}`);
 
   return (
     <div className="space-y-6">

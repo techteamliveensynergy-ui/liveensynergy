@@ -67,7 +67,7 @@ export default async function ProfilePage() {
             rel="noopener noreferrer"
             className="btn btn-ghost"
           >
-            Preview public profile ↗
+            View your profile ↗
           </a>
         )}
       </div>

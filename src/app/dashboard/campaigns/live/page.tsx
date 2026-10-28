@@ -185,7 +185,7 @@ export default async function CampaignsLivePage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 id={`campaign-title-${c.id}`} className="font-display text-lg font-semibold">
                         <Link href={`/dashboard/campaigns/live/${c.id}`} className="hover:underline">
-                          {campaignTitle(c, "Sponsorship campaign")}
+                          {campaignTitle(c, `Campaign ${c.reference}`)}
                         </Link>
                       </h3>
                       <CampaignStageBadge

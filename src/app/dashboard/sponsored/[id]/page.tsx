@@ -32,6 +32,8 @@ import {
 } from "../actions";
 import { ProofUploadSection } from "./ProofUploadSection";
 import { RewardEngineDisplay } from "./RewardEngineDisplay";
+import { ArtistDetailsCard, type ArtistDetails } from "./ArtistDetailsCard";
+import { ARTIST_TYPES } from "@/lib/constants";
 import { ChangeRequestSection } from "./ChangeRequestSection";
 import { UK_TIME_ZONE, ukLocalInputValue } from "@/lib/format";
 
@@ -196,6 +198,35 @@ export default async function SponsoredEventPage({
   // public to signed-in users.
   if (!isBrand && !isArtist) notFound();
 
+  // The artist's own details head their fulfilment form (#58) — from their
+  // own profile row, which only they (and admins) can read.
+  let artistDetails: ArtistDetails | null = null;
+  if (isArtist) {
+    if (profile.role === "event") {
+      const { data: org } = await supabase
+        .from("event_organisers")
+        .select("event_name, category, category_other, contact_name, contact_email, contact_phone")
+        .eq("profile_id", profile.id)
+        .maybeSingle<{ event_name: string | null; category: string | null; category_other: string | null } & Omit<ArtistDetails, "name" | "type">>();
+      if (org) artistDetails = { ...org, name: org.event_name, type: org.category === "Other" ? org.category_other : org.category };
+    } else {
+      const { data: art } = await supabase
+        .from("artists")
+        .select("artist_name, artist_type, category, category_other, contact_name, contact_email, contact_phone")
+        .eq("profile_id", profile.id)
+        .maybeSingle<{ artist_name: string | null; artist_type: string | null; category: string | null; category_other: string | null } & Omit<ArtistDetails, "name" | "type">>();
+      if (art) {
+        artistDetails = {
+          ...art,
+          name: art.artist_name,
+          type:
+            ARTIST_TYPES.find((t) => t.value === art.artist_type)?.label ??
+            (art.category === "Other" ? art.category_other : art.category),
+        };
+      }
+    }
+  }
+
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
@@ -229,6 +260,24 @@ export default async function SponsoredEventPage({
 
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
+
+  const proofSection = (isBrand || isArtist) && (
+    <ProofUploadSection eventId={event.id} proofs={proofs} />
+  );
+  const rewardSection = (
+    <RewardEngineDisplay
+      eventId={event.id}
+      eventReference={event.reference}
+      tiers={rewardTiers}
+      pool={rewardPool}
+      codes={rewardCodes}
+      isArtist={isArtist}
+      confirmedAt={event.reward_codes_confirmed_at}
+      ticketPrice={ticketPrice}
+      viewerId={profile.id}
+      codesDueAt={event.codes_due_at ?? null}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -340,6 +389,10 @@ export default async function SponsoredEventPage({
         </div>
       </div>
 
+      {/* The artist's fulfilment form reads: your details → event →
+          discount codes → branding → proof → terms (Sakshi's spec, #58). */}
+      {artistDetails && <ArtistDetailsCard details={artistDetails} isOrganiser={profile.role === "event"} />}
+
       {/* Full event details — previously you had to leave the page for these. */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Event details</h2>
@@ -408,6 +461,8 @@ export default async function SponsoredEventPage({
         )}
       </div>
 
+      {isArtist && rewardSection}
+
       {/* Branding */}
       {(event.branding_guidelines || assets.length > 0) && (
         <div className="card p-6">
@@ -438,6 +493,8 @@ export default async function SponsoredEventPage({
           )}
         </div>
       )}
+
+      {isArtist && proofSection}
 
       {/* Terms & agreement */}
       <div className="card p-6">
@@ -607,21 +664,9 @@ export default async function SponsoredEventPage({
         )}
       </div>
 
-      {(isBrand || isArtist) && (
-        <ProofUploadSection eventId={event.id} proofs={proofs} />
-      )}
-
-      <RewardEngineDisplay
-        eventId={event.id}
-        eventReference={event.reference}
-        tiers={rewardTiers}
-        pool={rewardPool}
-        codes={rewardCodes}
-        isArtist={isArtist}
-        confirmedAt={event.reward_codes_confirmed_at}
-        ticketPrice={ticketPrice}
-        viewerId={profile.id}
-      />
+      {/* The brand's order is unchanged; the artist's is reordered (#58). */}
+      {!isArtist && proofSection}
+      {!isArtist && rewardSection}
 
       {locked && (isBrand || isArtist) && (
         <ChangeRequestSection

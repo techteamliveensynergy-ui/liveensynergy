@@ -17,11 +17,12 @@ import { LinkifiedText } from "@/components/LinkifiedText";
 import { Composer } from "./Composer";
 import { NewAdminThread } from "./NewAdminThread";
 import { RecallButton } from "./RecallButton";
+import { AdminThreadList, roleTint, type OrgGroup } from "./AdminThreadList";
 
 export const metadata = { title: "Messages" };
 
 type ConversationRow = Conversation & {
-  event_listings: { id: string; name: string } | null;
+  event_listings: { id: string; name: string; reference: string | null } | null;
   campaigns: { id: string; reference: string; campaign_name: string | null } | null;
 };
 
@@ -31,20 +32,22 @@ interface Party {
   id: string;
   full_name: string | null;
   role: Role;
+  is_active?: boolean;
 }
 
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; tab?: string; notice?: string }>;
+  searchParams: Promise<{ c?: string; tab?: string; notice?: string; q?: string }>;
 }) {
   const { profile } = await requireProfile();
-  const { c: activeId, tab: rawTab, notice } = await searchParams;
+  const { c: activeId, tab: rawTab, notice, q: rawQuery } = await searchParams;
+  const query = (rawQuery ?? "").trim();
   const supabase = await createClient();
 
   const { data: convData } = await supabase
     .from("conversations")
-    .select("*, event_listings(id, name), campaigns(id, reference, campaign_name)")
+    .select("*, event_listings(id, name, reference), campaigns(id, reference, campaign_name)")
     .order("created_at", { ascending: false });
   const isAdmin = profile!.role === "admin";
   // Direct brand↔artist chats ("partner" threads) stopped on 26 Aug — the
@@ -71,7 +74,6 @@ export default async function MessagesPage({
           : "support";
 
   const conversations = tab === "support" ? supportThreads : partnerThreads;
-  const active = linked ?? conversations[0] ?? null;
 
   // Who's who. Every message rendered identically because the only signal was
   // "did I send this?" — which tells an admin reading someone else's thread
@@ -86,7 +88,7 @@ export default async function MessagesPage({
   const { data: partyRows } = partyIds.length
     ? await supabase
         .from("profiles")
-        .select("id, full_name, role")
+        .select("id, full_name, role, is_active")
         .in("id", partyIds)
     : { data: [] };
   const parties = new Map(
@@ -99,7 +101,7 @@ export default async function MessagesPage({
   const { data: activityRows } = all.length
     ? await supabase
         .from("messages")
-        .select("conversation_id, created_at")
+        .select("conversation_id, created_at, sender_profile_id, read_at")
         .in(
           "conversation_id",
           all.map((c) => c.id),
@@ -108,50 +110,21 @@ export default async function MessagesPage({
     : { data: [] };
 
   const lastMessageAt = new Map<string, string>();
+  // Messages from a party the team hasn't opened yet (read_at, 0077), per
+  // thread — the admin inbox's unread counts (#52).
+  const unreadByThread = new Map<string, number>();
   for (const row of (activityRows ?? []) as {
     conversation_id: string;
     created_at: string;
+    sender_profile_id: string;
+    read_at: string | null;
   }[]) {
     if (!lastMessageAt.has(row.conversation_id)) {
       lastMessageAt.set(row.conversation_id, row.created_at);
     }
-  }
-
-  let messages: Message[] = [];
-  let attachmentUrls: (string | null)[] = [];
-  // Originals of recalled messages, for admins only (RLS, 0089).
-  const recalls = new Map<string, MessageRecall>();
-  if (active) {
-    const { data: msgData } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation_id", active.id)
-      .order("created_at", { ascending: true });
-    messages = (msgData ?? []) as Message[];
-    // Opening the thread reads what was sent to you (0077) — the sender sees
-    // "Seen" from now on. Done after the fetch, and best-effort.
-    if (messages.some((m) => !m.read_at && m.sender_profile_id !== profile!.id)) {
-      await supabase.rpc("mark_conversation_read", { p_conversation_id: active.id }).then(
-        () => undefined,
-        () => undefined,
-      );
+    if (!row.read_at && parties.get(row.sender_profile_id)?.role !== "admin") {
+      unreadByThread.set(row.conversation_id, (unreadByThread.get(row.conversation_id) ?? 0) + 1);
     }
-    const recalledIds = messages.filter((m) => m.recalled_at).map((m) => m.id);
-    if (isAdmin && recalledIds.length) {
-      const { data: recallRows } = await supabase
-        .from("message_recalls")
-        .select("message_id, original_body, attachment_name, recalled_at")
-        .in("message_id", recalledIds);
-      for (const r of (recallRows ?? []) as MessageRecall[]) recalls.set(r.message_id, r);
-    }
-    attachmentUrls = await Promise.all(
-      // Downloads under the name it was sent with, not the stored uuid (#51).
-      messages.map((m) =>
-        signedUrlFor(m.attachment_url, undefined, {
-          downloadName: m.attachment_name ?? "attachment",
-        }),
-      ),
-    );
   }
 
   // Everyone an admin can start a conversation with. Admins are excluded —
@@ -245,6 +218,130 @@ export default async function MessagesPage({
     return "Someone";
   }
 
+  /** What a thread is about, for the admin inbox (#52). Archived
+   *  brand↔artist chats also name the artist, since they're grouped under
+   *  the brand. */
+  function threadLabel(conv: ConversationRow) {
+    let label: string;
+    if (conv.campaigns) {
+      label = `Campaign ${conv.campaigns.reference}${
+        conv.campaigns.campaign_name ? ` · ${conv.campaigns.campaign_name}` : ""
+      }`;
+    } else if (conv.event_listings) {
+      const ref = conv.event_listings.reference ? ` ${conv.event_listings.reference}` : "";
+      label = `${conv.kind === "support" ? "Event" : "Enquiry"}${ref} · ${conv.event_listings.name}`;
+    } else if (conv.subject) {
+      label = conv.subject;
+    } else {
+      label = conv.kind === "support" ? "General" : "Direct chat";
+    }
+    if (conv.kind !== "support") label += ` · with ${partyLabel(conv.partner_profile_id)}`;
+    return label;
+  }
+
+  /** One row per organisation — keyed on the non-admin party's profile id,
+   *  so two brands with the same name never merge — newest activity first,
+   *  filtered by the search box. */
+  function groupByOrganisation(convs: ConversationRow[]): OrgGroup[] {
+    const byOrg = new Map<string, OrgGroup>();
+    const latest = (a: string | null, b: string | null) => (!a ? b : !b ? a : a > b ? a : b);
+    for (const conv of convs) {
+      const orgId =
+        parties.get(conv.brand_profile_id)?.role === "admin"
+          ? conv.partner_profile_id
+          : conv.brand_profile_id;
+      const party = parties.get(orgId);
+      let group = byOrg.get(orgId);
+      if (!group) {
+        group = {
+          orgId,
+          label: workspaceName.get(orgId) ?? party?.full_name ?? (party ? ROLE_LABELS[party.role] : "Unknown account"),
+          person: party?.full_name ?? null,
+          role: party?.role ?? null,
+          blocked: party?.is_active === false,
+          unread: 0,
+          lastAt: null,
+          threads: [],
+        };
+        byOrg.set(orgId, group);
+      }
+      const lastAt = lastMessageAt.get(conv.id) ?? null;
+      const unread = unreadByThread.get(conv.id) ?? 0;
+      group.threads.push({ id: conv.id, label: threadLabel(conv), unread, lastAt: lastAt ?? conv.created_at });
+      group.unread += unread;
+      group.lastAt = latest(group.lastAt, lastAt ?? conv.created_at);
+    }
+
+    const needle = query.toLowerCase();
+    const matches = (g: OrgGroup) =>
+      !needle ||
+      [g.label, g.person ?? "", ...g.threads.map((t) => t.label)].some((text) =>
+        text.toLowerCase().includes(needle),
+      );
+
+    return [...byOrg.values()]
+      .filter(matches)
+      .map((g) => ({
+        ...g,
+        threads: [...g.threads].sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")),
+      }))
+      .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
+  }
+
+  // The admin inbox lists organisations, newest activity first (#52); the
+  // thread opened by default is the newest one there, not the newest created.
+  const adminGroups = isAdmin ? groupByOrganisation(conversations) : [];
+  const active =
+    linked ??
+    (isAdmin
+      ? conversations.find((c) => c.id === adminGroups[0]?.threads[0]?.id) ?? null
+      : conversations[0] ?? null);
+
+  let messages: Message[] = [];
+  let attachmentUrls: (string | null)[] = [];
+  // Originals of recalled messages, for admins only (RLS, 0089).
+  const recalls = new Map<string, MessageRecall>();
+  if (active) {
+    const { data: msgData } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", active.id)
+      .order("created_at", { ascending: true });
+    messages = (msgData ?? []) as Message[];
+    // Opening the thread reads what was sent to you (0077) — the sender sees
+    // "Seen" from now on. Done after the fetch, and best-effort.
+    if (messages.some((m) => !m.read_at && m.sender_profile_id !== profile!.id)) {
+      await supabase.rpc("mark_conversation_read", { p_conversation_id: active.id }).then(
+        () => undefined,
+        () => undefined,
+      );
+    }
+    const recalledIds = messages.filter((m) => m.recalled_at).map((m) => m.id);
+    if (isAdmin && recalledIds.length) {
+      const { data: recallRows } = await supabase
+        .from("message_recalls")
+        .select("message_id, original_body, attachment_name, recalled_at")
+        .in("message_id", recalledIds);
+      for (const r of (recallRows ?? []) as MessageRecall[]) recalls.set(r.message_id, r);
+    }
+    attachmentUrls = await Promise.all(
+      // Downloads under the name it was sent with, not the stored uuid (#51).
+      messages.map((m) =>
+        signedUrlFor(m.attachment_url, undefined, {
+          downloadName: m.attachment_name ?? "attachment",
+        }),
+      ),
+    );
+  }
+
+  // The open thread's header carries its organisation's tint for admins.
+  const activeOrgRole = active
+    ? (parties.get(active.brand_profile_id)?.role === "admin"
+        ? parties.get(active.partner_profile_id)
+        : parties.get(active.brand_profile_id)
+      )?.role ?? null
+    : null;
+
   const viewerIsParty =
     !!active &&
     (active.brand_profile_id === profile!.id ||
@@ -321,9 +418,20 @@ export default async function MessagesPage({
           />
         )
       ) : (
-        <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+        <div className={`grid gap-4 ${isAdmin ? "md:grid-cols-[320px_1fr]" : "md:grid-cols-[260px_1fr]"}`}>
           {/* Conversation list */}
           <aside className="h-fit">
+            {isAdmin ? (
+              <AdminThreadList
+                groups={adminGroups}
+                activeId={active?.id ?? null}
+                tab={tab}
+                query={query}
+                hrefFor={(id) =>
+                  `/dashboard/messages?c=${id}${query ? `&q=${encodeURIComponent(query)}` : ""}`
+                }
+              />
+            ) : (
             <div className="card divide-y divide-black/5 overflow-hidden">
               {conversations.map((conv) => {
                 const isActive = active?.id === conv.id;
@@ -373,6 +481,7 @@ export default async function MessagesPage({
                 );
               })}
             </div>
+            )}
             {tab === "support" && (
               <form action={startSupportThread} className="mt-3">
                 <button type="submit" className="btn btn-ghost w-full text-sm">
@@ -386,7 +495,11 @@ export default async function MessagesPage({
           <section className="card flex min-h-[420px] flex-col">
             {active ? (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 px-5 py-3">
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-2 border-b border-black/10 px-5 py-3 ${
+                    isAdmin ? roleTint(activeOrgRole) : ""
+                  }`}
+                >
                   <div className="min-w-0">
                     <p className="font-semibold">{threadTitle(active)}</p>
                     <p className="truncate text-xs text-[var(--color-ink-soft)]">

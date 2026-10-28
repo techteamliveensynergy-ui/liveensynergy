@@ -100,6 +100,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin/packages", label: "Packages", icon: "📦" },
     { href: "/dashboard/admin/invoices", label: "Invoices", icon: "🧾" },
     { href: "/dashboard/admin/settings/payments", label: "Payment settings", icon: "🔐" },
+    { href: "/dashboard/admin/settings/email", label: "Email branding", icon: "✉️" },
     { href: "/dashboard/notifications", label: "Notifications", icon: "🔔" },
     { href: "/dashboard/profile", label: "Profile", icon: "👤" },
     { href: "/dashboard/resources", label: "Repository", icon: "📚" },

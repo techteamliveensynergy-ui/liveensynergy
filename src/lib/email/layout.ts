@@ -10,6 +10,8 @@ import "server-only";
  * own origin — a brand called "https://evil.example" stays inert text.
  */
 
+import { DEFAULT_HEADER_BG, DEFAULT_HEADER_TEXT, EMAIL_FONTS, type EmailBranding } from "./branding";
+
 const BRAND = "#e8590c"; // --color-brand
 const INK = "#1c1917"; // --color-ink
 const INK_SOFT = "#57534e";
@@ -50,8 +52,23 @@ function linkifyOwnOrigin(escapedLine: string): string {
   });
 }
 
-export function renderEmailHtml(input: { subject: string; body: string }): string {
+export function renderEmailHtml(
+  input: { subject: string; body: string },
+  branding: EmailBranding = {},
+): string {
   const origin = siteOrigin();
+  // Admin branding (#66, 0093), each field falling back to the original design.
+  const headerBg = branding.header_bg || DEFAULT_HEADER_BG;
+  const headerText = branding.header_text || DEFAULT_HEADER_TEXT;
+  const font = EMAIL_FONTS[branding.font ?? "system"]?.stack ?? EMAIL_FONTS.system.stack;
+  // Images are blocked by default in many clients, so the alt text carries the
+  // name; no logo keeps the text wordmark.
+  const header = branding.logo_url
+    ? `<img src="${escapeHtml(branding.logo_url)}" alt="Live En Synergy" width="160" style="display:block;max-width:160px;height:auto;border:0;">`
+    : "Live&middot;En&middot;Synergy";
+  const footerText = branding.footer_text?.trim()
+    ? `<p style="margin:0 0 8px;">${escapeHtml(branding.footer_text.trim()).replace(/\n/g, "<br>")}</p>`
+    : "";
   const paragraphs = input.body
     .replace(/\r\n/g, "\n")
     .split(/\n{2,}/)
@@ -77,10 +94,10 @@ export function renderEmailHtml(input: { subject: string; body: string }): strin
 <body style="margin:0;padding:0;background:${MIST};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${MIST};padding:24px 12px;">
 <tr><td align="center">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
-<tr><td style="background:${BRAND};padding:18px 28px;color:#ffffff;font-size:16px;font-weight:700;letter-spacing:.2px;">Live&middot;En&middot;Synergy</td></tr>
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;font-family:${font};">
+<tr><td style="background:${headerBg};padding:18px 28px;color:${headerText};font-size:16px;font-weight:700;letter-spacing:.2px;">${header}</td></tr>
 <tr><td style="padding:28px 28px 12px;">${paragraphs}</td></tr>
-<tr><td style="padding:16px 28px 24px;border-top:1px solid #eee;font-size:12px;line-height:1.5;color:${INK_SOFT};">You&rsquo;re receiving this because of activity on your Live&middot;En&middot;Synergy account${settingsLink}</td></tr>
+<tr><td style="padding:16px 28px 24px;border-top:1px solid #eee;font-size:12px;line-height:1.5;color:${INK_SOFT};">${footerText}You&rsquo;re receiving this because of activity on your Live&middot;En&middot;Synergy account${settingsLink}</td></tr>
 </table>
 </td></tr>
 </table>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { clearDraft } from "@/lib/drafts";
 import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
 import { normaliseUrl } from "@/lib/urls";
@@ -140,6 +141,9 @@ export async function submitCampaignIntake(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Submitted from a saved draft (#79): the draft has done its job.
+  if (user) await clearDraft(supabase, user.id, "campaign_request", str(formData.get("draft_id")));
 
   if (user) {
     await notify({

@@ -462,6 +462,8 @@ export interface SponsoredEvent {
   /** 0045 — the artist's consent to the discount-code setup; freezes it. */
   reward_codes_confirmed_at: string | null;
   reward_codes_confirmed_by: string | null;
+  /** Discount-code set-up deadline (0091, #58); null = none set. */
+  codes_due_at?: string | null;
   created_at: string;
   updated_at: string;
 }

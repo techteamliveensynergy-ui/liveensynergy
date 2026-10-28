@@ -19,7 +19,8 @@ import {
   confirmRewardCodes,
   type DiscountCodeState,
 } from "../actions";
-import { UK_TIME_ZONE } from "@/lib/format";
+import { formatDateTime, UK_TIME_ZONE } from "@/lib/format";
+import { codesDeadlineState } from "@/lib/codes-deadline";
 
 function Submit({ label, pending, className = "btn btn-primary text-sm" }: {
   label: string;
@@ -54,6 +55,7 @@ export function RewardEngineDisplay({
   confirmedAt,
   ticketPrice,
   viewerId,
+  codesDueAt = null,
 }: {
   eventId: string;
   eventReference: string;
@@ -64,6 +66,8 @@ export function RewardEngineDisplay({
   confirmedAt: string | null;
   ticketPrice: number | null;
   viewerId: string;
+  /** The set-up deadline (0091, #58); null shows none. */
+  codesDueAt?: string | null;
 }) {
   const [consentState, consentAction] = useActionState<DiscountCodeState, FormData>(
     confirmRewardCodes,
@@ -71,6 +75,7 @@ export function RewardEngineDisplay({
   );
   if (tiers.length === 0) return null;
   const frozen = !!confirmedAt;
+  const deadline = codesDeadlineState(codesDueAt, confirmedAt);
 
   return (
     <div id="discount-codes" className="card scroll-mt-24 p-6">
@@ -91,6 +96,25 @@ export function RewardEngineDisplay({
             : "Awaiting the artist's confirmation"}
         </span>
       </div>
+
+      {/* One week to set the codes up (#58). Late confirmation is allowed —
+          it's only recorded. */}
+      {deadline.kind === "due" && (
+        <p className="mt-3 rounded-lg bg-[var(--color-gold)]/40 px-3 py-2 text-sm text-[var(--color-ink)]">
+          {isArtist ? "Please review and confirm these codes" : "The artist confirms these codes"} by{" "}
+          <strong>{formatDateTime(deadline.dueAt)}</strong> ({deadline.daysLeft} day
+          {deadline.daysLeft === 1 ? "" : "s"} left).
+        </p>
+      )}
+      {deadline.kind === "overdue" && (
+        <p className="mt-3 rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
+          These codes were due by <strong>{formatDateTime(deadline.dueAt)}</strong>.{" "}
+          {isArtist ? "Please confirm them as soon as you can." : "The team has been told."}
+        </p>
+      )}
+      {deadline.kind === "confirmed" && deadline.late && (
+        <p className="mt-3 text-xs text-[var(--color-ink-soft)]">Confirmed after the set-up deadline.</p>
+      )}
 
       <div className="mt-4 space-y-3">
         {tiers.map((t) => {

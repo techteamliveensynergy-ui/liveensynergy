@@ -23,7 +23,7 @@ const ROLE_LABEL: Record<PublicProfile["role"], string> = {
 
 /**
  * The public-facing profile. Rendered both at the public URL and behind the
- * "Preview public profile" button, so what the owner previews is exactly what
+ * "View your profile" button, so what the owner previews is exactly what
  * a visitor sees.
  */
 export function PublicProfileView({

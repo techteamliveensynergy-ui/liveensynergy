@@ -97,6 +97,7 @@ export default async function AdminCampaignsPage({
     status_updated?: string;
     invoice_error?: string;
     action_error?: string;
+    unnamed?: string;
   }>;
 }) {
   await requireRole(["admin"]);
@@ -222,6 +223,10 @@ export default async function AdminCampaignsPage({
   if (sp.live === "yes") campaigns = campaigns.filter((c) => isSettled(c.id));
   if (sp.matched === "yes")
     campaigns = campaigns.filter((c) => c.matched_listing_id);
+  // Older campaigns from before 0067 have no name, and brands then see only
+  // the reference (#75) — this finds them so the team can name them.
+  const unnamedCount = ((campaignRows ?? []) as Row[]).filter((c) => !c.campaign_name?.trim()).length;
+  if (sp.unnamed === "yes") campaigns = campaigns.filter((c) => !c.campaign_name?.trim());
 
   const unmatched = ((campaignRows ?? []) as Row[]).filter(
     (c) => !c.matched_listing_id,
@@ -283,7 +288,7 @@ export default async function AdminCampaignsPage({
         <Link
           href={link({})}
           className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            !sp.status && !sp.matched && !sp.live && !sp.stage
+            !sp.status && !sp.matched && !sp.live && !sp.stage && !sp.unnamed
               ? "bg-[var(--color-brand)] text-white"
               : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
           }`}
@@ -303,6 +308,19 @@ export default async function AdminCampaignsPage({
             {CAMPAIGN_STAGE_LABELS[key]} ({stageCounts.get(key) ?? 0})
           </Link>
         ))}
+        {(unnamedCount > 0 || sp.unnamed === "yes") && (
+          <Link
+            href={link({ unnamed: "yes" })}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+              sp.unnamed === "yes"
+                ? "bg-[var(--color-brand)] text-white"
+                : "border border-dashed border-black/20 bg-[var(--color-gold)]/40 text-[var(--color-ink)] hover:bg-[var(--color-gold)]/60"
+            }`}
+            title="Campaigns brands see only by reference until they're named"
+          >
+            No name yet ({unnamedCount})
+          </Link>
+        )}
         {/* Older links (admin overview) filter by these; shown only while in use. */}
         {(sp.matched || sp.live || sp.status) && (
           <span className="rounded-full bg-[var(--color-brand)] px-3.5 py-1.5 text-sm font-semibold text-white">
@@ -334,7 +352,7 @@ export default async function AdminCampaignsPage({
                         href={`/dashboard/admin/campaigns/${c.id}`}
                         className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
                       >
-                        {campaignTitle(c, "Untitled campaign")}
+                        {campaignTitle(c, `Campaign ${c.reference}`)}
                       </Link>
                       <span className="text-sm text-[var(--color-ink-soft)]">
                         · {c.brands?.brand_name ?? "Unknown brand"}

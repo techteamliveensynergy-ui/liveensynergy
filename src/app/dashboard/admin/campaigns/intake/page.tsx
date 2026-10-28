@@ -69,7 +69,7 @@ export default async function AdminCampaignIntakePage({
                       href={`/dashboard/admin/campaigns/intake/${r.id}`}
                       className="font-semibold text-[var(--color-ink)] underline-offset-2 hover:underline"
                     >
-                      {campaignTitle(r, "Untitled request")}
+                      {campaignTitle(r, `Request ${r.reference}`)}
                     </Link>
                     <StatusBadge status={r.status} />
                   </div>

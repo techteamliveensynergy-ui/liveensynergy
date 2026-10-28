@@ -93,7 +93,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
   // Withdrawn proposals are history, not something the brand needs to act on.
   const visibleEvents = events.filter((e) => e.status !== "withdrawn");
 
-  const title = campaignTitle(c, "Sponsorship campaign");
+  const title = campaignTitle(c, `Campaign ${c.reference}`);
 
   return (
     <div className="space-y-6">
