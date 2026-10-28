@@ -749,6 +749,10 @@ export interface SurveyQuestionConfig {
   display_style?: "likert";
   /** attention_check — scored, never shown to the brand. */
   expected_answer?: string;
+  /** The admin confirmed this question's sensitive wording is intended
+   *  (#54, src/lib/survey-sensitive.ts). Admin-only: stripped from the
+   *  respondent views (0094). */
+  sensitive_ack?: { flags: string[]; reason: string; at: string };
   /** hidden_field — which profile field this question copies at submit time. */
   profile_field?: string;
   /** Universal, any question type — an image (uploaded to the media bucket)

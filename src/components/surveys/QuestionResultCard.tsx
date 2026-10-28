@@ -63,7 +63,9 @@ export function QuestionResultCard({
   q: ResultQuestion;
   s: ResultStats | undefined;
   counted: number;
-  textAnswers?: { reference: string; submitted_at: string; answer: string }[];
+  /** contains_pii (0094, #54): the answer has an email, phone number etc. —
+   *  shown in full here (admin only), masked in every export. */
+  textAnswers?: { reference: string; submitted_at: string; answer: string; contains_pii?: boolean }[];
   moreTextHref?: string;
   /** Typed "Other — please specify" answers — admin only (FB-00029); the
    *  brand page never passes these, so it shows the Other count alone. */
@@ -199,6 +201,14 @@ export function QuestionResultCard({
                     <p className="whitespace-pre-line break-words">{a.answer}</p>
                     <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                       {a.reference} · {formatDate(a.submitted_at)}
+                      {a.contains_pii && (
+                        <span
+                          className="ml-2 rounded-full bg-[var(--color-pink)] px-2 py-0.5 font-semibold text-[var(--color-accent)]"
+                          title="Has an email, phone number, postcode, NI or card number, or a link. Masked in exports and the AI analysis."
+                        >
+                          Personal details · masked in exports
+                        </span>
+                      )}
                     </p>
                   </li>
                 ))}
