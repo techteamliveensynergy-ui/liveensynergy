@@ -17,6 +17,8 @@ import { CopyLinkButton } from "./preview/CopyLinkButton";
 import { formatEventDateTime } from "@/lib/event-time";
 import { campaignLabel } from "@/lib/campaign-requests";
 
+import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
+import { sensitiveFlags, unacknowledgedFlags, type SensitiveAck } from "@/lib/survey-sensitive";
 export const metadata = { title: "Edit survey · Admin" };
 
 export default async function EditSurveyPage({
@@ -46,6 +48,11 @@ export default async function EditSurveyPage({
 
   const tpl = template as SurveyTemplate;
   const questions = (questionRows ?? []) as SurveyQuestion[];
+  // Saved questions whose wording touches a sensitive category nobody has
+  // acknowledged yet (#54) — Publish asks once more if there are any.
+  const unacknowledgedSensitive = questions
+    .filter((q) => unacknowledgedFlags(sensitiveFlags(q), q.config?.sensitive_ack as SensitiveAck | undefined).length > 0)
+    .map((q) => q.prompt || q.config?.group_prompt || "Untitled question");
   const rules = (ruleRows ?? []) as SurveyContradictionRule[];
   const campaigns = (campaignRows ?? []) as unknown as {
     id: string;
@@ -106,9 +113,33 @@ export default async function EditSurveyPage({
           <>
             <form action={publishSurveyTemplate}>
               <input type="hidden" name="id" value={tpl.id} />
-              <button type="submit" className="btn btn-primary text-sm">
-                Publish
-              </button>
+              {unacknowledgedSensitive.length > 0 ? (
+                <ConfirmSubmit
+                  label="Publish"
+                  pendingLabel="Publishing…"
+                  className="btn btn-primary text-sm"
+                  title="Publish with sensitive questions unacknowledged?"
+                  body={
+                    <>
+                      <p>
+                        These questions may collect special-category or identifying data, and nobody has confirmed
+                        they&apos;re intended and covered by the survey terms:
+                      </p>
+                      <ul className="mt-2 list-disc pl-5">
+                        {unacknowledgedSensitive.map((p, i) => (
+                          <li key={i}>{p}</li>
+                        ))}
+                      </ul>
+                    </>
+                  }
+                  confirmLabel="Publish anyway"
+                  cancelLabel="Go back and review"
+                />
+              ) : (
+                <button type="submit" className="btn btn-primary text-sm">
+                  Publish
+                </button>
+              )}
             </form>
             <form action={archiveSurveyTemplate}>
               <input type="hidden" name="id" value={tpl.id} />

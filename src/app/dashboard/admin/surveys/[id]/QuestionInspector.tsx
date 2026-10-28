@@ -17,6 +17,7 @@ import {
 } from "@/lib/survey-media";
 import type { SurveyMediaPosition, SurveyQuestionConfig, SurveyTemplateLayoutMode } from "@/lib/types";
 import { OptionListEditor } from "./OptionListEditor";
+import { SensitiveDataNotice } from "./SensitiveDataNotice";
 import { uploadQuestionMedia } from "../actions";
 import { uploadImageFile } from "@/lib/image-upload";
 
@@ -165,6 +166,10 @@ export function QuestionInspector({
           onChange={(e) => onChange({ help_text: e.target.value })}
         />
       </Field>
+
+      {/* Sensitive-data word check (#54). Re-keyed per question so the
+          reason box doesn't carry over to the next one selected. */}
+      <SensitiveDataNotice key={question.key} question={question} editable={editable} onChange={onChange} />
 
       {question.type !== "hidden_field" && (
         <label className="flex items-center gap-2 text-sm font-medium">

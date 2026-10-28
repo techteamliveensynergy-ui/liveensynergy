@@ -43,6 +43,8 @@ interface TextAnswer {
   reference: string;
   submitted_at: string;
   answer: string;
+  /** 0094 (#54); absent on a database without it. */
+  contains_pii?: boolean;
 }
 
 const TREND_DAYS = 30;
