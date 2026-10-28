@@ -65,7 +65,8 @@ export function toEmbed(rawUrl: string): VideoEmbed {
   if (vm) {
     return {
       url,
-      embedUrl: `https://player.vimeo.com/video/${vm.id}${vm.hash ? `?h=${vm.hash}` : ""}`,
+      // dnt=1: no Vimeo tracking cookies for profile visitors (#47).
+      embedUrl: `https://player.vimeo.com/video/${vm.id}?${vm.hash ? `h=${vm.hash}&` : ""}dnt=1`,
       provider: "vimeo",
     };
   }

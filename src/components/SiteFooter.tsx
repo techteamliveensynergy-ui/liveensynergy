@@ -23,6 +23,7 @@ const LINKS: { heading: string; items: { href: string; label: string }[] }[] = [
     items: [
       { href: "/terms", label: "Terms & Conditions" },
       { href: "/privacy", label: "Privacy Policy" },
+      { href: "/cookies", label: "Cookie Policy" },
     ],
   },
 ];

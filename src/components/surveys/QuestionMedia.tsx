@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { SurveyMediaType, SurveyQuestionConfig, SurveyVideoFormat } from "@/lib/types";
-import { videoEmbedUrl, videoFormatFor } from "@/lib/survey-media";
+import { needsClickToLoad, videoEmbedUrl, videoFormatFor } from "@/lib/survey-media";
+import { ClickToLoadEmbed } from "./ClickToLoadEmbed";
 
 /** Inner padding of a question card's text column. The card itself has none,
  *  so media can run edge to edge (13 Oct client notes: "images, videos to
@@ -8,6 +9,8 @@ import { videoEmbedUrl, videoFormatFor } from "@/lib/survey-media";
 export const CARD_BODY_PADDING = "p-6 sm:p-10";
 
 function Player({ src }: { src: string }) {
+  const platform = needsClickToLoad(src);
+  if (platform) return <ClickToLoadEmbed src={src} platform={platform} />;
   return (
     <iframe
       src={src}
