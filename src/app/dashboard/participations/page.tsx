@@ -68,7 +68,7 @@ export default async function ParticipationsPage({
     campaignIds.length > 0
       ? supabase
           .from("survey_templates")
-          .select("id, campaign_id, kind, title")
+          .select("id, campaign_id, kind, title, is_public")
           .in("campaign_id", campaignIds)
           .eq("status", "published")
       : Promise.resolve({ data: [] as SurveyTemplate[] }),
@@ -94,7 +94,7 @@ export default async function ParticipationsPage({
   ]);
   const surveyTemplates = (surveyTemplateRows ?? []) as Pick<
     SurveyTemplate,
-    "id" | "campaign_id" | "kind" | "title"
+    "id" | "campaign_id" | "kind" | "title" | "is_public"
   >[];
   const responses = (surveyResponseRows ?? []) as { template_id: string; participation_id: string | null }[];
   const respondedKeys = new Set(responses.map((r) => `${r.template_id}:${r.participation_id}`));
@@ -316,7 +316,16 @@ export default async function ParticipationsPage({
                             </p>
                           ) : (
                             <Link
-                              href={`/dashboard/surveys/${t.id}`}
+                              // /survey/[id] serves a registered participant the
+                              // same form and opens before email verification,
+                              // which blocks every /dashboard/* page but the
+                              // home (QA 30 Oct #9). It only takes public
+                              // pre-event surveys, so the rest stay here.
+                              href={
+                                t.is_public && t.kind === "pre_event"
+                                  ? `/survey/${t.id}`
+                                  : `/dashboard/surveys/${t.id}`
+                              }
                               className="btn btn-primary text-sm"
                             >
                               Take the {t.kind === "pre_event" ? "pre-event" : "post-event"}{" "}

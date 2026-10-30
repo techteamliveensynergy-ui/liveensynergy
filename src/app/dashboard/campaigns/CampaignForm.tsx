@@ -298,6 +298,10 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
               name="manager_name"
               className="input"
               required
+              // `required` accepts a value of only spaces; the server then
+              // refused it with an error far above the button (QA 30 Oct #5).
+              pattern=".*\S.*"
+              title="Enter the campaign manager's name"
               defaultValue={d?.manager_name ?? ""}
             />
           </Field>
@@ -324,12 +328,17 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
             type="tel"
             className="input"
             required
+            pattern=".*\S.*"
+            title="Enter a phone number"
             placeholder="+44 7700 900000"
             defaultValue={d?.manager_phone ?? ""}
           />
         </Field>
       </FormSection>
 
+      {/* Repeated by the button: the top banner is a long scroll away from
+          where the brand pressed Submit (QA 30 Oct #5). */}
+      <ErrorBanner error={state.error} />
       <div className="flex flex-wrap items-center justify-end gap-3">
         {/* Only a new request can be a draft (#79); a submitted one is
             already with the team. */}

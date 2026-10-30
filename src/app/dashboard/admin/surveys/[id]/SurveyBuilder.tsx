@@ -21,6 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { ErrorBanner } from "@/components/onboarding/parts";
+import { DirtyStateGuard } from "@/components/ui/DirtyStateGuard";
 import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
   firstQuestionProblem,
@@ -238,7 +239,12 @@ export function SurveyBuilder({
   const selected = questions.find((q) => q.key === selectedKey) ?? null;
 
   return (
-    <div>
+    // data-survey-unsaved lets the Publish form refuse while edits aren't saved.
+    <div data-survey-unsaved={editable && dirty ? "true" : undefined}>
+      <DirtyStateGuard
+        dirty={editable && dirty}
+        message="You have unsaved survey questions. Leave without saving them?"
+      />
       <ErrorBanner error={clientError ?? state.error} />
 
       <DndContext

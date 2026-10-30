@@ -4,12 +4,12 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import {
-  publishSurveyTemplate,
   unpublishSurveyTemplate,
   archiveSurveyTemplate,
   unarchiveSurveyTemplate,
 } from "./actions";
 import { campaignLabel } from "@/lib/campaign-requests";
+import { PublishSurveyForm } from "./PublishSurveyForm";
 
 export const metadata = { title: "Surveys · Admin" };
 
@@ -124,12 +124,7 @@ export default async function AdminSurveysPage() {
                   </Link>
                   {t.status === "draft" && (
                     <>
-                      <form action={publishSurveyTemplate}>
-                        <input type="hidden" name="id" value={t.id} />
-                        <button type="submit" className="btn btn-ghost text-sm">
-                          Publish
-                        </button>
-                      </form>
+                      <PublishSurveyForm id={t.id} className="btn btn-ghost text-sm" />
                       <form action={archiveSurveyTemplate}>
                         <input type="hidden" name="id" value={t.id} />
                         <button type="submit" className="btn btn-ghost text-sm">

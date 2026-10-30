@@ -376,24 +376,33 @@ export async function uploadSurveyBackground(formData: FormData): Promise<Upload
   return { url };
 }
 
-export async function publishSurveyTemplate(formData: FormData) {
+/**
+ * Publishes a survey, saying why when it can't (QA 30 Oct #4: every refusal
+ * used to return silently, so Publish looked like it did nothing).
+ */
+export async function publishSurveyTemplate(_prev: SurveyState, formData: FormData): Promise<SurveyState> {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
-  if (!id) return;
+  if (!id) return { error: "Missing survey." };
 
   const { data: tpl } = await supabase
     .from("survey_templates")
     .select("campaign_id, kind")
     .eq("id", id)
     .maybeSingle<{ campaign_id: string | null; kind: string }>();
-  // The DB constraint would refuse this anyway; bail early with no write.
-  if (!tpl?.campaign_id) return;
+  if (!tpl) return { error: "Survey not found." };
+  // The DB constraint would refuse this anyway; say so before trying.
+  if (!tpl.campaign_id) {
+    return { error: "Link this survey to a campaign (in Survey details) before publishing." };
+  }
 
   const { count: questionCount } = await supabase
     .from("survey_questions")
     .select("id", { count: "exact", head: true })
     .eq("template_id", id);
-  if (!questionCount) return;
+  if (!questionCount) {
+    return { error: "This survey has no saved questions. Add questions and click “Save changes” before publishing." };
+  }
 
   const { count: conflicting } = await supabase
     .from("survey_templates")
@@ -402,15 +411,21 @@ export async function publishSurveyTemplate(formData: FormData) {
     .eq("kind", tpl.kind)
     .eq("status", "published")
     .neq("id", id);
-  if (conflicting) return;
+  if (conflicting) {
+    return {
+      error: `Another ${tpl.kind === "pre_event" ? "pre-event" : "post-event"} survey is already published for this campaign. Unpublish it first.`,
+    };
+  }
 
-  await supabase
+  const { error } = await supabase
     .from("survey_templates")
     .update({ status: "published", published_at: new Date().toISOString() })
     .eq("id", id);
+  if (error) return { error: error.message };
 
   revalidatePath("/dashboard/admin/surveys");
   revalidatePath(`/dashboard/admin/surveys/${id}`);
+  return { success: true };
 }
 
 export async function unpublishSurveyTemplate(formData: FormData) {
