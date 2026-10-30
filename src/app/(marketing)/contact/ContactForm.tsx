@@ -34,7 +34,7 @@ export function ContactForm({
   if (state.message) {
     return (
       <div className="card mt-8 p-8 text-center">
-        <p className="font-semibold text-[var(--color-olive-deep)]">
+        <p className="font-semibold text-[var(--color-les-lime)]">
           {state.message}
         </p>
       </div>

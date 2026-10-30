@@ -15,7 +15,7 @@ export function LegalTabs({ active }: { active: "/terms" | "/privacy" | "/cookie
           href={tab.href}
           className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
             tab.href === active
-              ? "bg-white text-[var(--color-ink)]"
+              ? "bg-[var(--color-les-lime)] text-[var(--color-les-ink)]"
               : "text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
           }`}
         >

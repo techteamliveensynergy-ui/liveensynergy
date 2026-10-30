@@ -75,7 +75,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
       </Link>
 
       {/* 1. Hero */}
-      <section className="mt-4 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm">
+      <section className="mt-4 overflow-hidden rounded-3xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={art.src} alt={art.alt || ev.name} className="h-56 w-full object-cover md:h-72" />
         <div className="space-y-4 p-6 md:p-8">
@@ -209,7 +209,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             ],
           ].map(([title, body], i) => (
             <li key={title} className="flex gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-semibold text-white">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-semibold text-[var(--color-les-ink)]">
                 {i + 1}
               </span>
               <div className="text-sm">
@@ -245,7 +245,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
       </Section>
 
       {/* 7. Start survey and terms */}
-      <section className="mt-8 rounded-3xl bg-[var(--color-ink)] p-6 text-white md:p-8">
+      <section className="mt-8 rounded-3xl border border-[var(--color-les-lime)] bg-[var(--color-les-panel)] p-6 text-white md:p-8">
         <h2 className="font-display text-2xl font-semibold">{ended ? "This event has ended" : "Ready to take part?"}</h2>
         {!ended && cta.kind === "open" && (
           <p className="mt-2 text-sm text-white/80">

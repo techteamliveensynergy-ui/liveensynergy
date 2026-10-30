@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Albert_Sans, DM_Sans, Playfair_Display } from "next/font/google";
+import { Albert_Sans, Big_Shoulders, DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const albertSans = Albert_Sans({
@@ -14,6 +14,19 @@ const dmSans = DM_Sans({
   weight: ["400", "500", "600", "700"],
   variable: "--font-dm-sans",
   display: "swap",
+});
+
+// The public site's poster headings (the Figma site design, #82). Google
+// merged "Big Shoulders Display" into "Big Shoulders".
+const bigShoulders = Big_Shoulders({
+  subsets: ["latin"],
+  weight: ["800", "900"],
+  variable: "--font-big-shoulders",
+  display: "swap",
+  // Next has no metrics for this family, so name close condensed fallbacks
+  // instead of letting it guess (it warns and skips otherwise).
+  adjustFontFallback: false,
+  fallback: ["Impact", "Arial Narrow", "sans-serif"],
 });
 
 const playfairDisplay = Playfair_Display({
@@ -39,7 +52,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${albertSans.variable} ${dmSans.variable} ${playfairDisplay.variable}`}
+      className={`${albertSans.variable} ${dmSans.variable} ${playfairDisplay.variable} ${bigShoulders.variable}`}
     >
       <body>{children}</body>
     </html>

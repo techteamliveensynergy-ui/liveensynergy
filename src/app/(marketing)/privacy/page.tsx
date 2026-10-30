@@ -4,17 +4,17 @@ export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (
-    <div className="bg-[var(--color-sage)]">
+    <div>
       <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
         <LegalTabs active="/privacy" />
-        <p className="mt-6 font-serif text-[var(--color-olive-deep)]">
+        <p className="les-eyebrow mt-6">
           Last updated · 16 October 2026
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
           Privacy Policy
         </h1>
 
-        <article className="mt-8 space-y-6 rounded-2xl bg-white p-7 text-sm leading-relaxed text-[var(--color-ink)]/85">
+        <article className="mt-8 space-y-6 rounded-2xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-7 text-sm leading-relaxed text-[var(--color-ink)]/85">
           <section>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
               Data we collect

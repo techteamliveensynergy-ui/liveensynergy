@@ -59,7 +59,7 @@ export default async function EventsPage({
                 <Link
                   key={e.id}
                   href={`/events/${e.id}`}
-                  className="block rounded-3xl border border-black/10 bg-white p-3 shadow-sm transition hover:shadow-md"
+                  className="les-lift block rounded-3xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-3 hover:border-[var(--color-les-lime)]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={image.src} alt={image.alt} className="h-40 w-full rounded-2xl object-cover" />
@@ -124,7 +124,7 @@ export default async function EventsPage({
       )}
 
       {events.length === 0 ? (
-        <div className="mt-8 rounded-3xl border border-black/10 p-10 text-center text-[var(--color-ink-soft)]">
+        <div className="mt-8 rounded-3xl border border-[var(--color-les-line)] p-10 text-center text-[var(--color-ink-soft)]">
           No events are open for partnership right now — check back soon.
         </div>
       ) : (
@@ -136,7 +136,7 @@ export default async function EventsPage({
               <Link
                 key={l.id}
                 href={`/dashboard/events/${l.id}/view`}
-                className="block rounded-3xl border border-black/10 bg-[#f2f0f6] p-3 shadow-sm transition hover:shadow-md"
+                className="les-lift block rounded-3xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-3 hover:border-[var(--color-les-lime)]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={image.src} alt={image.alt} className="h-40 w-full rounded-2xl object-cover" />
