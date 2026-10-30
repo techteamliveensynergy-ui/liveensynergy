@@ -281,7 +281,7 @@ export default async function InvoiceDetailPage({
             <dd className="text-sm">{formatGbp(invoice.amount_gbp)}</dd>
           </div>
           <div>
-            <dt className="field-label">Sponsored event</dt>
+            <dt className="field-label">Partnered event</dt>
             <dd className="text-sm">{invoice.sponsored_events?.name ?? "—"}</dd>
           </div>
           <div>

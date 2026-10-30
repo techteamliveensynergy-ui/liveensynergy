@@ -3,9 +3,10 @@ import Link from "next/link";
 const TABS = [
   { href: "/terms", label: "Terms & Conditions" },
   { href: "/privacy", label: "Privacy Policy" },
+  { href: "/cookies", label: "Cookie Policy" },
 ];
 
-export function LegalTabs({ active }: { active: "/terms" | "/privacy" }) {
+export function LegalTabs({ active }: { active: "/terms" | "/privacy" | "/cookies" }) {
   return (
     <div className="flex flex-wrap gap-2">
       {TABS.map((tab) => (

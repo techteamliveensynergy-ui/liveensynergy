@@ -33,7 +33,7 @@ export function ChangeRequestSection({
     <div className="card p-6">
       <h2 className="text-lg font-semibold">Request a change</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        Ask to change the event or artist on this sponsorship — available up
+        Ask to change the event or artist on this partnership — available up
         to 2 days before the event date. Closer than that, use Contact
         Live·En·Synergy above instead.
       </p>

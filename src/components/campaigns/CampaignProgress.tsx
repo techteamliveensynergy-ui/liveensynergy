@@ -91,7 +91,7 @@ export function CampaignProgress({
               ))}
             {current.key === "match" && openProposals > 0 && (
               <Link href="/dashboard/sponsored" className="font-semibold text-[var(--color-brand-dark)] underline">
-                Open Sponsored events →
+                Open Partnered events →
               </Link>
             )}
           </>

@@ -107,7 +107,7 @@ test("A3 an admin can start a chat with a user who hasn't written in", async ({
   await page.goto("/dashboard/messages");
 
   const open = page.getByRole("button", {
-    name: /New chat with an artist or sponsor/i,
+    name: /New chat with an artist or partner/i,
   });
   await expect(open).toBeVisible();
   await shot(page, "A3a-button", "New chat control on the admin Messages page");

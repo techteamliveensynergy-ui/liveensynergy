@@ -60,9 +60,9 @@ export function MatchForm({
       <ErrorBanner error={state.error} />
 
       <div>
-        <p className="field-label">Suggest available listings to this sponsor</p>
+        <p className="field-label">Suggest available listings to this partner</p>
         <p className="field-hint">
-          Tick as many as you want to put forward. The sponsor picks one — the
+          Tick as many as you want to put forward. The partner picks one — the
           rest are withdrawn automatically and their listings go back on the
           market.
         </p>

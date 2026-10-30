@@ -189,7 +189,7 @@ export function LiveCampaignPanel(props: LiveCampaignPanelProps) {
                 {checkIn.note && <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">{checkIn.note}</p>}
               </>
             ) : (
-              <p className="text-[var(--color-ink-soft)]">Available once the sponsorship is confirmed.</p>
+              <p className="text-[var(--color-ink-soft)]">Available once the partnership is confirmed.</p>
             )}
           </Item>
         )}

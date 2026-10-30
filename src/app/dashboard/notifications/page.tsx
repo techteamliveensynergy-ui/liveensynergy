@@ -46,7 +46,7 @@ export default async function NotificationsPage() {
         <EmptyState
           icon="🔔"
           title="No notifications yet"
-          body="Updates about your events, sponsorships and rewards will show up here."
+          body="Updates about your events, partnerships and rewards will show up here."
         />
       ) : (
         <div className="card divide-y divide-black/10">

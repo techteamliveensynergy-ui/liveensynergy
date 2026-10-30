@@ -131,7 +131,7 @@ export function embedUrl(url: string | null | undefined): string | null {
   const yt = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/.exec(url);
   if (yt) return `https://www.youtube-nocookie.com/embed/${yt[1]}`;
   const vimeo = /vimeo\.com\/(\d+)/.exec(url);
-  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}?dnt=1`;
   return null;
 }
 

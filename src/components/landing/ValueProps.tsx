@@ -9,14 +9,14 @@ const CARDS = [
   },
   {
     eyebrow: "For artists & organisers",
-    title: "Sponsorship for your events.",
+    title: "Partnership for your events.",
     body: "List your upcoming events. When a brand campaign fits, we match it to you: you deliver the agreed branding, like social mentions and onsite presence, and get paid for it.",
     bg: "bg-[var(--color-lavender)]",
   },
   {
     eyebrow: "For audiences",
     title: "Share your view, get a reward.",
-    body: "Go to events you'd love anyway and answer the sponsor's short survey. Once your response passes our quality check, you get a discount code.",
+    body: "Go to events you'd love anyway and answer the partner's short survey. Once your response passes our quality check, you get a discount code.",
     bg: "bg-[var(--color-sage)]",
   },
 ];

@@ -20,7 +20,7 @@ export default async function EventOnboardingPage() {
       notices={<OnboardingNotices />}
       role="event"
       name={profile.full_name}
-      subtitle="Tell brands about your event and what you can offer as a sponsorship partner."
+      subtitle="Tell brands about your event and what you can offer as a partnership partner."
     >
       <EventForm mode="onboarding" draft={draft} />
     </OnboardingShell>

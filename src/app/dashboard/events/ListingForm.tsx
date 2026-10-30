@@ -131,7 +131,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
         <Field
           label="Event image"
           htmlFor="image"
-          hint="Shown on your listing and to sponsors browsing Discover events."
+          hint="Shown on your listing and to partners browsing Discover events."
         >
           <FileDrop
             name="image"
@@ -211,8 +211,8 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Sponsorship">
-        <Field label="Sponsorship budget range" htmlFor="budget_range">
+      <FormSection title="Partnership">
+        <Field label="Partnership budget range" htmlFor="budget_range">
           <select
             id="budget_range"
             name="budget_range"
@@ -227,7 +227,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             ))}
           </select>
         </Field>
-        <Field label="Existing sponsors" htmlFor="existing_sponsors">
+        <Field label="Existing partners" htmlFor="existing_sponsors">
           <input
             id="existing_sponsors"
             name="existing_sponsors"
@@ -237,7 +237,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
           />
         </Field>
         <Field
-          label="Benefit to sponsors"
+          label="Benefit to partners"
           htmlFor="sponsor_benefits"
           hint="e.g. branding on creatives, social content, mentions, onsite banners, merch stations"
         >
@@ -250,7 +250,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
         </Field>
         {d?.status === "matched" || d?.status === "closed" ? (
           <p className="rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm">
-            This event is {d.status === "matched" ? "matched with a sponsor" : "closed"} — saving
+            This event is {d.status === "matched" ? "matched with a partner" : "closed"} — saving
             your changes keeps it that way.
           </p>
         ) : (
@@ -261,7 +261,7 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
               defaultChecked={d?.status === "available"}
               className="h-4 w-4"
             />
-            Make this event available for sponsorship now (otherwise saved as a
+            Make this event available for partnership now (otherwise saved as a
             draft)
           </label>
         )}

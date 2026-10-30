@@ -37,7 +37,7 @@ import { ARTIST_TYPES } from "@/lib/constants";
 import { ChangeRequestSection } from "./ChangeRequestSection";
 import { UK_TIME_ZONE, ukLocalInputValue } from "@/lib/format";
 
-export const metadata = { title: "Sponsored event" };
+export const metadata = { title: "Partnered event" };
 
 type ParticipantRow = Participation & {
   profiles: { full_name: string | null } | null;
@@ -285,15 +285,15 @@ export default async function SponsoredEventPage({
         href="/dashboard/sponsored"
         className="inline-block text-sm text-[var(--color-brand)]"
       >
-        ← Back to sponsored events
+        ← Back to partnered events
       </Link>
 
       <PageHeader
         title={event.name}
         subtitle={
           event.artist_display_name
-            ? `Sponsorship ref ${event.reference} · with ${event.artist_display_name}`
-            : `Sponsorship ref ${event.reference}`
+            ? `Partnership ref ${event.reference} · with ${event.artist_display_name}`
+            : `Partnership ref ${event.reference}`
         }
         action={<StatusBadge status={event.status} />}
       />
@@ -366,7 +366,7 @@ export default async function SponsoredEventPage({
 
       {/* Sponsorship management */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold">Sponsorship at a glance</h2>
+        <h2 className="text-lg font-semibold">Partnership at a glance</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {isBrand && (
             <Stat label="Campaign budget" value={money(event.budget_gbp)} hint="what you committed" />
@@ -453,7 +453,7 @@ export default async function SponsoredEventPage({
 
         {listing?.sponsor_benefits && (
           <div className="mt-4">
-            <p className="field-label">Benefit to sponsors</p>
+            <p className="field-label">Benefit to partners</p>
             <p className="whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
               {listing.sponsor_benefits}
             </p>
@@ -504,12 +504,12 @@ export default async function SponsoredEventPage({
           <>
             <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
               {event.status === "withdrawn"
-                ? "This proposal was withdrawn — the sponsor confirmed a different event for the same campaign."
+                ? "This proposal was withdrawn — the partner confirmed a different event for the same campaign."
                 : "These terms are locked — both parties have agreed them. To change anything, contact the Live·En·Synergy team."}
             </p>
             <dl className="mt-4 grid gap-4">
               <Detail label="Reward rules" value={event.reward_rules} block />
-              <Detail label="Sponsorship terms" value={event.terms} block />
+              <Detail label="Partnership terms" value={event.terms} block />
               <Detail
                 label="How attendance is confirmed"
                 value={event.attendance_method}
@@ -532,7 +532,7 @@ export default async function SponsoredEventPage({
                 defaultValue={event.reward_rules ?? ""}
               />
             </Field>
-            <Field label="Sponsorship terms" htmlFor="terms">
+            <Field label="Partnership terms" htmlFor="terms">
               <textarea
                 id="terms"
                 name="terms"
@@ -617,7 +617,7 @@ export default async function SponsoredEventPage({
                         <>
                           You&apos;re agreeing to the terms for{" "}
                           <strong>{event.name}</strong> as they stand. The
-                          sponsorship confirms as soon as the other party agrees
+                          partnership confirms as soon as the other party agrees
                           too, and confirmation can&apos;t be undone.
                         </>
                       )
@@ -638,13 +638,13 @@ export default async function SponsoredEventPage({
               </button>
             </form>
             {/* New tab, with the reference already filled in — following the
-                enquiry form used to lose which sponsorship you were on, and
+                enquiry form used to lose which partnership you were on, and
                 you'd have to remember the number (10 Aug standup). */}
             <a
               href={`/contact?ref=${encodeURIComponent(
                 event.reference,
               )}&subject=${encodeURIComponent(
-                `Sponsorship ${event.reference} — ${event.name}`,
+                `Partnership ${event.reference} — ${event.name}`,
               )}`}
               target="_blank"
               rel="noopener noreferrer"

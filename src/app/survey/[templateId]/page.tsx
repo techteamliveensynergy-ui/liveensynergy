@@ -112,6 +112,12 @@ export default async function PublicSurveyPage({
       .limit(1);
     event = (evRows?.[0] as PublicSurveyEvent | undefined) ?? null;
   }
+  // The event's public page (#48) — linked only when it's actually public.
+  let eventPageHref: string | null = null;
+  if (event) {
+    const { data: isPublic } = await supabase.rpc("sponsored_event_is_public", { p_id: event.id });
+    if (isPublic === true) eventPageHref = `/events/${event.id}`;
+  }
 
   // Already-registered participant taking their own campaign's survey via a
   // shared link — same eligibility check the dashboard route itself uses.
@@ -252,6 +258,11 @@ export default async function PublicSurveyPage({
         <h1 className="font-display text-2xl font-semibold text-[var(--color-ink)]">{tpl.title}</h1>
         {tpl.description && (
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{tpl.description}</p>
+        )}
+        {eventPageHref && (
+          <Link href={eventPageHref} className="mt-2 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
+            About this event and the ticket offer →
+          </Link>
         )}
       </div>
       <CapacityNotice capacity={capacity} />

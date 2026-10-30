@@ -62,6 +62,19 @@ export default function PrivacyPage() {
           </section>
           <section>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
+              Cookies
+            </h2>
+            <p className="mt-2">
+              We only use cookies the platform needs to work — to keep you signed in and to keep surveys free of
+              bots — and no analytics or advertising cookies. Our{" "}
+              <a href="/cookies" className="font-semibold text-[var(--color-brand-dark)] underline">
+                Cookie Policy
+              </a>{" "}
+              lists each one.
+            </p>
+          </section>
+          <section>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
               Your rights
             </h2>
             <p className="mt-2">

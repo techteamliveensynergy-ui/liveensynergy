@@ -83,7 +83,7 @@ export function RewardEngineDisplay({
         <div>
           <h2 className="text-lg font-semibold">Reward engine · discount codes</h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            How rewards are tiered for this sponsorship, by order of registration. Participants
+            How rewards are tiered for this partnership, by order of registration. Participants
             redeem their code on the platform shown.
           </p>
         </div>

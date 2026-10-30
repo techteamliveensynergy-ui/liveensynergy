@@ -58,8 +58,8 @@ export function buildInvoiceLines(input: BuildInvoiceInput): InvoiceBuild {
   }
 
   const label = input.packageName
-    ? `Sponsorship package: ${input.packageName}`
-    : "Sponsorship campaign";
+    ? `Partnership package: ${input.packageName}`
+    : "Partnership campaign";
   const suffix = ` (${input.campaignReference})`;
 
   if (mode === "on_top_of_package") {
@@ -107,7 +107,7 @@ export function buildInvoiceLines(input: BuildInvoiceInput): InvoiceBuild {
   if (pool > 0) {
     lines.push({
       kind: "sponsorship_pool",
-      description: `${label} — sponsorship pool${suffix}`,
+      description: `${label} — partnership pool${suffix}`,
       net_gbp: toGbp(pool),
       vat_rate: 0,
       vat_gbp: 0,

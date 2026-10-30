@@ -18,7 +18,7 @@ export function Hero() {
               aria-hidden
               className="h-1.5 w-1.5 rounded-full bg-[var(--color-olive)]"
             />
-            A sponsorship marketplace for live events
+            A partnership marketplace for live events
           </span>
           <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--color-ink)] md:text-6xl">
             Where <span className="font-serif font-normal text-[var(--color-brand)]">brands</span>, artists &amp;
@@ -26,7 +26,7 @@ export function Hero() {
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-ink-soft)]">
             Brands reach real live-event audiences and learn what they think.
-            Artists get sponsored. Fans share their view and get a discount
+            Artists get partnered. Fans share their view and get a discount
             code for it.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -40,7 +40,7 @@ export function Hero() {
               href="/events"
               className="text-sm font-semibold text-[var(--color-ink)] hover:text-[var(--color-brand-dark)]"
             >
-              Explore sponsored events →
+              Explore partnered events →
             </Link>
           </div>
         </div>
@@ -65,7 +65,7 @@ export function Hero() {
             <div className="flex items-center justify-between">
               <span className="chip">Summer Beats Festival</span>
               <span className="text-xs font-semibold text-[var(--color-brand-dark)]">
-                Sponsored campaign
+                Partnered campaign
               </span>
             </div>
             <div className="grid h-32 place-items-center rounded-xl bg-[var(--color-lavender)] font-serif text-[var(--color-purple-deep)]">

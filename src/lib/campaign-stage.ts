@@ -86,7 +86,7 @@ export const CAMPAIGN_STAGE_HELP: Record<CampaignStageKey, { meaning: string; ho
   },
   awaiting_artist: {
     meaning: "An event is agreed; the artist still has to set up and confirm the discount codes.",
-    how: "Automatic, until the artist confirms the codes on the sponsored event.",
+    how: "Automatic, until the artist confirms the codes on the partnered event.",
   },
   awaiting_survey: {
     meaning: "Event and codes are in place; no campaign survey is published yet.",

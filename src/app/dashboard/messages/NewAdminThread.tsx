@@ -95,7 +95,7 @@ export function NewAdminThread({ people }: { people: ContactOption[] }) {
                 id="new-thread-subject"
                 name="subject"
                 className="input mt-1"
-                placeholder="e.g. Sponsorship SPE-00003"
+                placeholder="e.g. Partnership SPE-00003"
               />
             </div>
             <button type="submit" className="btn btn-primary">
@@ -109,7 +109,7 @@ export function NewAdminThread({ people }: { people: ContactOption[] }) {
           className="btn btn-ghost text-sm"
           onClick={() => setOpen(true)}
         >
-          + New chat with an artist or sponsor
+          + New chat with an artist or partner
         </button>
       )}
     </div>

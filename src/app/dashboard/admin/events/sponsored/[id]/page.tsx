@@ -26,6 +26,8 @@ import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
+import { PublicPageSection } from "./PublicPageSection";
+import type { EventPageCopy } from "@/lib/public-event";
 import type {
   Invoice,
   RewardCode,
@@ -37,7 +39,7 @@ import type {
 } from "@/lib/types";
 import { campaignLabel } from "@/lib/campaign-requests";
 
-export const metadata = { title: "Sponsored event · Admin" };
+export const metadata = { title: "Partnered event · Admin" };
 
 /**
  * Statuses run one way only — a confirmed deal can't be dropped back to "in
@@ -62,7 +64,7 @@ const GATE_NOTICES: Record<string, string> = {
   pending: "Survey submitted but not scored yet. Try again shortly.",
   review: "Survey is in the review queue — approve or reject it there first.",
   reject: "Survey failed the quality check — no reward code.",
-  mismatch: "That participant doesn't belong to this sponsorship.",
+  mismatch: "That participant doesn't belong to this partnership.",
   status: "Verify attendance before issuing or releasing a reward.",
   tier: "That reward tier no longer exists on this event.",
   cap: "That tier's participant cap has already been reached.",
@@ -112,17 +114,18 @@ export default async function AdminSponsoredDetailPage({
     issued?: string;
     held?: string;
     unplaced?: string;
+    msg?: string;
   }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
-  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced } = await searchParams;
+  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced, msg } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category)",
+      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category, ticket_buy_url)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -161,6 +164,7 @@ export default async function AdminSponsoredDetailPage({
         ticket_price_gbp: number | null;
         capacity: number | null;
         category: string | null;
+        ticket_buy_url: string | null;
       } | null;
     }>();
   if (!event) notFound();
@@ -218,11 +222,12 @@ export default async function AdminSponsoredDetailPage({
       .order("created_at", { ascending: true }),
   ]);
 
-  const { data: invoiceRows } = await supabase
-    .from("invoices")
-    .select("*")
-    .eq("sponsored_event_id", id)
-    .order("created_at", { ascending: false });
+  const [{ data: invoiceRows }, { data: pageCopy }, { data: isPublic }] = await Promise.all([
+    supabase.from("invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
+    // Public event page copy (#48, 0095). Missing table → null, section still renders.
+    supabase.from("sponsored_event_pages").select("*").eq("sponsored_event_id", id).maybeSingle<EventPageCopy>(),
+    supabase.rpc("sponsored_event_is_public", { p_id: id }),
+  ]);
 
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
@@ -317,7 +322,7 @@ export default async function AdminSponsoredDetailPage({
             href={`/contact?ref=${encodeURIComponent(
               event.reference,
             )}&subject=${encodeURIComponent(
-              `Sponsorship ${event.reference} — ${event.name}`,
+              `Partnership ${event.reference} — ${event.name}`,
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -498,6 +503,15 @@ export default async function AdminSponsoredDetailPage({
         )}
       </div>
 
+      <PublicPageSection
+        eventId={event.id}
+        copy={pageCopy ?? null}
+        isPublic={isPublic === true}
+        listingTicketUrl={event.event_listings?.ticket_buy_url ?? null}
+        notice={notice}
+        errorMessage={msg}
+      />
+
       <ProofsSection eventId={event.id} proofs={proofs} />
 
       {notice === "codes_sent" && (
@@ -555,7 +569,7 @@ export default async function AdminSponsoredDetailPage({
       <InvoiceSection eventId={event.id} invoices={invoices} />
 
       {/* Admin override of the deal's details. The parties themselves can't
-          touch a confirmed sponsorship, so this is the only route to moving a
+          touch a confirmed partnership, so this is the only route to moving a
           deadline that has passed or fixing a budget (3 Aug standup). */}
       <div className="card p-6">
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">

@@ -11,7 +11,7 @@ import { capture, fixture } from "./helpers";
 test("B-OV-01 overview: confirmed sponsorships section", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(
-    page.getByRole("heading", { name: "Confirmed sponsorships" }),
+    page.getByRole("heading", { name: "Confirmed partnerships" }),
   ).toBeVisible();
   await capture(page, "B-OV-01", "Overview — confirmed sponsorships", {
     fullPage: true,
@@ -33,7 +33,7 @@ test("B-CAMP-01 campaign intro + description placeholder", async ({ page }) => {
 test("B-CAMP-02 breakdown beside budget, category below", async ({ page }) => {
   await page.goto("/dashboard/campaigns/new");
   await page.fill("#budget_gbp", "10000");
-  await expect(page.getByText("Available for sponsorship")).toBeVisible();
+  await expect(page.getByText("Available for partnership")).toBeVisible();
   await capture(page, "B-CAMP-02", "Estimated breakdown beside budget", {
     selector: "form:has(#budget_gbp)",
   });
@@ -130,7 +130,7 @@ test("B-SPON-02 banner, branding assets, audience participation", async ({
 test("B-SPON-04 sponsored events grouped by status", async ({ page }) => {
   await page.goto("/dashboard/sponsored");
   await expect(
-    page.getByRole("heading", { name: /Confirmed sponsorships/ }),
+    page.getByRole("heading", { name: /Confirmed partnerships/ }),
   ).toBeVisible();
   await capture(page, "B-SPON-04", "Sponsored events grouped by status", {
     fullPage: true,
@@ -193,7 +193,7 @@ test("B-MSG-01 chat split into partner / team threads", async ({ page }) => {
   // Direct brand↔artist chats are archived (admin-only) since 19 Oct; a
   // brand/artist sees only their threads with the team.
   await expect(page.getByText(/Your conversations with the Live·En·Synergy team/)).toBeVisible();
-  await expect(page.getByText("With artists & sponsors")).toHaveCount(0);
+  await expect(page.getByText("With artists & partners")).toHaveCount(0);
   await capture(page, "B-MSG-01", "Messages — split into two categories", {
     fullPage: true,
   });

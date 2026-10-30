@@ -201,7 +201,7 @@ export function BrandForm({
           />
         </Field>
         <Field
-          label="Preferred event sponsorship location"
+          label="Preferred event partnership location"
           htmlFor="preferred_locations"
         >
           <input
@@ -214,7 +214,7 @@ export function BrandForm({
         </Field>
       </FormSection>
 
-      <FormSection title="Sponsorship manager & contact">
+      <FormSection title="Partnership manager & contact">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Manager name" htmlFor="manager_name">
             <input

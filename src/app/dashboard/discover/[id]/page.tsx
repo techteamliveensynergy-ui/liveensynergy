@@ -95,7 +95,7 @@ export default async function EventDetailsPage({
         <h2 className="text-lg font-semibold">What you get</h2>
         <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
           {event.reward_rules ??
-            "The sponsor hasn't published reward details for this event yet."}
+            "The partner hasn't published reward details for this event yet."}
         </p>
 
         <h2 className="mt-6 text-lg font-semibold">How it works</h2>

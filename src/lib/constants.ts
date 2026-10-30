@@ -12,7 +12,7 @@ export type SignupRole = (typeof ROLES)[number];
 export type Role = SignupRole | "admin";
 
 export const ROLE_LABELS: Record<Role, string> = {
-  brand: "Brand / Sponsor",
+  brand: "Brand / Partner",
   // Artists and event organisers were merged into one category (3 Aug
   // standup) — the two used the platform in exactly the same way. `event`
   // stays in the enum for accounts created before the merge.
@@ -36,21 +36,21 @@ export const SIGNUP_ROLE_OPTIONS: {
 }[] = [
   {
     value: "brand",
-    title: "Brand / Sponsor",
+    title: "Brand / Partner",
     description:
-      "You want to sponsor live events and connect with engaged audiences.",
+      "You want to partner with live events and connect with engaged audiences.",
   },
   {
     value: "artist",
     title: "Artist / Event Organiser",
     description:
-      "You perform, create or run events, and you're looking for sponsorship.",
+      "You perform, create or run events, and you're looking for partnership.",
   },
   {
     value: "audience",
     title: "Audience",
     description:
-      "You want to attend events and unlock sponsor-funded rewards and reimbursements.",
+      "You want to attend events and unlock partner-funded rewards and reimbursements.",
   },
 ];
 

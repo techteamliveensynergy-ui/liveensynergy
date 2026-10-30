@@ -10,7 +10,7 @@ export const CONSENT_LABELS: Record<ConsentType, string> = {
   privacy_policy: "Privacy Policy",
   email_verified: "Email address verified",
   event_terms: "Event registration terms",
-  sponsor_marketing: "Sponsor newsletter & promotions",
+  sponsor_marketing: "Partner newsletter & promotions",
   survey_terms: "Survey Terms & Conditions",
   residency_confirmed: "18 or over and a UK resident",
   order_form_details: "Order form: details approved",

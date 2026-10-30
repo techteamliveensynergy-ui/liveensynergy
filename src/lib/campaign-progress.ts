@@ -89,7 +89,7 @@ export function campaignSteps(c: CampaignProgressInput): CampaignStep[] {
     key: "live",
     label: "Campaign live",
     done: allDone,
-    detail: "Everything is in place — follow participants and results from the sponsored event.",
+    detail: "Everything is in place — follow participants and results from the partnered event.",
   });
   return steps;
 }

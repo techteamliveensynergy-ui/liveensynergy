@@ -7,7 +7,7 @@ import type { Campaign, EventListing } from "@/lib/types";
 import { SponsoredEventForm, type ListingOption } from "./SponsoredEventForm";
 import { campaignLabel } from "@/lib/campaign-requests";
 
-export const metadata = { title: "New sponsored event" };
+export const metadata = { title: "New partnered event" };
 
 export default async function NewSponsoredEventPage() {
   // Artists and organisers may now initiate too (27 Jul standup). A brand picks
@@ -154,18 +154,18 @@ export default async function NewSponsoredEventPage() {
   return (
     <div>
       <PageHeader
-        title="Create a sponsored event"
+        title="Create a partnered event"
         subtitle={
           isBrand
             ? "Set out the event and the terms you're offering. The artist or organiser is invited to review it and the deal confirms once they agree."
-            : "Propose a sponsorship against a brand's open brief. They'll be notified and the deal is confirmed once they agree."
+            : "Propose a partnership against a brand's open brief. They'll be notified and the deal is confirmed once they agree."
         }
       />
       <Link
         href="/dashboard/sponsored"
         className="mb-4 inline-block text-sm text-[var(--color-brand)]"
       >
-        ← Back to sponsored events
+        ← Back to partnered events
       </Link>
 
       {/* Sakshi found it unclear who is supposed to start an event (3 Aug
@@ -176,17 +176,17 @@ export default async function NewSponsoredEventPage() {
           Either side can start this
         </h2>
         <p className="mt-2 text-sm text-[var(--color-ink)]/80">
-          A sponsored event can be created by <strong>the brand</strong> or by{" "}
+          A partnered event can be created by <strong>the brand</strong> or by{" "}
           <strong>the artist / event organiser</strong> — whoever gets there
           first. Whoever creates it is inviting the other party: they get a
-          notification, review the details and terms, and the sponsorship is
+          notification, review the details and terms, and the partnership is
           confirmed only once <em>both</em> sides have agreed. Nothing here is
           binding until then.
         </p>
         <p className="mt-2 text-sm text-[var(--color-ink)]/80">
           {isBrand
             ? "Pick one of the listed events to pull its details in automatically, or enter them by hand if the event isn't listed yet."
-            : "Choose the brand's campaign brief you're proposing against — that's how we know which sponsor to send this to."}{" "}
+            : "Choose the brand's campaign brief you're proposing against — that's how we know which partner to send this to."}{" "}
           Once it&apos;s confirmed the terms lock, and only the Live·En·Synergy
           team can change them.
         </p>

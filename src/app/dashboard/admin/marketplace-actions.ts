@@ -720,7 +720,7 @@ export async function createCampaignFromAdmin(
   // for the reward pool isn't viable, package price or not.
   const net = netForCampaign(money);
   if (net == null || net <= 0) {
-    return { error: "This budget leaves nothing available for sponsorship after the platform margin." };
+    return { error: "This budget leaves nothing available for partnership after the platform margin." };
   }
 
   const { data: created, error } = await supabase
@@ -1199,7 +1199,7 @@ export async function reviewEventProof(formData: FormData) {
       recipientProfileId: updated.uploaded_by,
       link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
       variables: {
-        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        event_name: updated.sponsored_events?.name ?? "your partnership",
         proof_type: updated.proof_type === "social_mention" ? "social mention" : "onsite branding",
         status: op === "approve" ? "approved" : "rejected",
       },
@@ -1256,7 +1256,7 @@ export async function upsertRewardTiers(
 ): Promise<MarketplaceState> {
   const { supabase } = await requireAdmin();
   const eventId = str(formData.get("event_id"));
-  if (!eventId) return { error: "Missing sponsorship." };
+  if (!eventId) return { error: "Missing partnership." };
   if (await rewardConfigFrozen(supabase, eventId)) {
     return { error: "The artist has already confirmed these discount codes — reopen them before editing." };
   }
@@ -1842,11 +1842,70 @@ export async function resolveEventChangeRequest(formData: FormData) {
       recipientProfileId: updated.requested_by,
       link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
       variables: {
-        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        event_name: updated.sponsored_events?.name ?? "your partnership",
         status: op === "approve" ? "approved" : "declined",
       },
     });
   }
 
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+}
+
+/** "yes" / "no" / "" from a not-stated/yes/no select. */
+function triState(v: FormDataEntryValue | null): boolean | null {
+  const s = String(v ?? "");
+  return s === "yes" ? true : s === "no" ? false : null;
+}
+
+/** One line per row of a textarea, blanks dropped. */
+function lines(v: FormDataEntryValue | null): string[] {
+  return String(v ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+/**
+ * The team's copy for the public event page (GitHub #48, 0095). Admin-only
+ * table, so this is the one writer. Redirects with a notice (L6) and
+ * revalidates the public page, which otherwise keeps serving its cached copy.
+ */
+export async function savePublicEventPage(formData: FormData) {
+  const { supabase, userId } = await requireAdmin();
+  const eventId = str(formData.get("event_id"));
+  if (!eventId) return;
+  const back = `/dashboard/admin/events/sponsored/${eventId}`;
+
+  const ticket = normaliseUrl(formData.get("ticket_url"), "The ticket link");
+  if (ticket.error) redirect(`${back}?notice=page_error&msg=${encodeURIComponent(ticket.error)}#public-page`);
+  const minutes = num(formData.get("survey_minutes"));
+
+  const row = {
+    sponsored_event_id: eventId,
+    event_description: str(formData.get("event_description")),
+    subcategory: str(formData.get("subcategory")),
+    age_restriction: str(formData.get("age_restriction")),
+    ticket_url: ticket.url,
+    research_about: str(formData.get("research_about")),
+    research_why: str(formData.get("research_why")),
+    survey_minutes: minutes != null && minutes >= 1 && minutes <= 120 ? Math.round(minutes) : null,
+    eligible_tickets: str(formData.get("eligible_tickets")),
+    booking_fees_excluded: triState(formData.get("booking_fees_excluded")),
+    single_use: triState(formData.get("single_use")),
+    combinable: triState(formData.get("combinable")),
+    code_limit_note: str(formData.get("code_limit_note")),
+    offer_lines: lines(formData.get("offer_lines")),
+    account_required: formData.get("account_required") === "on",
+    participation_limit: str(formData.get("participation_limit")),
+    eligibility_lines: lines(formData.get("eligibility_lines")),
+    updated_by: userId,
+  };
+  const { error } = await supabase.from("sponsored_event_pages").upsert(row, { onConflict: "sponsored_event_id" });
+  if (error) redirect(`${back}?notice=page_error&msg=${encodeURIComponent(error.message)}#public-page`);
+
+  revalidatePath(back);
+  revalidatePath(`/events/${eventId}`);
+  revalidatePath("/events");
+  redirect(`${back}?notice=page_saved#public-page`);
 }

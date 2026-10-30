@@ -38,7 +38,7 @@ export function ProofUploadSection({
       <h2 className="text-lg font-semibold">Proof of terms</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
         Upload evidence for the social-media mentions and onsite branding
-        owed under this sponsorship — the team reviews each one.
+        owed under this partnership — the team reviews each one.
       </p>
 
       {state.error && (

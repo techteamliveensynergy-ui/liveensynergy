@@ -50,7 +50,7 @@ export async function contactOrganiser(formData: FormData) {
   await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_profile_id: userId,
-    body: `Interested in sponsoring: ${listing.name}`,
+    body: `Interested in partnering with: ${listing.name}`,
   });
 
   // The team relays this to the organiser's own thread with us if it's

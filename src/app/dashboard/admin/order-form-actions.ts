@@ -284,7 +284,7 @@ async function syncCampaignBilling(
   }
   const line: InvoiceLine = {
     kind: "package",
-    description: `${packageName ? `Sponsorship package: ${packageName}` : "Sponsorship campaign"} (${campaign.reference})`,
+    description: `${packageName ? `Partnership package: ${packageName}` : "Partnership campaign"} (${campaign.reference})`,
     net_gbp: fee,
     vat_rate: vat === 0 ? 0 : INVOICE.vatRate,
     vat_gbp: vat,

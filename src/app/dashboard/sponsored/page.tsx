@@ -5,7 +5,7 @@ import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 
-export const metadata = { title: "Sponsored events" };
+export const metadata = { title: "Partnered events" };
 
 export default async function SponsoredPage() {
   const { profile } = await requireRole(["brand", "artist", "event"]);
@@ -49,8 +49,8 @@ export default async function SponsoredPage() {
   return (
     <div>
       <PageHeader
-        title="Sponsored events"
-        subtitle="Confirmed and in-progress sponsorships linking a brand and an artist or event."
+        title="Partnered events"
+        subtitle="Confirmed and in-progress partnerships linking a brand and an artist or event."
         action={
           isBrand ? (
             <Link href="/dashboard/campaigns/new" className="btn btn-primary">
@@ -63,7 +63,7 @@ export default async function SponsoredPage() {
       {events.length === 0 ? (
         <EmptyState
           icon="🤝"
-          title="No sponsored events yet"
+          title="No partnered events yet"
           body={
             isBrand
               ? "Request a campaign and the Live·En·Synergy team matches it with artists. Proposed events appear here for you to agree."
@@ -80,7 +80,7 @@ export default async function SponsoredPage() {
           {/* Always rendered, even when empty — this is the section people are
               looking for, and its absence would read as a missing feature. */}
           <Section
-            title="Confirmed sponsorships"
+            title="Confirmed partnerships"
             description="Both sides have agreed terms. These are live — audience sign-ups and reward releases run against them."
             count={confirmed.length}
             emptyNote={
@@ -175,7 +175,7 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
             .join(" · ") || "No date set"}
         </p>
         <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
-          Sponsorship ref {e.reference}
+          Partnership ref {e.reference}
           {e.artist_display_name ? ` · with ${e.artist_display_name}` : ""}
         </p>
       </div>

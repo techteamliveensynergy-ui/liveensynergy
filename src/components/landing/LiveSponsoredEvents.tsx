@@ -52,10 +52,10 @@ export async function LiveSponsoredEvents() {
             Happening now
           </p>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
-            Sponsored events you can join
+            Partnered events you can join
           </h2>
           <p className="mt-3 text-[var(--color-ink-soft)]">
-            Register, answer the sponsor&apos;s short survey and go along. Your
+            Register, answer the partner&apos;s short survey and go along. Your
             discount code arrives once your response passes our quality check.
           </p>
         </div>

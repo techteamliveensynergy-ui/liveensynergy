@@ -213,6 +213,11 @@ export const RECOMMENDED_IMAGE_SIZES = {
 
 /**
  * Turns a YouTube/Vimeo/Loom/Instagram/TikTok share link into an embeddable player URL.
+ *
+ * Cookies (GitHub #47): YouTube goes through youtube-nocookie.com and Vimeo
+ * gets dnt=1, so neither sets tracking cookies just because a survey page
+ * loaded. Loom, Instagram and TikTok can't be told not to, so the player
+ * waits for a click (needsClickToLoad, ClickToLoadEmbed).
  * Anything else returns null rather than iframe-embedding an arbitrary
  * origin — most sites block that via X-Frame-Options anyway, and the 4 Sep
  * standup's "embed links, not uploads" decision was about known video
@@ -229,25 +234,29 @@ export function videoEmbedUrl(raw: string): string | null {
 
   if (host === "youtu.be") {
     const id = url.pathname.slice(1);
-    return id ? `https://www.youtube.com/embed/${id}` : null;
+    return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
   }
   if (host === "youtube.com" || host === "m.youtube.com") {
     if (url.pathname === "/watch") {
       const id = url.searchParams.get("v");
-      return id ? `https://www.youtube.com/embed/${id}` : null;
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
     }
-    if (url.pathname.startsWith("/embed/")) return url.toString();
+    if (url.pathname.startsWith("/embed/")) {
+      const id = url.pathname.split("/")[2];
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+    }
     if (url.pathname.startsWith("/shorts/")) {
       const id = url.pathname.split("/")[2];
-      return id ? `https://www.youtube.com/embed/${id}` : null;
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
     }
     return null;
   }
   if (host === "vimeo.com") {
     const id = url.pathname.split("/").filter(Boolean)[0];
-    return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+    return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}?dnt=1` : null;
   }
   if (host === "player.vimeo.com") {
+    url.searchParams.set("dnt", "1");
     return url.toString();
   }
   if (host === "loom.com") {
@@ -299,4 +308,19 @@ export function videoFormatFor(
 ): SurveyVideoFormat {
   if (explicit) return explicit;
   return url && looksPortrait(url) ? "portrait" : "landscape";
+}
+
+/** Players that set their own cookies however they're embedded (#47): shown
+ *  only after the viewer clicks, never on page load. Returns the platform's
+ *  name for the notice, or null when the player can load straight away. */
+export function needsClickToLoad(embedUrl: string): string | null {
+  try {
+    const host = new URL(embedUrl).hostname.replace(/^www\./, "");
+    if (host === "instagram.com") return "Instagram";
+    if (host === "tiktok.com") return "TikTok";
+    if (host === "loom.com") return "Loom";
+  } catch {
+    // fall through
+  }
+  return null;
 }

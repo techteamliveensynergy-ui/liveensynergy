@@ -50,7 +50,7 @@ export function ContactForm({
       )}
 
       {/* Carried through from wherever the form was opened, so the team can
-          see which sponsorship this is about (10 Aug standup). Shown rather
+          see which partnership this is about (10 Aug standup). Shown rather
           than hidden — you should be able to see what you're quoting. */}
       {reference && (
         <div className="rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm">
@@ -90,7 +90,7 @@ export function ContactForm({
           id="subject"
           name="subject"
           className="input"
-          placeholder="Sponsorship enquiry"
+          placeholder="Partnership enquiry"
           defaultValue={defaultSubject ?? ""}
         />
       </Field>

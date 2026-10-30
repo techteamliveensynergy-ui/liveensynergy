@@ -70,7 +70,7 @@ export function RegistrationForm({
           label="Date of birth"
           htmlFor="date_of_birth"
           required
-          hint="Some sponsors set an age requirement for their rewards."
+          hint="Some partners set an age requirement for their rewards."
         >
           <input
             id="date_of_birth"

@@ -398,11 +398,11 @@ export async function updateSponsoredEvent(formData: FormData) {
 export async function contactSupport(formData: FormData) {
   const { userId } = await requireUser();
   const id = str(formData.get("id"));
-  const eventName = str(formData.get("event_name")) ?? "a sponsorship";
+  const eventName = str(formData.get("event_name")) ?? "a partnership";
 
   const conversationId = await getOrCreateSupportConversation({
     userProfileId: userId,
-    subject: `Sponsorship: ${eventName}`,
+    subject: `Partnership: ${eventName}`,
   });
 
   if (!conversationId) {
@@ -558,11 +558,11 @@ export async function uploadEventProof(
   const eventId = str(formData.get("id"));
   const proofType = str(formData.get("proof_type"));
   if (!eventId || !proofType || !PROOF_PURPOSE[proofType]) {
-    return { error: "Missing sponsorship or proof type." };
+    return { error: "Missing partnership or proof type." };
   }
 
   const party = await loadPartyEvent(supabase, eventId, userId);
-  if (!party) return { error: "You're not a party to this sponsorship." };
+  if (!party) return { error: "You're not a party to this partnership." };
 
   const upload = await uploadImage(formData.get("file"), PROOF_PURPOSE[proofType]);
   if (upload.error) return { error: upload.error };
@@ -602,7 +602,7 @@ export async function requestEventChange(
   if (!eventId || !summary) return { error: "Describe the change you're asking for." };
 
   const party = await loadPartyEvent(supabase, eventId, userId);
-  if (!party) return { error: "You're not a party to this sponsorship." };
+  if (!party) return { error: "You're not a party to this partnership." };
 
   const instant = eventStartInstant({
     date: party.event.event_date,
@@ -638,11 +638,11 @@ export async function submitTicketSalesReport(
 ): Promise<SponsoredState> {
   const { supabase, userId } = await requireUser();
   const eventId = str(formData.get("id"));
-  if (!eventId) return { error: "Missing sponsorship." };
+  if (!eventId) return { error: "Missing partnership." };
 
   const party = await loadPartyEvent(supabase, eventId, userId);
   if (!party?.isArtist) {
-    return { error: "Only the artist on this sponsorship can submit a sales report." };
+    return { error: "Only the artist on this partnership can submit a sales report." };
   }
 
   const upload = await uploadPrivateFile(
@@ -740,7 +740,7 @@ export async function artistUploadPoolCodes(
   const tierId = str(formData.get("tier_id"));
   if (!eventId || !tierId) return { error: "Missing tier." };
   const ctx = await requireEventArtist(eventId);
-  if (!ctx) return { error: "Only the artist on this sponsorship can add codes." };
+  if (!ctx) return { error: "Only the artist on this partnership can add codes." };
   if (ctx.event.reward_codes_confirmed_at) {
     return { error: "You've already confirmed these codes — ask the team to reopen them to make changes." };
   }
@@ -796,7 +796,7 @@ export async function artistRemovePoolCode(formData: FormData) {
 }
 
 const CONFIRM_REFUSALS: Record<string, string> = {
-  forbidden: "Only the artist on this sponsorship can confirm its discount codes.",
+  forbidden: "Only the artist on this partnership can confirm its discount codes.",
   already_confirmed: "You've already confirmed these codes.",
   no_tiers: "The team hasn't set up any discount codes for this event yet.",
   shared_code_missing: "A shared-code tier has no code yet — the team needs to add it before you confirm.",
@@ -810,7 +810,7 @@ export async function confirmRewardCodes(
   formData: FormData,
 ): Promise<DiscountCodeState> {
   const eventId = str(formData.get("event_id"));
-  if (!eventId) return { error: "Missing sponsorship." };
+  if (!eventId) return { error: "Missing partnership." };
   if (formData.get("consent") !== "on") {
     return { error: "Tick the box to confirm you agree to these discount codes." };
   }

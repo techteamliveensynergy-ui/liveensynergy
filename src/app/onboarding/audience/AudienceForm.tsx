@@ -124,8 +124,8 @@ export function AudienceForm({
       {mode === "profile" && (
       <Placeholder
         title="What do you love going to?"
-        description="Pick your favourite categories and we'll surface sponsored events that match."
-        note="Not active yet — for now every confirmed sponsored event shows up under Discover events, unfiltered."
+        description="Pick your favourite categories and we'll surface partnered events that match."
+        note="Not active yet — for now every confirmed partnered event shows up under Discover events, unfiltered."
       >
         <div className="flex flex-wrap gap-2">
           {EVENT_CATEGORIES.map((c) => (

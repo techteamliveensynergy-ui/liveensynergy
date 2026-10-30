@@ -53,7 +53,7 @@ export default async function AdminInvoicesPage({
     <div>
       <PageHeader
         title="Invoices"
-        subtitle="Every sponsor invoice and where it stands. Unpaid ones can be resent to the brand."
+        subtitle="Every partner invoice and where it stands. Unpaid ones can be resent to the brand."
         action={
           <Link href="/dashboard/admin/invoices/new" className="btn btn-primary">
             + New invoice

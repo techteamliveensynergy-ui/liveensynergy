@@ -183,7 +183,7 @@ export function ArtistForm({
 
       <FormSection
         title="Additional information"
-        description="Helps our team match you with the right sponsors — not shown publicly."
+        description="Helps our team match you with the right partners — not shown publicly."
         private
       >
         <div className="grid gap-4 sm:grid-cols-2">

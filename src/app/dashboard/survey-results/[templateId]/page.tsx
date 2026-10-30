@@ -43,7 +43,7 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
   return (
     <div>
       <Link href="/dashboard/sponsored" className="mb-4 inline-block text-sm text-[var(--color-brand)]">
-        ← Back to sponsored events
+        ← Back to partnered events
       </Link>
       <PageHeader
         title={results.title}

@@ -100,7 +100,7 @@ test("survey admin — layout modes, cover vs per-question media, footer brandin
   await beat(page, 2600);
 
   await page.locator("#footer_brand_name").fill("Live En Synergy");
-  await page.locator("#footer_tagline").fill("Sponsorship, re-imagined");
+  await page.locator("#footer_tagline").fill("Partnership, re-imagined");
   const accentInput = page.locator("#accent_color");
   await accentInput.fill("#7c3aed");
   await caption(
@@ -148,7 +148,7 @@ test("survey admin — layout modes, cover vs per-question media, footer brandin
   // no text node between them (the "·" spacing is CSS margin only) — the
   // concatenated text has no space around the separator, so match a
   // substring that doesn't depend on that spacing.
-  const footerLocator = page.getByText("Sponsorship, re-imagined");
+  const footerLocator = page.getByText("Partnership, re-imagined");
   await footerLocator.scrollIntoViewIfNeeded();
   const submitButton = page.getByRole("button", { name: "Finish preview" });
   await submitButton.scrollIntoViewIfNeeded();

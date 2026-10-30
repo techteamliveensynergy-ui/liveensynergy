@@ -123,7 +123,7 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
         ],
       },
       {
-        title: "Sponsorship manager",
+        title: "Partnership manager",
         fields: [
           { name: "manager_name", label: "Manager name", type: "text" },
           { name: "manager_email", label: "Manager email", type: "email" },
@@ -209,11 +209,11 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
         ],
       },
       {
-        title: "Sponsor value",
+        title: "Partner value",
         fields: [
           {
             name: "sponsor_value_details",
-            label: "What they offer sponsors",
+            label: "What they offer partners",
             type: "textarea",
             wide: true,
           },
@@ -259,7 +259,7 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
         fields: [
           {
             name: "existing_partners",
-            label: "Existing partners / sponsors",
+            label: "Existing partners",
             type: "text",
           },
           { name: "contact_name", label: "Contact name", type: "text" },
@@ -286,11 +286,11 @@ export const ROLE_PROFILE_SPECS: Partial<Record<Role, RoleProfileSpec>> = {
         ],
       },
       {
-        title: "Sponsor value",
+        title: "Partner value",
         fields: [
           {
             name: "sponsor_value_details",
-            label: "What they offer sponsors",
+            label: "What they offer partners",
             type: "textarea",
             wide: true,
           },

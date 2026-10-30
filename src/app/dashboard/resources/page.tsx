@@ -21,13 +21,13 @@ const GUIDES: Resource[] = [
     pending: true,
   },
   {
-    title: "Sponsor guidelines",
-    body: "What brands can expect from a sponsorship, what to include in a brief, and how matches are reviewed.",
+    title: "Partner guidelines",
+    body: "What brands can expect from a partnership, what to include in a brief, and how matches are reviewed.",
     pending: true,
   },
   {
     title: "Artist & organiser guidelines",
-    body: "How to present your event to sponsors, what branding value to offer, and your obligations once a deal is confirmed.",
+    body: "How to present your event to partners, what branding value to offer, and your obligations once a deal is confirmed.",
     pending: true,
   },
   {
@@ -87,7 +87,7 @@ export default async function ResourcesPage() {
         </h2>
         <div className="card p-6">
           <p className="text-sm text-[var(--color-ink-soft)]">
-            Live·En·Synergy charges a single service fee on the sponsorship
+            Live·En·Synergy charges a single service fee on the partnership
             budget — whichever of these two is higher:
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -104,7 +104,7 @@ export default async function ResourcesPage() {
                 {Math.round(PLATFORM_FEE.percentage * 100)}%
               </p>
               <p className="text-xs text-[var(--color-ink-soft)]">
-                of the sponsorship budget, + VAT
+                of the partnership budget, + VAT
               </p>
             </div>
           </div>
