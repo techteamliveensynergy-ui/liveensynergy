@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Logo } from "./ui/Logo";
+import { SiteWordmark } from "./SiteWordmark";
 
 const LINKS: { heading: string; items: { href: string; label: string }[] }[] = [
   {
     heading: "Platform",
     items: [
-      { href: "/#how-it-works", label: "How it works" },
+      { href: "/brands", label: "For brands" },
       { href: "/events", label: "Browse events" },
+      { href: "/#how-it-works", label: "How it works" },
       { href: "/auth/sign-up", label: "Get started" },
     ],
   },
@@ -30,26 +31,24 @@ const LINKS: { heading: string; items: { href: string; label: string }[] }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[var(--color-ink)] text-[#fcf7f0]">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="border-t border-[var(--color-les-line)] bg-[var(--color-les-ink)]">
+      <div className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-10">
         <div>
-          <Logo light />
-          <p className="mt-4 max-w-xs text-sm text-white/60">
-            Turning partnership into something everyone actually wins — for
-            brands, artists and the audiences who show up.
+          <SiteWordmark />
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--color-les-muted)]">
+            More engagement. More experiences. More live events — for brands, artists and the audiences who
+            show up.
           </p>
         </div>
         {LINKS.map((col) => (
           <div key={col.heading}>
-            <h4 className="font-display text-sm font-semibold text-white">
-              {col.heading}
-            </h4>
-            <ul className="mt-3 space-y-2">
+            <h4 className="les-eyebrow">{col.heading}</h4>
+            <ul className="mt-4 space-y-2">
               {col.items.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-sm text-white/60 hover:text-[var(--color-brand-soft)]"
+                    className="text-sm text-[var(--color-les-muted)] transition-colors hover:text-[var(--color-les-lime)]"
                   >
                     {item.label}
                   </Link>
@@ -59,9 +58,9 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-5 py-5 text-xs text-white/40">
-          © {new Date().getFullYear()} Live·En·Synergy. All rights reserved.
+      <div className="border-t border-[var(--color-les-line)]">
+        <p className="mx-auto max-w-[1200px] px-5 py-5 text-xs text-[var(--color-les-muted)]/70 md:px-10">
+          © {new Date().getFullYear()} Live En Synergy. All rights reserved.
         </p>
       </div>
     </footer>

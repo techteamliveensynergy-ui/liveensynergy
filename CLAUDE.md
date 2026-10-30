@@ -326,6 +326,18 @@ Unlayered CSS beats Tailwind's `@layer utilities` regardless of specificity, so
 outside a layer `.select { width: 100% }` silently defeats every `w-[8rem]` /
 `w-auto` on a call site. That shipped a phone field with nowhere to type (L3).
 
+**The public site has its own theme** (#82, the Figma site design): dark ink,
+lime, coral/teal accents, Big Shoulders poster headings. Everything inside
+`.les-site` (the `(marketing)` layout and the home page) gets it: the
+`--color-les-*` tokens plus `.les-site` re-pointing `--color-ink`/`-mist`/
+`-brand` and darkening `.card`/`.chip`/`.btn*`/`.input`, so a public page
+written with the shared tokens reads light-on-dark without changes. Don't use
+`bg-white` or `border-black/…` on public pages — use the `les` panel/line
+tokens. Site building blocks: `.les-poster`, `.les-eyebrow`,
+`.les-wedge-down/up`, `.les-lift`, `<Marquee>`, `<FinalCta>`
+(`src/components/site/`). The dashboard, auth, onboarding and surveys never
+sit inside `.les-site`.
+
 `docs/STYLE_GUIDE.md` describes a different, unrelated project's ("The Raising
 Club") theme and file layout — none of it matches this repo. Treat
 `src/app/globals.css` as the source of truth.

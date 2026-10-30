@@ -32,6 +32,18 @@
     -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: var(--font-dm-sans), var(--font-sans);
   --font-serif: var(--font-playfair), Georgia, serif;
+
+  /* Public site (the Figma site design, #82): dark ink, electric lime,
+     coral and teal accents, cream text. Used inside .les-site only. */
+  --color-les-ink: #080e09;
+  --color-les-panel: #101b11;
+  --color-les-line: #2e4028;
+  --color-les-lime: #d4f040;
+  --color-les-coral: #ff3c5a;
+  --color-les-teal: #55d7bd;
+  --color-les-cream: #f2efe4;
+  --color-les-muted: #a7b2a2;
+  --font-poster: var(--font-big-shoulders), var(--font-display);
 }
 
 :root {
@@ -392,5 +404,155 @@ h4,
   }
   [data-print-report] .print-avoid-break {
     break-inside: avoid;
+  }
+}
+
+
+/* Public site theme (#82) ------------------------------------------------- */
+/* Applied by the marketing layout and the home page. Re-points the shared
+   tokens so every existing public page reads light-on-dark without being
+   rewritten: "ink" (headings/strong text) becomes cream, "mist" panels
+   become the dark panel, the CTA colour becomes lime. The dashboard, auth,
+   onboarding and surveys never sit inside .les-site and keep their look. */
+.les-site {
+  --color-ink: var(--color-les-cream);
+  --color-ink-soft: var(--color-les-muted);
+  --color-mist: var(--color-les-panel);
+  --color-lavender: var(--color-les-panel);
+  --color-purple-deep: var(--color-les-teal);
+  --color-brand: var(--color-les-lime);
+  --color-brand-dark: var(--color-les-lime);
+  --background: var(--color-les-ink);
+  --foreground: var(--color-les-muted);
+  background: var(--color-les-ink);
+  color: var(--color-les-muted);
+  color-scheme: dark;
+  font-family: var(--font-display);
+}
+.les-site * {
+  border-color: var(--color-les-line);
+}
+.les-site .font-poster,
+.les-site h1 {
+  font-family: var(--font-poster);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+/* .btn is unlayered, so these are too (with higher specificity). */
+.les-site .btn {
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.les-site .btn-primary {
+  background: var(--color-les-lime);
+  color: var(--color-les-ink);
+}
+.les-site .btn-primary:hover:not(:disabled) {
+  background: #c3df2f;
+}
+.les-site .btn-ghost {
+  color: var(--color-les-cream);
+  border-color: var(--color-les-line);
+}
+.les-site .btn-ghost:hover:not(:disabled) {
+  border-color: var(--color-les-lime);
+  color: var(--color-les-lime);
+  background: transparent;
+}
+.les-site .btn-white {
+  background: var(--color-les-cream);
+  color: var(--color-les-ink);
+}
+.les-site .btn-dark {
+  background: var(--color-les-ink);
+  color: var(--color-les-lime);
+}
+
+/* .card and .chip are unlayered as well. */
+.les-site .card {
+  background: var(--color-les-panel);
+  border: 1px solid var(--color-les-line);
+  color: var(--color-les-muted);
+  box-shadow: none;
+}
+.les-site .chip {
+  background: transparent;
+  border: 1px solid var(--color-les-line);
+  color: var(--color-les-lime);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+@layer components {
+  .les-site .input,
+  .les-site .textarea,
+  .les-site .select {
+    background: var(--color-les-ink);
+    border-color: var(--color-les-line);
+    color: var(--color-les-cream);
+  }
+  .les-site .input::placeholder,
+  .les-site .textarea::placeholder {
+    color: color-mix(in srgb, var(--color-les-muted) 70%, transparent);
+  }
+  .les-site .input:focus,
+  .les-site .textarea:focus,
+  .les-site .select:focus {
+    border-color: var(--color-les-lime);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-les-lime) 20%, transparent);
+  }
+
+  /* Site building blocks. */
+  .les-eyebrow {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-les-lime);
+  }
+  .les-poster {
+    font-family: var(--font-poster);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+  }
+  .les-wedge-down {
+    clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+  }
+  .les-wedge-up {
+    clip-path: polygon(0 5%, 100% 0, 100% 100%, 0 100%);
+  }
+  .les-lift {
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .les-lift:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes les-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.les-marquee-track {
+  width: max-content;
+  animation: les-marquee 22s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .les-marquee-track {
+    animation: none;
+  }
+  .les-site .les-lift:hover {
+    transform: none;
   }
 }

@@ -8,7 +8,12 @@ import { ukCsvDateTime } from "./format";
 
 /** Wraps a value in quotes and escapes embedded quotes/commas/newlines, per RFC 4180. */
 export function csvCell(value: unknown): string {
-  const s = value == null ? "" : String(value);
+  let s = value == null ? "" : String(value);
+  // A text cell starting with = + @ (or a tab/CR) is run as a formula when
+  // the file is opened in Excel/Sheets — names and free text here are typed
+  // by users. A leading apostrophe makes it plain text. Numbers are untouched.
+  // A plain phone number ("+44 7700 900123") can't run, so it's left alone.
+  if (typeof value === "string" && /^[=+@\t\r]/.test(s) && !/^\+[\d\s()-]+$/.test(s)) s = `'${s}`;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

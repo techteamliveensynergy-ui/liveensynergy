@@ -25,7 +25,7 @@ export function MobileNav({
         aria-expanded={open}
         aria-controls="mobile-nav-panel"
         onClick={() => setOpen((v) => !v)}
-        className="grid h-10 w-10 place-items-center rounded-full border border-black/10 bg-white text-lg text-[var(--color-ink)] transition hover:bg-[var(--color-mist)]"
+        className="grid h-10 w-10 place-items-center rounded-lg border border-[var(--color-les-line)] text-lg text-[var(--color-les-cream)] transition hover:border-[var(--color-les-lime)]"
       >
         <span aria-hidden>{open ? "✕" : "☰"}</span>
       </button>
@@ -33,7 +33,7 @@ export function MobileNav({
       {open && (
         <div
           id="mobile-nav-panel"
-          className="absolute inset-x-0 top-full border-b border-black/10 bg-[var(--color-mist)] shadow-[0_8px_16px_-8px_rgba(44,36,34,0.2)]"
+          className="absolute inset-x-0 top-full border-b border-[var(--color-les-line)] bg-[var(--color-les-ink)] shadow-[0_16px_32px_-12px_rgba(0,0,0,0.6)]"
         >
           <nav className="mx-auto flex max-w-6xl flex-col px-5 py-2">
             {items.map((item) => (
@@ -41,7 +41,7 @@ export function MobileNav({
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-3 text-base font-medium text-[var(--color-ink)] transition hover:bg-black/[0.04]"
+                className="rounded-lg px-3 py-3 text-base text-[var(--color-les-cream)] transition hover:text-[var(--color-les-lime)]"
               >
                 {item.label}
               </Link>

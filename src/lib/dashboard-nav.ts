@@ -87,6 +87,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     // from Artists and from each live campaign.
     { href: "/dashboard/admin/artists", label: "Artists", icon: "🎤" },
     { href: "/dashboard/admin/participants", label: "Participants", icon: "🎟️" },
+    { href: "/dashboard/admin/marketing", label: "Marketing list", icon: "💌" },
     { href: "/dashboard/admin/campaigns/intake", label: "Campaign requests", icon: "📥" },
     { href: "/dashboard/admin/campaigns", label: "Campaigns live", icon: "📣" },
     { href: "/dashboard/admin/surveys", label: "Surveys", icon: "📝" },

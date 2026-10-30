@@ -36,15 +36,15 @@ const COOKIES: { name: string; provider: string; purpose: string; lasts: string 
 
 export default function CookiesPage() {
   return (
-    <div className="bg-[var(--color-sage)]">
+    <div>
       <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
         <LegalTabs active="/cookies" />
-        <p className="mt-6 font-serif text-[var(--color-olive-deep)]">Last updated · 28 October 2026</p>
+        <p className="les-eyebrow mt-6">Last updated · 28 October 2026</p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
           Cookie Policy
         </h1>
 
-        <article className="mt-8 space-y-6 rounded-2xl bg-white p-7 text-sm leading-relaxed text-[var(--color-ink)]/85">
+        <article className="mt-8 space-y-6 rounded-2xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-7 text-sm leading-relaxed text-[var(--color-ink)]/85">
           <section>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">What cookies are</h2>
             <p className="mt-2">
@@ -68,7 +68,7 @@ export default function CookiesPage() {
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[32rem] border-collapse text-left text-xs">
                 <thead>
-                  <tr className="border-b border-black/10 text-[var(--color-ink)]">
+                  <tr className="border-b border-[var(--color-les-line)] text-[var(--color-ink)]">
                     <th className="py-2 pr-3 font-semibold">Cookie</th>
                     <th className="py-2 pr-3 font-semibold">Set by</th>
                     <th className="py-2 pr-3 font-semibold">What it&apos;s for</th>
@@ -77,7 +77,7 @@ export default function CookiesPage() {
                 </thead>
                 <tbody>
                   {COOKIES.map((c) => (
-                    <tr key={c.name} className="border-b border-black/5 align-top">
+                    <tr key={c.name} className="border-b border-[var(--color-les-line)] align-top">
                       <td className="py-2 pr-3 font-mono">{c.name}</td>
                       <td className="py-2 pr-3">{c.provider}</td>
                       <td className="py-2 pr-3">{c.purpose}</td>

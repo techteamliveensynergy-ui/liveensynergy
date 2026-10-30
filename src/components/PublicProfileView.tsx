@@ -167,7 +167,7 @@ export function PublicProfileView({
                   return (
                     <div
                       key={raw}
-                      className="overflow-hidden rounded-2xl border border-black/10 bg-black"
+                      className="overflow-hidden rounded-2xl border border-[var(--color-les-line)] bg-black"
                     >
                       <iframe
                         src={video.embedUrl}
