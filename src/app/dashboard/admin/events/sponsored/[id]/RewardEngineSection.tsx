@@ -121,6 +121,7 @@ export function RewardEngineSection({
   brandName,
   ticketPrice,
   participantNames,
+  brandTerms,
 }: {
   eventId: string;
   eventReference: string;
@@ -132,17 +133,32 @@ export function RewardEngineSection({
   brandName: string | null;
   ticketPrice: number | null;
   participantNames: Record<string, string>;
+  /** What the brand agreed on the campaign order form (QA 30 Oct #8). */
+  brandTerms?: {
+    discountReward: string | null;
+    rewardsAvailable: number | null;
+    participants: number | null;
+    redemption: string | null;
+  };
 }) {
   const [state, formAction, saving] = useActionState<MarketplaceState, FormData>(upsertRewardTiers, {});
   const defaultPrefix = brandPrefix(brandName) ?? "";
-  const [draft, setDraft] = useState<DraftTier[]>(
-    tiers.length > 0
-      ? tiers.map(toDraft)
-      : [
-          blankTier("First 50 participants", "50", defaultPrefix),
-          blankTier("Everyone after", "", defaultPrefix),
-        ],
-  );
+  // Start from the brand's agreed terms rather than a fixed "first 50 +
+  // everyone after" (QA 30 Oct #8): one tier capped at the rewards agreed
+  // (else the participant figure), carrying the agreed discount wording.
+  const agreedCap = brandTerms?.rewardsAvailable ?? brandTerms?.participants ?? null;
+  const agreedPct = brandTerms?.discountReward?.match(/(\d{1,3}(?:\.\d+)?)\s*%/)?.[1] ?? "";
+  const starterTier = (): DraftTier => ({
+    ...blankTier(
+      agreedCap ? `First ${agreedCap} participants` : "All participants",
+      agreedCap ? String(agreedCap) : "",
+      defaultPrefix,
+    ),
+    value_label: brandTerms?.discountReward ?? "",
+    discount_percent: agreedPct && Number(agreedPct) > 0 && Number(agreedPct) <= 100 ? agreedPct : "",
+    redemption_instructions: brandTerms?.redemption ?? "",
+  });
+  const [draft, setDraft] = useState<DraftTier[]>(tiers.length > 0 ? tiers.map(toDraft) : [starterTier()]);
   // After a save the server hands back the tiers with real ids; a draft still
   // holding `id: ""` for them would insert duplicates on the next save. Reset
   // the draft whenever the saved tiers change (React's "adjust state on prop

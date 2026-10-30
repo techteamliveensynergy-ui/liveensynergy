@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingSubmit } from "@/components/ui/PendingSubmit";
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -516,9 +517,7 @@ export default async function AdminCampaignsPage({
                     {!invoiceFor(c.id) && (
                       <form action={draftInvoiceForCampaign}>
                         <input type="hidden" name="campaign_id" value={c.id} />
-                        <button type="submit" className="btn btn-ghost text-sm">
-                          Draft invoice
-                        </button>
+                        <PendingSubmit label="Draft invoice" pendingLabel="Drafting…" className="btn btn-ghost text-sm" />
                       </form>
                     )}
                     <CampaignStatusActions

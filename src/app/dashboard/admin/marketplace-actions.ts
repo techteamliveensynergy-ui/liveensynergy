@@ -148,6 +148,22 @@ export async function matchCampaign(
   }[];
   if (listings.length === 0) return { error: "Those listings no longer exist." };
 
+  // Who is performing — the artist's stage/artist name (organiser name for
+  // pre-merge `event` accounts), never the listing's event name (QA 30 Oct #7).
+  const ownerIds = [...new Set(listings.map((l) => l.owner_profile_id))];
+  const [{ data: artistRows }, { data: organiserRows }] = await Promise.all([
+    supabase.from("artists").select("profile_id, artist_name, stage_name").in("profile_id", ownerIds),
+    supabase.from("event_organisers").select("profile_id, event_name").in("profile_id", ownerIds),
+  ]);
+  const actName = new Map<string, string>();
+  for (const o of (organiserRows ?? []) as { profile_id: string; event_name: string | null }[]) {
+    if (o.event_name) actName.set(o.profile_id, o.event_name);
+  }
+  for (const a of (artistRows ?? []) as { profile_id: string; artist_name: string | null; stage_name: string | null }[]) {
+    const n = a.stage_name || a.artist_name;
+    if (n) actName.set(a.profile_id, n);
+  }
+
   const budget = campaign.budget_gbp;
   const { data: created, error } = await supabase
     .from("sponsored_events")
@@ -157,6 +173,7 @@ export async function matchCampaign(
         campaign_id: campaign.id,
         listing_id: listing.id,
         artist_profile_id: listing.owner_profile_id,
+        artist_display_name: actName.get(listing.owner_profile_id) ?? null,
         name: listing.name,
         event_date: listing.event_date,
         venue_details: listing.venue_name,
@@ -293,7 +310,12 @@ export async function matchCampaign(
     }
   }
 
-  revalidatePath("/dashboard/admin/campaigns");
+  // List + detail, the listings now "matched", the overview, and both
+  // parties' partnership pages (QA 30 Oct #3: lists stale until reload).
+  revalidatePath("/dashboard/admin/campaigns", "layout");
+  revalidatePath("/dashboard/admin/events", "layout");
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/sponsored", "layout");
 
   const firstId = createdByListing.get(listings[0].id)?.id;
   redirect(
@@ -530,8 +552,9 @@ export async function waiveCampaignPayment(formData: FormData) {
 
   await notifyCampaignOpened(supabase, campaignId);
 
-  revalidatePath("/dashboard/admin/campaigns");
+  revalidatePath("/dashboard/admin/campaigns", "layout");
   revalidatePath("/dashboard/admin/invoices");
+  revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/campaigns", "layout");
   revalidatePath("/dashboard/discover-campaigns");
   redirect("/dashboard/admin/campaigns");
@@ -551,6 +574,10 @@ export async function reviewCampaignIntake(formData: FormData) {
       .update({ status: "in_review", reviewed_by: userId, reviewed_at: new Date().toISOString() })
       .eq("id", id)
       .eq("status", "submitted");
+    // Nothing was refreshed here, so going back showed the request still
+    // "submitted" and the overview count unchanged (QA 30 Oct #3, L6).
+    revalidatePath("/dashboard/admin/campaigns/intake", "layout");
+    revalidatePath("/dashboard/admin");
     redirect(`/dashboard/admin/campaigns/new?from_intake=${id}`);
   }
 
@@ -579,8 +606,9 @@ export async function reviewCampaignIntake(formData: FormData) {
         variables: { reference: updated.reference, reason: reason ?? "no reason given" },
       });
     }
-    revalidatePath("/dashboard/admin/campaigns/intake");
-    revalidatePath(`/dashboard/admin/campaigns/intake/${id}`);
+    revalidatePath("/dashboard/admin/campaigns/intake", "layout");
+    revalidatePath("/dashboard/admin/brands");
+    revalidatePath("/dashboard/admin");
   }
 }
 
@@ -778,9 +806,10 @@ export async function createCampaignFromAdmin(
     }
   }
 
-  revalidatePath("/dashboard/admin/campaigns");
-  revalidatePath("/dashboard/admin/campaigns/intake");
+  // "layout" also covers the intake list and the converted request's page.
+  revalidatePath("/dashboard/admin/campaigns", "layout");
   revalidatePath("/dashboard/admin/invoices");
+  revalidatePath("/dashboard/admin");
   redirect("/dashboard/admin/campaigns");
 }
 
