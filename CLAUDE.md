@@ -38,6 +38,8 @@ npx playwright test --project=brand --project=artist \
 npx playwright test --project=standup-video   # 3 Aug walkthrough video
 npx playwright test --project=s0810-video     # 10 Aug walkthrough video
 npx playwright test --project=audience-video  # signed-out audience journey
+npx playwright test --project=public-nav      # every public link clicks through (read-only;
+                                              # PUBLIC_NAV_URL=<origin> to run against a deploy)
 ```
 
 Both walkthrough projects record against the **deployed** site by default and

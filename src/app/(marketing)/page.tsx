@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import { Marquee } from "@/components/site/Marquee";
 import { FinalCta } from "@/components/site/FinalCta";
 import { createClient } from "@/lib/supabase/server";
@@ -15,7 +13,8 @@ import { FAQS } from "@/lib/faqs";
  * packages teaser, FAQs, closing band. Copy carried over from the previous
  * home page (already on the new model and "partner" wording); package
  * prices come from campaign_packages, live events from public_live_events()
- * (0095) — that section hides itself when there's nothing live.
+ * (0095) — that section hides itself when there's nothing live. Lives in the
+ * (marketing) group so it shares the site header/footer and loading state.
  */
 
 const SIDES = [
@@ -84,9 +83,7 @@ export default async function HomePage() {
   const fromPrice = prices.length ? Math.min(...prices) : null;
 
   return (
-    <div className="les-site min-h-screen overflow-x-hidden">
-      <SiteHeader />
-      <main>
+    <div className="overflow-x-hidden">
         {/* Hero */}
         <section className="les-wedge-down relative flex min-h-[85vh] flex-col justify-center overflow-hidden bg-[var(--color-les-lime)] px-5 pb-40 pt-20 md:px-10">
           <p
@@ -300,8 +297,6 @@ export default async function HomePage() {
         </section>
 
         <FinalCta />
-      </main>
-      <SiteFooter />
     </div>
   );
 }
