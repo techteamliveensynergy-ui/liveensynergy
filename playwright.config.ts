@@ -24,6 +24,16 @@ export default defineConfig({
   },
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // Signed out and read-only — safe against the deployed site too
+    // (PUBLIC_NAV_URL). Not in the evidence chain; no setup needed.
+    {
+      name: "public-nav",
+      testMatch: /public-nav\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.PUBLIC_NAV_URL ?? "http://localhost:3000",
+      },
+    },
     {
       name: "brand",
       testMatch: /brand\.spec\.ts/,

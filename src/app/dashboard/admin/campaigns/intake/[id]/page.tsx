@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PendingSubmit } from "@/components/ui/PendingSubmit";
 import { campaignTitle } from "@/lib/campaign-requests";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -145,9 +146,7 @@ export default async function AdminCampaignRequestPage({ params }: { params: Pro
               <form action={reviewCampaignIntake}>
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="op" value="approve" />
-                <button type="submit" className="btn btn-primary text-sm">
-                  Approve → create campaign
-                </button>
+                <PendingSubmit label="Approve → create campaign" pendingLabel="Approving…" className="btn btn-primary text-sm" />
               </form>
             ) : (
               <Link href={`/dashboard/admin/campaigns/new?from_intake=${r.id}`} className="btn btn-primary text-sm">
@@ -158,9 +157,7 @@ export default async function AdminCampaignRequestPage({ params }: { params: Pro
               <input type="hidden" name="id" value={r.id} />
               <input type="hidden" name="op" value="decline" />
               <input type="text" name="decline_reason" placeholder="Reason (shown to the brand)" className="input w-64 py-1.5 text-sm" />
-              <button type="submit" className="btn btn-ghost text-sm text-[var(--color-accent)]">
-                Decline
-              </button>
+              <PendingSubmit label="Decline" pendingLabel="Declining…" className="btn btn-ghost text-sm text-[var(--color-accent)]" />
             </form>
           </div>
         ) : r.status === "converted" && r.converted_campaign_id ? (

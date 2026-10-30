@@ -25,14 +25,17 @@ export default async function EventsPage({
   const today = ukDayKey(new Date());
   // Live research campaigns (#48): paid, agreed events the audience can take
   // part in. Shown first; the sponsorship listings below are for brands.
-  const live = await getPublicLiveEvents(supabase);
-  const { data } = await supabase
-    .from("event_listings")
-    .select("id, name, event_date, start_time, timezone, venue_name, city, country, category, image_url")
-    .eq("status", "available")
-    // Upcoming, plus listings without a date yet.
-    .or(`event_date.gte.${today},event_date.is.null`)
-    .order("event_date", { ascending: true, nullsFirst: false });
+  // Both at once — one after the other doubled the wait on a slow response.
+  const [live, { data }] = await Promise.all([
+    getPublicLiveEvents(supabase),
+    supabase
+      .from("event_listings")
+      .select("id, name, event_date, start_time, timezone, venue_name, city, country, category, image_url")
+      .eq("status", "available")
+      // Upcoming, plus listings without a date yet.
+      .or(`event_date.gte.${today},event_date.is.null`)
+      .order("event_date", { ascending: true, nullsFirst: false }),
+  ]);
   const all = (data ?? []) as Pick<
     EventListing,
     "id" | "name" | "event_date" | "start_time" | "timezone" | "venue_name" | "city" | "country" | "category" | "image_url"

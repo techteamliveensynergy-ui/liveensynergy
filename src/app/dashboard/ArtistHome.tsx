@@ -42,7 +42,19 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
     .filter((l) => l.event_date && l.event_date >= today && l.status !== "closed")
     .sort((a, b) => (a.event_date! < b.event_date! ? -1 : a.event_date! > b.event_date! ? 1 : 0));
   const live = sponsored.filter((s) => s.status === "confirmed");
-  const awaitingYou = sponsored.filter((s) => s.status === "in_progress" && !s.artist_agreed);
+  // One settled deal per listing (0022): a proposal still in progress on a
+  // listing that's already confirmed can never be agreed ("conflict"), so
+  // don't ask for it — it showed as a duplicate next to that listing's
+  // discount-codes task (QA 30 Oct #12).
+  const settledListings = new Set(
+    sponsored
+      .filter((s) => (s.status === "confirmed" || s.status === "completed") && s.listing_id)
+      .map((s) => s.listing_id),
+  );
+  const awaitingYou = sponsored.filter(
+    (s) =>
+      s.status === "in_progress" && !s.artist_agreed && !(s.listing_id && settledListings.has(s.listing_id)),
+  );
   const codesToConfirm = live.filter((s) => !s.reward_codes_confirmed_at);
 
   let checkedInCount = 0;
@@ -158,7 +170,8 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
                   className="flex items-center justify-between gap-3 rounded-xl bg-white p-3.5 text-sm transition hover:shadow-sm"
                 >
                   <span className="min-w-0 truncate">
-                    Agree the terms for <strong>{s.name}</strong>
+                    Agree the terms for <strong>{s.name}</strong>{" "}
+                    <span className="text-xs text-[var(--color-ink-soft)]">· {s.reference}</span>
                   </span>
                   <span className="shrink-0 font-semibold text-[var(--color-brand-dark)]">Review →</span>
                 </Link>
@@ -170,7 +183,8 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
                   className="flex items-center justify-between gap-3 rounded-xl bg-white p-3.5 text-sm transition hover:shadow-sm"
                 >
                   <span className="min-w-0 truncate">
-                    Confirm discount codes for <strong>{s.name}</strong>
+                    Confirm discount codes for <strong>{s.name}</strong>{" "}
+                    <span className="text-xs text-[var(--color-ink-soft)]">· {s.reference}</span>
                   </span>
                   <span className="shrink-0 font-semibold text-[var(--color-brand-dark)]">Open →</span>
                 </Link>

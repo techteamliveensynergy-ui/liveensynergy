@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useFormStatus } from "react-dom";
 
 /**
  * A submit button that first shows what will happen and asks the admin to
@@ -17,6 +18,7 @@ export function ConfirmSubmitButton({
   warnings = [],
   confirmLabel,
   danger = false,
+  pendingLabel = "Working…",
 }: {
   label: string;
   className?: string;
@@ -27,9 +29,13 @@ export function ConfirmSubmitButton({
   warnings?: string[];
   confirmLabel: string;
   danger?: boolean;
+  /** Shown on the button while the form's action runs (QA 30 Oct #3: admin
+   *  actions took seconds with nothing on screen, and could be re-submitted). */
+  pendingLabel?: string;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { pending } = useFormStatus();
 
   function open() {
     const form = buttonRef.current?.closest("form");
@@ -44,8 +50,15 @@ export function ConfirmSubmitButton({
 
   return (
     <>
-      <button ref={buttonRef} type="button" className={className} onClick={open}>
-        {label}
+      <button
+        ref={buttonRef}
+        type="button"
+        className={className}
+        onClick={open}
+        disabled={pending}
+        aria-busy={pending}
+      >
+        {pending ? pendingLabel : label}
       </button>
       <dialog
         ref={dialogRef}

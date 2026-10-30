@@ -1,6 +1,7 @@
 "use server";
 
 import { clearDraft } from "@/lib/drafts";
+import { registrationNextLink } from "@/lib/participation-links";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -281,7 +282,7 @@ async function registerPendingEvent(userId: string): Promise<string | null> {
 
   const { data: event } = await supabase
     .from("sponsored_events")
-    .select("id, name, artist_profile_id")
+    .select("id, name, artist_profile_id, campaign_id")
     .eq("reference", reference)
     .in("status", ["confirmed", "completed"])
     .maybeSingle();
@@ -307,7 +308,7 @@ async function registerPendingEvent(userId: string): Promise<string | null> {
   await notify({
     eventKey: "participation.registered",
     recipientProfileId: userId,
-    link: "/dashboard/participations",
+    link: await registrationNextLink(supabase, event.campaign_id),
     variables: { event_name: event.name },
   });
   if (event.artist_profile_id) {

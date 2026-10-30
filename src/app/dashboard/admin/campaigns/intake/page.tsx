@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingSubmit } from "@/components/ui/PendingSubmit";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
@@ -133,9 +134,7 @@ export default async function AdminCampaignIntakePage({
                     <form action={reviewCampaignIntake}>
                       <input type="hidden" name="id" value={r.id} />
                       <input type="hidden" name="op" value="approve" />
-                      <button type="submit" className="btn btn-primary text-sm">
-                        Approve → create campaign
-                      </button>
+                      <PendingSubmit label="Approve → create campaign" pendingLabel="Approving…" className="btn btn-primary text-sm" />
                     </form>
                     <form
                       action={reviewCampaignIntake}
@@ -149,12 +148,7 @@ export default async function AdminCampaignIntakePage({
                         placeholder="Reason (optional)"
                         className="input w-40 py-1 text-xs"
                       />
-                      <button
-                        type="submit"
-                        className="btn btn-ghost text-xs text-[var(--color-accent)]"
-                      >
-                        Decline
-                      </button>
+                      <PendingSubmit label="Decline" pendingLabel="Declining…" className="btn btn-ghost text-xs text-[var(--color-accent)]" />
                     </form>
                   </div>
                 )}

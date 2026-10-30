@@ -125,7 +125,7 @@ export default async function AdminSponsoredDetailPage({
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category, ticket_buy_url)",
+      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description, package_participant_count), event_listings(name, ticket_price_gbp, capacity, category, ticket_buy_url)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -158,7 +158,12 @@ export default async function AdminSponsoredDetailPage({
       reward_codes_confirmed_at: string | null;
       codes_due_at?: string | null;
       brands: { brand_name: string; profile_id: string } | null;
-      campaigns: { reference: string; campaign_name: string | null; description: string } | null;
+      campaigns: {
+        reference: string;
+        campaign_name: string | null;
+        description: string;
+        package_participant_count: number | null;
+      } | null;
       event_listings: {
         name: string;
         ticket_price_gbp: number | null;
@@ -222,11 +227,24 @@ export default async function AdminSponsoredDetailPage({
       .order("created_at", { ascending: true }),
   ]);
 
-  const [{ data: invoiceRows }, { data: pageCopy }, { data: isPublic }] = await Promise.all([
+  const [{ data: invoiceRows }, { data: pageCopy }, { data: isPublic }, { data: orderTerms }] = await Promise.all([
     supabase.from("invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
     // Public event page copy (#48, 0095). Missing table → null, section still renders.
     supabase.from("sponsored_event_pages").select("*").eq("sponsored_event_id", id).maybeSingle<EventPageCopy>(),
     supabase.rpc("sponsored_event_is_public", { p_id: id }),
+    // The brand's agreed terms, for the discount-tier defaults (QA 30 Oct #8).
+    event.campaign_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("discount_reward, rewards_available, approx_participants, redemption_arrangements")
+          .eq("campaign_id", event.campaign_id)
+          .maybeSingle<{
+            discount_reward: string | null;
+            rewards_available: number | null;
+            approx_participants: number | null;
+            redemption_arrangements: string | null;
+          }>()
+      : Promise.resolve({ data: null }),
   ]);
 
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
@@ -556,6 +574,12 @@ export default async function AdminSponsoredDetailPage({
         hasArtist={!!event.artist_profile_id}
         brandName={event.brands?.brand_name ?? null}
         ticketPrice={event.event_listings?.ticket_price_gbp ?? null}
+        brandTerms={{
+          discountReward: orderTerms?.discount_reward ?? null,
+          rewardsAvailable: orderTerms?.rewards_available ?? null,
+          participants: orderTerms?.approx_participants ?? event.campaigns?.package_participant_count ?? null,
+          redemption: orderTerms?.redemption_arrangements ?? null,
+        }}
         participantNames={Object.fromEntries(
           participants.map((p) => [p.id, p.profiles?.full_name ?? p.profiles?.email ?? "Participant"]),
         )}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { registrationNextLink } from "@/lib/participation-links";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
@@ -143,7 +144,7 @@ export async function confirmRegistration(
 
   const { data: ev } = await supabase
     .from("sponsored_events")
-    .select("name, reward_rules, artist_profile_id")
+    .select("name, reward_rules, artist_profile_id, campaign_id")
     .eq("id", sponsoredEventId)
     .maybeSingle();
 
@@ -152,7 +153,7 @@ export async function confirmRegistration(
     await notify({
       eventKey: "participation.registered",
       recipientProfileId: userId,
-      link: "/dashboard/participations",
+      link: await registrationNextLink(supabase, ev.campaign_id),
       variables: {
         event_name: ev.name,
         reward_rules: ev.reward_rules ?? undefined,

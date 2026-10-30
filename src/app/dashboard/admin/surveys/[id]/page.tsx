@@ -6,7 +6,6 @@ import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import type { SurveyContradictionRule, SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { contradictionRuleRowToDraft, questionRowToDraft } from "@/lib/surveys";
 import {
-  publishSurveyTemplate,
   unpublishSurveyTemplate,
   archiveSurveyTemplate,
   unarchiveSurveyTemplate,
@@ -17,7 +16,7 @@ import { CopyLinkButton } from "./preview/CopyLinkButton";
 import { formatEventDateTime } from "@/lib/event-time";
 import { campaignLabel } from "@/lib/campaign-requests";
 
-import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
+import { PublishSurveyForm } from "../PublishSurveyForm";
 import { sensitiveFlags, unacknowledgedFlags, type SensitiveAck } from "@/lib/survey-sensitive";
 export const metadata = { title: "Edit survey · Admin" };
 
@@ -111,36 +110,7 @@ export default async function EditSurveyPage({
         </Link>
         {tpl.status === "draft" && (
           <>
-            <form action={publishSurveyTemplate}>
-              <input type="hidden" name="id" value={tpl.id} />
-              {unacknowledgedSensitive.length > 0 ? (
-                <ConfirmSubmit
-                  label="Publish"
-                  pendingLabel="Publishing…"
-                  className="btn btn-primary text-sm"
-                  title="Publish with sensitive questions unacknowledged?"
-                  body={
-                    <>
-                      <p>
-                        These questions may collect special-category or identifying data, and nobody has confirmed
-                        they&apos;re intended and covered by the survey terms:
-                      </p>
-                      <ul className="mt-2 list-disc pl-5">
-                        {unacknowledgedSensitive.map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    </>
-                  }
-                  confirmLabel="Publish anyway"
-                  cancelLabel="Go back and review"
-                />
-              ) : (
-                <button type="submit" className="btn btn-primary text-sm">
-                  Publish
-                </button>
-              )}
-            </form>
+            <PublishSurveyForm id={tpl.id} sensitive={unacknowledgedSensitive} />
             <form action={archiveSurveyTemplate}>
               <input type="hidden" name="id" value={tpl.id} />
               <button type="submit" className="btn btn-ghost text-sm">

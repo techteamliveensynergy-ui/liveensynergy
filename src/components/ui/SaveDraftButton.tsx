@@ -72,14 +72,23 @@ export function SaveDraftButton({
     const form = ref.current?.form;
     if (!form) return;
     const fd = new FormData(form);
+    // Files aren't kept in a draft (drafts/actions.ts) — don't upload them;
+    // a picked image made the request big enough to fail (QA 30 Oct #5).
+    for (const [k, v] of Array.from(fd.entries())) if (v instanceof File) fd.delete(k);
     fd.set("draft_kind", kind);
     if (draftId) fd.set("draft_id", draftId);
     setError(null);
     startTransition(async () => {
-      const result = await saveFormDraft(fd);
-      if (result.error) setError(result.error);
-      if (result.draftId) setDraftId(result.draftId);
-      if (result.savedAt) setSavedAt(result.savedAt);
+      // A thrown request used to leave the button on "Saving…" with nothing
+      // said; always end in a message.
+      try {
+        const result = await saveFormDraft(fd);
+        if (result.error) setError(result.error);
+        if (result.draftId) setDraftId(result.draftId);
+        if (result.savedAt) setSavedAt(result.savedAt);
+      } catch {
+        setError("Couldn't save your draft — check your connection and try again.");
+      }
     });
   }
 

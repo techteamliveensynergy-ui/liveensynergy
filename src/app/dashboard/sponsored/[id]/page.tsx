@@ -227,6 +227,26 @@ export default async function SponsoredEventPage({
     }
   }
 
+  // The act, not the event (QA 30 Oct #7): rows matched before the fix carry
+  // no artist_display_name. Read through the public views — `artists` is
+  // owner-only under RLS, so the brand would get nothing from the table.
+  let actName: string | null = event.artist_display_name || (isArtist ? artistDetails?.name ?? null : null);
+  if (!actName && event.artist_profile_id) {
+    const [{ data: a }, { data: o }] = await Promise.all([
+      supabase
+        .from("public_artist_profiles")
+        .select("artist_name, stage_name")
+        .eq("profile_id", event.artist_profile_id)
+        .maybeSingle<{ artist_name: string | null; stage_name: string | null }>(),
+      supabase
+        .from("public_organiser_profiles")
+        .select("event_name")
+        .eq("profile_id", event.artist_profile_id)
+        .maybeSingle<{ event_name: string | null }>(),
+    ]);
+    actName = a?.stage_name || a?.artist_name || o?.event_name || null;
+  }
+
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
@@ -291,8 +311,8 @@ export default async function SponsoredEventPage({
       <PageHeader
         title={event.name}
         subtitle={
-          event.artist_display_name
-            ? `Partnership ref ${event.reference} · with ${event.artist_display_name}`
+          actName
+            ? `Partnership ref ${event.reference} · with ${actName}`
             : `Partnership ref ${event.reference}`
         }
         action={<StatusBadge status={event.status} />}
@@ -400,7 +420,7 @@ export default async function SponsoredEventPage({
           <Detail label="Event name" value={event.name} />
           <Detail
             label="Artist / act"
-            value={event.artist_display_name ?? listing?.name ?? null}
+            value={actName}
           />
           <Detail
             label={event.start_time ? "Date & time" : "Date"}

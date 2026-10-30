@@ -173,7 +173,7 @@ export async function signIn(
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const redirectTo = safeRedirectPath(String(formData.get("redirectTo") ?? ""), "/dashboard");
+  let redirectTo = safeRedirectPath(String(formData.get("redirectTo") ?? ""), "/dashboard");
 
   if (!email || !password) {
     return { error: "Please enter your email and password." };
@@ -228,6 +228,11 @@ export async function signIn(
       const { data: pending } = await supabase.rpc("email_verification_pending");
       if (pending === false) await sendVerificationEmail(supabase, data.user.id, ROLE_LABELS[profile.role]);
     }
+
+    // Admins have no /dashboard home of their own — land them on the admin
+    // overview directly unless they were heading somewhere specific (QA
+    // 30 Oct #14). dashboard/page.tsx still redirects as a safety net.
+    if (profile?.role === "admin" && redirectTo === "/dashboard") redirectTo = "/dashboard/admin";
   }
 
   revalidatePath("/", "layout");

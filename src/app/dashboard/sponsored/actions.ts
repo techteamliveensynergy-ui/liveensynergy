@@ -286,7 +286,14 @@ export async function toggleAgreement(formData: FormData) {
   }
   if (result.outcome === "not_party") return;
 
-  const { data: full } = await supabase
+  // brands (and the brand's profile, for its email) are owner-or-admin under
+  // RLS, so an artist's session read brands = null and the brand was never
+  // told (QA 30 Oct #10). agree_to_sponsorship has just proved the caller is
+  // a party, so read the counterparty — and notify — with the service client,
+  // as markCompleted() does.
+  const notifyOpts = completionNotifyOpts();
+  const reader = createServiceClient() ?? supabase;
+  const { data: full } = await reader
     .from("sponsored_events")
     .select(
       "name, reference, budget_gbp, artist_profile_id, brands(profile_id, brand_name)",
@@ -311,16 +318,19 @@ export async function toggleAgreement(formData: FormData) {
     if (result.outcome === "confirmed") {
       for (const pid of [brandProfileId, full.artist_profile_id]) {
         if (pid) {
-          await notify({
-            eventKey: "sponsorship.confirmed",
-            recipientProfileId: pid,
-            link: `/dashboard/sponsored/${id}`,
-            variables: {
-              event_name: full.name,
-              reference: full.reference,
-              budget,
+          await notify(
+            {
+              eventKey: "sponsorship.confirmed",
+              recipientProfileId: pid,
+              link: `/dashboard/sponsored/${id}`,
+              variables: {
+                event_name: full.name,
+                reference: full.reference,
+                budget,
+              },
             },
-          });
+            notifyOpts,
+          );
         }
       }
 
@@ -330,27 +340,33 @@ export async function toggleAgreement(formData: FormData) {
       // caller reads nothing for them.
       for (const loser of result.withdrawn ?? []) {
         if (!loser.artist_profile_id) continue;
-        await notify({
-          eventKey: "sponsorship.withdrawn",
-          recipientProfileId: loser.artist_profile_id,
-          link: `/dashboard/sponsored/${loser.id}`,
-          variables: {
-            event_name: loser.name,
-            reference: loser.reference ?? "—",
+        await notify(
+          {
+            eventKey: "sponsorship.withdrawn",
+            recipientProfileId: loser.artist_profile_id,
+            link: `/dashboard/sponsored/${loser.id}`,
+            variables: {
+              event_name: loser.name,
+              reference: loser.reference ?? "—",
+            },
           },
-        });
+          notifyOpts,
+        );
       }
     } else if (
       result.outcome === "agreed" &&
       full.artist_profile_id === userId &&
       brandProfileId
     ) {
-      await notify({
-        eventKey: "sponsorship.artist_agreed",
-        recipientProfileId: brandProfileId,
-        link: `/dashboard/sponsored/${id}`,
-        variables: { event_name: full.name, reference: full.reference },
-      });
+      await notify(
+        {
+          eventKey: "sponsorship.artist_agreed",
+          recipientProfileId: brandProfileId,
+          link: `/dashboard/sponsored/${id}`,
+          variables: { event_name: full.name, reference: full.reference },
+        },
+        notifyOpts,
+      );
     }
   }
 
@@ -435,10 +451,27 @@ export async function markCompleted(formData: FormData) {
     .update({ status: "completed" })
     .eq("id", id)
     .neq("status", "completed")
-    .select("name, artist_profile_id, brands(profile_id)")
-    .maybeSingle<{ name: string; artist_profile_id: string | null; brands: { profile_id: string } | null }>();
+    .select("name, artist_profile_id, brand_id, brands(profile_id)")
+    .maybeSingle<{
+      name: string;
+      artist_profile_id: string | null;
+      brand_id: string | null;
+      brands: { profile_id: string } | null;
+    }>();
   if (done) {
-    for (const recipient of [done.brands?.profile_id, done.artist_profile_id]) {
+    // An artist's session can't read brands (owner/admin RLS), so the embed
+    // comes back null and the brand was never told (QA 30 Oct #10).
+    let brandProfileId = done.brands?.profile_id ?? null;
+    const service = createServiceClient();
+    if (!brandProfileId && done.brand_id && service) {
+      const { data: b } = await service
+        .from("brands")
+        .select("profile_id")
+        .eq("id", done.brand_id)
+        .maybeSingle<{ profile_id: string }>();
+      brandProfileId = b?.profile_id ?? null;
+    }
+    for (const recipient of [brandProfileId, done.artist_profile_id]) {
       if (!recipient) continue;
       await notify({
         eventKey: "sponsorship.completed",
@@ -824,6 +857,16 @@ export async function confirmRewardCodes(
   if (outcome !== "confirmed") {
     return { error: CONFIRM_REFUSALS[outcome as string] ?? "Couldn't confirm the codes." };
   }
+  // Never report success unless the row actually changed (QA 30 Oct #2:
+  // "reverts silently").
+  const { data: after } = await ctx.supabase
+    .from("sponsored_events")
+    .select("reward_codes_confirmed_at")
+    .eq("id", eventId)
+    .maybeSingle<{ reward_codes_confirmed_at: string | null }>();
+  if (!after?.reward_codes_confirmed_at) {
+    return { error: "Your confirmation didn't save. Please try again, or message the team." };
+  }
 
   await notifyAdmins({
     eventKey: "admin.reward_codes_confirmed",
@@ -831,7 +874,12 @@ export async function confirmRewardCodes(
     variables: { event_name: ctx.event.name, reference: ctx.event.reference },
   });
 
-  revalidatePath(`/dashboard/sponsored/${eventId}`);
-  revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
-  return { message: "Confirmed — the team can now issue these codes to qualifying participants." };
+  // The codes status shows on the artist's home, the partnered-events list,
+  // the brand's live campaign and every admin campaign/event screen — all of
+  // them, not just this page, or they keep saying "awaiting the artist" (L6).
+  revalidatePath("/dashboard", "layout");
+  return {
+    message:
+      "Confirmed — the team can now issue these codes. Registration opens when the team opens the campaign to the audience.",
+  };
 }
