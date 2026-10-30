@@ -26,6 +26,8 @@ import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
+import { PublicPageSection } from "./PublicPageSection";
+import type { EventPageCopy } from "@/lib/public-event";
 import type {
   Invoice,
   RewardCode,
@@ -112,17 +114,18 @@ export default async function AdminSponsoredDetailPage({
     issued?: string;
     held?: string;
     unplaced?: string;
+    msg?: string;
   }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
-  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced } = await searchParams;
+  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced, msg } = await searchParams;
   const supabase = await createClient();
 
   const { data: event } = await supabase
     .from("sponsored_events")
     .select(
-      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category)",
+      "*, brands(brand_name, profile_id), campaigns(reference, campaign_name, description), event_listings(name, ticket_price_gbp, capacity, category, ticket_buy_url)",
     )
     .eq("id", id)
     .maybeSingle<{
@@ -161,6 +164,7 @@ export default async function AdminSponsoredDetailPage({
         ticket_price_gbp: number | null;
         capacity: number | null;
         category: string | null;
+        ticket_buy_url: string | null;
       } | null;
     }>();
   if (!event) notFound();
@@ -218,11 +222,12 @@ export default async function AdminSponsoredDetailPage({
       .order("created_at", { ascending: true }),
   ]);
 
-  const { data: invoiceRows } = await supabase
-    .from("invoices")
-    .select("*")
-    .eq("sponsored_event_id", id)
-    .order("created_at", { ascending: false });
+  const [{ data: invoiceRows }, { data: pageCopy }, { data: isPublic }] = await Promise.all([
+    supabase.from("invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
+    // Public event page copy (#48, 0095). Missing table → null, section still renders.
+    supabase.from("sponsored_event_pages").select("*").eq("sponsored_event_id", id).maybeSingle<EventPageCopy>(),
+    supabase.rpc("sponsored_event_is_public", { p_id: id }),
+  ]);
 
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
@@ -497,6 +502,15 @@ export default async function AdminSponsoredDetailPage({
           </div>
         )}
       </div>
+
+      <PublicPageSection
+        eventId={event.id}
+        copy={pageCopy ?? null}
+        isPublic={isPublic === true}
+        listingTicketUrl={event.event_listings?.ticket_buy_url ?? null}
+        notice={notice}
+        errorMessage={msg}
+      />
 
       <ProofsSection eventId={event.id} proofs={proofs} />
 
