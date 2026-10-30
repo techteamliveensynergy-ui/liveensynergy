@@ -57,7 +57,7 @@ export function GenderField({
         <Field
           label="How would you describe it?"
           htmlFor="gender_self_describe"
-          hint="In your own words. Only ever used in aggregate, never shown to sponsors."
+          hint="In your own words. Only ever used in aggregate, never shown to partners."
         >
           <input
             id="gender_self_describe"

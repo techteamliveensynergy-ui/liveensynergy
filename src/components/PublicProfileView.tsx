@@ -18,7 +18,7 @@ const SOCIAL_LABELS: Record<string, string> = {
 const ROLE_LABEL: Record<PublicProfile["role"], string> = {
   artist: "Artist",
   event: "Event organiser",
-  brand: "Brand / Sponsor",
+  brand: "Brand / Partner",
 };
 
 /**
@@ -112,9 +112,9 @@ export function PublicProfileView({
           <section className="card mt-6 p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-                What sponsors get
+                What partners get
               </h2>
-              <span className="chip">Visible to sponsors only</span>
+              <span className="chip">Visible to partners only</span>
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-ink-soft)]">
               {profile.sponsorValue}

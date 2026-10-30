@@ -215,7 +215,7 @@ export default async function ParticipationsPage({
           body={
             tab === "past"
               ? "Events you've attended will move here once the date has passed."
-              : "Discover events with sponsor-funded rewards and register to attend."
+              : "Discover events with partner-funded rewards and register to attend."
           }
           cta={
             tab === "past"
@@ -433,7 +433,7 @@ export default async function ParticipationsPage({
                         defaultChecked={p.newsletter_opt_in}
                         className="h-4 w-4"
                       />
-                      Sign me up for the sponsor&apos;s newsletter &amp;
+                      Sign me up for the partner&apos;s newsletter &amp;
                       promotions
                     </label>
                     <div>

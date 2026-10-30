@@ -41,7 +41,7 @@ export default async function ContactPage({
         </h1>
         <p className="mt-3 text-[var(--color-ink-soft)]">
           Questions, partnerships, press — send them our way. Whether you want
-          to sponsor, list an event, or join as an audience member, our team
+          to partner with artists, list an event, or join as an audience member, our team
           will get back to you.
         </p>
 

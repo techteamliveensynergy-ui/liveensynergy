@@ -102,7 +102,7 @@ export default async function DiscoverPage({
       <div>
         <PageHeader
           title="Discover events"
-          subtitle="Events currently open for sponsorship. Reach out and our team will be in touch within 48 hours."
+          subtitle="Events currently open for partnership. Reach out and our team will be in touch within 48 hours."
         />
 
         {/* Confirmation after "Enquire with our team" — floats over the page
@@ -161,7 +161,7 @@ export default async function DiscoverPage({
             body={
               hasFilters
                 ? "Try widening your search — clear a filter or pick a different month."
-                : "Check back soon — artists and organisers are listing events open for sponsorship."
+                : "Check back soon — artists and organisers are listing events open for partnership."
             }
           />
         ) : (
@@ -183,15 +183,15 @@ export default async function DiscoverPage({
                     event is still open is the first thing to read off a tile. */}
                 {sponsorship?.mine ? (
                   <p className="bg-[var(--color-brand)] px-4 py-1.5 text-center text-xs font-semibold text-white">
-                    ★ Sponsored by you
+                    ★ Partnered by you
                   </p>
                 ) : sponsorship ? (
                   <p className="bg-[var(--color-lavender)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-purple-deep)]">
-                    Already sponsored
+                    Already partnered
                   </p>
                 ) : (
                   <p className="bg-[var(--color-sage)] px-4 py-1.5 text-center text-xs font-semibold text-[var(--color-olive-deep)]">
-                    Open for sponsorship
+                    Open for partnership
                   </p>
                 )}
                 {/* Falls back to category artwork so a card is never blank. */}
@@ -238,7 +238,7 @@ export default async function DiscoverPage({
                       href={`/dashboard/sponsored/${sponsorship.id}`}
                       className="btn btn-primary mt-4 w-full"
                     >
-                      Open your sponsorship
+                      Open your partnership
                     </Link>
                   ) : (
                     // Always the enquiry to our team. The "Enquiry sent / Open
@@ -306,7 +306,7 @@ export default async function DiscoverPage({
     <div>
       <PageHeader
         title="Discover events"
-        subtitle="Register for sponsored events, answer a short survey and get a discount code."
+        subtitle="Register for partnered events, answer a short survey and get a discount code."
       />
 
       <FilterBar
@@ -345,7 +345,7 @@ export default async function DiscoverPage({
           body={
             hasFilters
               ? "Try widening your search — clear a filter or pick a different month."
-              : "Sponsored events with rewards will appear here once they're announced."
+              : "Partnered events with rewards will appear here once they're announced."
           }
         />
       ) : (

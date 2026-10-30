@@ -70,7 +70,7 @@ export function FeedbackForm() {
           name="subject"
           className="input"
           required
-          placeholder="Sponsor offers count looks wrong on the artist dashboard"
+          placeholder="Partner offers count looks wrong on the artist dashboard"
         />
       </Field>
 

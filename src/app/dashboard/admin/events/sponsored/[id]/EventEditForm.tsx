@@ -150,14 +150,14 @@ export function EventEditForm({
 
         {/* Ticket price and capacity are the listing's, and this is the only
             place they can be corrected once a deal is confirmed — the parties
-            can't edit a confirmed sponsorship, and the ticket price is what
-            "people this can sponsor" divides by. */}
+            can't edit a confirmed partnership, and the ticket price is what
+            "people this can cover" divides by. */}
         {event.listing_name !== null && (
           <>
             <Field
               label="Ticket price (GBP)"
               htmlFor="edit-ticket-price"
-              hint={`Saved on the listing “${event.listing_name}”. Sets how many people the budget can sponsor.`}
+              hint={`Saved on the listing “${event.listing_name}”. Sets how many people the budget can cover.`}
             >
               <input
                 id="edit-ticket-price"
@@ -187,7 +187,7 @@ export function EventEditForm({
             <Field
               label="Category"
               htmlFor="edit-category"
-              hint="The listing's event category, as shown to audiences and sponsors."
+              hint="The listing's event category, as shown to audiences and partners."
             >
               <select
                 id="edit-category"
@@ -220,7 +220,7 @@ export function EventEditForm({
           defaultValue={event.reward_rules ?? ""}
         />
       </Field>
-      <Field label="Sponsorship terms" htmlFor="edit-terms">
+      <Field label="Partnership terms" htmlFor="edit-terms">
         <textarea
           id="edit-terms"
           name="terms"

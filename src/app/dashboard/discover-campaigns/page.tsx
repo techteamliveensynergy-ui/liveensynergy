@@ -74,7 +74,7 @@ export default async function DiscoverCampaignsPage({
     <div>
       <PageHeader
         title="Discover campaigns"
-        subtitle="Sponsorship briefs from brands looking for artists and events. Register interest and our team will pick it up within 48 hours."
+        subtitle="Partnership briefs from brands looking for artists and events. Register interest and our team will pick it up within 48 hours."
       />
 
       {q.registered === "1" && (
@@ -143,7 +143,7 @@ export default async function DiscoverCampaignsPage({
           body={
             hasFilters
               ? "Try widening your search — clear a filter or lower the minimum budget."
-              : "When brands publish sponsorship briefs, they'll show up here for you to register interest."
+              : "When brands publish partnership briefs, they'll show up here for you to register interest."
           }
         />
       ) : (

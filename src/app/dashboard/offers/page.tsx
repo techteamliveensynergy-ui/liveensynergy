@@ -5,7 +5,7 @@ import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import { formatEventDateTime } from "@/lib/event-time";
 import type { SponsoredEvent } from "@/lib/types";
 
-export const metadata = { title: "Sponsor offers" };
+export const metadata = { title: "Partner offers" };
 
 export default async function OffersPage() {
   const { profile } = await requireRole(["artist", "event"]);
@@ -31,15 +31,15 @@ export default async function OffersPage() {
   return (
     <div>
       <PageHeader
-        title="Sponsor offers"
-        subtitle="Sponsorship proposals awaiting your response."
+        title="Partner offers"
+        subtitle="Partnership proposals awaiting your response."
       />
 
       {nothing ? (
         <EmptyState
           icon="✨"
           title="No offers yet"
-          body="When a sponsorship is proposed for one of your events, you'll see it here. Make sure your events are published."
+          body="When a partnership is proposed for one of your events, you'll see it here. Make sure your events are published."
           cta={{ href: "/dashboard/events", label: "Manage my events" }}
         />
       ) : (

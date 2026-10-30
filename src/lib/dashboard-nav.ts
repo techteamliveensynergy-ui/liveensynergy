@@ -30,7 +30,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/campaigns/live", label: "Campaigns live", icon: "📣" },
     // Not in the client's 13 Oct list — kept until they decide whether it
     // folds into Campaigns live.
-    { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
+    { href: "/dashboard/sponsored", label: "Partnered events", icon: "🤝" },
     { href: "/dashboard/discover", label: "Discover events", icon: "🔎" },
     // Every invoice in one place (13 Oct); an invoice's own page lives under
     // /dashboard/campaigns/invoices and lights this item.
@@ -51,24 +51,24 @@ const BY_ROLE: Record<Role, NavItem[]> = {
   ],
   artist: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },
-    { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
+    { href: "/dashboard/sponsored", label: "Partnered events", icon: "🤝" },
     {
       href: "/dashboard/discover-campaigns",
       label: "Discover campaigns",
       icon: "🔎",
     },
-    { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
+    { href: "/dashboard/offers", label: "Partner offers", icon: "✨" },
     { href: "/dashboard/campaign-briefs", label: "Campaign briefs", icon: "📋" },
   ],
   event: [
     { href: "/dashboard/events", label: "My events", icon: "🎫" },
-    { href: "/dashboard/sponsored", label: "Sponsored events", icon: "🤝" },
+    { href: "/dashboard/sponsored", label: "Partnered events", icon: "🤝" },
     {
       href: "/dashboard/discover-campaigns",
       label: "Discover campaigns",
       icon: "🔎",
     },
-    { href: "/dashboard/offers", label: "Sponsor offers", icon: "✨" },
+    { href: "/dashboard/offers", label: "Partner offers", icon: "✨" },
     { href: "/dashboard/campaign-briefs", label: "Campaign briefs", icon: "📋" },
   ],
   audience: [

@@ -432,7 +432,7 @@ export default async function AdminCampaignsPage({
                     {(c.suggested_event_note || c.suggested_event_url) && (
                       <p className="mt-2 rounded-lg bg-[var(--color-gold)]/40 px-3 py-2 text-xs text-[var(--color-ink)]">
                         <span className="font-semibold">
-                          Sponsor suggests:
+                          Partner suggests:
                         </span>{" "}
                         {c.suggested_event_note}
                         {c.suggested_event_url && (
@@ -584,7 +584,7 @@ export default async function AdminCampaignsPage({
                               <StatusBadge status={s.status} />
                               {accepted && (
                                 <span className="text-xs font-semibold text-[var(--color-olive-deep)]">
-                                  selected by the sponsor
+                                  selected by the partner
                                 </span>
                               )}
                             </span>
@@ -603,7 +603,7 @@ export default async function AdminCampaignsPage({
                 {/* Open for more suggestions only while nothing has settled.
                     Gating on the campaign's own status wasn't enough — a
                     campaign could sit at "in progress" while already carrying
-                    a confirmed or completed sponsorship, and suggesting more
+                    a confirmed or completed partnership, and suggesting more
                     against it creates a conflict nobody can accept (0022). */}
                 {c.status === "in_progress" && !isSettled(c.id) ? (
                   <div className="mt-4 border-t border-black/10 pt-4">

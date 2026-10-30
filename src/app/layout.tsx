@@ -26,11 +26,11 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: {
-    default: "Live·En·Synergy — Performance-based sponsorship for live events",
+    default: "Live·En·Synergy — Performance-based partnership for live events",
     template: "%s · Live·En·Synergy",
   },
   description:
-    "Live·En·Synergy transforms sponsorship into a performance-based engagement model where brands, artists and audiences all win.",
+    "Live·En·Synergy transforms partnership into a performance-based engagement model where brands, artists and audiences all win.",
 };
 
 export default function RootLayout({

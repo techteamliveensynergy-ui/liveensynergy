@@ -190,7 +190,7 @@ export default async function EditSurveyPage({
           </p>
         ) : campaign ? (
           <p className="mt-1 text-[var(--color-ink-soft)]">
-            No sponsored event matched to this campaign yet.
+            No partnered event matched to this campaign yet.
           </p>
         ) : null}
       </div>

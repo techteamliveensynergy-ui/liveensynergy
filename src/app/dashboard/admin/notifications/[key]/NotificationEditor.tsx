@@ -33,7 +33,7 @@ const SAMPLE: Record<string, string> = {
   participant_count: "18",
   name: "Jane Doe",
   email: "jane@example.com",
-  subject: "Sponsorship enquiry",
+  subject: "Partnership enquiry",
   link: "https://liveensynergy.com/auth/reset-password",
 };
 

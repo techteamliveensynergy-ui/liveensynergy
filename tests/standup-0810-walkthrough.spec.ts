@@ -104,7 +104,7 @@ test("10 Aug standup — walkthrough of every change", async ({ page }) => {
   await titleCard(page, "Starting a conversation", "4 of 8");
   await page.goto("/dashboard/messages");
   const newChat = page.getByRole("button", {
-    name: /New chat with an artist or sponsor/i,
+    name: /New chat with an artist or partner/i,
   });
   if (await newChat.count()) {
     await newChat.click();

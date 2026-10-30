@@ -110,7 +110,7 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
             Launch Your Next Partnership
           </h2>
           <p className="mt-2 text-sm text-[var(--color-ink)]/80">
-            Submit your campaign details and sponsorship goals. Our team at
+            Submit your campaign details and partnership goals. Our team at
             Live·En·Synergy will analyse your brief, put together a package,
             and pair you with the ideal artist or event to bring your vision
             to life — we'll be in touch within 3 days.
@@ -147,13 +147,13 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
             name="description"
             className="textarea"
             required
-            placeholder="For example: “We want to sponsor a live event that will feature young audiences who love trendy vibes and wear high street fashion.”"
+            placeholder="For example: “We want to partner with a live event that will feature young audiences who love trendy vibes and wear high street fashion.”"
             defaultValue={d?.description ?? ""}
           />
         </Field>
 
         <Field
-          label="Sponsorship budget guidance (GBP)"
+          label="Partnership budget guidance (GBP)"
           htmlFor="budget_expectation_gbp"
           hint="Optional — a rough figure to work from. Our team will put together a package and confirm the real budget with you."
         >
@@ -257,7 +257,7 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
       </FormSection>
 
       {/* The brief captured what kind of event you're after but never "this
-          one, here" — so a sponsor who already had an event in mind had
+          one, here" — so a partner who already had an event in mind had
           nowhere to say so (10 Aug standup). Our team relays it to the
           artist once your request is reviewed. */}
       <FormSection
@@ -265,7 +265,7 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
         description="Optional. If there's a specific event — one of ours or one you've seen elsewhere — describe it here and we'll put it to the artist or organiser."
       >
         <Field
-          label="Event you'd like to sponsor"
+          label="Event you'd like to partner with"
           htmlFor="suggested_event_note"
         >
           <textarea

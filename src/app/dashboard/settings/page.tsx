@@ -37,7 +37,7 @@ export default async function SettingsPage() {
       >
         <h2 className="text-lg font-semibold">Repository</h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          How-it-works videos, blog, FAQs, sponsor and artist guidelines, terms
+          How-it-works videos, blog, FAQs, partner and artist guidelines, terms
           &amp; conditions and the pricing structure.
         </p>
         <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">

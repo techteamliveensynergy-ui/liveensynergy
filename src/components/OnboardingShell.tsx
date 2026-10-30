@@ -20,13 +20,13 @@ interface OnboardingShellProps {
  *  one-liner (client request, 13 Oct: welcome first, then profile set-up). */
 const WELCOME_LINES: Record<Role, string> = {
   brand:
-    "Reach engaged audiences at live events. Our team turns your goals into sponsorship campaigns and pairs you with the right artists and events.",
+    "Reach engaged audiences at live events. Our team turns your goals into partnership campaigns and pairs you with the right artists and events.",
   artist:
-    "Get your shows and events sponsored by brands that suit your audience — and give your fans rewards for coming.",
+    "Get your shows and events partnered by brands that suit your audience — and give your fans rewards for coming.",
   event:
-    "Get your events sponsored by brands that suit your audience — and give attendees rewards for coming.",
+    "Get your events partnered by brands that suit your audience — and give attendees rewards for coming.",
   audience:
-    "Discover live events near you and unlock sponsor-funded rewards just for going.",
+    "Discover live events near you and unlock partner-funded rewards just for going.",
   admin: "You're set up as part of the Live·En·Synergy team.",
 };
 

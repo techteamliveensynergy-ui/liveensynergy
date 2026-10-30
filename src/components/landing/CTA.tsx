@@ -13,7 +13,7 @@ export function CTA() {
           className="pointer-events-none absolute -bottom-16 right-0 h-56 w-56 rounded-full bg-[var(--color-ink)]/10"
         />
         <h2 className="relative font-display text-3xl font-semibold tracking-tight md:text-4xl">
-          Ready to build a better sponsorship story?
+          Ready to build a better partnership story?
         </h2>
         <p className="relative mx-auto mt-4 max-w-xl text-white/85">
           Whether you&apos;re a brand, an artist, an organiser or a fan — there&apos;s

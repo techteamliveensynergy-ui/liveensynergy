@@ -25,15 +25,15 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         <Logo light />
         <div className="relative">
           <p className="font-serif text-lg text-white/70">
-            Sponsorship, re-imagined
+            Partnership, re-imagined
           </p>
           <h2 className="mt-2 font-display text-3xl font-semibold leading-tight">
-            Sponsorship where{" "}
+            Partnership where{" "}
             <span className="text-[var(--color-gold)]">everyone wins.</span>
           </h2>
           <p className="mt-4 max-w-sm text-white/70">
             Brands build meaningful connections, artists secure confirmed
-            attendance, and audiences receive exclusive sponsor-funded rewards.
+            attendance, and audiences receive exclusive partner-funded rewards.
           </p>
         </div>
         <p className="relative text-sm text-white/50">

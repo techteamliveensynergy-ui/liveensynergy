@@ -396,7 +396,7 @@ export default async function AdminPage() {
         <section className="card min-w-0 p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-              Recent sponsorships
+              Recent partnerships
             </h2>
             <Link
               href="/dashboard/admin/events"
@@ -407,7 +407,7 @@ export default async function AdminPage() {
           </div>
           {sponsored.length === 0 ? (
             <p className="text-sm text-[var(--color-ink-soft)]">
-              No sponsored events yet.
+              No partnered events yet.
             </p>
           ) : (
             <div className="space-y-2">

@@ -108,7 +108,7 @@ export default async function AdminParticipantsPage({
     <div>
       <PageHeader
         title="Participants"
-        subtitle={`${total} registrations across every sponsored event · ${codesIssued} discount code${codesIssued === 1 ? "" : "s"} issued.`}
+        subtitle={`${total} registrations across every partnered event · ${codesIssued} discount code${codesIssued === 1 ? "" : "s"} issued.`}
         action={
           <a href={exportHref} className="btn btn-ghost text-sm">
             ⬇ Export CSV

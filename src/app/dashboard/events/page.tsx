@@ -40,7 +40,7 @@ export default async function EventsPage({
     <div>
       <PageHeader
         title="My events"
-        subtitle="Events you've listed for sponsorship, and the sponsorships you've agreed."
+        subtitle="Events you've listed for partnership, and the partnerships you've agreed."
         action={
           <Link href="/dashboard/events/new" className="btn btn-primary">
             + New event
@@ -57,7 +57,7 @@ export default async function EventsPage({
         />
         <TabLink
           href="/dashboard/events?tab=sponsored"
-          label="My sponsored events"
+          label="My partnered events"
           count={sponsored.length}
           active={tab === "sponsored"}
         />
@@ -68,7 +68,7 @@ export default async function EventsPage({
           <EmptyState
             icon="🎫"
             title="No events yet"
-            body="List your first event and open it up for sponsorship."
+            body="List your first event and open it up for partnership."
             cta={{ href: "/dashboard/events/new", label: "Create an event" }}
           />
         ) : (
@@ -155,7 +155,7 @@ export default async function EventsPage({
       ) : sponsored.length === 0 ? (
         <EmptyState
           icon="🤝"
-          title="No sponsored events yet"
+          title="No partnered events yet"
           body="Browse the campaigns brands have published and register your interest — our team handles the match from there."
           cta={{
             href: "/dashboard/discover-campaigns",
@@ -185,7 +185,7 @@ export default async function EventsPage({
                     .join(" · ") || "No date set"}
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
-                  Sponsorship ref {e.reference}
+                  Partnership ref {e.reference}
                 </p>
               </div>
               <span className="text-sm font-semibold text-[var(--color-brand-dark)]">

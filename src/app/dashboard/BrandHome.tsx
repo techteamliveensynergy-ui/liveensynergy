@@ -93,9 +93,9 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {!brand
-            ? "Finish your brand profile to start requesting sponsorship campaigns."
+            ? "Finish your brand profile to start requesting partnership campaigns."
             : campaigns.length === 0 && requests.length === 0
-              ? "Request your first sponsorship campaign — the Live·En·Synergy team matches it with artists and events."
+              ? "Request your first partnership campaign — the Live·En·Synergy team matches it with artists and events."
               : `You have ${activeCampaigns} active campaign${activeCampaigns === 1 ? "" : "s"}${
                   requests.length > 0
                     ? ` and ${requests.length} request${requests.length === 1 ? "" : "s"} with our team`
@@ -311,7 +311,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
         >
           <h3 className="font-semibold text-[var(--color-ink)]">Discover events</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Browse events currently open for sponsorship.
+            Browse events currently open for partnership.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →

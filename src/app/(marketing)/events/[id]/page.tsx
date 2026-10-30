@@ -366,7 +366,7 @@ function PartnerLine({ ev }: { ev: PublicEvent }) {
             <img src={ev.brand.logo_url} alt="" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5 ring-1 ring-black/10" />
           )}
           <span>
-            <span className="block text-xs text-[var(--color-ink-soft)]">Research sponsor</span>
+            <span className="block text-xs text-[var(--color-ink-soft)]">Research partner</span>
             <span className="font-semibold text-[var(--color-ink)]">{ev.brand.name}</span>
           </span>
         </span>

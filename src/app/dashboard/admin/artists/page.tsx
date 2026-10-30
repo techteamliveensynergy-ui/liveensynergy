@@ -69,7 +69,7 @@ export default async function AdminArtistsPage({ searchParams }: { searchParams:
     <div>
       <PageHeader
         title="Artists"
-        subtitle={`${people.length} artists and event partners — their listings and sponsorships.`}
+        subtitle={`${people.length} artists and event partners — their listings and partnerships.`}
         action={
           <Link href="/dashboard/admin/events" className="btn btn-ghost text-sm">
             All events & sponsorships →
@@ -118,7 +118,7 @@ export default async function AdminArtistsPage({ searchParams }: { searchParams:
                     <span className="font-semibold">{mine.length}</span> listing{mine.length === 1 ? "" : "s"} ({available} open)
                   </span>
                   <span>
-                    <span className="font-semibold">{myDeals.length}</span> sponsorship{myDeals.length === 1 ? "" : "s"} · {live} live
+                    <span className="font-semibold">{myDeals.length}</span> partnership{myDeals.length === 1 ? "" : "s"} · {live} live
                   </span>
                   <Link href={`/dashboard/admin/users/${p.profile_id}`} className="btn btn-ghost text-sm">
                     Account

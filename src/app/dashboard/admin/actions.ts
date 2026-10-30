@@ -448,7 +448,7 @@ export async function adminUpdateSponsoredEvent(
       remaining_budget_gbp: number | null;
       listing_id: string | null;
     }>();
-  if (!current) return { error: "That sponsorship no longer exists." };
+  if (!current) return { error: "That partnership no longer exists." };
   if (current.status === "completed") {
     return { error: "This event is completed — its details are locked." };
   }

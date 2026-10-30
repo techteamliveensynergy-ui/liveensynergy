@@ -35,7 +35,7 @@ function Submit() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn btn-primary" disabled={pending}>
-      {pending ? "Creating…" : "Create sponsored event"}
+      {pending ? "Creating…" : "Create partnered event"}
     </button>
   );
 }
@@ -101,7 +101,7 @@ export function SponsoredEventForm({
         <Field
           label="Artist / act name"
           htmlFor="artist_display_name"
-          hint="Shown on the sponsorship alongside your brand."
+          hint="Shown on the partnership alongside your brand."
         >
           <input
             key={`artist-${fillKey}`}
@@ -244,7 +244,7 @@ export function SponsoredEventForm({
 
       <FormSection
         title="Branding"
-        description="Branding guidelines and assets for this sponsorship. The Live·En·Synergy team also uses these for branded emails to participants and for display on the portal."
+        description="Branding guidelines and assets for this partnership. The Live·En·Synergy team also uses these for branded emails to participants and for display on the portal."
       >
         <Field
           label="Branding guidelines"
@@ -289,11 +289,11 @@ export function SponsoredEventForm({
         </div>
       </FormSection>
 
-      <FormSection title="Sponsorship">
+      <FormSection title="Partnership">
         <Field
           label="Budget (GBP)"
           htmlFor="budget_gbp"
-          hint="The amount committed to this sponsorship. Audience rewards are discount codes, issued by Live·En·Synergy."
+          hint="The amount committed to this partnership. Audience rewards are discount codes, issued by Live·En·Synergy."
         >
           <input
             id="budget_gbp"
@@ -316,7 +316,7 @@ export function SponsoredEventForm({
         >
           <textarea id="reward_rules" name="reward_rules" className="textarea" />
         </Field>
-        <Field label="Sponsorship terms" htmlFor="terms">
+        <Field label="Partnership terms" htmlFor="terms">
           <textarea id="terms" name="terms" className="textarea" />
         </Field>
       </FormSection>

@@ -103,9 +103,9 @@ export default async function EventViewPage({
                 ) : null
               }
             />
-            <DetailFact label="Sponsorship budget range" value={l.budget_range} />
-            <DetailFact label="Existing sponsors" value={l.existing_sponsors} />
-            <DetailFact label="What sponsors get" value={l.sponsor_benefits} />
+            <DetailFact label="Partnership budget range" value={l.budget_range} />
+            <DetailFact label="Existing partners" value={l.existing_sponsors} />
+            <DetailFact label="What partners get" value={l.sponsor_benefits} />
           </dl>
         </div>
       </div>

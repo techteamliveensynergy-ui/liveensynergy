@@ -6,12 +6,12 @@ export default function AboutPage() {
       <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
         <span className="chip">Our story</span>
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-5xl">
-          Sponsorship, <span className="font-serif font-normal">re-imagined</span>.
+          Partnership, <span className="font-serif font-normal">re-imagined</span>.
         </h1>
         <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-[var(--color-ink-soft)] md:text-base">
           <p>
-            Live·En·Synergy was born from a simple frustration: sponsorship
-            rarely reaches the audience. Traditional sponsorship flows straight
+            Live·En·Synergy was born from a simple frustration: partnership
+            rarely reaches the audience. Traditional partnership flows straight
             from a brand to an artist or event — the people actually showing up
             never see a penny of it.
           </p>
@@ -19,15 +19,15 @@ export default function AboutPage() {
             We rebuilt it as a three-sided marketplace so brands can fund what
             matters, artists fill the room, and audiences get real value for
             showing up. Brands gain measurable engagement and verified
-            outcomes. Artists and organisers gain sponsorship funding and
+            outcomes. Artists and organisers gain partnership funding and
             stronger, confirmed attendance. Audiences receive tangible value —
-            from ticket reimbursements to exclusive sponsor-funded rewards.
+            from ticket reimbursements to exclusive partner-funded rewards.
           </p>
           <p>
-            By turning sponsorship into a performance-based engagement model,
+            By turning partnership into a performance-based engagement model,
             we create a more transparent, accountable and effective ecosystem
             for live events — so promising events don&apos;t get cancelled at
-            the last minute, and every pound of sponsorship drives real
+            the last minute, and every pound of partnership drives real
             engagement.
           </p>
         </div>

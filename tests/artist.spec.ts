@@ -33,10 +33,10 @@ test("A-OV-01 overview: sponsor offers pending", async ({ page }) => {
 test("A-EV-01 my events split into published / sponsored", async ({ page }) => {
   await page.goto("/dashboard/events");
   await expect(page.getByText("My published events")).toBeVisible();
-  await expect(page.getByText("My sponsored events")).toBeVisible();
+  await expect(page.getByText("My partnered events")).toBeVisible();
   await capture(page, "A-EV-01a", "My events — published tab", { fullPage: true });
 
-  await page.getByText("My sponsored events").click();
+  await page.getByText("My partnered events").click();
   await page.waitForURL(/tab=sponsored/);
   await capture(page, "A-EV-01b", "My events — sponsored tab", { fullPage: true });
 });
@@ -54,7 +54,7 @@ test("A-SPON-01 artist can create a sponsored event", async ({ page }) => {
   await page.goto("/dashboard/sponsored/new");
   await expect(page).toHaveURL(/\/dashboard\/sponsored\/new/);
   await expect(
-    page.getByRole("heading", { name: "Create a sponsored event" }),
+    page.getByRole("heading", { name: "Create a partnered event" }),
   ).toBeVisible();
   await expect(page.locator("#campaign_id")).toBeVisible();
   await capture(page, "A-SPON-01", "Artist can propose a sponsorship", {
@@ -77,7 +77,7 @@ test("A-MSG-01 chat split + attachments", async ({ page }) => {
   // Direct brand↔artist chats are archived (admin-only) since 19 Oct; a
   // brand/artist sees only their threads with the team.
   await expect(page.getByText(/Your conversations with the Live·En·Synergy team/)).toBeVisible();
-  await expect(page.getByText("With artists & sponsors")).toHaveCount(0);
+  await expect(page.getByText("With artists & partners")).toHaveCount(0);
   await capture(page, "A-MSG-01", "Artist messages — split threads", {
     fullPage: true,
   });

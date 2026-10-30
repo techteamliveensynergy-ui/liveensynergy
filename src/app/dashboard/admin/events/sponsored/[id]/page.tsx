@@ -39,7 +39,7 @@ import type {
 } from "@/lib/types";
 import { campaignLabel } from "@/lib/campaign-requests";
 
-export const metadata = { title: "Sponsored event · Admin" };
+export const metadata = { title: "Partnered event · Admin" };
 
 /**
  * Statuses run one way only — a confirmed deal can't be dropped back to "in
@@ -64,7 +64,7 @@ const GATE_NOTICES: Record<string, string> = {
   pending: "Survey submitted but not scored yet. Try again shortly.",
   review: "Survey is in the review queue — approve or reject it there first.",
   reject: "Survey failed the quality check — no reward code.",
-  mismatch: "That participant doesn't belong to this sponsorship.",
+  mismatch: "That participant doesn't belong to this partnership.",
   status: "Verify attendance before issuing or releasing a reward.",
   tier: "That reward tier no longer exists on this event.",
   cap: "That tier's participant cap has already been reached.",
@@ -322,7 +322,7 @@ export default async function AdminSponsoredDetailPage({
             href={`/contact?ref=${encodeURIComponent(
               event.reference,
             )}&subject=${encodeURIComponent(
-              `Sponsorship ${event.reference} — ${event.name}`,
+              `Partnership ${event.reference} — ${event.name}`,
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -569,7 +569,7 @@ export default async function AdminSponsoredDetailPage({
       <InvoiceSection eventId={event.id} invoices={invoices} />
 
       {/* Admin override of the deal's details. The parties themselves can't
-          touch a confirmed sponsorship, so this is the only route to moving a
+          touch a confirmed partnership, so this is the only route to moving a
           deadline that has passed or fixing a budget (3 Aug standup). */}
       <div className="card p-6">
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">

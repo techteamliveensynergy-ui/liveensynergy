@@ -35,7 +35,7 @@ export function SiteFooter() {
         <div>
           <Logo light />
           <p className="mt-4 max-w-xs text-sm text-white/60">
-            Turning sponsorship into something everyone actually wins — for
+            Turning partnership into something everyone actually wins — for
             brands, artists and the audiences who show up.
           </p>
         </div>

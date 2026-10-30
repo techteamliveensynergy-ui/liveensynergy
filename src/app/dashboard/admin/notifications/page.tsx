@@ -23,7 +23,7 @@ interface SettingRow {
 
 const CATEGORY_LABELS: Record<string, string> = {
   account: "Account & access",
-  brand: "Brand / sponsor",
+  brand: "Brand / partner",
   artist: "Artist / organiser",
   audience: "Audience",
   messaging: "Messaging",

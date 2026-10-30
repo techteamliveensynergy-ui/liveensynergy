@@ -134,7 +134,7 @@ export default async function AdminEventsPage({
     <div>
       <PageHeader
         title="Events"
-        subtitle="Every listing and sponsorship deal on the platform."
+        subtitle="Every listing and partnership deal on the platform."
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -149,7 +149,7 @@ export default async function AdminEventsPage({
             }`}
           >
             {t === "sponsored"
-              ? `Sponsored events (${sponsored.length})`
+              ? `Partnered events (${sponsored.length})`
               : `Listings (${listings.length})`}
           </Link>
         ))}
@@ -189,7 +189,7 @@ export default async function AdminEventsPage({
       {tab === "sponsored" ? (
         sponsored.length === 0 ? (
           <div className="card p-10 text-center text-sm text-[var(--color-ink-soft)]">
-            No sponsored events match.
+            No partnered events match.
           </div>
         ) : (
           <div className="card divide-y divide-black/10">

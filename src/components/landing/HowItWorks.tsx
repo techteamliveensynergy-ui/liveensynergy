@@ -12,7 +12,7 @@ const STEPS = [
   {
     n: "03",
     title: "Audiences take part",
-    body: "Ticket holders answer the sponsor's survey and check in at the venue. Responses that pass our quality check earn a discount code, and the brand gets the insights.",
+    body: "Ticket holders answer the partner's survey and check in at the venue. Responses that pass our quality check earn a discount code, and the brand gets the insights.",
   },
 ];
 
@@ -22,10 +22,10 @@ export function HowItWorks() {
       <div className="max-w-2xl">
         <span className="chip">How it works</span>
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
-          Sponsorship that comes back with answers
+          Partnership that comes back with answers
         </h2>
         <p className="mt-4 text-lg text-[var(--color-ink-soft)]">
-          Instead of a logo on a poster, a sponsor gets a conversation with the
+          Instead of a logo on a poster, a partner gets a conversation with the
           audience: verified participants, quality-checked research and a
           campaign report at the end.
         </p>

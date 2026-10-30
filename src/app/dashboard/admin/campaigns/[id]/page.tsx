@@ -400,7 +400,7 @@ export default async function AdminCampaignPage({
       </section>
 
       <section className="card p-6">
-        <h2 className="text-lg font-semibold">Events and sponsorships</h2>
+        <h2 className="text-lg font-semibold">Events and partnerships</h2>
         {sponsorships.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
             No event suggested yet.{" "}

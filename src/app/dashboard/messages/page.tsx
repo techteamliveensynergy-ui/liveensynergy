@@ -400,7 +400,7 @@ export default async function MessagesPage({
               No thread with our team yet
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-ink-soft)]">
-              Questions about a match, a campaign or a confirmed sponsorship?
+              Questions about a match, a campaign or a confirmed partnership?
               Start a thread and we&apos;ll reply within 48 hours.
             </p>
             <form action={startSupportThread} className="mt-5">

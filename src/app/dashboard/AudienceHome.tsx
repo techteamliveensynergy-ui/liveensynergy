@@ -74,7 +74,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {rows.length === 0
-            ? "Discover sponsored events — attend, share your views in a short survey and get a discount code."
+            ? "Discover partnered events — attend, share your views in a short survey and get a discount code."
             : pendingCount > 0
               ? `You have ${pendingCount} event${pendingCount === 1 ? "" : "s"} in progress — keep an eye on the next step.`
               : "You're all caught up — go find your next event."}
@@ -142,7 +142,7 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/discover" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">Find events</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Browse sponsored events near you.
+            Browse partnered events near you.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →

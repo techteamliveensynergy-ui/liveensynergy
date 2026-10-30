@@ -141,11 +141,11 @@ export function EventForm({
 
       <FormSection
         title="Additional information"
-        description="Helps our team match you with the right sponsors — not shown publicly."
+        description="Helps our team match you with the right partners — not shown publicly."
         private
       >
         <Field
-          label="Existing partners / sponsors"
+          label="Existing partners"
           htmlFor="existing_partners"
           hint="Mention n/a if none."
         >

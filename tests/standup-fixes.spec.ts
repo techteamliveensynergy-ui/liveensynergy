@@ -91,7 +91,7 @@ test("S-ART-01 an artist can create a sponsored event", async ({ page }) => {
   // Previously requireRole(["brand"]) bounced the artist straight out.
   await expect(page).toHaveURL(/\/dashboard\/sponsored\/new/);
   await expect(
-    page.getByRole("heading", { name: "Create a sponsored event" }),
+    page.getByRole("heading", { name: "Create a partnered event" }),
   ).toBeVisible();
 
   // The brand is identified by the brief being proposed against.
@@ -111,7 +111,7 @@ test("S-ART-01 an artist can create a sponsored event", async ({ page }) => {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: /Create sponsored event/i }).click();
+  await page.getByRole("button", { name: /Create partnered event/i }).click();
   await page.waitForURL(/\/dashboard\/sponsored\/[0-9a-f-]{36}/, {
     timeout: 60_000,
   });

@@ -90,19 +90,19 @@ export default async function EventsPage({
         </section>
       )}
 
-      <span className="chip">Available for sponsorship</span>
+      <span className="chip">Available for partnership</span>
       {/* One h1 per page: the live list's heading takes it when there is one. */}
       {live.length > 0 ? (
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
-          Events looking for sponsors
+          Events looking for partners
         </h2>
       ) : (
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
-          Events looking for sponsors
+          Events looking for partners
         </h1>
       )}
       <p className="mt-3 max-w-2xl text-[var(--color-ink-soft)]">
-        Upcoming events from artists and organisers on Live·En·Synergy, open for brand sponsorship.
+        Upcoming events from artists and organisers on Live·En·Synergy, open for brand partnership.
       </p>
 
       {categories.length > 1 && (
@@ -125,7 +125,7 @@ export default async function EventsPage({
 
       {events.length === 0 ? (
         <div className="mt-8 rounded-3xl border border-black/10 p-10 text-center text-[var(--color-ink-soft)]">
-          No events are open for sponsorship right now — check back soon.
+          No events are open for partnership right now — check back soon.
         </div>
       ) : (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -163,7 +163,7 @@ export default async function EventsPage({
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-ink-soft)]">
           Create an artist or event profile and mark your events available for
-          sponsorship.
+          partnership.
         </p>
         <Link href="/auth/sign-up?role=artist" className="btn btn-primary mt-4">
           Get started

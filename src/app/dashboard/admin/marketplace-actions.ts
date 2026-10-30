@@ -720,7 +720,7 @@ export async function createCampaignFromAdmin(
   // for the reward pool isn't viable, package price or not.
   const net = netForCampaign(money);
   if (net == null || net <= 0) {
-    return { error: "This budget leaves nothing available for sponsorship after the platform margin." };
+    return { error: "This budget leaves nothing available for partnership after the platform margin." };
   }
 
   const { data: created, error } = await supabase
@@ -1199,7 +1199,7 @@ export async function reviewEventProof(formData: FormData) {
       recipientProfileId: updated.uploaded_by,
       link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
       variables: {
-        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        event_name: updated.sponsored_events?.name ?? "your partnership",
         proof_type: updated.proof_type === "social_mention" ? "social mention" : "onsite branding",
         status: op === "approve" ? "approved" : "rejected",
       },
@@ -1256,7 +1256,7 @@ export async function upsertRewardTiers(
 ): Promise<MarketplaceState> {
   const { supabase } = await requireAdmin();
   const eventId = str(formData.get("event_id"));
-  if (!eventId) return { error: "Missing sponsorship." };
+  if (!eventId) return { error: "Missing partnership." };
   if (await rewardConfigFrozen(supabase, eventId)) {
     return { error: "The artist has already confirmed these discount codes — reopen them before editing." };
   }
@@ -1842,7 +1842,7 @@ export async function resolveEventChangeRequest(formData: FormData) {
       recipientProfileId: updated.requested_by,
       link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
       variables: {
-        event_name: updated.sponsored_events?.name ?? "your sponsorship",
+        event_name: updated.sponsored_events?.name ?? "your partnership",
         status: op === "approve" ? "approved" : "declined",
       },
     });

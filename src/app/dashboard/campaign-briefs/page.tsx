@@ -47,7 +47,7 @@ export default async function CampaignBriefsPage() {
     <div>
       <PageHeader
         title="Campaign briefs"
-        subtitle="What each sponsor's campaign at your event involves: the objective, participant rewards and how to promote it."
+        subtitle="What each partner's campaign at your event involves: the objective, participant rewards and how to promote it."
       />
       {briefs.length === 0 ? (
         <EmptyState

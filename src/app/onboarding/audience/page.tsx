@@ -23,7 +23,7 @@ export default async function AudienceOnboardingPage() {
       notices={<OnboardingNotices />}
       role="audience"
       name={profile.full_name}
-      subtitle="Just a few details so you can start unlocking sponsor-funded rewards."
+      subtitle="Just a few details so you can start unlocking partner-funded rewards."
     >
       {/* A survey sign-up already gave us a mobile number (FB-00032) —
           don't make them type it twice. */}

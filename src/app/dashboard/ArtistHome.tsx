@@ -67,14 +67,14 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         </h1>
         <p className="mt-2 text-[var(--color-ink-soft)]">
           {listings.length === 0
-            ? "List your first event to open it up for sponsorship."
+            ? "List your first event to open it up for partnership."
             : awaitingYou.length > 0
-              ? `${awaitingYou.length} sponsored event${awaitingYou.length === 1 ? " is" : "s are"} waiting for you to agree the terms.`
+              ? `${awaitingYou.length} partnered event${awaitingYou.length === 1 ? " is" : "s are"} waiting for you to agree the terms.`
               : codesToConfirm.length > 0
-                ? `Confirm the discount codes for ${codesToConfirm.length} sponsored event${codesToConfirm.length === 1 ? "" : "s"}.`
+                ? `Confirm the discount codes for ${codesToConfirm.length} partnered event${codesToConfirm.length === 1 ? "" : "s"}.`
                 : upcoming.length > 0
                   ? `Your next event is ${upcoming[0].name}.`
-                  : "List your next event so our team can match it with a sponsor."}
+                  : "List your next event so our team can match it with a partner."}
         </p>
         <ProfileLinks role={profile.role} profileId={profile.id} />
       </div>
@@ -89,8 +89,8 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
           hint="terms to agree + discount codes to confirm"
           tint="bg-[var(--color-gold)]"
         />
-        <MetricTile label="Sponsored events" value={live.length} hint="agreed with a brand" tint="bg-[var(--color-sage)]" />
-        <MetricTile label="Attendees checked in" value={checkedInCount} hint="across your sponsored events" tint="bg-[var(--color-pink)]" />
+        <MetricTile label="Partnered events" value={live.length} hint="agreed with a brand" tint="bg-[var(--color-sage)]" />
+        <MetricTile label="Attendees checked in" value={checkedInCount} hint="across your partnered events" tint="bg-[var(--color-pink)]" />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -147,7 +147,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
           </h2>
           {awaitingYou.length === 0 && codesToConfirm.length === 0 ? (
             <p className="mt-2 text-sm text-[var(--color-ink)]/80">
-              Nothing right now — we&apos;ll let you know when a sponsor&apos;s campaign needs you.
+              Nothing right now — we&apos;ll let you know when a partner&apos;s campaign needs you.
             </p>
           ) : (
             <div className="mt-3 space-y-2">
@@ -192,7 +192,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/events/new" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">List an event</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Create an event and mark it available for sponsorship.
+            Create an event and mark it available for partnership.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →
@@ -201,7 +201,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
         <Link href="/dashboard/campaign-briefs" className="card block p-5 transition hover:-translate-y-0.5">
           <h3 className="font-semibold text-[var(--color-ink)]">Campaign briefs</h3>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            What each sponsor&apos;s campaign at your event involves.
+            What each partner&apos;s campaign at your event involves.
           </p>
           <span className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
             Open →

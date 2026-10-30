@@ -143,7 +143,7 @@ export function PackageForm({ pkg }: { pkg?: CampaignPackage }) {
           <Field
             label="Platform margin (GBP)"
             htmlFor="platform_margin_gbp"
-            hint="What the platform keeps from this package's price — the rest becomes the sponsorship's reward pool."
+            hint="What the platform keeps from this package's price — the rest becomes the partnership's reward pool."
           >
             <input
               id="platform_margin_gbp"
