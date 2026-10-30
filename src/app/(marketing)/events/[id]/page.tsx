@@ -82,6 +82,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
           <div className="flex flex-wrap items-center gap-2">
             {ended ? <span className="chip">Event ended</span> : <span className="chip">Live research campaign</span>}
             {ev.category && <span className="chip">{ev.category}</span>}
+            {page?.subcategory && <span className="chip">{page.subcategory}</span>}
           </div>
           <PartnerLine ev={ev} />
           <div>
@@ -111,7 +112,9 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
         {page?.event_description && <Prose text={page.event_description} />}
         <Facts>
           <Fact label="Artist / organiser">{ev.artist_name}</Fact>
-          <Fact label="Music category">{ev.category}</Fact>
+          <Fact label="Music category">
+            {[ev.category, page?.subcategory].filter(Boolean).join(" · ") || null}
+          </Fact>
           <Fact label="Date">{when}</Fact>
           <Fact label="Doors / start">{clockTime(ev.start_time)}</Fact>
           <Fact label="Ends">{clockTime(ev.end_time)}</Fact>
@@ -126,6 +129,12 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             )}
           </Fact>
         </Facts>
+        {/* Sakshi: "a slightly smaller banner image of the event below this" —
+            the listing's own artwork; skipped when it's the hero image again. */}
+        {ev.event_image_url && ev.event_image_url !== ev.banner_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ev.event_image_url} alt="" className="mt-5 h-40 w-full rounded-2xl object-cover md:h-48" />
+        )}
       </Section>
 
       {/* 3. About the research campaign */}
@@ -148,8 +157,13 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             {page?.survey_minutes ? `About ${page.survey_minutes} minute${page.survey_minutes === 1 ? "" : "s"}` : null}
           </Fact>
         </Facts>
-        {ev.brand && (ev.brand.description || ev.brand.logo_url) && (
-          <div className="mt-5 flex gap-4 rounded-2xl bg-[var(--color-mist)] p-4">
+        {ev.brand && (ev.brand.description || ev.brand.logo_url || ev.brand.banner_url) && (
+          <div className="mt-5 overflow-hidden rounded-2xl bg-[var(--color-mist)]">
+          {ev.brand.banner_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ev.brand.banner_url} alt="" className="h-32 w-full object-cover md:h-40" />
+          )}
+          <div className="flex gap-4 p-4">
             {ev.brand.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -172,6 +186,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
                 </a>
               )}
             </div>
+          </div>
           </div>
         )}
       </Section>
@@ -206,12 +221,11 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
         </ol>
         <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
           If your response doesn&apos;t pass the quality check, no code is issued — for example when answers are
-          rushed, contradictory, or a duplicate of another response. See the{" "}
-          <Link href="/faqs" className="underline">
-            FAQs
-          </Link>{" "}
-          for more about taking part.
+          rushed, contradictory, or a duplicate of another response.
         </p>
+        <a href="#participation-faq" className="mt-3 inline-block text-sm font-semibold text-[var(--color-brand-dark)]">
+          Participation FAQ ↓
+        </a>
       </Section>
 
       {/* 6. Eligibility */}
@@ -259,14 +273,85 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
           <Link href="/privacy" className="underline">
             privacy policy
           </Link>
-          . Questions about this promotion?{" "}
-          <Link href="/contact" className="underline">
-            Contact Live·En·Synergy
+          .
+        </p>
+        <p className="mt-2 text-xs text-white/70">
+          Questions, a complaint, or a problem with your code?{" "}
+          <Link href={contactHref(ev)} className="underline">
+            Contact Live·En·Synergy about this promotion
           </Link>
           .
         </p>
       </section>
+
+      <ParticipationFaq ev={ev} />
     </div>
+  );
+}
+
+/** The contact form pre-filled with this event (it reads ?ref= and ?subject=). */
+function contactHref(ev: PublicEvent) {
+  const q = new URLSearchParams({ ref: ev.reference, subject: `Promotion: ${ev.name}` });
+  return `/contact?${q}`;
+}
+
+/**
+ * Sakshi: "explain what happens if validation fails — perhaps a Participation
+ * FAQ link below How it works". On the page rather than a separate one so it
+ * can't drift from this event's own terms; the answers describe what the
+ * platform actually does (quality scoring, auto-issued codes, review of late
+ * responses, aggregated-only brand results).
+ */
+function ParticipationFaq({ ev }: { ev: PublicEvent }) {
+  const faqs: [string, ReactNode][] = [
+    [
+      "What happens if my response doesn't pass the check?",
+      "No code is issued for that response. Responses are checked for things like answers given too quickly, failed attention questions, contradictions, and duplicates of another response. If you think we got it wrong, contact us and the team will review it.",
+    ],
+    [
+      "When do I get my code?",
+      "As soon as your response passes the check, your code is shown on screen and emailed to you. If the survey had already reached its participant limit when you answered, your response is reviewed by the team first and a code isn't guaranteed.",
+    ],
+    [
+      "I haven't received my code, or it doesn't work",
+      <>
+        Check your spam or junk folder first. If it's still missing, or the ticket site won&apos;t accept it,{" "}
+        <Link href={contactHref(ev)} className="underline">
+          contact us
+        </Link>{" "}
+        with the email address you used and we&apos;ll sort it out.
+      </>,
+    ],
+    [
+      "Can I take part more than once?",
+      "No — one response per person. Repeat responses are flagged as duplicates and don't receive a code.",
+    ],
+    [
+      "Who sees my answers?",
+      <>
+        The brand sees combined results only, never your name or contact details. See our{" "}
+        <Link href="/privacy" className="underline">
+          privacy policy
+        </Link>
+        .
+      </>,
+    ],
+  ];
+  return (
+    <section id="participation-faq" className="mt-8 scroll-mt-24">
+      <h2 className="mb-4 font-display text-xl font-semibold text-[var(--color-ink)]">Participation FAQ</h2>
+      <div className="space-y-3">
+        {faqs.map(([q, a]) => (
+          <details key={q} className="card group p-5 [&_summary]:cursor-pointer">
+            <summary className="flex items-center justify-between gap-3 font-display font-semibold text-[var(--color-ink)]">
+              {q}
+              <span className="text-[var(--color-brand)] transition group-open:rotate-45">+</span>
+            </summary>
+            <p className="mt-3 text-sm text-[var(--color-ink-soft)]">{a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -1884,6 +1884,7 @@ export async function savePublicEventPage(formData: FormData) {
   const row = {
     sponsored_event_id: eventId,
     event_description: str(formData.get("event_description")),
+    subcategory: str(formData.get("subcategory")),
     age_restriction: str(formData.get("age_restriction")),
     ticket_url: ticket.url,
     research_about: str(formData.get("research_about")),

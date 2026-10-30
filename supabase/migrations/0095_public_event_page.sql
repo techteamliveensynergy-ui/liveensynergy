@@ -42,6 +42,7 @@ create table if not exists sponsored_event_pages (
   sponsored_event_id    uuid primary key references sponsored_events (id) on delete cascade,
   -- About the event
   event_description     text,
+  subcategory           text,            -- e.g. "Afrobeats" under Music; no such field elsewhere
   age_restriction       text,            -- e.g. "18+ (ID required)"; null = not stated
   ticket_url            text,            -- falls back to the listing's ticket_buy_url
   -- About the research campaign
@@ -62,6 +63,10 @@ create table if not exists sponsored_event_pages (
   updated_at            timestamptz not null default now(),
   updated_by            uuid references profiles (id) on delete set null
 );
+
+-- Re-running this file over an earlier draft of it (applied to dev for the
+-- PR preview) still ends with every column.
+alter table sponsored_event_pages add column if not exists subcategory text;
 
 alter table sponsored_event_pages enable row level security;
 
@@ -111,6 +116,7 @@ as $$
     select jsonb_build_object(
       'id',                se.id,
       'name',              se.name,
+      'reference',         se.reference,
       'status',            se.status,
       'event_date',        coalesce(se.event_date, l.event_date),
       'start_time',        coalesce(se.start_time, l.start_time),
@@ -123,6 +129,7 @@ as $$
       'venue_details',     se.venue_details,
       'category',          coalesce(l.category, c.category),
       'banner_url',        coalesce(se.banner_url, l.image_url, c.image_url),
+      'event_image_url',   coalesce(l.image_url, se.banner_url),
       'artist_name',       coalesce(nullif(se.artist_display_name, ''), a.stage_name, a.artist_name, o.event_name),
       'campaign_name',     c.campaign_name,
       'campaign_status',   c.status,

@@ -13,6 +13,7 @@ import type { RedemptionPlatform } from "./types";
 /** The team's copy for the page (sponsored_event_pages, 0095). */
 export interface EventPageCopy {
   event_description: string | null;
+  subcategory: string | null;
   age_restriction: string | null;
   ticket_url: string | null;
   research_about: string | null;
@@ -43,6 +44,7 @@ export interface PublicEventTier {
 
 export interface PublicEvent {
   id: string;
+  reference: string;
   name: string;
   status: "confirmed" | "completed";
   event_date: string | null;
@@ -56,6 +58,8 @@ export interface PublicEvent {
   venue_details: string | null;
   category: string | null;
   banner_url: string | null;
+  /** The listing's own artwork, for the smaller banner under "About the event". */
+  event_image_url: string | null;
   artist_name: string | null;
   campaign_name: string | null;
   campaign_status: "in_progress" | "completed";

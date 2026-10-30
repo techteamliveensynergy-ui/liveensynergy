@@ -63,6 +63,11 @@ export function PublicPageSection({
             <span className="field-label">Event description</span>
             <textarea name="event_description" rows={3} className="textarea mt-1" defaultValue={copy?.event_description ?? ""} />
           </label>
+          <label className="block">
+            <span className="field-label">Subcategory</span>
+            <input name="subcategory" className="input mt-1" placeholder="e.g. Afrobeats" defaultValue={copy?.subcategory ?? ""} />
+            <span className="field-hint">Shown next to the event&apos;s category.</span>
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="field-label">Age restriction</span>
