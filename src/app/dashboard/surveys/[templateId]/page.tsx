@@ -11,14 +11,45 @@ import { SurveyForm } from "./SurveyForm";
 
 export const metadata = { title: "Survey" };
 
-function NotAvailable() {
+/**
+ * Why a survey is locked, in the participant's terms (QA 30 Oct #20 — it
+ * used to say only "isn't available"). The reason comes from
+ * survey_access_reason() (0098) and covers the caller's own registration
+ * only; anything else, including a database without 0098, gets the plain
+ * message.
+ */
+const LOCKED_REASONS: Record<string, { title: string; body: string }> = {
+  awaiting_selection: {
+    title: "This survey opens after the event",
+    body: "It's the post-event survey, so it opens once you've been selected to take part and your attendance has been verified at the venue. We'll let you know when it's ready.",
+  },
+  awaiting_attendance: {
+    title: "This survey opens once your attendance is verified",
+    body: "You're selected — check in with the QR code at the venue on the day. As soon as your attendance is verified the survey opens under My events, and we'll let you know.",
+  },
+  rejected: {
+    title: "This survey isn't open to you",
+    body: "Your registration for this event wasn't selected this time, so its survey isn't available. Thanks for registering.",
+  },
+};
+
+function NotAvailable({ reason }: { reason?: string | null }) {
+  const locked = reason ? LOCKED_REASONS[reason] : undefined;
   return (
     <div>
       <PageHeader title="Survey" />
       <div className="card p-8 text-center">
-        <p className="text-[var(--color-ink-soft)]">
-          This survey isn&apos;t available to you.
-        </p>
+        {locked ? (
+          <>
+            <p className="text-lg font-semibold text-[var(--color-ink)]">{locked.title}</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-ink-soft)]">{locked.body}</p>
+          </>
+        ) : (
+          <p className="text-[var(--color-ink-soft)]">
+            This survey isn&apos;t available to you — it may have closed, or it belongs to an event you haven&apos;t
+            registered for.
+          </p>
+        )}
         <Link href="/dashboard/participations" className="btn btn-primary mt-4">
           Back to My events
         </Link>
@@ -46,7 +77,10 @@ export default async function TakeSurveyPage({
     .select("*")
     .eq("id", templateId)
     .maybeSingle();
-  if (!template) return <NotAvailable />;
+  if (!template) {
+    const { data: reason } = await supabase.rpc("survey_access_reason", { p_template_id: templateId });
+    return <NotAvailable reason={typeof reason === "string" ? reason : null} />;
+  }
 
   const tpl = template as SurveyTemplate;
 

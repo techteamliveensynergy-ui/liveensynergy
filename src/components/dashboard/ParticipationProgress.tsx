@@ -17,27 +17,44 @@ export interface ProgressStep {
 }
 
 /**
- * Derives the five steps from a participation row.
+ * Derives the steps from a participation row, plus what the row itself can't
+ * say: whether this person has answered the event's survey, and whether a
+ * discount code exists for them.
  *
  * "current" is the first step that hasn't happened yet — that's the one the
  * user either has to act on or is waiting on someone else for.
+ *
+ * QA 30 Oct #21: the tracker had no survey step, so "Code issued" sat next
+ * to "Attended" with nothing explaining the gap; "Selected" claimed a random
+ * draw when the team can also pick by hand; and a code released by the
+ * survey (0075) left the participation at attendance_verified, so the last
+ * step stayed open while the code was already under My rewards.
  */
-export function participationSteps(p: Participation): ProgressStep[] {
+export function participationSteps(
+  p: Participation,
+  extra: { surveyDone?: boolean; hasCode?: boolean } = {},
+): ProgressStep[] {
+  const verified = ["attendance_verified", "reward_released"].includes(p.status);
+  const rewarded = p.status === "reward_released" || Boolean(extra.hasCode);
+  const surveyed = Boolean(extra.surveyDone) || rewarded;
+  // Attendance can be verified at the venue without a ticket upload; a
+  // verified attendee has evidently got past the ticket step.
   const uploaded =
     Boolean(p.ticket_proof_url) ||
-    ["ticket_uploaded", "attendance_verified", "reward_released"].includes(
-      p.status,
-    );
-  const verified = ["attendance_verified", "reward_released"].includes(p.status);
-  const rewarded = p.status === "reward_released";
+    p.status === "ticket_uploaded" ||
+    verified;
 
-  const done = [true, p.selected, uploaded, verified, rewarded];
+  const done = [true, p.selected || verified, uploaded, verified, surveyed, rewarded];
   const labels: { label: string; hint?: string }[] = [
     { label: "Registered", hint: "You signed up for this event" },
-    { label: "Selected", hint: "Chosen in the random draw" },
+    { label: "Selected", hint: "The Live·En·Synergy team chooses who takes part — we'll email you" },
     { label: "Ticket uploaded", hint: "Upload your ticket as proof" },
     { label: "Attended", hint: "Scan the QR code at the venue" },
-    { label: "Code issued", hint: "Find it under My rewards" },
+    { label: "Survey", hint: "Answer the event's short survey — the button appears under My events when it opens" },
+    {
+      label: "Discount code",
+      hint: "Released once your survey passes our quality check and the event's discount codes are confirmed — then it's under My rewards",
+    },
   ];
 
   const firstPending = done.indexOf(false);
@@ -46,6 +63,18 @@ export function participationSteps(p: Participation): ProgressStep[] {
     ...l,
     state: done[i] ? "done" : i === firstPending ? "current" : "todo",
   }));
+}
+
+/**
+ * The badge next to an event on the audience's own pages. The stored status
+ * lags what they've been told: selection doesn't change it (still
+ * "registered"), and a survey-released code doesn't either (#21).
+ */
+export function participationBadge(p: Participation, hasCode = false): string {
+  if (p.status === "rejected") return "rejected";
+  if (hasCode || p.status === "reward_released") return "code_issued";
+  if (p.status === "registered" && p.selected) return "selected";
+  return p.status;
 }
 
 /** Tickets are routinely PDFs, which an `<img>` can't render. */

@@ -72,6 +72,14 @@ const GATE_NOTICES: Record<string, string> = {
   ...ISSUE_REFUSALS,
 };
 
+const SURVEY_PILL_LABELS: Partial<Record<RewardGate["code"], string>> = {
+  pass: "survey passed",
+  missing: "no survey answer yet",
+  pending: "survey being scored",
+  review: "survey in review",
+  reject: "survey failed",
+};
+
 const GATE_TINTS: Record<RewardGate["code"], string> = {
   open: "",
   pass: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
@@ -83,7 +91,9 @@ const GATE_TINTS: Record<RewardGate["code"], string> = {
 
 function SurveyGatePill({ gate }: { gate: RewardGate | undefined }) {
   if (!gate || gate.code === "open") return null;
-  const label = gate.code === "pass" ? "survey passed" : `survey ${gate.code}`;
+  // Plain words rather than the gate's code ("survey missing" read as an
+  // error to QA, 30 Oct #21).
+  const label = SURVEY_PILL_LABELS[gate.code] ?? `survey ${gate.code}`;
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-xs font-medium ${GATE_TINTS[gate.code]}`}
@@ -279,6 +289,11 @@ export default async function AdminSponsoredDetailPage({
       issuedByTier.set(c.tier_id, (issuedByTier.get(c.tier_id) ?? 0) + 1);
     }
   }
+
+  // Codes wait for the artist's consent (needsConsent() in the actions). The
+  // per-person button used to look live and then bounce back to the top of
+  // the page with a banner nobody saw (QA 30 Oct #17) — say so in place.
+  const awaitingArtistConsent = !!event.artist_profile_id && !event.reward_codes_confirmed_at;
 
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = await qrCodeDataUrl(checkInUrl);
@@ -671,7 +686,7 @@ export default async function AdminSponsoredDetailPage({
       </div>
 
       {/* Participants */}
-      <div className="card p-6">
+      <div id="participants" className="card scroll-mt-24 p-6">
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
           Participants ({participants.length})
         </h2>
@@ -820,12 +835,15 @@ export default async function AdminSponsoredDetailPage({
                     !rewardCodes.some((c) => c.participation_id === p.id) &&
                     (() => {
                       const gate = gates.get(p.id);
-                      const blocked = !!gate && !gate.allowed;
+                      const blocked = awaitingArtistConsent || (!!gate && !gate.allowed);
+                      const reason = awaitingArtistConsent
+                        ? "Waiting for the artist to confirm the discount codes"
+                        : gate?.note;
                       return (
                         <form
                           action={issueRewardCode}
                           className="flex items-center gap-1.5"
-                          title={blocked ? gate!.note : undefined}
+                          title={blocked ? reason : undefined}
                         >
                           <input type="hidden" name="event_id" value={event.id} />
                           <input type="hidden" name="participation_id" value={p.id} />
@@ -857,7 +875,17 @@ export default async function AdminSponsoredDetailPage({
                             Issue code
                           </button>
                           {blocked && (
-                            <span className="text-xs text-[var(--color-accent)]">{gate!.note}</span>
+                            <span className="text-xs text-[var(--color-accent)]">
+                              {reason}
+                              {awaitingArtistConsent && (
+                                <>
+                                  {" — "}
+                                  <a href="#discount-codes" className="underline">
+                                    discount codes
+                                  </a>
+                                </>
+                              )}
+                            </span>
                           )}
                         </form>
                       );
