@@ -42,6 +42,8 @@ import type { CampaignStatus, SponsoredEventRewardTier } from "@/lib/types";
 export interface MarketplaceState {
   error?: string;
   success?: boolean;
+  /** What happened, for forms that stay on screen after a success. */
+  message?: string;
 }
 
 function str(v: FormDataEntryValue | null): string | null {
@@ -1420,7 +1422,8 @@ export async function generatePoolCodes(
   });
   if (res.error) return { error: res.error };
   revalidateRewardPages(eventId);
-  return { success: true };
+  // Said in words (QA 30 Oct #19): the button alone gave no sign it had worked.
+  return { success: true, message: `Added ${res.added} code${res.added === 1 ? "" : "s"} to this tier.` };
 }
 
 /** Pattern C, Phase 1: the admin pastes (or uploads a CSV of) the codes they
@@ -1452,7 +1455,12 @@ export async function uploadPoolCodes(
   });
   if (res.error) return { error: res.error };
   revalidateRewardPages(eventId);
-  return { success: true };
+  return {
+    success: true,
+    message: `Added ${res.added} code${res.added === 1 ? "" : "s"}${
+      res.skipped ? ` · ${res.skipped} already on this event, skipped` : ""
+    }.`,
+  };
 }
 
 export async function removePoolCode(formData: FormData) {
@@ -1536,7 +1544,9 @@ export async function reopenRewardCodes(formData: FormData) {
  * `<form action={fn}>`s with no client state of their own. */
 function refuseGate(eventId: string, code: string, who: string): never {
   redirect(
-    `/dashboard/admin/events/sponsored/${eventId}?notice=gate&gate=${encodeURIComponent(code)}&who=${encodeURIComponent(who)}`,
+    // Anchored to the participants list, where the banner renders — without
+    // it the page reloads at the top and the refusal looks silent (#17).
+    `/dashboard/admin/events/sponsored/${eventId}?notice=gate&gate=${encodeURIComponent(code)}&who=${encodeURIComponent(who)}#participants`,
   );
 }
 

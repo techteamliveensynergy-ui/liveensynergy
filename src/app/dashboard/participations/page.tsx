@@ -5,6 +5,7 @@ import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import {
   ParticipationProgress,
   isImagePath,
+  participationBadge,
   participationSteps,
 } from "@/components/dashboard/ParticipationProgress";
 import { signedUrlFor } from "@/lib/storage";
@@ -99,6 +100,15 @@ export default async function ParticipationsPage({
   const responses = (surveyResponseRows ?? []) as { template_id: string; participation_id: string | null }[];
   const respondedKeys = new Set(responses.map((r) => `${r.template_id}:${r.participation_id}`));
   const respondedPublicly = new Set(responses.filter((r) => !r.participation_id).map((r) => r.template_id));
+  // Answered any of this event's surveys — on the dashboard (carries the
+  // participation) or through the public link (carries only the person).
+  const surveyDone = (p: Row) =>
+    responses.some(
+      (r) =>
+        r.participation_id === p.id ||
+        (!r.participation_id &&
+          surveyTemplates.some((t) => t.id === r.template_id && t.campaign_id === p.sponsored_events?.campaign_id)),
+    );
   const codeByParticipation = new Map(
     ((codeRows ?? []) as Pick<
       RewardCode,
@@ -233,7 +243,7 @@ export default async function ParticipationsPage({
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{ev?.name ?? "Event"}</h3>
-                      <StatusBadge status={p.status} />
+                      <StatusBadge status={participationBadge(p, codeByParticipation.has(p.id))} />
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {[
@@ -271,7 +281,10 @@ export default async function ParticipationsPage({
                     (3 Aug standup). */}
                 <div className="mt-4 rounded-xl border border-black/10 p-4">
                   <ParticipationProgress
-                    steps={participationSteps(p)}
+                    steps={participationSteps(p, {
+                      surveyDone: surveyDone(p),
+                      hasCode: codeByParticipation.has(p.id),
+                    })}
                     rejected={p.status === "rejected"}
                     ticketHref={ticketLinks.get(p.id)}
                     ticketIsImage={isImagePath(p.ticket_proof_url)}

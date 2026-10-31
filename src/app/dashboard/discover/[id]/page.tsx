@@ -102,8 +102,8 @@ export default async function EventDetailsPage({
         <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-[var(--color-ink-soft)]">
           <li>Register here, then answer the event&apos;s short survey under <strong>My events</strong>.</li>
           <li>
-            Once your answers pass our quality check, your discount code appears straight away under My events
-            and My rewards, and we email it to you.
+            Once your answers pass our quality check and the event&apos;s discount codes have been confirmed, your
+            code appears under My events and My rewards, and we email it to you.
           </li>
           <li>The Live·En·Synergy team draws who takes part once registration closes.</li>
           <li>

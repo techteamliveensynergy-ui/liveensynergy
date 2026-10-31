@@ -100,6 +100,8 @@ const STATUS_STYLES: Record<string, string> = {
   available: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   matched: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   registered: "bg-[var(--color-gold)] text-[var(--color-ink)]",
+  selected: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
+  code_issued: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   ticket_uploaded: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   attendance_verified: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   reward_released: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
@@ -121,6 +123,8 @@ const STATUS_STYLES: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   // A brand's campaign request that became a real campaign (13 Oct notes).
   converted: "Converted to Live Campaign",
+  // The audience's own view of a participation (participationBadge()).
+  code_issued: "Code issued",
 };
 
 export function StatusBadge({ status }: { status: string }) {

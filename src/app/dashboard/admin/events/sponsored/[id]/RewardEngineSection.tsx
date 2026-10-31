@@ -30,15 +30,28 @@ import {
 } from "../../../marketplace-actions";
 import { UK_TIME_ZONE } from "@/lib/format";
 
-function Submit({ label, pending: pendingLabel, className = "btn btn-primary text-sm", disabled }: {
+function Submit({
+  label,
+  pending: pendingLabel,
+  className = "btn btn-primary text-sm",
+  disabled,
+  confirm,
+}: {
   label: string;
   pending: string;
   className?: string;
   disabled?: boolean;
+  /** Asks before submitting, for actions that undo someone else's step. */
+  confirm?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={className} disabled={pending || disabled}>
+    <button
+      type="submit"
+      className={className}
+      disabled={pending || disabled}
+      onClick={confirm ? (e) => !window.confirm(confirm) && e.preventDefault() : undefined}
+    >
       {pending ? pendingLabel : label}
     </button>
   );
@@ -204,7 +217,12 @@ export function RewardEngineSection({
           </span>
           <form action={reopenRewardCodes}>
             <input type="hidden" name="event_id" value={eventId} />
-            <Submit label="Reopen for editing" pending="Reopening…" className="btn btn-ghost text-sm" />
+            <Submit
+              label="Reopen for editing"
+              pending="Reopening…"
+              className="btn btn-ghost text-sm"
+              confirm="Reopen the discount codes? This withdraws the artist's confirmation — no codes go out until they confirm again."
+            />
           </form>
         </div>
       )}
@@ -521,8 +539,10 @@ export function RewardEngineSection({
               />
             </form>
             {hasArtist && !frozen && (
-              <span className="text-xs text-[var(--color-ink-soft)]">
-                Codes can be issued once the artist has confirmed.
+              <span className="w-full text-xs text-[var(--color-ink-soft)]">
+                &ldquo;Send to artist for review&rdquo; only notifies the artist — tiers and codes stay exactly as
+                they are, and it can be sent again as a reminder. Codes can be issued once the artist has confirmed;
+                their confirmation then locks this setup (QA 30 Oct #18).
               </span>
             )}
           </div>
@@ -618,8 +638,8 @@ function TierCodes({
   issued: number;
   frozen: boolean;
 }) {
-  const [genState, genAction] = useActionState<MarketplaceState, FormData>(generatePoolCodes, {});
-  const [upState, upAction] = useActionState<MarketplaceState, FormData>(uploadPoolCodes, {});
+  const [genState, genAction, generating] = useActionState<MarketplaceState, FormData>(generatePoolCodes, {});
+  const [upState, upAction, uploading] = useActionState<MarketplaceState, FormData>(uploadPoolCodes, {});
   const available = pool.filter((p) => !p.assigned_at).length;
 
   return (
@@ -669,6 +689,9 @@ function TierCodes({
                   <Submit label="Generate" pending="Generating…" className="btn btn-ghost text-sm" />
                 </div>
                 {genState.error && <p className="text-xs text-[var(--color-accent)]">{genState.error}</p>}
+                {!generating && !genState.error && genState.message && (
+                  <p className="text-xs text-[var(--color-olive-deep)]">✓ {genState.message}</p>
+                )}
               </form>
               <form action={upAction} className="space-y-2">
                 <input type="hidden" name="event_id" value={eventId} />
@@ -685,6 +708,9 @@ function TierCodes({
                   <Submit label="Add codes" pending="Adding…" className="btn btn-ghost text-sm" />
                 </div>
                 {upState.error && <p className="text-xs text-[var(--color-accent)]">{upState.error}</p>}
+                {!uploading && !upState.error && upState.message && (
+                  <p className="text-xs text-[var(--color-olive-deep)]">✓ {upState.message}</p>
+                )}
               </form>
             </div>
           )}

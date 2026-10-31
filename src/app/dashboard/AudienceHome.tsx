@@ -4,6 +4,7 @@ import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
 import {
   ParticipationProgress,
   isImagePath,
+  participationBadge,
   participationSteps,
 } from "@/components/dashboard/ParticipationProgress";
 import { signedUrlFor } from "@/lib/storage";
@@ -16,7 +17,7 @@ type Row = Participation & { sponsored_events: SponsoredEvent | null };
 export async function AudienceHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
 
-  const [{ data: memberData }, { data: rowData }] = await Promise.all([
+  const [{ data: memberData }, { data: rowData }, { data: codeRows }, { data: responseRows }] = await Promise.all([
     supabase
       .from("audience_members")
       .select("*")
@@ -27,7 +28,18 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
       .select("*, sponsored_events(*)")
       .eq("audience_profile_id", profile.id)
       .order("created_at", { ascending: false }),
+    // What the tracker needs beyond the row (QA 30 Oct #21). Own rows only,
+    // under RLS; a public-link response without a participation isn't
+    // matched here — My events has the full picture.
+    supabase.from("reward_codes").select("participation_id").neq("status", "void"),
+    supabase.from("survey_responses").select("participation_id").not("participation_id", "is", null),
   ]);
+  const withCode = new Set(
+    ((codeRows ?? []) as { participation_id: string | null }[]).map((c) => c.participation_id),
+  );
+  const surveyed = new Set(
+    ((responseRows ?? []) as { participation_id: string | null }[]).map((r) => r.participation_id),
+  );
 
   const member = memberData as AudienceMember | null;
   const rows = (rowData ?? []) as Row[];
@@ -55,7 +67,9 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
   const selectedCount = rows.filter((r) => r.selected).length;
   // Rewards are discount codes (9 Oct standup); a participation reaches
   // reward_released when its code is issued.
-  const codesReceived = rows.filter((r) => r.status === "reward_released").length;
+  // A code released by the survey (0075) leaves the row at
+  // attendance_verified, so the code itself counts too.
+  const codesReceived = rows.filter((r) => r.status === "reward_released" || withCode.has(r.id)).length;
 
   const memberSince = member?.created_at
     ? new Date(member.created_at).toLocaleDateString("en-GB", {
@@ -211,13 +225,13 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
                         : "Date TBC"}
                     </p>
                   </div>
-                  <StatusBadge status={r.status} />
+                  <StatusBadge status={participationBadge(r, withCode.has(r.id))} />
                 </div>
 
                 {/* Where they are in the flow, at a glance (3 Aug standup). */}
                 <div className="mt-4">
                   <ParticipationProgress
-                    steps={participationSteps(r)}
+                    steps={participationSteps(r, { surveyDone: surveyed.has(r.id), hasCode: withCode.has(r.id) })}
                     rejected={r.status === "rejected"}
                     ticketHref={ticketLinks[i]}
                     ticketIsImage={isImagePath(r.ticket_proof_url)}
