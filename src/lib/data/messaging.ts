@@ -63,3 +63,41 @@ export async function getOrCreateSupportConversation(params: {
   }
   return created.id as string;
 }
+
+/**
+ * Starts a NEW chat with the team under `subject` — unlike
+ * getOrCreateSupportConversation(), which reuses the user's first thread.
+ * There is no limit on how many a user can have (0102) — every call makes a
+ * new one, so the caller must guard against a double submit (the form's button
+ * disables itself while pending).
+ */
+export async function createSupportThread(params: {
+  userProfileId: string;
+  subject: string;
+}): Promise<string | null> {
+  const supabase = await createClient();
+  const { userProfileId } = params;
+  const subject = params.subject.trim().slice(0, 120);
+  if (!subject) return null;
+
+  const { data: adminId, error: adminError } = await supabase.rpc("support_admin_id");
+  if (adminError) console.error("[messaging] support_admin_id failed:", adminError.message);
+  if (!adminId) return null;
+
+  const { data: created, error } = await supabase
+    .from("conversations")
+    .insert({
+      brand_profile_id: userProfileId,
+      partner_profile_id: adminId as string,
+      kind: "support",
+      subject,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[messaging] creating a support thread failed:", error.message);
+    return null;
+  }
+  return created.id as string;
+}
+

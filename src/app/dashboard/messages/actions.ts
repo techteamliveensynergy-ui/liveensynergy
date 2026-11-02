@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { removePrivateFile, uploadPrivateFile } from "@/lib/storage";
-import { getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { createSupportThread, getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { TEAM_SENDER_NAME } from "@/lib/constants";
 
 export interface MessageState {
@@ -209,19 +209,44 @@ export async function startAdminThread(formData: FormData) {
   redirect(`/dashboard/messages?c=${conversationId}&notice=admin-thread`);
 }
 
-/** Opens (or reuses) the user's thread with the Live·En·Synergy team. */
-export async function startSupportThread() {
+/**
+ * Starts a chat with the Live·En·Synergy team under a heading. A user can have
+ * several, one per topic (0102); the same heading reopens that thread. An
+ * optional first message is posted and the team is told.
+ */
+export async function startSupportThread(formData: FormData) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
 
-  const conversationId = await getOrCreateSupportConversation({
+  const topic = String(formData.get("topic") ?? "").trim();
+  const custom = String(formData.get("custom_subject") ?? "").trim();
+  const subject = (topic === "Something else" ? custom || topic : topic) || "General";
+  const firstMessage = String(formData.get("first_message") ?? "").trim();
+
+  const conversationId = await createSupportThread({
     userProfileId: user.id,
+    subject,
   });
 
-  if (!conversationId) redirect("/contact");
+  if (!conversationId) redirect("/dashboard/messages?tab=support&notice=thread-failed");
+
+  if (firstMessage) {
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_profile_id: user.id,
+      body: firstMessage.slice(0, 4000),
+    });
+    if (!error) {
+      await notifyAdmins({
+        eventKey: "message.received",
+        link: `/dashboard/messages?c=${conversationId}`,
+        variables: { sender_name: "A user", event_name: subject },
+      });
+    }
+  }
 
   revalidatePath("/dashboard/messages");
   redirect(`/dashboard/messages?c=${conversationId}&tab=support`);

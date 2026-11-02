@@ -12,7 +12,7 @@ import {
   ukDayKey,
 } from "@/lib/format";
 import type { Conversation, Message, MessageRecall } from "@/lib/types";
-import { startSupportThread } from "./actions";
+import { NewSupportThread } from "./NewSupportThread";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { Composer } from "./Composer";
 import { NewAdminThread } from "./NewAdminThread";
@@ -364,6 +364,12 @@ export default async function MessagesPage({
           within 48 hours.
         </p>
       )}
+      {notice === "thread-failed" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-ink)]">
+          We couldn&apos;t start that chat. Please try again, or use the contact
+          form if it keeps happening.
+        </p>
+      )}
       {notice === "admin-thread" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
           Thread open. Send the first message below — it reaches them under
@@ -403,11 +409,9 @@ export default async function MessagesPage({
               Questions about a match, a campaign or a confirmed partnership?
               Start a thread and we&apos;ll reply within 48 hours.
             </p>
-            <form action={startSupportThread} className="mt-5">
-              <button type="submit" className="btn btn-primary">
-                Message the team
-              </button>
-            </form>
+            <div className="mx-auto mt-5 max-w-sm">
+              <NewSupportThread />
+            </div>
           </div>
         ) : (
           <EmptyState
@@ -483,11 +487,9 @@ export default async function MessagesPage({
             </div>
             )}
             {tab === "support" && (
-              <form action={startSupportThread} className="mt-3">
-                <button type="submit" className="btn btn-ghost w-full text-sm">
-                  + New thread with the team
-                </button>
-              </form>
+              <div className="mt-3">
+                <NewSupportThread variant="ghost" label="+ New thread with the team" />
+              </div>
             )}
           </aside>
 
