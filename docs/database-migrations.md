@@ -154,3 +154,4 @@ once 0020 has committed.
 No existing column, constraint, enum, or RLS policy was changed or dropped —
 new columns are covered by the row-level policies already in place on their
 tables, so nothing needed to be added on the security side.
+| 0101 | `0101_support_admin_lookup.sql` | QA 2 Nov: a user's first chat with the team could never be created. `getOrCreateSupportConversation()` read the admin's id from `profiles`, which RLS hides from anyone without a thread, so it returned null and every caller silently redirected. New `support_admin_id()` (definer, authenticated only) returns just the oldest admin's id. Additive; **apply before deploying** the code that calls it. **Not yet applied to production.** |

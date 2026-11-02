@@ -30,16 +30,15 @@ export async function getOrCreateSupportConversation(params: {
 
   if (existing) return existing.id as string;
 
+  // Which admin sits on the other end. A user can't read the admin's profile
+  // row under RLS until a thread exists, so ask the definer function (0101).
   let adminId = adminProfileId;
   if (!adminId) {
-    const { data: admin } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "admin")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    adminId = admin?.id ?? null;
+    const { data: lookedUp, error: adminError } = await supabase.rpc("support_admin_id");
+    if (adminError) {
+      console.error("[messaging] support_admin_id failed:", adminError.message);
+    }
+    adminId = (lookedUp as string | null) ?? null;
   }
 
   // No admin seeded yet — there's nobody for the thread to be with.
@@ -56,6 +55,11 @@ export async function getOrCreateSupportConversation(params: {
     .select("id")
     .single();
 
-  if (error) return null;
+  // Never swallow this silently: a missing thread looked like "nothing
+  // happens" to the user and left nothing in the logs.
+  if (error) {
+    console.error("[messaging] creating the support thread failed:", error.message);
+    return null;
+  }
   return created.id as string;
 }
