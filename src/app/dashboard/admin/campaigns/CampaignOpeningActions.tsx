@@ -19,6 +19,7 @@ export function CampaignOpeningActions({
   overrideReason,
   settledEvent,
   surveyPublished,
+  fulfilmentConsented,
   returnTo,
 }: {
   campaignId: string;
@@ -28,6 +29,9 @@ export function CampaignOpeningActions({
   overrideReason: string | null;
   settledEvent: { name: string; reward_codes_confirmed_at: string | null } | null;
   surveyPublished: boolean;
+  /** The artist gave their final consent to the fulfilment form (0104).
+   *  Undefined = not known here, so no warning. */
+  fulfilmentConsented?: boolean;
   returnTo: string;
 }) {
   const open = isCampaignOpen(opensAt);
@@ -37,6 +41,7 @@ export function CampaignOpeningActions({
     !settledEvent && "No event is agreed yet.",
     settledEvent && !settledEvent.reward_codes_confirmed_at && "The artist hasn't confirmed the discount codes.",
     !surveyPublished && "No survey is published for this campaign.",
+    settledEvent && fulfilmentConsented === false && "The artist hasn't consented to the fulfilment form.",
   ].filter((x): x is string => !!x);
   const ready = missing.length === 0;
 

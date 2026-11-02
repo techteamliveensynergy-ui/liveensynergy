@@ -436,6 +436,61 @@ export async function contactSupport(formData: FormData) {
   redirect(`/dashboard/messages?c=${conversationId}&notice=support`);
 }
 
+/**
+ * The artist's final consent to the fulfilment form (0104). It replaces the
+ * artist's old "I agree" button: the consent is recorded (and logged as
+ * evidence, 0080), then the artist's agreement to the partnership goes through
+ * the same locked RPC as before (toggleAgreement), so conflicts and
+ * confirmation behave exactly as they did.
+ */
+export async function giveFulfilmentConsent(formData: FormData) {
+  const { supabase, userId } = await requireUser();
+  const id = str(formData.get("id"));
+  if (!id) return;
+
+  if (formData.get("consent_commitments") !== "on" || formData.get("consent_terms") !== "on") {
+    redirect(`/dashboard/sponsored/${id}?notice=consent-missing#fulfilment`);
+  }
+
+  const { data: outcome, error } = await supabase.rpc("acknowledge_fulfilment_form", { p_event_id: id });
+  if (error || (outcome !== "ok" && outcome !== "already")) {
+    if (error) console.error("[sponsored] fulfilment consent failed", error);
+    redirect(`/dashboard/sponsored/${id}?notice=consent-failed&reason=${encodeURIComponent(String(outcome ?? ""))}#fulfilment`);
+  }
+
+  const { data: ev } = await supabase
+    .from("sponsored_events")
+    .select("name, reference, status, artist_agreed")
+    .eq("id", id)
+    .eq("artist_profile_id", userId)
+    .maybeSingle<{ name: string; reference: string | null; status: string; artist_agreed: boolean }>();
+
+  if (outcome === "ok") {
+    const variables = { event_name: ev?.name ?? "your partnership", reference: ev?.reference ?? "" };
+    await notify({
+      eventKey: "fulfilment.acknowledged",
+      recipientProfileId: userId,
+      link: `/dashboard/sponsored/${id}#fulfilment`,
+      variables,
+    });
+    await notifyAdmins({
+      eventKey: "admin.fulfilment_acknowledged",
+      link: `/dashboard/admin/events/sponsored/${id}#fulfilment`,
+      variables,
+    });
+  }
+
+  // The consent is also the artist's agreement. toggleAgreement redirects on
+  // a conflict, which is the message the artist should see.
+  if (ev && ev.status === "in_progress" && !ev.artist_agreed) {
+    await toggleAgreement(formData);
+  }
+
+  revalidatePath(`/dashboard/sponsored/${id}`);
+  revalidatePath(`/dashboard/admin/events/sponsored/${id}`);
+  redirect(`/dashboard/sponsored/${id}?notice=consented#fulfilment`);
+}
+
 /** The other party's profile (for their email) isn't readable under the caller's RLS. */
 function completionNotifyOpts() {
   const client = createServiceClient();
@@ -550,6 +605,7 @@ export async function updateParticipation(formData: FormData) {
 
 interface PartyRow {
   name: string;
+  reference: string | null;
   event_date: string | null;
   start_time: string | null;
   timezone: string;
@@ -566,7 +622,7 @@ async function loadPartyEvent(
   const [{ data: event }, { data: brand }] = await Promise.all([
     supabase
       .from("sponsored_events")
-      .select("name, event_date, start_time, timezone, brand_id, artist_profile_id")
+      .select("name, reference, event_date, start_time, timezone, brand_id, artist_profile_id")
       .eq("id", eventId)
       .maybeSingle<PartyRow>(),
     supabase.from("brands").select("id").eq("profile_id", userId).maybeSingle(),
@@ -597,14 +653,28 @@ export async function uploadEventProof(
   const party = await loadPartyEvent(supabase, eventId, userId);
   if (!party) return { error: "You're not a party to this partnership." };
 
-  const upload = await uploadImage(formData.get("file"), PROOF_PURPOSE[proofType]);
-  if (upload.error) return { error: upload.error };
-  if (!upload.url) return { error: "Choose a file to upload." };
+  // A screenshot, or a link to the live post (0104 spec: "proof of social
+  // media … increase the option to add more"). The link wins if both are given.
+  const rawLink = str(formData.get("link"));
+  let proofUrl: string | null = null;
+  if (rawLink) {
+    const link = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
+    try {
+      proofUrl = new URL(link).toString();
+    } catch {
+      return { error: "That link doesn't look right. Paste the full address of the post." };
+    }
+  } else {
+    const upload = await uploadImage(formData.get("file"), PROOF_PURPOSE[proofType]);
+    if (upload.error) return { error: upload.error };
+    proofUrl = upload.url ?? null;
+  }
+  if (!proofUrl) return { error: "Paste a link to the post or choose a screenshot." };
 
   const { error } = await supabase.from("sponsored_event_proofs").insert({
     sponsored_event_id: eventId,
     proof_type: proofType,
-    url: upload.url,
+    url: proofUrl,
     description: str(formData.get("description")),
     uploaded_by: userId,
   });
@@ -615,6 +685,17 @@ export async function uploadEventProof(
     link: `/dashboard/admin/events/sponsored/${eventId}`,
     variables: {
       event_name: party.event.name,
+      proof_type: proofType === "social_mention" ? "social mention" : "onsite branding",
+    },
+  });
+  // And a receipt to whoever sent it (in-app + email).
+  await notify({
+    eventKey: "fulfilment.proof_received",
+    recipientProfileId: userId,
+    link: `/dashboard/sponsored/${eventId}`,
+    variables: {
+      event_name: party.event.name,
+      reference: party.event.reference ?? "—",
       proof_type: proofType === "social_mention" ? "social mention" : "onsite branding",
     },
   });
