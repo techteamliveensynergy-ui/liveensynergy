@@ -97,6 +97,9 @@ export default async function SponsoredEventPage({
         .order("created_at", { ascending: true }),
       // Names come through the "profiles: read my event participants" policy
       // added in 0021 — before it, this list could only show an id fragment.
+      // Names are the artist's to see (who they verify at the door). A brand
+      // gets aggregates only (QA 31 Oct M-01): the render below never shows a
+      // name to a brand, and 0100 stops the profiles policy returning one.
       supabase
         .from("participations")
         .select("*, profiles(full_name)")
@@ -175,7 +178,24 @@ export default async function SponsoredEventPage({
   ]);
   const partySurveys = (partySurveyRows ?? []) as LiveCampaignSurvey[];
 
-  const listing = listingRow as EventListing | null;
+  // Category / capacity / ticket price (QA 31 Oct L-04): the brand can't read
+  // the source listing once it's committed, so the parties get these event
+  // facts through sponsored_event_listing_facts() (0100). Falls back to the
+  // listing read when the function isn't applied yet.
+  const { data: factRows } = event.listing_id
+    ? await supabase.rpc("sponsored_event_listing_facts", { p_sponsored_event_id: id })
+    : { data: null };
+  const listingFacts = ((factRows ?? []) as {
+    category: string | null;
+    capacity: number | null;
+    ticket_price_gbp: number | null;
+    venue_name: string | null;
+    city: string | null;
+    country: string | null;
+  }[])[0] ?? null;
+  const listing = (listingRow
+    ? { ...(listingRow as EventListing), ...(listingFacts ?? {}) }
+    : listingFacts) as EventListing | null;
   const assets = (assetRows ?? []) as SponsoredEventAsset[];
   const participations = (parts ?? []) as ParticipantRow[];
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
@@ -757,6 +777,24 @@ export default async function SponsoredEventPage({
             discount code after the post-event survey.
           </p>
 
+          {isBrand && !isArtist ? (
+            // Aggregates only for a brand (QA 31 Oct M-01) — no names, no
+            // per-person rows.
+            <dl className="mt-4 grid gap-3 sm:grid-cols-4">
+              {[
+                ["Registered", registeredCount],
+                ["Selected in the draw", selectedCount],
+                ["Checked in", checkedInCount],
+                ["Surveys completed", completedParticipations.size],
+              ].map(([k, v]) => (
+                <div key={k as string} className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
+                  <dt className="text-xs text-[var(--color-ink-soft)]">{k}</dt>
+                  <dd className="mt-0.5 text-lg font-semibold">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+          <>
           {participations.length === 0 ? (
             <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
               No registrations yet.
@@ -821,6 +859,8 @@ export default async function SponsoredEventPage({
                 </div>
               ))}
             </div>
+          )}
+          </>
           )}
         </div>
       )}

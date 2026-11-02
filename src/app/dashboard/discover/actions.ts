@@ -48,10 +48,27 @@ export async function contactOrganiser(formData: FormData) {
     .eq("profile_id", userId)
     .maybeSingle();
 
+  // Idempotency: a double click / double submit (or a retried request) must
+  // produce one message and one admin notification, not two (QA 31 Oct L-13).
+  // An identical enquiry from this brand in the last hour counts as a repeat.
+  const enquiryBody = `Interested in partnering with: ${listing.name}`;
+  const since = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { data: recent } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .eq("sender_profile_id", userId)
+    .eq("body", enquiryBody)
+    .gte("created_at", since)
+    .limit(1);
+  if (recent && recent.length > 0) {
+    redirect(`/dashboard/discover?enquiry=${listingId}&thread=${conversationId}`);
+  }
+
   await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_profile_id: userId,
-    body: `Interested in partnering with: ${listing.name}`,
+    body: enquiryBody,
   });
 
   // The team relays this to the organiser's own thread with us if it's

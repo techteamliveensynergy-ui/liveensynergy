@@ -140,6 +140,49 @@ export async function retryOutboxEmail(formData: FormData) {
   revalidatePath(OUTBOX_PAGE);
 }
 
+/**
+ * Re-queues every failed email in one go (skipping suppressed addresses) and
+ * sends a first batch straight away; the 5-minute sweeper picks up the rest.
+ */
+export async function retryAllFailedEmails() {
+  const { supabase } = await requireAdmin();
+  const service = createServiceClient();
+  if (!service) return;
+
+  const { data: failed } = await supabase
+    .from("email_outbox")
+    .select("id, to_email")
+    .eq("status", "failed")
+    .limit(500);
+  const rows = (failed ?? []) as { id: string; to_email: string }[];
+  if (rows.length === 0) {
+    revalidatePath(OUTBOX_PAGE);
+    return;
+  }
+
+  const { data: blocked } = await supabase
+    .from("email_suppressions")
+    .select("email")
+    .in("email", [...new Set(rows.map((r) => r.to_email.toLowerCase()))]);
+  const blockedSet = new Set(((blocked ?? []) as { email: string }[]).map((b) => b.email));
+  const ids = rows.filter((r) => !blockedSet.has(r.to_email.toLowerCase())).map((r) => r.id);
+
+  if (ids.length > 0) {
+    await service
+      .from("email_outbox")
+      .update({
+        status: "queued",
+        attempts: 0,
+        next_attempt_at: new Date().toISOString(),
+        error: null,
+      })
+      .in("id", ids)
+      .eq("status", "failed");
+    await drainOutbox({ limit: 10 });
+  }
+  revalidatePath(OUTBOX_PAGE);
+}
+
 /** Removes an address from the suppression list so it can be mailed again. */
 export async function unsuppressEmail(formData: FormData) {
   const { supabase } = await requireAdmin();

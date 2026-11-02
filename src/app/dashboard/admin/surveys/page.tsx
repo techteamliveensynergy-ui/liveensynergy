@@ -93,7 +93,7 @@ export default async function AdminSurveysPage() {
                   return (
                     <p className={`mt-1 text-sm ${cap.is_full ? "font-semibold text-[var(--color-accent)]" : "text-[var(--color-ink-soft)]"}`}>
                       {cap.responses} response{cap.responses === 1 ? "" : "s"}
-                      {cap.response_limit != null ? ` of ${cap.response_limit} (cap)` : " · no cap"}
+                      {cap.response_limit != null ? ` received · limit ${cap.response_limit}` : " received · no limit"}
                       {cap.is_full ? " · closed" : ""}
                     </p>
                   );

@@ -26,6 +26,9 @@ export interface PublicSurveyResponseState {
   success?: boolean;
   /** Submitted past the participant limit: held for an admin (#34, 0083). */
   heldForReview?: boolean;
+  /** The quality check did not pass the response outright (held or rejected).
+   *  Never carries the score or reason (M-06). */
+  underReview?: boolean;
 }
 
 interface SubmitOutcome {
@@ -48,6 +51,30 @@ interface SubmissionGateResult {
  * redirecting, so the page can show the CTA screen in place.
  */
 export async function submitPublicSurveyResponse(
+  prev: PublicSurveyResponseState,
+  formData: FormData,
+): Promise<PublicSurveyResponseState> {
+  // M-07: an unexpected throw must surface as a visible error (answers kept),
+  // never as an unhandled failure that leaves the respondent guessing.
+  try {
+    return await submitPublicSurveyResponseInner(prev, formData);
+  } catch (e) {
+    if (isNextControlFlow(e)) throw e;
+    console.error("submitPublicSurveyResponse threw:", e);
+    return { error: SAVE_FAILED_MESSAGE };
+  }
+}
+
+const SAVE_FAILED_MESSAGE =
+  "Something went wrong and we couldn't confirm your response was saved. Your answers are still here — please press Submit again.";
+
+/** Next's redirect()/notFound() work by throwing; those must pass through. */
+function isNextControlFlow(e: unknown): boolean {
+  const digest = (e as { digest?: unknown } | null)?.digest;
+  return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") || digest === "NEXT_NOT_FOUND");
+}
+
+async function submitPublicSurveyResponseInner(
   _prev: PublicSurveyResponseState,
   formData: FormData,
 ): Promise<PublicSurveyResponseState> {
@@ -178,16 +205,30 @@ export async function submitPublicSurveyResponse(
     return { error: outcome.reason ?? "Please check your answers and try again." };
   }
   if (outcome.outcome === "already_submitted") {
-    return { success: true };
+    // Nothing new was saved, so don't show the thank-you as if it were.
+    return { error: "You've already completed this survey, so we haven't recorded a second response." };
   }
 
-  // outcome.outcome === "submitted" — score immediately, same best-effort
-  // reasoning as the authenticated action: never block the CTA on this.
-  if (outcome.response_id) {
-    const { error: scoreError } = await supabase.rpc("score_survey_response", {
+  // outcome.outcome === "submitted" — M-07: success only with a confirmed
+  // response id from the database.
+  if (!outcome.response_id) {
+    console.error("submit_public_survey_response returned submitted without a response_id");
+    return { error: "We couldn't save your response. Your answers are still here — please press Submit again." };
+  }
+
+  // Score immediately. A scoring failure doesn't fail the (already saved)
+  // submission, but the outcome picks the wording (M-06).
+  let underReview = true; // unknown or not-passed => don't promise acceptance
+  {
+    const { data: scoreData, error: scoreError } = await supabase.rpc("score_survey_response", {
       p_response_id: outcome.response_id,
     });
-    if (scoreError) console.error("score_survey_response failed:", scoreError.message);
+    if (scoreError) {
+      console.error("score_survey_response failed:", scoreError.message);
+    } else {
+      const scored = scoreData as { quality_status?: string } | null;
+      underReview = scored?.quality_status !== "pass";
+    }
 
     // Best-effort in-app nudge for a signed-in respondent (0043) — never
     // blocks the CTA. Writes email_outbox only (never drained, per
@@ -211,7 +252,7 @@ export async function submitPublicSurveyResponse(
     }
   }
 
-  return { success: true, heldForReview };
+  return { success: true, heldForReview, underReview };
 }
 
 export interface RegisterAfterSurveyState {

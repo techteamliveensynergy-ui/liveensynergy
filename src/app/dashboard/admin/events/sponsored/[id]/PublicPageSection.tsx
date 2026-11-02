@@ -12,6 +12,7 @@ export function PublicPageSection({
   eventId,
   copy,
   isPublic,
+  eventStatus,
   listingTicketUrl,
   notice,
   errorMessage,
@@ -19,6 +20,8 @@ export function PublicPageSection({
   eventId: string;
   copy: EventPageCopy | null;
   isPublic: boolean;
+  /** sponsored_events.status — public needs confirmed/completed (both parties agreed). */
+  eventStatus: string;
   listingTicketUrl: string | null;
   notice: string | undefined;
   errorMessage: string | undefined;
@@ -34,7 +37,11 @@ export function PublicPageSection({
           </Link>
         ) : (
           <span className="text-sm text-[var(--color-ink-soft)]">
-            Not public yet — shows once the event is confirmed and its campaign is paid and open.
+            {eventStatus === "confirmed" || eventStatus === "completed"
+              ? "Not public yet — the event is confirmed, but its campaign isn't paid and open (in progress)."
+              : eventStatus === "in_progress"
+                ? "Not public yet — the brand and the artist haven't both agreed this event. The campaign being live isn't enough: the event itself must be confirmed."
+                : `Not public — this event is ${eventStatus.replace(/_/g, " ")}.`}
           </span>
         )}
       </div>

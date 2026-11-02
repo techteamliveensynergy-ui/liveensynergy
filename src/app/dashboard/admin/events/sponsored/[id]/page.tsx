@@ -532,6 +532,13 @@ export default async function AdminSponsoredDetailPage({
         {event.reward_rules && (
           <div className="mt-3 rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
             <span className="font-semibold">Reward rules</span> — {event.reward_rules}
+            {rewardTiers.some((t) => t.participant_cap != null) && (
+              <span className="mt-1 block text-xs text-[var(--color-ink-soft)]">
+                Reward tiers set: {rewardTiers
+                  .map((t) => (t.participant_cap != null ? `first ${t.participant_cap} (${t.label})` : t.label))
+                  .join("; ")}. If the wording above says otherwise, the tiers are what apply — edit the rules text to match.
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -540,6 +547,7 @@ export default async function AdminSponsoredDetailPage({
         eventId={event.id}
         copy={pageCopy ?? null}
         isPublic={isPublic === true}
+        eventStatus={event.status}
         listingTicketUrl={event.event_listings?.ticket_buy_url ?? null}
         notice={notice}
         errorMessage={msg}

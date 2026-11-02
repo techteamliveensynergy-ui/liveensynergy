@@ -25,7 +25,7 @@ import {
 import { choseOther, emptyAnswerFor, surveyBlocks } from "@/lib/surveys";
 import { surveyPath } from "@/lib/survey-logic";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
-import { SURVEY_HELD_FOR_REVIEW_MESSAGE } from "@/lib/survey-capacity";
+import { SURVEY_HELD_FOR_REVIEW_MESSAGE, SURVEY_UNDER_REVIEW_MESSAGE } from "@/lib/survey-capacity";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
 import { ResetPasswordForm } from "@/app/auth/reset-password/ResetPasswordForm";
@@ -366,7 +366,13 @@ export function PublicSurveyForm({
   if (state.success) {
     return (
       <ThankYouScreen
-        message={state.heldForReview ? SURVEY_HELD_FOR_REVIEW_MESSAGE : thankYouMessage}
+        message={
+          state.heldForReview
+            ? SURVEY_HELD_FOR_REVIEW_MESSAGE
+            : state.underReview
+              ? SURVEY_UNDER_REVIEW_MESSAGE
+              : thankYouMessage
+        }
         event={event}
         isAuthenticated={isAuthenticated}
         needsPassword={needsPassword}

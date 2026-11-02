@@ -41,6 +41,16 @@ export const SURVEY_OVER_CAPACITY_BODY =
 export const SURVEY_HELD_FOR_REVIEW_MESSAGE =
   "Your response has been recorded. As it arrived after the participant limit was reached, our team will review it before any discount code is issued.";
 
+/**
+ * Shown when the quality check did not pass the response outright (held or
+ * rejected). Deliberately identical for both and silent on score, signals or
+ * thresholds, so respondents can't learn the rules (M-06).
+ */
+export const SURVEY_UNDER_REVIEW_MESSAGE =
+  "Thanks - your response has been received and is being reviewed. Any reward depends on it passing review.";
+/** Shown when the response passed the quality check at submit time. */
+export const SURVEY_RECEIVED_MESSAGE = "Thanks - your survey response has been received.";
+
 export interface SurveyCapacityState {
   expected_participants: number | null;
   response_limit: number | null;

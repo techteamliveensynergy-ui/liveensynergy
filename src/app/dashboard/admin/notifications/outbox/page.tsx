@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
-import { retryOutboxEmail, unsuppressEmail } from "../actions";
+import { retryAllFailedEmails, retryOutboxEmail, unsuppressEmail } from "../actions";
 
 export const metadata = { title: "Email outbox · Admin" };
 
@@ -20,6 +20,7 @@ interface OutboxRow {
   sent_at: string | null;
   attempts: number;
   next_attempt_at: string | null;
+  last_attempt_at: string | null;
   delivery_status: string | null;
   provider_message_id: string | null;
 }
@@ -37,6 +38,16 @@ const STATUS_TINTS: Record<string, string> = {
   failed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   skipped: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
 };
+
+/** Plain-English hint for the errors admins actually hit. */
+function errorHint(error: string): string | null {
+  if (/resend 4(03|22)/.test(error) || /only send testing emails|verify a domain|not verified/i.test(error)) {
+    return "Resend is rejecting this sender: the account is in sandbox / testing mode or the sending domain is not verified. Verify the domain in Resend (add its DNS records), set EMAIL_FROM to an address on it, then use Retry. This is Resend/DNS configuration, not an app bug, and it is not retried automatically because retrying cannot fix it.";
+  }
+  if (/resend 401/.test(error)) return "The Resend API key is invalid or revoked. Update RESEND_API_KEY.";
+  if (/resend 429/.test(error)) return "Resend rate limit hit; this retries automatically.";
+  return null;
+}
 
 export default async function OutboxPage({
   searchParams,
@@ -113,6 +124,14 @@ export default async function OutboxPage({
         )}
       </div>
 
+      {counts.failed ? (
+        <form action={retryAllFailedEmails} className="mb-4">
+          <button type="submit" className="btn btn-ghost text-sm">
+            Retry all failed ({counts.failed})
+          </button>
+        </form>
+      ) : null}
+
       {rows.length === 0 ? (
         <div className="card p-10 text-center">
           <p className="font-semibold text-[var(--color-ink)]">
@@ -148,6 +167,11 @@ export default async function OutboxPage({
                     To {r.to_email}
                     {r.cc?.length ? ` · CC ${r.cc.join(", ")}` : ""}
                   </span>
+                  {r.error && r.status !== "sent" && (
+                    <span className="block truncate text-xs text-[var(--color-accent)]">
+                      {r.error}
+                    </span>
+                  )}
                 </span>
                 <span className="text-xs text-[var(--color-ink-soft)]">
                   {formatDateTime(r.created_at)}
@@ -163,6 +187,18 @@ export default async function OutboxPage({
                 <div className="whitespace-pre-wrap rounded-xl bg-[var(--color-mist)] p-4 text-sm leading-relaxed text-[var(--color-ink)]">
                   {r.body}
                 </div>
+                <dl className="mb-3 grid gap-x-4 gap-y-1 text-xs text-[var(--color-ink-soft)] sm:grid-cols-2">
+                  <div><dt className="inline font-semibold">Recipient: </dt><dd className="inline">{r.to_email}</dd></div>
+                  <div><dt className="inline font-semibold">Status: </dt><dd className="inline capitalize">{r.status}</dd></div>
+                  <div><dt className="inline font-semibold">Attempts: </dt><dd className="inline">{r.attempts} of 5</dd></div>
+                  <div><dt className="inline font-semibold">Created: </dt><dd className="inline">{formatDateTime(r.created_at)}</dd></div>
+                  {r.last_attempt_at && (
+                    <div><dt className="inline font-semibold">Last attempt: </dt><dd className="inline">{formatDateTime(r.last_attempt_at)}</dd></div>
+                  )}
+                  {r.sent_at && (
+                    <div><dt className="inline font-semibold">Sent: </dt><dd className="inline">{formatDateTime(r.sent_at)}</dd></div>
+                  )}
+                </dl>
                 <p className="mb-2 text-xs text-[var(--color-ink-soft)]">
                   Attempts: {r.attempts}
                   {r.status === "queued" && r.next_attempt_at
@@ -172,7 +208,13 @@ export default async function OutboxPage({
                 </p>
                 {r.error && (
                   <p className="mt-3 rounded-xl bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
-                    {r.error}
+                    <span className="block font-semibold">Last error</span>
+                    <span className="block break-words font-mono text-xs">{r.error}</span>
+                    {errorHint(r.error) && (
+                      <span className="mt-2 block text-xs text-[var(--color-ink)]">
+                        {errorHint(r.error)}
+                      </span>
+                    )}
                   </p>
                 )}
                 {(r.status === "failed" || r.status === "skipped") && (

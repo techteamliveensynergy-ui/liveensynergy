@@ -33,6 +33,9 @@ export interface CampaignProgressInput {
   /** campaigns.opens_at (0070): when registration and the survey open to the
    *  audience. Null = not opened yet; in the future = scheduled. */
   opensAt: string | null;
+  /** campaigns.payment_waived_at (0049): the admin waived the invoice, so
+   *  "paid" would be untrue — the step reads "Payment waived". */
+  paymentWaived?: boolean;
 }
 
 /** Registration and the survey are open to the audience right now. */
@@ -47,7 +50,7 @@ export function campaignSteps(c: CampaignProgressInput): CampaignStep[] {
   const steps: CampaignStep[] = [
     {
       key: "payment",
-      label: "Invoice paid",
+      label: c.paymentWaived ? "Payment waived" : "Invoice paid",
       done: paid,
       detail: "Your campaign opens to artists once its invoice is paid.",
     },

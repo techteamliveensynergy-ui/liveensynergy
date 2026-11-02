@@ -79,10 +79,19 @@ export default async function AdminPage() {
   const [brandCount, artistCount, organiserCount, audienceCount] = roleCounts;
 
   const campaigns = campaignRows.data ?? [];
-  const recentStages = await campaignStagesFor(
+  // One stage definition for the whole portal (campaign-stage.ts): the
+  // "Campaigns to match" count below and the Campaigns tab's "Needs matching"
+  // chip both read it, so they can't disagree (QA 31 Oct M-03).
+  const allStages = await campaignStagesFor(
     supabase,
-    (campaigns as { id: string; status: CampaignStatus; opens_at: string | null }[]).slice(0, 5),
+    campaigns as { id: string; status: CampaignStatus; opens_at: string | null }[],
     "admin",
+  );
+  const recentStages = new Map(
+    (campaigns as { id: string }[]).slice(0, 5).flatMap((c) => {
+      const st = allStages.get(c.id);
+      return st ? [[c.id, st] as const] : [];
+    }),
   );
   const sponsored = sponsoredRows.data ?? [];
   const listings = listingRows.data ?? [];
@@ -96,7 +105,7 @@ export default async function AdminPage() {
   const enquiries = enquiryRows.data ?? [];
 
   // --- the queue that actually needs a human ---
-  const needsMatching = campaigns.filter((c) => !c.matched_listing_id);
+  const needsMatching = campaigns.filter((c) => allStages.get(c.id)?.key === "needs_matching");
   // Only proposals still being agreed — withdrawn siblings and settled deals
   // aren't waiting on anyone.
   const awaitingAgreement = sponsored.filter(
@@ -132,7 +141,7 @@ export default async function AdminPage() {
     {
       label: "Campaigns to match",
       count: needsMatching.length,
-      href: "/dashboard/admin/campaigns?matched=no",
+      href: "/dashboard/admin/campaigns?stage=needs_matching",
       tint: "bg-[var(--color-gold)]",
     },
     {

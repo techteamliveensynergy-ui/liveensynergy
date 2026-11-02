@@ -50,7 +50,7 @@ export function CampaignProgress({
   }
 
   const openProposals = events.filter((e) => e.status === "in_progress").length;
-  const steps = campaignSteps({ status: c.status, settled, openProposals, surveyPublished, opensAt: c.opens_at });
+  const steps = campaignSteps({ status: c.status, settled, openProposals, surveyPublished, opensAt: c.opens_at, paymentWaived: !!c.payment_waived_at });
   const current = currentStep(steps);
 
   return (

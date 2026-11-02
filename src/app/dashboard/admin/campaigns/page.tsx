@@ -229,9 +229,8 @@ export default async function AdminCampaignsPage({
   const unnamedCount = ((campaignRows ?? []) as Row[]).filter((c) => !c.campaign_name?.trim()).length;
   if (sp.unnamed === "yes") campaigns = campaigns.filter((c) => !c.campaign_name?.trim());
 
-  const unmatched = ((campaignRows ?? []) as Row[]).filter(
-    (c) => !c.matched_listing_id,
-  ).length;
+  // Same definition as the "Needs matching" chip and the admin overview.
+  const unmatched = stageCounts.get("needs_matching") ?? 0;
 
   const link = (params: Record<string, string>) => {
     const q = new URLSearchParams(params);

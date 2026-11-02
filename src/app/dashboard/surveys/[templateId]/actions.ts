@@ -31,6 +31,29 @@ interface SubmissionGateResult {
 }
 
 export async function submitSurveyResponse(
+  prev: SurveyResponseState,
+  formData: FormData,
+): Promise<SurveyResponseState> {
+  // M-07: an unexpected throw must surface as a visible error (answers kept).
+  try {
+    return await submitSurveyResponseInner(prev, formData);
+  } catch (e) {
+    if (isNextControlFlow(e)) throw e;
+    console.error("submitSurveyResponse threw:", e);
+    return { error: SAVE_FAILED_MESSAGE };
+  }
+}
+
+const SAVE_FAILED_MESSAGE =
+  "Something went wrong and we couldn't confirm your response was saved. Your answers are still here — please press Submit again.";
+
+/** Next's redirect()/notFound() work by throwing; those must pass through. */
+function isNextControlFlow(e: unknown): boolean {
+  const digest = (e as { digest?: unknown } | null)?.digest;
+  return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") || digest === "NEXT_NOT_FOUND");
+}
+
+async function submitSurveyResponseInner(
   _prev: SurveyResponseState,
   formData: FormData,
 ): Promise<SurveyResponseState> {
@@ -168,16 +191,33 @@ export async function submitSurveyResponse(
   }
 
   // outcome.outcome === "submitted"
-  // Score immediately so the review queue and any reward gate see a
-  // decided status right away. Never block the redirect on this — the
-  // submission itself already succeeded, and a response stuck on `pending`
-  // (a scoring failure here, or a request that never reached this line) can
-  // still be scored later from the review queue's "Score now" action.
-  if (outcome.response_id) {
-    const { error: scoreError } = await supabase.rpc("score_survey_response", {
-      p_response_id: outcome.response_id,
-    });
-    if (scoreError) console.error("score_survey_response failed:", scoreError.message);
+  // M-07: success is only reported once the database has handed back a
+  // response id. A "submitted" outcome without one means nothing we can point
+  // at was saved, so it must surface as an error, never a thank-you.
+  if (!outcome.response_id) {
+    console.error("submit_survey_response returned submitted without a response_id");
+    return { error: "We couldn't save your response. Your answers are still here — please press Submit again." };
+  }
+
+  // Score immediately so the review queue and any reward gate see a decided
+  // status right away. A scoring failure doesn't fail the submission (the
+  // response is saved and can be scored later from the review queue), but its
+  // outcome decides the wording: we only say "received" when it passed, and
+  // never expose the score or why (M-06).
+  let qualityStatus: string | null = null;
+  const { data: scoreData, error: scoreError } = await supabase.rpc("score_survey_response", {
+    p_response_id: outcome.response_id,
+  });
+  if (scoreError) {
+    console.error("score_survey_response failed:", scoreError.message);
+  } else {
+    const scored = scoreData as { outcome?: string; quality_status?: string } | null;
+    if (scored?.outcome === "not_found") {
+      // The row we were just told about isn't visible: treat as not saved.
+      console.error("score_survey_response: response not found after submit", outcome.response_id);
+      return { error: "We couldn't confirm your response was saved. Please press Submit again." };
+    }
+    qualityStatus = scored?.quality_status ?? null;
   }
   // The intro gate's Terms & Privacy tick (0080). Never blocks the redirect.
   if (formData.get("consent_accepted") === "on") {
@@ -186,5 +226,10 @@ export async function submitSurveyResponse(
   }
 
   revalidatePath("/dashboard/participations");
-  redirect(`/dashboard/participations?notice=${heldForReview ? "survey-held" : "survey-submitted"}`);
+  const notice = heldForReview
+    ? "survey-held"
+    : qualityStatus === "pass"
+      ? "survey-submitted"
+      : "survey-review";
+  redirect(`/dashboard/participations?notice=${notice}`);
 }
