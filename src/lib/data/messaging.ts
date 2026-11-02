@@ -74,21 +74,28 @@ export async function getOrCreateSupportConversation(params: {
 export async function createSupportThread(params: {
   userProfileId: string;
   subject: string;
+  /** The admin on the other end — an admin starting the chat passes their own
+   *  id; a user-started thread leaves it out and gets the team's default. */
+  adminProfileId?: string | null;
 }): Promise<string | null> {
   const supabase = await createClient();
   const { userProfileId } = params;
   const subject = params.subject.trim().slice(0, 120);
   if (!subject) return null;
 
-  const { data: adminId, error: adminError } = await supabase.rpc("support_admin_id");
-  if (adminError) console.error("[messaging] support_admin_id failed:", adminError.message);
+  let adminId: string | null = params.adminProfileId ?? null;
+  if (!adminId) {
+    const { data, error: adminError } = await supabase.rpc("support_admin_id");
+    if (adminError) console.error("[messaging] support_admin_id failed:", adminError.message);
+    adminId = (data as string | null) ?? null;
+  }
   if (!adminId) return null;
 
   const { data: created, error } = await supabase
     .from("conversations")
     .insert({
       brand_profile_id: userProfileId,
-      partner_profile_id: adminId as string,
+      partner_profile_id: adminId,
       kind: "support",
       subject,
     })
