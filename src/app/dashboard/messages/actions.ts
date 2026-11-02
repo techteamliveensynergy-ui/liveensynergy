@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { removePrivateFile, uploadPrivateFile } from "@/lib/storage";
-import { createSupportThread, getOrCreateSupportConversation } from "@/lib/data/messaging";
+import { createSupportThread } from "@/lib/data/messaging";
 import { TEAM_SENDER_NAME } from "@/lib/constants";
 
 export interface MessageState {
@@ -195,15 +195,34 @@ export async function startAdminThread(formData: FormData) {
   if (me?.role !== "admin") redirect("/dashboard/messages");
 
   const recipientId = String(formData.get("profile_id") ?? "").trim();
-  const subject = String(formData.get("subject") ?? "").trim() || null;
+  const subject = String(formData.get("subject") ?? "").trim() || "New chat";
+  const firstMessage = String(formData.get("first_message") ?? "").trim();
   if (!recipientId) redirect("/dashboard/messages?tab=support");
 
-  const conversationId = await getOrCreateSupportConversation({
+  // Always a NEW thread under this heading (0102) — an admin can run several
+  // chats with the same brand or artist, one per topic.
+  const conversationId = await createSupportThread({
     userProfileId: recipientId,
     subject,
     adminProfileId: user.id,
   });
-  if (!conversationId) redirect("/dashboard/messages?tab=support");
+  if (!conversationId) redirect("/dashboard/messages?tab=support&notice=thread-failed");
+
+  if (firstMessage) {
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_profile_id: user.id,
+      body: firstMessage.slice(0, 4000),
+    });
+    if (!error) {
+      await notify({
+        eventKey: "message.received",
+        recipientProfileId: recipientId,
+        link: `/dashboard/messages?c=${conversationId}`,
+        variables: { sender_name: TEAM_SENDER_NAME, event_name: subject },
+      });
+    }
+  }
 
   revalidatePath("/dashboard/messages");
   redirect(`/dashboard/messages?c=${conversationId}&notice=admin-thread`);

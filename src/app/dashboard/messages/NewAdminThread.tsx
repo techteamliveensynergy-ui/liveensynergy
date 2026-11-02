@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { startAdminThread } from "./actions";
+import { SUPPORT_TOPICS } from "@/lib/support-topics";
 
 export interface ContactOption {
   id: string;
@@ -42,8 +43,8 @@ export function NewAdminThread({ people }: { people: ContactOption[] }) {
               </h2>
               <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">
                 They&apos;ll find it under &ldquo;With Live·En·Synergy
-                team&rdquo;. If a thread with them already exists, this opens
-                that one.
+                team&rdquo;. Each chat is its own thread under its heading,
+                even if you already have one with them.
               </p>
             </div>
             <button
@@ -89,18 +90,40 @@ export function NewAdminThread({ people }: { people: ContactOption[] }) {
                 htmlFor="new-thread-subject"
                 className="block text-xs text-[var(--color-ink-soft)]"
               >
-                Subject (optional)
+                Heading
               </label>
               <input
                 id="new-thread-subject"
                 name="subject"
                 className="input mt-1"
+                list="new-thread-topics"
+                maxLength={120}
                 placeholder="e.g. Partnership SPE-00003"
               />
+              <datalist id="new-thread-topics">
+                {SUPPORT_TOPICS.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
             </div>
             <button type="submit" className="btn btn-primary">
               Start chat
             </button>
+          </div>
+          <div>
+            <label
+              htmlFor="new-thread-first"
+              className="block text-xs text-[var(--color-ink-soft)]"
+            >
+              First message (optional)
+            </label>
+            <textarea
+              id="new-thread-first"
+              name="first_message"
+              className="textarea mt-1"
+              rows={2}
+              maxLength={4000}
+            />
           </div>
         </form>
       ) : (
