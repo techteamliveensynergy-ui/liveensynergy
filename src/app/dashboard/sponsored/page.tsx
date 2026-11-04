@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
-import { waitingFulfilment, WAITING_STATUS } from "@/lib/data/fulfilment";
 
 export const metadata = { title: "Partnered events" };
 
@@ -46,8 +45,6 @@ export default async function SponsoredPage() {
   const confirmed = events.filter((e) => e.status === "confirmed");
   const inProgress = events.filter((e) => e.status === "in_progress");
   const completed = events.filter((e) => e.status === "completed");
-  // Confirmed but not live yet: the artist still has the fulfilment form to do (0103).
-  const waiting = await waitingFulfilment(supabase, confirmed.map((e) => e.id));
 
   return (
     <div>
@@ -84,7 +81,7 @@ export default async function SponsoredPage() {
               looking for, and its absence would read as a missing feature. */}
           <Section
             title="Confirmed partnerships"
-            description="Both sides have agreed terms. An event goes live — and audience sign-ups open — once the artist completes the fulfilment form."
+            description="Both sides have agreed terms. These are live — audience sign-ups and reward releases run against them."
             count={confirmed.length}
             emptyNote={
               isBrand
@@ -92,7 +89,6 @@ export default async function SponsoredPage() {
                 : "Nothing confirmed yet — once you and the brand both agree terms, the deal moves here."
             }
             events={confirmed}
-            waiting={waiting}
           />
 
           {inProgress.length > 0 && (
@@ -124,14 +120,11 @@ function Section({
   count,
   events,
   emptyNote,
-  waiting,
 }: {
   title: string;
   description: string;
   count: number;
   events: SponsoredEvent[];
-  /** Confirmed events still waiting for the artist's fulfilment form. */
-  waiting?: Set<string>;
   /** Shown instead of the list when the section is empty. */
   emptyNote?: string;
 }) {
@@ -154,7 +147,7 @@ function Section({
       ) : (
         <div className="space-y-3">
           {events.map((e) => (
-            <SponsoredCard key={e.id} event={e} waiting={waiting?.has(e.id) ?? false} />
+            <SponsoredCard key={e.id} event={e} />
           ))}
         </div>
       )}
@@ -162,7 +155,7 @@ function Section({
   );
 }
 
-function SponsoredCard({ event: e, waiting }: { event: SponsoredEvent; waiting: boolean }) {
+function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
   return (
     <Link
       href={`/dashboard/sponsored/${e.id}`}
@@ -171,7 +164,7 @@ function SponsoredCard({ event: e, waiting }: { event: SponsoredEvent; waiting: 
       <div>
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{e.name}</h3>
-          <StatusBadge status={waiting ? WAITING_STATUS : e.status} />
+          <StatusBadge status={e.status} />
         </div>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           {[

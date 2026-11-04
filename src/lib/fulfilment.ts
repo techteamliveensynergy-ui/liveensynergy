@@ -58,3 +58,13 @@ export function linesToList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean)
     .slice(0, 20);
 }
+
+/**
+ * The two extra confirmations under Reward Engine / Discount Codes (Sakshi's
+ * "Artist / Event Portal" doc, 2 Nov — first screenshot). They sit beside the
+ * existing "I agree to honour them" tick; the artist ticks all three.
+ */
+export const CODES_EXTRA_CONFIRMATIONS = [
+  "Codes will be configured and tested before the campaign is launched.",
+  "LES will be informed promptly of any redemption problems, restrictions or changes affecting the codes.",
+] as const;

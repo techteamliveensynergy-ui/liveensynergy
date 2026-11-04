@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import { waitingFulfilment, WAITING_STATUS } from "@/lib/data/fulfilment";
 import { formatDate } from "@/lib/format";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
 import { setListingStatus } from "../actions";
@@ -102,9 +101,6 @@ export default async function AdminEventsPage({
       sponsored = sponsored.filter((e) => e.status === sp.status);
     }
   }
-
-  // Confirmed but not live yet — the artist's fulfilment form is outstanding (0103).
-  const waiting = await waitingFulfilment(supabase, sponsored.map((e) => e.id));
 
   const countFor = (id: string) =>
     parts.filter((p) => p.sponsored_event_id === id).length;
@@ -208,7 +204,7 @@ export default async function AdminEventsPage({
                     <span className="font-semibold text-[var(--color-ink)]">
                       {e.name}
                     </span>
-                    <StatusBadge status={waiting.has(e.id) ? WAITING_STATUS : e.status} />
+                    <StatusBadge status={e.status} />
                     {datePassed(e) && (
                       <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
                         Date passed — not yet marked completed

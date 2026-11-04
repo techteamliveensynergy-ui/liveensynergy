@@ -334,20 +334,6 @@ export async function toggleAgreement(formData: FormData) {
         }
       }
 
-      // The event is confirmed but not live until the artist completes the
-      // fulfilment form (0103) — the confirmation trigger has just created it.
-      if (full.artist_profile_id) {
-        await notify(
-          {
-            eventKey: "fulfilment.requested",
-            recipientProfileId: full.artist_profile_id,
-            link: `/dashboard/sponsored/${id}#fulfilment`,
-            variables: { event_name: full.name, reference: full.reference },
-          },
-          notifyOpts,
-        );
-      }
-
       // Whoever else was in the running for this campaign. Their references
       // come back from the RPC (0023) rather than being looked up here — the
       // withdrawn proposals belong to *other* artists, so under RLS this
@@ -690,8 +676,6 @@ export async function uploadEventProof(
     proof_type: proofType,
     url: proofUrl,
     description: str(formData.get("description")),
-    // Which agreed promotional channel (0103); free text, capped.
-    channel: str(formData.get("channel"))?.slice(0, 200) ?? null,
     uploaded_by: userId,
   });
   if (error) return { error: error.message };

@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0104 — email the team when a survey reaches 100% of its expected
+-- 0105 — email the team when a survey reaches 100% of its expected
 -- participants (2 Nov standup follow-up to #34 / 0083).
 --
 -- Where the survey stages stand (expected participants = E, buffer = B%,
@@ -42,7 +42,7 @@
 alter table public.survey_templates
   add column if not exists quota_alert_sent_at timestamptz;
 comment on column public.survey_templates.quota_alert_sent_at is
-  'When admins were told this survey reached 100% of its expected participants (0104). Cleared when the target changes.';
+  'When admins were told this survey reached 100% of its expected participants (0105). Cleared when the target changes.';
 
 -- ---------------------------------------------------------------------------
 -- 3. A new target gets its own alert.

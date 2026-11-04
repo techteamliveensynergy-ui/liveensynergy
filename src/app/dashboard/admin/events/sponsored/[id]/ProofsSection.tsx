@@ -34,7 +34,6 @@ export function ProofsSection({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-[var(--color-ink)]">
                   {LABELS[p.proof_type] ?? p.proof_type}
-                  {p.channel ? ` · ${p.channel}` : ""}
                 </span>
                 <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--color-ink-soft)]">
                   {p.status}

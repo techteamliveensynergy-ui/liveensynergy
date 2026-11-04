@@ -7,19 +7,18 @@ import { getPublicLiveEvents } from "@/lib/public-event";
 export const metadata = { title: "Events" };
 
 /**
- * The public events page: only live research campaigns — events whose artist
- * has completed the fulfilment form (0103), through public_live_events().
+ * The public events page: only live research campaigns, through
+ * public_live_events().
  *
  * It used to also list every artist's "available" sponsorship listing for
  * brands to browse. That's gone (2 Nov standup): brands enquire through the
- * team, and 0103 closes the listings' anonymous read as well, so nothing here
+ * team, and 0106 closes the listings' anonymous read as well, so nothing here
  * can bring them back by accident.
  */
 export default async function EventsPage() {
   const supabase = await createClient();
-  // Live research campaigns (#48): paid, agreed events whose artist has
-  // completed the fulfilment form (0103). Sponsorship listings are NOT shown
-  // here any more — brands enquire through the team.
+  // Live research campaigns (#48): paid, agreed events. Sponsorship listings
+  // are NOT shown here any more — brands enquire through the team (0106).
   const live = await getPublicLiveEvents(supabase);
 
   return (
