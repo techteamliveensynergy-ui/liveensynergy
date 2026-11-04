@@ -121,9 +121,6 @@ test("discount codes: setup → consent → issue → redeem", async ({ browser 
   await shot(artist, "03-artist-review", "Artist: reviews the setup, adds own code + ID number");
 
   await aSection.locator('[name="consent"]').check();
-  // Sakshi's fulfilment doc (2 Nov): two more confirmations under the codes.
-  await aSection.locator('[name="consent_tested"]').check();
-  await aSection.locator('[name="consent_inform"]').check();
   await aSection.getByRole("button", { name: "Confirm discount codes" }).click();
   await expect(artist.getByText("Confirmed — the team can now issue")).toBeVisible();
   await artist.reload();

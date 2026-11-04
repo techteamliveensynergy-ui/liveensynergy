@@ -21,7 +21,6 @@ import {
 } from "../actions";
 import { formatDateTime, UK_TIME_ZONE } from "@/lib/format";
 import { codesDeadlineState } from "@/lib/codes-deadline";
-import { CODES_EXTRA_CONFIRMATIONS } from "@/lib/fulfilment";
 
 function Submit({ label, pending, className = "btn btn-primary text-sm" }: {
   label: string;
@@ -224,15 +223,6 @@ export function RewardEngineDisplay({
               I&apos;ve reviewed these discount codes. They&apos;re set up on my ticketing platform (or
               will be before the event), and I agree to honour them for qualifying participants.
             </span>
-          </label>
-          {/* Sakshi's fulfilment doc (2 Nov): two more confirmations here. */}
-          <label className="mt-2 flex items-start gap-2 text-sm">
-            <input type="checkbox" name="consent_tested" className="mt-1" />
-            <span>{CODES_EXTRA_CONFIRMATIONS[0]}</span>
-          </label>
-          <label className="mt-2 flex items-start gap-2 text-sm">
-            <input type="checkbox" name="consent_inform" className="mt-1" />
-            <span>{CODES_EXTRA_CONFIRMATIONS[1]}</span>
           </label>
           {consentState.error && (
             <p className="mt-2 text-sm text-[var(--color-accent)]">{consentState.error}</p>

@@ -7,8 +7,6 @@ import {
   SURVEY_CODES_OUT_TITLE,
   SURVEY_FILLED_MID_BODY,
   SURVEY_FILLED_MID_TITLE,
-  SURVEY_QUOTA_MID_BODY,
-  SURVEY_QUOTA_MID_TITLE,
   type SurveyAvailability,
 } from "@/lib/survey-capacity";
 
@@ -21,9 +19,8 @@ const MIN_INTERVAL_MS = 30_000;
  * costs nothing. Once the survey fills or its codes run out, `notice` is a
  * banner the respondent can read and carry on past — it never blocks.
  *
- * `initiallyFull`: the page already showed the quota-filled or over-limit
- * notice at load, so a "quota reached" / "full" answer has nothing new to
- * say; "codes out" still does.
+ * `initiallyFull`: the page already showed the over-limit notice at load, so
+ * a "full" answer has nothing new to say; "codes out" still does.
  */
 export function useLiveAvailability(templateId: string, initiallyFull: boolean) {
   const [state, setState] = useState<SurveyAvailability>("open");
@@ -44,20 +41,17 @@ export function useLiveAvailability(templateId: string, initiallyFull: boolean) 
       });
   }, [templateId]);
 
-  const show =
-    state === "codes_out" || ((state === "full" || state === "quota_reached") && !initiallyFull);
-  const title =
-    state === "codes_out" ? SURVEY_CODES_OUT_TITLE : state === "quota_reached" ? SURVEY_QUOTA_MID_TITLE : SURVEY_FILLED_MID_TITLE;
-  const body =
-    state === "codes_out" ? SURVEY_CODES_OUT_BODY : state === "quota_reached" ? SURVEY_QUOTA_MID_BODY : SURVEY_FILLED_MID_BODY;
+  const show = state === "codes_out" || (state === "full" && !initiallyFull);
   const notice = show ? (
     <div
       role="status"
       aria-live="polite"
       className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-[0.875em] text-[var(--color-accent)]"
     >
-      <p className="font-semibold">{title}</p>
-      <p className="mt-0.5">{body}</p>
+      <p className="font-semibold">
+        {state === "codes_out" ? SURVEY_CODES_OUT_TITLE : SURVEY_FILLED_MID_TITLE}
+      </p>
+      <p className="mt-0.5">{state === "codes_out" ? SURVEY_CODES_OUT_BODY : SURVEY_FILLED_MID_BODY}</p>
     </div>
   ) : null;
 

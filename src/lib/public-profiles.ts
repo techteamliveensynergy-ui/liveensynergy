@@ -1,5 +1,30 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Role } from "@/lib/constants";
+import type { EventListing } from "@/lib/types";
+import { ukDayKey } from "@/lib/format";
+
+export type PublicListing = Pick<
+  EventListing,
+  "id" | "name" | "event_date" | "start_time" | "timezone" | "venue_name" | "city" | "category"
+>;
+
+/**
+ * An artist's / organiser's upcoming events open for sponsorship — listings
+ * marked "available" are publicly readable (RLS, 0002), so this is exactly
+ * what a visitor may see (General Notes, 13 Oct).
+ */
+export async function getUpcomingPublicListings(profileId: string): Promise<PublicListing[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("event_listings")
+    .select("id, name, event_date, start_time, timezone, venue_name, city, category")
+    .eq("owner_profile_id", profileId)
+    .eq("status", "available")
+    .gte("event_date", ukDayKey(new Date()))
+    .order("event_date", { ascending: true })
+    .limit(6);
+  return (data ?? []) as PublicListing[];
+}
 
 /**
  * Public profile reads.

@@ -7,7 +7,6 @@ import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
-import { useSubmitQuotaConfirm } from "@/components/surveys/SubmitQuotaDialog";
 import { SurveyIntroGate } from "@/components/surveys/SurveyIntroGate";
 import {
   accentColorVars,
@@ -66,8 +65,6 @@ export function SurveyForm({
   // Re-checks places and codes as the respondent moves through a stepped
   // survey, so they hear codes have run out before the last question (#53).
   const live = useLiveAvailability(templateId, initiallyFull);
-  // At the submit step, ask first when the quota is full / codes are gone (2 Nov).
-  const quota = useSubmitQuotaConfirm(templateId);
   // A registered participant already agreed to the platform's own T&Cs at
   // sign-up (participations.terms_accepted_at/profiles.terms_accepted_at) —
   // this gate re-confirms them for THIS survey (requirement 5, 17 Sep
@@ -249,17 +246,14 @@ export function SurveyForm({
         // onSubmit path exists specifically to dodge that wiring's other
         // side effect — form.reset() wiping every radio/checkbox answer
         // after ANY action call resolves, success or validation error alike.
-        quota.guard(() => {
-          startTransition(() => {
-            formAction(formData);
-          });
+        startTransition(() => {
+          formAction(formData);
         });
       }}
       className="survey-scope space-y-4"
       style={typographyVars(typography ?? {})}
     >
       <ErrorBanner error={state.error} />
-      {quota.dialog}
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
       {showIntroGate && <input type="hidden" name="consent_accepted" value="on" />}
@@ -295,7 +289,7 @@ export function SurveyForm({
           onChange={handleChange}
           onOtherTextChange={handleOtherText}
           onShown={markShown}
-          isPending={isPending || quota.checking}
+          isPending={isPending}
           footer={footer}
           accentColor={accentColor}
           appearance={appearance}
@@ -325,8 +319,8 @@ export function SurveyForm({
           {footer}
 
           <div className="flex justify-end" style={accentColorVars(accentColor)}>
-            <button type="submit" className="btn btn-primary" disabled={isPending || quota.checking}>
-              {isPending || quota.checking ? "Submitting…" : "Submit survey"}
+            <button type="submit" className="btn btn-primary" disabled={isPending}>
+              {isPending ? "Submitting…" : "Submit survey"}
             </button>
           </div>
         </div>

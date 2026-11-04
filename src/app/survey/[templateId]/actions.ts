@@ -1,6 +1,6 @@
 "use server";
 
-import { atQuota, isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState, type SurveyAvailability } from "@/lib/survey-capacity";
+import { isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState, type SurveyAvailability } from "@/lib/survey-capacity";
 import { isRegistrationNotOpenError, isSurveyNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -484,8 +484,6 @@ export async function surveyAvailability(templateId: string): Promise<SurveyAvai
   ]);
   if (!codes.error && codes.data === "exhausted") return "codes_out";
   if (capacity?.is_full) return "full";
-  // 100% of the expected participants, still inside the buffer (2 Nov).
-  if (capacity && atQuota(capacity)) return "quota_reached";
   if (capacity?.nearly_full) return "nearly_full";
   return "open";
 }
