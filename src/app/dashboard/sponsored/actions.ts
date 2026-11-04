@@ -928,6 +928,11 @@ export async function confirmRewardCodes(
   if (formData.get("consent") !== "on") {
     return { error: "Tick the box to confirm you agree to these discount codes." };
   }
+  // The two extra confirmations from Sakshi's fulfilment doc (2 Nov): codes
+  // tested before launch, and the team told promptly of redemption problems.
+  if (formData.get("consent_tested") !== "on" || formData.get("consent_inform") !== "on") {
+    return { error: "Tick all three confirmations to confirm these discount codes." };
+  }
   const ctx = await requireEventArtist(eventId);
   if (!ctx) return { error: CONFIRM_REFUSALS.forbidden };
 

@@ -451,11 +451,13 @@ function CtaButton({ cta, compact = false }: { cta: SurveyCta; compact?: boolean
           <Link href={`/survey/${cta.surveyId}`} className="btn btn-primary">
             {codesOut ? "Take the survey anyway" : "Start survey"}
           </Link>
-          {!compact && (cta.full || codesOut) && (
-            <p className="mt-2 text-sm opacity-80">
+          {!compact && (cta.quota || codesOut) && (
+            <p className="mt-2 text-sm opacity-80" data-testid="event-quota-note">
               {codesOut
                 ? "Every discount code has been claimed. Your answers still count, but a code isn't guaranteed."
-                : "This survey has reached its participant limit. Late responses are reviewed, and a code isn't guaranteed."}
+                : cta.full
+                  ? "100% of the quota has been completed and the participant limit has been reached, so we can't guarantee a discount code. You're welcome to take the survey at your own discretion — late responses are reviewed."
+                  : "100% of the quota has been completed, so we can't guarantee a discount code now. If someone cancels you may still get one, so you're welcome to take the survey at your own discretion."}
             </p>
           )}
         </div>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { createClient } from "@/lib/supabase/server";
 import { SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody, surveyOpenState } from "@/lib/campaign-opening";
@@ -169,7 +169,7 @@ export default async function PublicSurveyPage({
           </div>
           <CapacityNotice capacity={capacity} />
           <SurveyForm
-            initiallyFull={Boolean(capacity?.is_full)}
+            initiallyFull={atQuota(capacity)}
             templateId={tpl.id}
             questions={questions}
             introMessage={tpl.intro_message}
@@ -267,7 +267,7 @@ export default async function PublicSurveyPage({
       </div>
       <CapacityNotice capacity={capacity} />
       <PublicSurveyForm
-        initiallyFull={Boolean(capacity?.is_full)}
+        initiallyFull={atQuota(capacity)}
         templateId={tpl.id}
         questions={publicQuestions}
         introMessage={tpl.intro_message}
