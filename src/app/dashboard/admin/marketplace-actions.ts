@@ -8,7 +8,7 @@ import {
   roundMoney,
   TEAM_SENDER_NAME,
 } from "@/lib/constants";
-import { notify } from "@/lib/notifications";
+import { notify, notifyAdmins } from "@/lib/notifications";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { rewardGateFor, rewardGatesForEvent } from "@/lib/data/reward-gate";
 import {
@@ -1217,11 +1217,11 @@ export async function reviewEventProof(formData: FormData) {
       review_note: str(formData.get("review_note")),
     })
     .eq("id", id)
-    .select("proof_type, uploaded_by, sponsored_events(name)")
+    .select("proof_type, uploaded_by, sponsored_events(name, reference)")
     .maybeSingle<{
       proof_type: string;
       uploaded_by: string;
-      sponsored_events: { name: string } | null;
+      sponsored_events: { name: string; reference: string | null } | null;
     }>();
 
   if (updated) {
@@ -1233,6 +1233,16 @@ export async function reviewEventProof(formData: FormData) {
         event_name: updated.sponsored_events?.name ?? "your partnership",
         proof_type: updated.proof_type === "social_mention" ? "social mention" : "onsite branding",
         status: op === "approve" ? "approved" : "rejected",
+      },
+    });
+    // The team hears it too, so every status change reaches both sides.
+    await notifyAdmins({
+      eventKey: "admin.proof_reviewed",
+      link: eventId ? `/dashboard/admin/events/sponsored/${eventId}` : "/dashboard/admin",
+      variables: {
+        event_name: updated.sponsored_events?.name ?? "a partnership",
+        reference: updated.sponsored_events?.reference ?? "—",
+        outcome: op === "approve" ? "approved" : "rejected",
       },
     });
   }

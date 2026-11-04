@@ -114,6 +114,15 @@ export default async function AdminCampaignPage({
   // The live deal: the confirmed/completed sponsorship (at most one, 0022's
   // unique index); otherwise nothing is running yet.
   const live = sponsorships.find((s) => s.status === "confirmed" || s.status === "completed") ?? null;
+  // Has the agreed event's artist consented to the fulfilment form (0104)?
+  const { data: liveForm } = live
+    ? await supabase
+        .from("sponsored_event_fulfilment")
+        .select("artist_ack_at")
+        .eq("sponsored_event_id", live.id)
+        .maybeSingle<{ artist_ack_at: string | null }>()
+    : { data: null };
+  const fulfilmentConsented = live ? Boolean(liveForm?.artist_ack_at) : undefined;
 
   const templates = (templateRows ?? []) as (LiveCampaignSurvey & { published_at: string | null })[];
   const shownTemplates = templates.filter((t) => t.status === "published" || t.status === "archived");
@@ -315,6 +324,7 @@ export default async function AdminCampaignPage({
         overrideReason={campaign.open_override_reason}
         settledEvent={live}
         surveyPublished={templates.some((t) => t.status === "published")}
+        fulfilmentConsented={fulfilmentConsented}
         returnTo={`/dashboard/admin/campaigns/${campaign.id}`}
       />
 

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import { Field } from "@/components/ui/Field";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
 import type {
   EventListing,
@@ -25,7 +24,6 @@ import { LiveCampaignPanel, type LiveCampaignSurvey } from "@/components/campaig
 import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-forms";
 import {
   toggleAgreement,
-  updateSponsoredEvent,
   markCompleted,
   contactSupport,
   updateParticipation,
@@ -33,9 +31,11 @@ import {
 import { ProofUploadSection } from "./ProofUploadSection";
 import { RewardEngineDisplay } from "./RewardEngineDisplay";
 import { ArtistDetailsCard, type ArtistDetails } from "./ArtistDetailsCard";
+import { FulfilmentCards, FulfilmentConsent } from "./FulfilmentSection";
+import type { FulfilmentForm } from "@/lib/fulfilment";
 import { ARTIST_TYPES } from "@/lib/constants";
 import { ChangeRequestSection } from "./ChangeRequestSection";
-import { UK_TIME_ZONE, ukLocalInputValue } from "@/lib/format";
+import { UK_TIME_ZONE } from "@/lib/format";
 
 export const metadata = { title: "Partnered event" };
 
@@ -267,6 +267,16 @@ export default async function SponsoredEventPage({
     actName = a?.stage_name || a?.artist_name || o?.event_name || null;
   }
 
+  // The artist's fulfilment form (0104). RLS returns it only once the team
+  // has marked it ready, so "no row" means "being prepared".
+  const { data: fulfilment } = isArtist
+    ? await supabase
+        .from("sponsored_event_fulfilment")
+        .select("*")
+        .eq("sponsored_event_id", event.id)
+        .maybeSingle<FulfilmentForm>()
+    : { data: null };
+
   const myAgreed = isBrand ? event.brand_agreed : event.artist_agreed;
   const otherPartyAgreed = isBrand ? event.artist_agreed : event.brand_agreed;
   const locked = event.status !== "in_progress";
@@ -348,6 +358,25 @@ export default async function SponsoredEventPage({
             {reason ||
               "Another event has already been confirmed for this campaign."}
           </p>
+        </div>
+      )}
+      {notice === "consented" && (
+        <div className="rounded-xl bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          Thanks — your consent is recorded. We&apos;ve let the team know.
+        </div>
+      )}
+      {notice === "consent-missing" && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          Please tick both boxes to give your consent.
+        </div>
+      )}
+      {notice === "consent-failed" && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          {reason === "not_ready"
+            ? "The fulfilment form isn't ready yet — the team will let you know."
+            : reason === "closed"
+              ? "This partnership is no longer open."
+              : "We couldn't record your consent. Please try again, or contact the Live·En·Synergy team."}
         </div>
       )}
       {notice === "agree-failed" && (
@@ -503,6 +532,9 @@ export default async function SponsoredEventPage({
 
       {isArtist && rewardSection}
 
+      {/* Promotional commitments + special terms, filled in by the team (0104). */}
+      {isArtist && <FulfilmentCards form={fulfilment ?? null} />}
+
       {/* Branding */}
       {(event.branding_guidelines || assets.length > 0) && (
         <div className="card p-6">
@@ -540,81 +572,15 @@ export default async function SponsoredEventPage({
       <div className="card p-6">
         <h2 className="text-lg font-semibold">Terms &amp; confirmation</h2>
 
-        {locked ? (
-          <>
-            <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-              {event.status === "withdrawn"
-                ? "This proposal was withdrawn — the partner confirmed a different event for the same campaign."
-                : "These terms are locked — both parties have agreed them. To change anything, contact the Live·En·Synergy team."}
-            </p>
-            <dl className="mt-4 grid gap-4">
-              <Detail label="Reward rules" value={event.reward_rules} block />
-              <Detail label="Partnership terms" value={event.terms} block />
-              <Detail
-                label="How attendance is confirmed"
-                value={event.attendance_method}
-                block
-              />
-            </dl>
-          </>
-        ) : (
-          <form action={updateSponsoredEvent} className="mt-4 grid gap-4">
-            <input type="hidden" name="id" value={event.id} />
-            <p className="text-xs text-[var(--color-ink-soft)]">
-              Saving changes to these terms clears both agreements, so each side confirms the version they&apos;ve
-              actually read.
-            </p>
-            <Field label="Reward rules" htmlFor="reward_rules">
-              <textarea
-                id="reward_rules"
-                name="reward_rules"
-                className="textarea"
-                defaultValue={event.reward_rules ?? ""}
-              />
-            </Field>
-            <Field label="Partnership terms" htmlFor="terms">
-              <textarea
-                id="terms"
-                name="terms"
-                className="textarea"
-                defaultValue={event.terms ?? ""}
-              />
-            </Field>
-            <Field label="Branding guidelines" htmlFor="branding_guidelines">
-              <textarea
-                id="branding_guidelines"
-                name="branding_guidelines"
-                className="textarea"
-                defaultValue={event.branding_guidelines ?? ""}
-              />
-            </Field>
-            <Field
-              label="How will the audience confirm physical attendance?"
-              htmlFor="attendance_method"
-            >
-              <textarea
-                id="attendance_method"
-                name="attendance_method"
-                className="textarea"
-                placeholder="Artist will provide confirmation after ticket scan at the box office, or display a QR code at the venue."
-                defaultValue={event.attendance_method ?? ""}
-              />
-            </Field>
-            <Field label="Participation deadline" htmlFor="participation_deadline">
-              <input
-                id="participation_deadline"
-                name="participation_deadline"
-                type="datetime-local"
-                className="input"
-                defaultValue={ukLocalInputValue(event.participation_deadline)}
-              />
-            </Field>
-            <div className="flex justify-end">
-              <button type="submit" className="btn btn-ghost">
-                Save terms
-              </button>
-            </div>
-          </form>
+        {/* The reward rules / partnership terms / branding guidelines /
+            attendance text fields are hidden for now (3 Nov). The artist's
+            commitments live in the fulfilment form above. */}
+        {locked && (
+          <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+            {event.status === "withdrawn"
+              ? "This proposal was withdrawn — the partner confirmed a different event for the same campaign."
+              : "This partnership is confirmed — both parties have agreed. To change anything, contact the Live·En·Synergy team."}
+          </p>
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -624,7 +590,18 @@ export default async function SponsoredEventPage({
 
         {(isBrand || isArtist) && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {!locked && (
+            {!locked && isArtist && !myAgreed && (
+              <div className="w-full">
+                <FulfilmentConsent
+                  eventId={event.id}
+                  eventName={event.name}
+                  form={fulfilment ?? null}
+                  brandAgreed={event.brand_agreed}
+                  artistAgreed={event.artist_agreed}
+                />
+              </div>
+            )}
+            {!locked && (isBrand || myAgreed) && (
               <form action={toggleAgreement}>
                 <input type="hidden" name="id" value={event.id} />
                 {myAgreed ? (

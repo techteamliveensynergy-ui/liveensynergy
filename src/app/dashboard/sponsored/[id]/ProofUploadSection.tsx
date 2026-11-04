@@ -37,8 +37,9 @@ export function ProofUploadSection({
     <div className="card p-6">
       <h2 className="text-lg font-semibold">Proof of terms</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        Upload evidence for the social-media mentions and onsite branding
-        owed under this partnership — the team reviews each one.
+        Add evidence for each social-media post and the onsite branding owed
+        under this partnership — a link or a screenshot, one at a time; add as
+        many as you need. The team reviews each one.
       </p>
 
       {state.error && (
@@ -63,6 +64,16 @@ export function ProofUploadSection({
           </label>
         </div>
         <Submit />
+        <label className="text-sm sm:col-span-2">
+          <span className="field-label">Link to the post</span>
+          <input
+            name="link"
+            className="input mt-1"
+            placeholder="e.g. instagram.com/p/…"
+            inputMode="url"
+          />
+          <span className="field-hint">Paste the post&apos;s address — or add a screenshot below instead.</span>
+        </label>
         <div className="sm:col-span-2">
           <FileDrop
             name="file"

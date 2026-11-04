@@ -27,6 +27,8 @@ import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
 import { PublicPageSection } from "./PublicPageSection";
+import { FulfilmentFormSection } from "./FulfilmentFormSection";
+import type { FulfilmentForm, FulfilmentPrefill } from "@/lib/fulfilment";
 import type { EventPageCopy } from "@/lib/public-event";
 import type {
   Invoice,
@@ -254,6 +256,23 @@ export default async function AdminSponsoredDetailPage({
             approx_participants: number | null;
             redemption_arrangements: string | null;
           }>()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  // The artist fulfilment form (0104) and what the brand's order form says,
+  // to suggest before anything is saved. Missing table → null, card renders.
+  const [{ data: fulfilment }, { data: fulfilmentPrefill }] = await Promise.all([
+    supabase
+      .from("sponsored_event_fulfilment")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .maybeSingle<FulfilmentForm>(),
+    event.campaign_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("social_media_details, other_details, campaign_timeline")
+          .eq("campaign_id", event.campaign_id)
+          .maybeSingle<FulfilmentPrefill>()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -542,6 +561,15 @@ export default async function AdminSponsoredDetailPage({
           </div>
         )}
       </div>
+
+      <FulfilmentFormSection
+        eventId={event.id}
+        form={fulfilment ?? null}
+        prefill={fulfilmentPrefill ?? null}
+        hasArtist={Boolean(event.artist_profile_id)}
+        notice={notice}
+        errorMessage={msg}
+      />
 
       <PublicPageSection
         eventId={event.id}
