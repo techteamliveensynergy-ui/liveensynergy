@@ -91,6 +91,8 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: "bg-[var(--color-gold)] text-[var(--color-ink)]",
   awaiting_payment: "bg-[var(--color-lavender)] text-[var(--color-purple-deep)]",
   confirmed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
+  // A confirmed partnership whose artist hasn't completed the fulfilment form (0103).
+  waiting_fulfilment: "bg-[var(--color-gold)] text-[var(--color-ink)]",
   completed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   closed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   withdrawn: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
@@ -125,6 +127,8 @@ const STATUS_LABELS: Record<string, string> = {
   converted: "Converted to Live Campaign",
   // The audience's own view of a participation (participationBadge()).
   code_issued: "Code issued",
+  // Confirmed, but not live until the artist completes the fulfilment form (0103).
+  waiting_fulfilment: "Waiting for fulfilment",
 };
 
 export function StatusBadge({ status }: { status: string }) {

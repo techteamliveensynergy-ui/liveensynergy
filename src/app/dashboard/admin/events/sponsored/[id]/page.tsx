@@ -27,6 +27,8 @@ import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
 import { PublicPageSection } from "./PublicPageSection";
+import { FulfilmentAdminSection } from "./FulfilmentAdminSection";
+import type { ArtistInvoice, SponsoredEventFulfilment } from "@/lib/fulfilment";
 import type { EventPageCopy } from "@/lib/public-event";
 import type {
   Invoice,
@@ -257,6 +259,18 @@ export default async function AdminSponsoredDetailPage({
       : Promise.resolve({ data: null }),
   ]);
 
+  // The artist fulfilment form (#57/#59, 0103) and the invoices uploaded to it.
+  const [{ data: fulfilmentRow }, { data: artistInvoiceRows }] = await Promise.all([
+    supabase.from("sponsored_event_fulfilment").select("*").eq("sponsored_event_id", id).maybeSingle<SponsoredEventFulfilment>(),
+    supabase.from("artist_invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
+  ]);
+  const artistInvoices = await Promise.all(
+    ((artistInvoiceRows ?? []) as ArtistInvoice[]).map(async (inv) => ({
+      ...inv,
+      href: await signedUrlFor(inv.file_path, 60 * 60, { downloadName: inv.file_name }),
+    })),
+  );
+
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
   const rewardCodes = (codeRows ?? []) as RewardCode[];
@@ -364,7 +378,7 @@ export default async function AdminSponsoredDetailPage({
             Raise an enquiry about this ↗
           </a>
         </div>
-        <StatusBadge status={event.status} />
+        <StatusBadge status={event.status === "confirmed" && fulfilmentRow && !fulfilmentRow.completed_at ? "waiting_fulfilment" : event.status} />
       </div>
 
       {/* Money */}
@@ -551,6 +565,20 @@ export default async function AdminSponsoredDetailPage({
         listingTicketUrl={event.event_listings?.ticket_buy_url ?? null}
         notice={notice}
         errorMessage={msg}
+      />
+
+      <FulfilmentAdminSection
+        eventId={event.id}
+        eventStatus={event.status}
+        eventDate={event.event_date}
+        hasArtist={!!event.artist_profile_id}
+        artistFeeGbp={event.artist_fee_gbp}
+        codesConfirmed={!!event.reward_codes_confirmed_at}
+        hasTiers={rewardTiers.length > 0}
+        fulfilment={fulfilmentRow ?? null}
+        invoices={artistInvoices}
+        notice={notice}
+        message={msg}
       />
 
       <ProofsSection eventId={event.id} proofs={proofs} />

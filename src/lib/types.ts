@@ -486,6 +486,8 @@ export interface SponsoredEventProof {
   proof_type: SponsoredEventProofType;
   url: string;
   description: string | null;
+  /** Which agreed promotional channel this proof is for (0103). */
+  channel?: string | null;
   uploaded_by: string;
   status: SponsoredEventProofStatus;
   reviewed_by: string | null;
