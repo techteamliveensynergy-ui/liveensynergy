@@ -17,6 +17,7 @@ export function FulfilmentFormSection({
   form,
   prefill,
   hasArtist,
+  eventStatus,
   notice,
   errorMessage,
 }: {
@@ -24,6 +25,8 @@ export function FulfilmentFormSection({
   form: FulfilmentForm | null;
   prefill: FulfilmentPrefill | null;
   hasArtist: boolean;
+  /** The partnership's own status — a confirmed one is not changed by the artist's consent. */
+  eventStatus?: string;
   notice?: string;
   errorMessage?: string;
 }) {
@@ -58,6 +61,13 @@ export function FulfilmentFormSection({
         <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
           Sent {formatDateTime(form.ready_at)}
           {form.artist_ack_at ? ` · artist consented ${formatDateTime(form.artist_ack_at)}` : ""}
+        </p>
+      )}
+
+      {eventStatus === "confirmed" && (
+        <p className="mt-3 rounded-lg bg-[var(--color-mist)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+          This partnership is already confirmed (both sides agreed before the form existed). The artist can still read
+          the form and give their consent, which is recorded here, but it doesn&apos;t change the partnership&apos;s status.
         </p>
       )}
 
@@ -199,6 +209,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function Banner({ tone, children }: { tone: "ok" | "error"; children: React.ReactNode }) {
   return (
     <p
+      role="status"
       className={`mt-4 rounded-lg px-4 py-3 text-sm ${
         tone === "ok"
           ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"

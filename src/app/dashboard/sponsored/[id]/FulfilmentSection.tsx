@@ -89,12 +89,15 @@ export function FulfilmentConsent({
   form,
   brandAgreed,
   artistAgreed,
+  alreadyConfirmed = false,
 }: {
   eventId: string;
   eventName: string;
   form: FulfilmentForm | null;
   brandAgreed: boolean;
   artistAgreed: boolean;
+  /** The partnership is already confirmed: consenting records it but changes nothing else. */
+  alreadyConfirmed?: boolean;
 }) {
   if (form?.artist_ack_at) {
     return (
@@ -135,9 +138,15 @@ export function FulfilmentConsent({
       <ConfirmSubmit
         label="Give my consent"
         pendingLabel="Recording…"
-        title={brandAgreed && !artistAgreed ? "Confirm this partnership?" : "Give your consent?"}
+        title={!alreadyConfirmed && brandAgreed && !artistAgreed ? "Confirm this partnership?" : "Give your consent?"}
         body={
-          brandAgreed && !artistAgreed ? (
+          alreadyConfirmed ? (
+            <>
+              You&apos;re consenting to the fulfilment form for <strong>{eventName}</strong> as it stands. The
+              partnership is already confirmed, so this only records your consent. Changing anything afterwards
+              means contacting the Live·En·Synergy team.
+            </>
+          ) : brandAgreed && !artistAgreed ? (
             <>
               The brand has already agreed, so this confirms <strong>{eventName}</strong> immediately.{" "}
               <strong>This can&apos;t be undone</strong>. Changing anything afterwards means contacting the
@@ -150,8 +159,8 @@ export function FulfilmentConsent({
             </>
           )
         }
-        confirmLabel={brandAgreed && !artistAgreed ? "Yes, confirm it" : "Yes, I consent"}
-        danger={brandAgreed && !artistAgreed}
+        confirmLabel={!alreadyConfirmed && brandAgreed && !artistAgreed ? "Yes, confirm it" : "Yes, I consent"}
+        danger={!alreadyConfirmed && brandAgreed && !artistAgreed}
       />
     </form>
   );

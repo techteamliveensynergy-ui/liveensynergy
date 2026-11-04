@@ -535,6 +535,27 @@ export default async function SponsoredEventPage({
       {/* Promotional commitments + special terms, filled in by the team (0104). */}
       {isArtist && <FulfilmentCards form={fulfilment ?? null} />}
 
+      {/* Consent for events the Terms card below doesn't offer it on: already
+          confirmed (the form can be sent after both sides agreed — every event
+          confirmed before 0104), or the artist agreed before the form was sent.
+          Without this the admin's "waiting for the artist's consent" never ends.
+          The database already accepts it for in_progress and confirmed events. */}
+      {isArtist &&
+        fulfilment &&
+        (event.status === "confirmed" || (event.status === "in_progress" && myAgreed)) && (
+          <div id="fulfilment-consent" className="card p-6">
+            <h2 className="text-lg font-semibold">Your consent</h2>
+            <FulfilmentConsent
+              eventId={event.id}
+              eventName={event.name}
+              form={fulfilment}
+              brandAgreed={event.brand_agreed}
+              artistAgreed={event.artist_agreed}
+              alreadyConfirmed={event.status === "confirmed"}
+            />
+          </div>
+        )}
+
       {/* Branding */}
       {(event.branding_guidelines || assets.length > 0) && (
         <div className="card p-6">
