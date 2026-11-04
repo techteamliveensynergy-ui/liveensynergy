@@ -48,7 +48,7 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("sponsored_events")
-      .select("id, reference, name, status, brand_agreed, artist_agreed, campaign_id, event_date, created_at")
+      .select("id, reference, name, status, brand_agreed, artist_agreed, campaign_id, event_date, created_at, artist_profile_id")
       .order("created_at", { ascending: false }),
     supabase
       .from("event_listings")
@@ -112,6 +112,17 @@ export default async function AdminPage() {
     (e) => e.status === "in_progress" && (!e.brand_agreed || !e.artist_agreed),
   );
   const openEnquiries = enquiries.filter((e) => !e.handled_at);
+
+  // Fulfilment forms the team still has to fill in and send (0104): open
+  // proposals with an artist and no form marked ready. Missing table → none.
+  const { data: readyForms } = await supabase
+    .from("sponsored_event_fulfilment")
+    .select("sponsored_event_id")
+    .not("ready_at", "is", null);
+  const readyIds = new Set(((readyForms ?? []) as { sponsored_event_id: string }[]).map((r) => r.sponsored_event_id));
+  const formsToSetUp = sponsored.filter(
+    (e) => e.status === "in_progress" && e.artist_profile_id && !readyIds.has(e.id),
+  );
   const verifiedUnrewarded = participations.filter(
     (p) => p.status === "attendance_verified",
   );
@@ -142,6 +153,14 @@ export default async function AdminPage() {
       label: "Campaigns to match",
       count: needsMatching.length,
       href: "/dashboard/admin/campaigns?stage=needs_matching",
+      tint: "bg-[var(--color-gold)]",
+    },
+    {
+      label: "Fulfilment forms to set up",
+      count: formsToSetUp.length,
+      href: formsToSetUp[0]
+        ? `/dashboard/admin/events/sponsored/${formsToSetUp[0].id}#fulfilment`
+        : "/dashboard/admin/events?tab=sponsored",
       tint: "bg-[var(--color-gold)]",
     },
     {

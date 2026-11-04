@@ -27,8 +27,8 @@ import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection } from "./InvoiceSection";
 import { PublicPageSection } from "./PublicPageSection";
-import { FulfilmentAdminSection } from "./FulfilmentAdminSection";
-import type { ArtistInvoice, SponsoredEventFulfilment } from "@/lib/fulfilment";
+import { FulfilmentFormSection } from "./FulfilmentFormSection";
+import type { FulfilmentForm, FulfilmentPrefill } from "@/lib/fulfilment";
 import type { EventPageCopy } from "@/lib/public-event";
 import type {
   Invoice,
@@ -259,17 +259,22 @@ export default async function AdminSponsoredDetailPage({
       : Promise.resolve({ data: null }),
   ]);
 
-  // The artist fulfilment form (#57/#59, 0103) and the invoices uploaded to it.
-  const [{ data: fulfilmentRow }, { data: artistInvoiceRows }] = await Promise.all([
-    supabase.from("sponsored_event_fulfilment").select("*").eq("sponsored_event_id", id).maybeSingle<SponsoredEventFulfilment>(),
-    supabase.from("artist_invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
+  // The artist fulfilment form (0104) and what the brand's order form says,
+  // to suggest before anything is saved. Missing table → null, card renders.
+  const [{ data: fulfilment }, { data: fulfilmentPrefill }] = await Promise.all([
+    supabase
+      .from("sponsored_event_fulfilment")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .maybeSingle<FulfilmentForm>(),
+    event.campaign_id
+      ? supabase
+          .from("campaign_order_forms")
+          .select("social_media_details, other_details, campaign_timeline")
+          .eq("campaign_id", event.campaign_id)
+          .maybeSingle<FulfilmentPrefill>()
+      : Promise.resolve({ data: null }),
   ]);
-  const artistInvoices = await Promise.all(
-    ((artistInvoiceRows ?? []) as ArtistInvoice[]).map(async (inv) => ({
-      ...inv,
-      href: await signedUrlFor(inv.file_path, 60 * 60, { downloadName: inv.file_name }),
-    })),
-  );
 
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
@@ -556,6 +561,15 @@ export default async function AdminSponsoredDetailPage({
           </div>
         )}
       </div>
+
+      <FulfilmentFormSection
+        eventId={event.id}
+        form={fulfilment ?? null}
+        prefill={fulfilmentPrefill ?? null}
+        hasArtist={Boolean(event.artist_profile_id)}
+        notice={notice}
+        errorMessage={msg}
+      />
 
       <PublicPageSection
         eventId={event.id}
