@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState } from "@/lib/survey-capacity";
+import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -148,7 +148,7 @@ export default async function TakeSurveyPage({
       <PageHeader title={tpl.title} subtitle={tpl.description ?? undefined} />
       <CapacityNotice capacity={capacity} />
       <SurveyForm
-        initiallyFull={Boolean(capacity?.is_full)}
+        initiallyFull={atQuota(capacity)}
         templateId={tpl.id}
         questions={questions}
         introMessage={tpl.intro_message}

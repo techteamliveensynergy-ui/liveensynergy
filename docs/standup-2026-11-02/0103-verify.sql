@@ -138,3 +138,56 @@ select se.id, se.reference
 --     the event STAYS live. Admin → "Reopen the form" → it leaves /events.
 --  7. As the brand: the page shows only the badge — no fulfilment card, no
 --     invoices.
+
+
+-- =============== PART D — migration 0104 (survey quota alert), after applying ===============
+-- Read-only. 0104 is independent of 0103; the page alert and pop-up work
+-- without it — it only adds the email to admins.
+
+-- D1. The once-only stamp column exists. Expect 1.
+select count(*) as quota_alert_column
+  from information_schema.columns
+ where table_schema = 'public' and table_name = 'survey_templates' and column_name = 'quota_alert_sent_at';
+
+-- D2. Both triggers in place. Expect 2 rows.
+select tgrelid::regclass as "table", tgname
+  from pg_trigger
+ where not tgisinternal and tgname in ('survey_responses_quota_alert', 'survey_templates_reset_quota_alert')
+ order by 1, 2;
+
+-- D3. Notification event, settings row, in-app + email templates. Expect 1, 1, 2.
+select (select count(*) from public.notification_events    where key = 'admin.survey_quota_reached') as events,
+       (select count(*) from public.notification_settings  where event_key = 'admin.survey_quota_reached') as settings,
+       (select count(*) from public.notification_templates where event_key = 'admin.survey_quota_reached') as templates;
+
+-- D4. Backfill: no survey that is ALREADY at/over its quota is left unstamped
+--     (it would email about an old survey on its next response). Expect 0
+--     straight after applying.
+select count(*) as unstamped_but_over_quota
+  from public.survey_templates t
+  left join public.campaign_order_forms f on f.campaign_id = t.campaign_id
+ where t.quota_alert_sent_at is null
+   and coalesce(t.expected_participants, f.approx_participants) is not null
+   and (select count(*) from public.survey_responses r
+         where r.template_id = t.id and r.quality_status <> 'reject')
+       >= coalesce(t.expected_participants, f.approx_participants);
+
+-- D5. The alert function is SECURITY DEFINER (it reads other people's rows to
+--     count places and writes the stamp). Expect t.
+select prosecdef as definer from pg_proc
+ where pronamespace = 'public'::regnamespace and proname = 'survey_quota_alert';
+
+-- ---- Try it on dev (by hand) ----
+--  1. Pick a published survey with an expected-participants number and note its
+--     response count N (non-rejected). Set expected participants to N + 1.
+--     (Changing the target clears quota_alert_sent_at.)
+--  2. Submit ONE response. Admins get "Quota reached: <survey>" (in-app and
+--     email, per Notification setup). quota_alert_sent_at is now set; a second
+--     submission sends nothing.
+--  3. Open the survey page: the pink "participant quota has been filled" alert
+--     shows. Press Submit: the pop-up "The quota is full — a discount code
+--     isn't guaranteed" appears; "Go back" keeps your answers, "Submit anyway"
+--     submits. Responses up to expected + 10% are still processed normally;
+--     past that they are held for review.
+--  4. Raise expected participants again: the stamp clears, and reaching the new
+--     number emails admins again.

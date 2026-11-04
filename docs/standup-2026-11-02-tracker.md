@@ -14,6 +14,7 @@ Portal" Google Doc (the fulfilment form spec, last edited 2 Nov).
 | 7 | Keep events off the public site; brands enquire through the team | Built — `/events` lists only live research events; the public sponsorship-listing grid and the "upcoming events" block on public profiles are gone; anonymous read of `event_listings` is closed in 0103 |
 | 8 | Unpublish and download limits for partner events | **Not built — spec unclear.** See the open question in the PR |
 | 9 | Extra consent under the discount codes (doc, first screenshot) | Built — two more ticks beside "I agree to honour them" |
+| 11 | Survey quota: alert at 100% of expected participants, a pop-up when submitting, and an email when it's reached (10% buffer keeps accepting) | Built — migration 0104 + page notice + submit pop-up in both survey forms + public event page note. Email goes to **admins**; the 90% stage still has no email |
 | 10 | Message Sakshi when fulfilment is live; walkthrough video of admin setup | Drafts prepared, not sent — they wait for the migration to be applied and the deploy |
 
 Also in the notes, not actioned: prompting surveys at 90% completion risks

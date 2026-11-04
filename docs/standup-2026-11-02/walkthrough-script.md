@@ -45,3 +45,11 @@ confirm the four promotional confirmations → upload an invoice → final conse
 ## 5. What changed on the public site
 `/events` lists only live research events; the old "events looking for partners"
 grid is gone — brands enquire through the team (button → contact form).
+
+## 6. Survey quota stages (follow-up request)
+Open a published survey with an expected-participants number. Below 90% nothing shows;
+90–99% "Places are filling up"; at **100%** the pink "participant quota has been filled"
+alert appears above the form (and on the public event page), and **pressing Submit
+opens a pop-up** — "The quota is full — a discount code isn't guaranteed" — with
+*Go back* / *Submit anyway*. The 10% buffer keeps taking responses; past it, responses
+are held for review. Admins get one email/in-app alert when 100% is reached.

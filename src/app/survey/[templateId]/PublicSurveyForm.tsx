@@ -10,6 +10,7 @@ import { CoverMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
+import { useSubmitQuotaConfirm } from "@/components/surveys/SubmitQuotaDialog";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
@@ -190,6 +191,8 @@ export function PublicSurveyForm({
   // Re-checks places and codes as the respondent moves through a stepped
   // survey, so they hear codes have run out before the last question (#53).
   const live = useLiveAvailability(templateId, initiallyFull);
+  // At the submit step, ask first when the quota is full / codes are gone (2 Nov).
+  const quota = useSubmitQuotaConfirm(templateId);
   const [stage, setStage] = useState<Stage>(() => {
     if (showIntroGate) return "gate";
     return prefill ? "questions" : "contact";
@@ -521,14 +524,17 @@ export function PublicSurveyForm({
         const formData = new FormData(e.currentTarget);
         // See SurveyForm.tsx's identical comment: sidesteps <form action>'s
         // auto-reset of native controls on any action resolution.
-        startTransition(() => {
-          formAction(formData);
+        quota.guard(() => {
+          startTransition(() => {
+            formAction(formData);
+          });
         });
       }}
       className="survey-scope space-y-4"
       style={typographyVars(typography ?? {})}
     >
       <ErrorBanner error={state.error} />
+      {quota.dialog}
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
       <input type="hidden" name="answers" value={JSON.stringify(payload)} readOnly />
@@ -588,7 +594,7 @@ export function PublicSurveyForm({
           onChange={handleChange}
           onOtherTextChange={handleOtherText}
           onShown={markShown}
-          isPending={isPending}
+          isPending={isPending || quota.checking}
           footer={
             <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
           }
@@ -623,8 +629,8 @@ export function PublicSurveyForm({
           <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
 
           <div className="flex justify-end" style={accentColorVars(accentColor)}>
-            <button type="submit" className="btn btn-primary" disabled={isPending}>
-              {isPending ? "Submitting…" : "Submit survey"}
+            <button type="submit" className="btn btn-primary" disabled={isPending || quota.checking}>
+              {isPending || quota.checking ? "Submitting…" : "Submit survey"}
             </button>
           </div>
         </div>
