@@ -24,9 +24,15 @@ function Submit() {
 export function ProofUploadSection({
   eventId,
   proofs,
+  channels = [],
+  requirements = null,
 }: {
   eventId: string;
   proofs: SponsoredEventProof[];
+  /** The agreed promotional channels (fulfilment form, 0103) — a proof can be tied to one. */
+  channels?: string[];
+  /** What the team asked for, shown above the form. */
+  requirements?: string | null;
 }) {
   const [state, formAction] = useActionState<SponsoredState, FormData>(
     uploadEventProof,
@@ -41,6 +47,13 @@ export function ProofUploadSection({
         under this partnership — a link or a screenshot, one at a time; add as
         many as you need. The team reviews each one.
       </p>
+
+      {requirements && (
+        <p className="mt-3 whitespace-pre-wrap rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm">
+          <span className="font-semibold">What we need: </span>
+          {requirements}
+        </p>
+      )}
 
       {state.error && (
         <p className="mt-3 rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
@@ -58,6 +71,19 @@ export function ProofUploadSection({
               <option value="onsite_branding">Onsite branding</option>
             </select>
           </label>
+          {channels.length > 0 && (
+            <label className="text-sm">
+              <span className="field-label">Which channel? (optional)</span>
+              <select name="channel" className="select mt-1" defaultValue="">
+                <option value="">—</option>
+                {channels.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="text-sm">
             <span className="field-label">Note (optional)</span>
             <input name="description" className="input mt-1" />
@@ -92,6 +118,7 @@ export function ProofUploadSection({
             >
               <span>
                 {LABELS[p.proof_type] ?? p.proof_type}
+                {p.channel ? ` · ${p.channel}` : ""}
                 {p.description ? ` — ${p.description}` : ""}
               </span>
               <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--color-ink-soft)]">

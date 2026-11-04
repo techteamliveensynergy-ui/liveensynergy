@@ -247,6 +247,33 @@ export default async function SponsoredEventPage({
     }
   }
 
+  // The fulfilment form (#57/#59, 0103): the team's commitments and payment
+  // terms, the artist's consents and invoices. Only the artist reads these —
+  // the brand has no policy on either table, by design.
+  let fulfilment: SponsoredEventFulfilment | null = null;
+  let invoices: (ArtistInvoice & { href: string | null })[] = [];
+  if (isArtist && ["confirmed", "completed"].includes(event.status)) {
+    const [{ data: fRow }, { data: invRows }] = await Promise.all([
+      supabase
+        .from("sponsored_event_fulfilment")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .maybeSingle<SponsoredEventFulfilment>(),
+      supabase
+        .from("artist_invoices")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: false }),
+    ]);
+    fulfilment = fRow ?? null;
+    invoices = await Promise.all(
+      ((invRows ?? []) as ArtistInvoice[]).map(async (inv) => ({
+        ...inv,
+        href: await signedUrlFor(inv.file_path, 60 * 60, { downloadName: inv.file_name }),
+      })),
+    );
+  }
+
   // The act, not the event (QA 30 Oct #7): rows matched before the fix carry
   // no artist_display_name. Read through the public views — `artists` is
   // owner-only under RLS, so the brand would get nothing from the table.
@@ -312,7 +339,12 @@ export default async function SponsoredEventPage({
   const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
 
   const proofSection = (isBrand || isArtist) && (
-    <ProofUploadSection eventId={event.id} proofs={proofs} />
+    <ProofUploadSection
+      eventId={event.id}
+      proofs={proofs}
+      channels={isArtist ? fulfilment?.promo_channels ?? [] : []}
+      requirements={isArtist ? fulfilment?.proof_requirements ?? null : null}
+    />
   );
   const rewardSection = (
     <RewardEngineDisplay
@@ -328,6 +360,43 @@ export default async function SponsoredEventPage({
       codesDueAt={event.codes_due_at ?? null}
     />
   );
+
+  // An event that went live before the form existed, with nothing added to it
+  // since, has nothing to fulfil: don't show its owner a to-do card (0103).
+  if (
+    fulfilment &&
+    fulfilment.completion_kind === "predates" &&
+    !hasPromo(fulfilment) &&
+    !fulfilment.payment_terms &&
+    invoices.length === 0
+  ) {
+    fulfilment = null;
+  }
+
+  // The header badge (artist AND brand): confirmed but not live yet.
+  const waitingForFulfilment =
+    event.status === "confirmed" ? (await waitingFulfilment(supabase, [event.id])).has(event.id) : false;
+
+  // Fulfilment (artist view). `live` = the database's own rule (completed_at).
+  const live = !!fulfilment?.completed_at;
+  const needsInvoice = fulfilment ? invoiceRequired(event, fulfilment) : false;
+  const steps = fulfilment
+    ? fulfilmentSteps({
+        codesConfirmed: !!event.reward_codes_confirmed_at,
+        hasTiers: rewardTiers.length > 0,
+        fulfilment,
+        invoiceCount: invoices.filter((i) => i.status !== "rejected").length,
+        invoiceNeeded: needsInvoice,
+      })
+    : [];
+  const blockedBy = steps.filter((st) => st.key !== "consent" && !st.done).map((st) => st.label);
+  // A live event asks again only when something the artist agreed was reset
+  // by a team edit — never for events that went live before this form existed.
+  const reconfirm =
+    !!fulfilment &&
+    live &&
+    ((hasPromo(fulfilment) && !fulfilment.promo_consent_at) ||
+      (fulfilment.completion_kind === "artist" && !fulfilment.final_consent_at));
 
   return (
     <div className="space-y-6">
@@ -345,7 +414,7 @@ export default async function SponsoredEventPage({
             ? `Partnership ref ${event.reference} · with ${actName}`
             : `Partnership ref ${event.reference}`
         }
-        action={<StatusBadge status={event.status} />}
+        action={<StatusBadge status={waitingForFulfilment ? WAITING_STATUS : event.status} />}
       />
 
       {/* An agreement that couldn't be honoured — the campaign was settled on
@@ -384,6 +453,15 @@ export default async function SponsoredEventPage({
           Something went wrong recording your agreement. Please try again, or
           contact the Live·En·Synergy team.
         </div>
+      )}
+
+      {fulfilment && (
+        <FulfilmentChecklist
+          steps={steps}
+          live={live}
+          waivedReason={fulfilment.completion_kind === "admin_waived" ? fulfilment.waived_reason : null}
+          needsReconfirm={reconfirm}
+        />
       )}
 
       {event.campaign_id && (
@@ -680,6 +758,25 @@ export default async function SponsoredEventPage({
           </div>
         )}
       </div>
+
+      {fulfilment && (
+        <PaymentInvoiceSection
+          eventId={event.id}
+          fulfilment={fulfilment}
+          invoices={invoices}
+          invoiceNeeded={needsInvoice && !live}
+        />
+      )}
+      {fulfilment && (!live || reconfirm || fulfilment.final_consent_at) && (
+        <FinalConsentSection
+          eventId={event.id}
+          live={live}
+          reconfirm={reconfirm}
+          ready={blockedBy.length === 0}
+          blockedBy={blockedBy}
+          consentedAt={fulfilment.final_consent_at}
+        />
+      )}
 
       {/* The brand's order is unchanged; the artist's is reordered (#58). */}
       {!isArtist && proofSection}

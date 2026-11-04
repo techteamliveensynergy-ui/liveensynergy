@@ -383,7 +383,7 @@ export default async function AdminSponsoredDetailPage({
             Raise an enquiry about this ↗
           </a>
         </div>
-        <StatusBadge status={event.status} />
+        <StatusBadge status={event.status === "confirmed" && fulfilmentRow && !fulfilmentRow.completed_at ? "waiting_fulfilment" : event.status} />
       </div>
 
       {/* Money */}
@@ -579,6 +579,20 @@ export default async function AdminSponsoredDetailPage({
         listingTicketUrl={event.event_listings?.ticket_buy_url ?? null}
         notice={notice}
         errorMessage={msg}
+      />
+
+      <FulfilmentAdminSection
+        eventId={event.id}
+        eventStatus={event.status}
+        eventDate={event.event_date}
+        hasArtist={!!event.artist_profile_id}
+        artistFeeGbp={event.artist_fee_gbp}
+        codesConfirmed={!!event.reward_codes_confirmed_at}
+        hasTiers={rewardTiers.length > 0}
+        fulfilment={fulfilmentRow ?? null}
+        invoices={artistInvoices}
+        notice={notice}
+        message={msg}
       />
 
       <ProofsSection eventId={event.id} proofs={proofs} />

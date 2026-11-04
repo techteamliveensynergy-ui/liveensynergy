@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { platformLabel } from "./discount-codes";
-import { surveyCapacityState } from "./survey-capacity";
+import { atQuota, surveyCapacityState } from "./survey-capacity";
 import type { RedemptionPlatform } from "./types";
 
 /**
@@ -165,7 +165,7 @@ export type SurveyCta =
   | { kind: "not_open"; opensAt: string | null }
   | { kind: "deadline_passed" }
   | { kind: "closed" }
-  | { kind: "open"; surveyId: string; full: boolean; codes: "available" | "exhausted" | "none" };
+  | { kind: "open"; surveyId: string; full: boolean; quota: boolean; codes: "available" | "exhausted" | "none" };
 
 export async function surveyCta(supabase: SupabaseClient, ev: PublicEvent): Promise<SurveyCta> {
   if (eventHasEnded(ev)) return { kind: "ended" };
@@ -185,7 +185,7 @@ export async function surveyCta(supabase: SupabaseClient, ev: PublicEvent): Prom
     | "available"
     | "exhausted"
     | "none";
-  return { kind: "open", surveyId: ev.survey.id, full: Boolean(capacity?.is_full), codes };
+  return { kind: "open", surveyId: ev.survey.id, full: Boolean(capacity?.is_full), quota: atQuota(capacity), codes };
 }
 
 /** One line per venue part, skipping blanks. */
