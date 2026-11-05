@@ -17,6 +17,8 @@ import {
   screenSurveySubmission,
 } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
+import type { SurveyRewardOutcome } from "@/lib/survey-reward";
+import { EMAIL_NOT_VERIFIED_MESSAGE, isEmailNotVerifiedError } from "@/lib/survey-verify";
 import { siteUrl } from "@/lib/site-url";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -29,6 +31,15 @@ export interface PublicSurveyResponseState {
   /** The quality check did not pass the response outright (held or rejected).
    *  Never carries the score or reason (M-06). */
   underReview?: boolean;
+  /** The respondent is now registered for the survey's event (the submit
+   *  registers them — see registerAndRewardAfterSubmit). */
+  registered?: boolean;
+  /** Their discount code, or why there isn't one yet. Absent when the survey
+   *  has no event or the respondent isn't a signed-in audience account. */
+  reward?: SurveyRewardOutcome;
+  /** The database refused because the account's email isn't verified (0108):
+   *  the form returns to its "confirm your email" step with answers intact. */
+  needsEmailVerification?: boolean;
 }
 
 interface SubmitOutcome {
@@ -194,6 +205,9 @@ async function submitPublicSurveyResponseInner(
     if (isSurveyNotOpenError(error.message)) {
       return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
     }
+    if (isEmailNotVerifiedError(error.message)) {
+      return { error: EMAIL_NOT_VERIFIED_MESSAGE, needsEmailVerification: true };
+    }
     return { error: error.message };
   }
 
@@ -252,7 +266,158 @@ async function submitPublicSurveyResponseInner(
     }
   }
 
-  return { success: true, heldForReview, underReview };
+  // Registering is what lets a code be issued (a participation must exist), and
+  // the code is what the respondent is waiting to see.
+  const followUp = await registerAndRewardAfterSubmit(
+    supabase,
+    templateId,
+    String(formData.get("register_event_id") ?? "").trim(),
+    { underReview, heldForReview },
+  );
+
+  return { success: true, heldForReview, underReview, ...followUp };
+}
+
+/**
+ * After a public, event-linked survey is saved and scored: register the signed-in
+ * audience respondent for the event, then report their code (or why there isn't
+ * one yet).
+ *
+ * Why this exists (client test, 4 Nov): the register step used to be a separate
+ * button on the thank-you screen, and for an account the survey itself had just
+ * created it never appeared (the password form took its place, and the
+ * `survey_account` flag that chose it is never cleared). So the person was never
+ * registered, no code was ever issued (auto_issue_reward_code() needs a
+ * participation, 0075), the dashboard said "no events participated", and the
+ * thank-you screen had no way to show a code anyway.
+ *
+ * Rules:
+ *  - Only when the form asked for it (`register_event_id`, which the form sends
+ *    only alongside the sentence "Submitting also registers you for …") and
+ *    that event is the one this survey's campaign is actually running — the form
+ *    naming an event is not enough to register someone for it.
+ *  - Only an audience account. A brand or artist taking the link isn't registered.
+ *  - Registration also records the event-terms acceptance, as the old Register
+ *    button did: it follows an explicit, labelled Submit.
+ *  - Registering fires the existing participations trigger, which issues the code
+ *    if the response already passed (0075) — nothing here issues a code.
+ *  - NEVER throws and never undoes the saved response: any failure degrades to
+ *    "we'll email your code" wording.
+ */
+async function registerAndRewardAfterSubmit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  templateId: string,
+  requestedEventId: string,
+  flags: { underReview: boolean; heldForReview: boolean },
+): Promise<{ registered?: boolean; reward?: SurveyRewardOutcome }> {
+  if (!requestedEventId) return {};
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return {};
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string }>();
+    if (profile?.role !== "audience") return {};
+
+    const { data: tpl } = await supabase
+      .from("survey_templates")
+      .select("campaign_id")
+      .eq("id", templateId)
+      .maybeSingle<{ campaign_id: string | null }>();
+    if (!tpl?.campaign_id) return {};
+
+    // The same lookup the survey page uses to name the event.
+    const { data: evRows } = await supabase
+      .from("sponsored_events")
+      .select("id, artist_profile_id, reward_codes_confirmed_at")
+      .eq("campaign_id", tpl.campaign_id)
+      .in("status", ["confirmed", "completed"])
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const ev = (evRows?.[0] ?? null) as {
+      id: string;
+      artist_profile_id: string | null;
+      reward_codes_confirmed_at: string | null;
+    } | null;
+    if (!ev || ev.id !== requestedEventId) return {};
+
+    const { error: regError } = await supabase.from("participations").insert({
+      sponsored_event_id: ev.id,
+      audience_profile_id: user.id,
+      status: "registered",
+      terms_accepted_at: new Date().toISOString(),
+    });
+    // 23505 = already registered: fine, they may be completing a second survey.
+    if (regError && regError.code !== "23505") {
+      if (isRegistrationNotOpenError(regError.message)) {
+        return { registered: false, reward: { status: "pending", reason: "not_open" } };
+      }
+      console.error("[survey] registering after submit failed:", regError.message);
+      return { registered: false, reward: { status: "pending", reason: "unknown" } };
+    }
+    revalidatePath("/dashboard/participations");
+    revalidatePath("/dashboard/rewards");
+
+    // The code, if the registration trigger just issued one (or it already existed).
+    const { data: part } = await supabase
+      .from("participations")
+      .select("id")
+      .eq("sponsored_event_id", ev.id)
+      .eq("audience_profile_id", user.id)
+      .maybeSingle<{ id: string }>();
+    if (part) {
+      const { data: codeRow } = await supabase
+        .from("reward_codes")
+        .select("code, value_label, redemption_platform, redemption_url, redemption_instructions, expires_at, is_shared")
+        .eq("participation_id", part.id)
+        .neq("status", "void")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<{
+          code: string;
+          value_label: string | null;
+          redemption_platform: string | null;
+          redemption_url: string | null;
+          redemption_instructions: string | null;
+          expires_at: string | null;
+          is_shared: boolean;
+        }>();
+      if (codeRow) {
+        return {
+          registered: true,
+          reward: {
+            status: "issued",
+            code: codeRow.code,
+            valueLabel: codeRow.value_label,
+            platform: codeRow.redemption_platform,
+            url: codeRow.redemption_url,
+            instructions: codeRow.redemption_instructions,
+            expiresAt: codeRow.expires_at,
+            shared: codeRow.is_shared,
+          },
+        };
+      }
+    }
+
+    // No code. Say why, without revealing how the quality check works (M-06).
+    if (flags.heldForReview) return { registered: true, reward: { status: "pending", reason: "held" } };
+    if (flags.underReview) return { registered: true, reward: { status: "pending", reason: "review" } };
+    if (ev.artist_profile_id && !ev.reward_codes_confirmed_at) {
+      return { registered: true, reward: { status: "pending", reason: "not_ready" } };
+    }
+    const { data: codesState } = await supabase.rpc("survey_codes_state", { p_template_id: templateId });
+    if (codesState === "exhausted") return { registered: true, reward: { status: "pending", reason: "no_codes" } };
+    if (codesState === "none") return { registered: true, reward: { status: "pending", reason: "not_ready" } };
+    return { registered: true, reward: { status: "pending", reason: "unknown" } };
+  } catch (e) {
+    console.error("[survey] registerAndRewardAfterSubmit threw:", e);
+    return {};
+  }
 }
 
 export interface RegisterAfterSurveyState {
@@ -488,4 +653,107 @@ export async function surveyAvailability(templateId: string): Promise<SurveyAvai
   if (capacity && atQuota(capacity)) return "quota_reached";
   if (capacity?.nearly_full) return "nearly_full";
   return "open";
+}
+
+/**
+ * Has the signed-in respondent confirmed their email yet? Asked by the survey's
+ * "check your inbox" step while the respondent opens the link (often on another
+ * device or tab), so the step carries on by itself. False for anyone not signed
+ * in — never throws.
+ */
+export async function checkEmailVerified(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email_verified_at")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string; email_verified_at: string | null }>();
+    return Boolean(profile && (profile.role === "admin" || profile.email_verified_at));
+  } catch {
+    return false;
+  }
+}
+
+export interface ChangeEmailState {
+  error?: string;
+  message?: string;
+  /** The address now on the account — the form updates its own copy from this. */
+  email?: string;
+}
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * "Wrong address?" on the confirm-your-email step. A respondent who mistyped
+ * their email can't verify it, and can't just start again: their phone number is
+ * already on the account (one number per audience account, phone_in_use()). So
+ * let them correct the address and send a fresh link.
+ *
+ * Deliberately narrow — only the signed-in respondent's own account, only an
+ * audience account, only while it is still UNVERIFIED (a verified address is
+ * proof of ownership and is never changed here), and rate-limited. The auth email
+ * is changed through the Admin API with email_confirm, which sends no Supabase
+ * email and does not re-fire the verified sync (that only fires on a first
+ * confirmation). profiles.email is updated by hand — nothing syncs it from auth —
+ * and our notifications are sent to that column.
+ */
+export async function changeUnverifiedEmail(
+  _prev: ChangeEmailState,
+  formData: FormData,
+): Promise<ChangeEmailState> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Please start the survey again." };
+
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    if (email.length > 254 || !EMAIL_SHAPE.test(email)) return { error: "Enter a valid email address." };
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email, email_verified_at")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string; email: string | null; email_verified_at: string | null }>();
+    if (!profile || profile.role !== "audience" || profile.email_verified_at) {
+      return { error: "This address can't be changed here." };
+    }
+
+    const { data: allowed } = await supabase.rpc("rate_limit_hit", {
+      p_action: "survey_email_change",
+      p_window_seconds: 600,
+      p_max: 4,
+    });
+    if (allowed === false) return { error: "Please wait a few minutes before trying again." };
+
+    if (email !== (profile.email ?? "").toLowerCase()) {
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { error: "We can't change the address right now." };
+      const admin = createAdminClient();
+      const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
+        email,
+        email_confirm: true,
+      });
+      if (updateError) {
+        // Never say whose address it is.
+        return /already|exists|registered|taken/i.test(updateError.message)
+          ? { error: "That address can't be used. Try another, or sign in with it." }
+          : { error: "We couldn't change the address just now. Please try again." };
+      }
+      const { error: profileError } = await admin.from("profiles").update({ email }).eq("id", user.id);
+      if (profileError) console.error("[survey] profiles.email update failed:", profileError.message);
+    }
+
+    const sent = await sendVerificationEmail(supabase, user.id, ROLE_LABELS.audience);
+    if (!sent) return { error: "We saved the new address but couldn't send the email. Use “Send it again”.", email };
+    return { message: `Sent — check ${email} (and your spam folder). The new link replaces any earlier one.`, email };
+  } catch (e) {
+    console.error("[survey] changeUnverifiedEmail threw:", e);
+    return { error: "Something went wrong. Please try again." };
+  }
 }

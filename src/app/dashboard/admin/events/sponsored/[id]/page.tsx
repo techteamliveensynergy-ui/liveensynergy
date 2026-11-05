@@ -567,6 +567,7 @@ export default async function AdminSponsoredDetailPage({
         form={fulfilment ?? null}
         prefill={fulfilmentPrefill ?? null}
         hasArtist={Boolean(event.artist_profile_id)}
+        eventStatus={event.status}
         notice={notice}
         errorMessage={msg}
       />

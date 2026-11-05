@@ -210,15 +210,23 @@ export default async function PublicSurveyPage({
   // allows both selects — no policy change) — the "Implement Pre-fill"
   // action item.
   let prefill: SurveyPrefill | null = null;
+  // Only an audience account is registered for the event when it submits; a
+  // brand or artist opening the link is not (see registerAndRewardAfterSubmit).
+  let isAudience = false;
+  // An admin is always treated as verified (0074); everyone else must have confirmed their
+  // address before answering (0108). Anonymous visitors have no account to confirm.
+  let emailVerified = true;
   if (user) {
     const [{ data: profile }, { data: member }] = await Promise.all([
-      supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, email, role, email_verified_at").eq("id", user.id).maybeSingle(),
       supabase
         .from("audience_members")
         .select("phone, phone_country_code")
         .eq("profile_id", user.id)
         .maybeSingle(),
     ]);
+    isAudience = profile?.role === "audience";
+    emailVerified = profile?.role === "admin" || Boolean(profile?.email_verified_at);
     const name = (profile?.full_name ?? "").trim();
     const cut = name.lastIndexOf(" ");
     prefill = {
@@ -274,6 +282,8 @@ export default async function PublicSurveyPage({
         thankYouMessage={tpl.thank_you_message}
         event={event}
         isAuthenticated={Boolean(user)}
+        isAudience={isAudience}
+        emailVerified={emailVerified}
         needsPassword={needsPassword}
         prefill={prefill}
         showIntroGate={tpl.show_intro_gate}

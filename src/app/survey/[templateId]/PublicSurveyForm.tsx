@@ -11,6 +11,7 @@ import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
 import { useSubmitQuotaConfirm } from "@/components/surveys/SubmitQuotaDialog";
+import { VerifyEmailStep } from "@/components/surveys/VerifyEmailStep";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
@@ -27,6 +28,7 @@ import { choseOther, emptyAnswerFor, surveyBlocks } from "@/lib/surveys";
 import { surveyPath } from "@/lib/survey-logic";
 import { SURVEY_HONEYPOT_FIELD } from "@/lib/survey-abuse-constants";
 import { SURVEY_HELD_FOR_REVIEW_MESSAGE, SURVEY_UNDER_REVIEW_MESSAGE } from "@/lib/survey-capacity";
+import { REWARD_PENDING_COPY, registerNoteFor, type SurveyRewardOutcome } from "@/lib/survey-reward";
 import type { SurveyAnswerValue, SurveyMediaType, SurveyQuestion, SurveyTemplateLayoutMode } from "@/lib/types";
 import { TurnstileWidget } from "@/app/dashboard/surveys/[templateId]/TurnstileWidget";
 import { ResetPasswordForm } from "@/app/auth/reset-password/ResetPasswordForm";
@@ -78,11 +80,85 @@ function RegisterButton({ event }: { event: PublicSurveyEvent }) {
   );
 }
 
+/** The discount code on screen (or, plainly, why it isn't there yet). */
+function RewardPanel({ reward }: { reward: SurveyRewardOutcome }) {
+  const [copied, setCopied] = useState(false);
+
+  if (reward.status === "pending") {
+    const copy = REWARD_PENDING_COPY[reward.reason];
+    return (
+      <div
+        role="status"
+        data-testid="reward-pending"
+        data-reason={reward.reason}
+        className="rounded-xl bg-[var(--color-mist)] px-4 py-3 text-left text-sm"
+      >
+        <p className="font-semibold text-[var(--color-ink)]">{copy.title}</p>
+        <p className="mt-1 text-[var(--color-ink-soft)]">{copy.body}</p>
+      </div>
+    );
+  }
+
+  const expires = reward.expiresAt
+    ? new Date(reward.expiresAt).toLocaleDateString("en-GB", { dateStyle: "medium", timeZone: "Europe/London" })
+    : null;
+
+  return (
+    <div
+      data-testid="reward-issued"
+      className="rounded-2xl border border-[var(--color-olive-deep)]/30 bg-[var(--color-sage)]/50 px-4 py-4 text-left"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-olive-deep)]">
+        Your discount code{reward.valueLabel ? ` · ${reward.valueLabel}` : ""}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <code
+          data-testid="reward-code"
+          className="select-all rounded-lg bg-white px-3 py-2 font-mono text-lg font-semibold tracking-wider text-[var(--color-ink)]"
+        >
+          {reward.code}
+        </code>
+        <button
+          type="button"
+          className="btn btn-ghost text-sm"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(reward.code);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            } catch {
+              // Clipboard blocked: the code is selectable on screen anyway.
+            }
+          }}
+        >
+          {copied ? "Copied" : "Copy code"}
+        </button>
+      </div>
+      {reward.instructions && (
+        <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{reward.instructions}</p>
+      )}
+      {reward.url && (
+        <p className="mt-2 text-sm">
+          <a href={reward.url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+            Where to use it ↗
+          </a>
+        </p>
+      )}
+      <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
+        {expires ? `Valid until ${expires}. ` : ""}
+        We&apos;ve also emailed it to you, and you can find it any time under My rewards.
+      </p>
+    </div>
+  );
+}
+
 function ThankYouScreen({
   message,
   event,
   isAuthenticated,
   needsPassword,
+  registered,
+  reward,
   typography,
   appearance,
   accentColor,
@@ -93,12 +169,20 @@ function ThankYouScreen({
   typography?: SurveyTypography;
   appearance: SurveyAppearance;
   accentColor?: string | null;
-  /** True for an account startSurveyAccount() just created — it has a
-   *  random password the respondent never saw, so they need to set a real
-   *  one before the "register" step (or later, from the emailed reset
-   *  link). */
+  /** True only in the visit where startSurveyAccount() just created the
+   *  account — it has a random password the respondent never saw, so offer to
+   *  set one (they also have the emailed link). It must NOT follow the
+   *  account's `survey_account` flag, which is never cleared: that replaced the
+   *  register step on every survey, forever. */
   needsPassword: boolean;
+  /** The submit registered them for the event. */
+  registered?: boolean;
+  /** Their code, or why there isn't one yet. */
+  reward?: SurveyRewardOutcome;
 }) {
+  // The reward panel already says "under review" / "held" in its own words;
+  // repeating the message above it would say it twice.
+  const rewardSaysIt = reward?.status === "pending" && (reward.reason === "review" || reward.reason === "held");
   return (
     <SurveySlide
       className="survey-scope"
@@ -110,26 +194,49 @@ function ThankYouScreen({
       <h2 className="font-display text-[1.75em] font-semibold text-[var(--survey-question-color,var(--color-ink))]">
         Thanks for taking part!
       </h2>
-      <p className="whitespace-pre-line text-[1.05em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
-        {message ??
-          "Your answers have been recorded. Join the Live·En·Synergy community to unlock rewards and exclusive offers."}
-      </p>
+      {!rewardSaysIt && (
+        <p className="whitespace-pre-line text-[1.05em] leading-relaxed text-[var(--survey-body-color,var(--color-ink-soft))]">
+          {message ??
+            "Your answers have been recorded. Join the Live·En·Synergy community to unlock rewards and exclusive offers."}
+        </p>
+      )}
 
       {isAuthenticated ? (
-        needsPassword ? (
-          <div className="space-y-3 text-left">
-            <p className="text-center text-sm text-[var(--color-ink-soft)]">
-              We&apos;ve created your account — set a password now, or use the link we emailed you later.
-            </p>
-            <ResetPasswordForm />
-          </div>
-        ) : event ? (
-          <RegisterButton event={event} />
-        ) : (
-          <Link href="/dashboard" className="btn btn-primary mt-2 w-full">
-            Go to my dashboard
-          </Link>
-        )
+        <>
+          {reward && <RewardPanel reward={reward} />}
+
+          {registered ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--color-olive-deep)]" data-testid="registered-note">
+                ✓ You&apos;re registered{event ? ` for ${event.name}` : ""}.
+              </p>
+              <Link
+                href={reward?.status === "issued" ? "/dashboard/rewards" : "/dashboard/participations"}
+                className="btn btn-primary w-full"
+              >
+                {reward?.status === "issued" ? "View my rewards" : "View my events"}
+              </Link>
+            </div>
+          ) : event ? (
+            // Auto-registration didn't happen (e.g. an account that wasn't
+            // created in this visit, or the event wasn't open) — keep the manual route.
+            <RegisterButton event={event} />
+          ) : (
+            <Link href="/dashboard" className="btn btn-primary mt-2 w-full">
+              Go to my dashboard
+            </Link>
+          )}
+
+          {needsPassword && (
+            <div className="space-y-3 border-t border-black/10 pt-4 text-left">
+              <p className="text-sm font-semibold text-[var(--color-ink)]">Set a password</p>
+              <p className="text-sm text-[var(--color-ink-soft)]">
+                We&apos;ve created your account. Set a password now to sign in later, or use the link we emailed you.
+              </p>
+              <ResetPasswordForm />
+            </div>
+          )}
+        </>
       ) : (
         <Link
           href={`/auth/sign-up?role=audience${event ? `&event=${encodeURIComponent(event.reference)}` : ""}`}
@@ -142,7 +249,7 @@ function ThankYouScreen({
   );
 }
 
-type Stage = "gate" | "contact" | "questions";
+type Stage = "gate" | "contact" | "verify" | "questions";
 
 export function PublicSurveyForm({
   templateId,
@@ -151,6 +258,8 @@ export function PublicSurveyForm({
   thankYouMessage,
   event,
   isAuthenticated,
+  isAudience = false,
+  emailVerified = true,
   needsPassword = false,
   prefill = null,
   showIntroGate = true,
@@ -172,6 +281,11 @@ export function PublicSurveyForm({
   thankYouMessage: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
+  /** The signed-in account is an audience account (only those are registered on submit). */
+  isAudience?: boolean;
+  /** The signed-in respondent has confirmed their email. False sends them to the
+   *  "confirm your email" step before the questions (0108). */
+  emailVerified?: boolean;
   needsPassword?: boolean;
   prefill?: SurveyPrefill | null;
   showIntroGate?: boolean;
@@ -193,9 +307,13 @@ export function PublicSurveyForm({
   const live = useLiveAvailability(templateId, initiallyFull);
   // At the submit step, ask first when the quota is full / codes are gone (2 Nov).
   const quota = useSubmitQuotaConfirm(templateId);
+  // The address must be confirmed BEFORE the questions (client test, 4 Nov;
+  // migration 0108 enforces it at the database too). Nothing is answered yet at
+  // that point, so waiting for the email loses nothing.
+  const [emailOk, setEmailOk] = useState(emailVerified);
   const [stage, setStage] = useState<Stage>(() => {
     if (showIntroGate) return "gate";
-    return prefill ? "questions" : "contact";
+    return prefill ? (emailVerified ? "questions" : "verify") : "contact";
   });
   const [consent, setConsent] = useState<SurveyConsent>({
     consentAccepted: false,
@@ -210,6 +328,16 @@ export function PublicSurveyForm({
   const [accountState, setAccountState] = useState<SurveyAccountState>({});
   const [accountPending, setAccountPending] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
+  // A signed-in respondent on an event-linked survey is registered for the event
+  // when they submit (and told so beside the button) — see
+  // registerAndRewardAfterSubmit() in ./actions.ts.
+  const registersForEvent = Boolean(event) && (accountCreated || (isAuthenticated && isAudience));
+  const registerNote =
+    registersForEvent && event ? (
+      <p className="text-sm text-[var(--color-ink-soft)]" data-testid="register-note">
+        {registerNoteFor(event.name)}
+      </p>
+    ) : null;
   const router = useRouter();
 
   async function handleCreateAccount() {
@@ -238,11 +366,13 @@ export function PublicSurveyForm({
       const result = await startSurveyAccount({}, form);
       setAccountPending(false);
       if (result.created) {
-        // Straight on to the first question (FB-00032), then pull the
-        // signed-in server props (needsPassword etc.) without remounting —
+        // On to the confirm-your-email step, then the first question (FB-00032).
+        // Pull the signed-in server props (needsPassword etc.) without remounting —
         // a remount would reset this form back to the welcome screen.
         setAccountCreated(true);
-        setStage("questions");
+        // A brand-new account's address is unproven: confirm it first (0108).
+        setEmailOk(false);
+        setStage("verify");
         router.refresh();
         return;
       }
@@ -283,6 +413,14 @@ export function PublicSurveyForm({
     submitPublicSurveyResponse,
     {},
   );
+  // The database refused because the email isn't confirmed (0108): back to the
+  // confirm step. The form stays mounted, so the answers are still here.
+  useEffect(() => {
+    if (state.needsEmailVerification) {
+      setEmailOk(false);
+      setStage("verify");
+    }
+  }, [state]);
   const [botToken, setBotToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
@@ -378,7 +516,9 @@ export function PublicSurveyForm({
         }
         event={event}
         isAuthenticated={isAuthenticated}
-        needsPassword={needsPassword}
+        needsPassword={needsPassword && accountCreated}
+        registered={state.registered}
+        reward={state.reward}
         typography={typography}
         appearance={appearance}
         accentColor={accentColor}
@@ -399,9 +539,25 @@ export function PublicSurveyForm({
         appearance={appearance}
         onStart={(c) => {
           setConsent(c);
-          setStage(prefill ? "questions" : "contact");
+          setStage(prefill ? (emailOk ? "questions" : "verify") : "contact");
         }}
       />
+    );
+  }
+
+  if (stage === "verify") {
+    return (
+      <div className="survey-scope space-y-4" style={typographyVars(typography ?? {})}>
+        <VerifyEmailStep
+          email={contactEmail}
+          onEmailChanged={setContactEmail}
+          onVerified={() => {
+            setEmailOk(true);
+            setStage("questions");
+            router.refresh();
+          }}
+        />
+      </div>
     );
   }
 
@@ -485,8 +641,8 @@ export function PublicSurveyForm({
               </div>
               <p className="text-xs text-[var(--color-ink-soft)]">
                 We&apos;ll create your Live·En·Synergy account so your answers, events and rewards stay
-                together. You&apos;ll go straight on to the questions — we&apos;ll also email you a link to set
-                your password (it arrives titled &ldquo;Reset your password&rdquo;).
+                together. We&apos;ll email you a link to confirm your address — open it and the questions start. You
+                can set a password at the end.
               </p>
               <button
                 type="button"
@@ -535,6 +691,7 @@ export function PublicSurveyForm({
     >
       <ErrorBanner error={state.error} />
       {quota.dialog}
+      {registersForEvent && event && <input type="hidden" name="register_event_id" value={event.id} readOnly />}
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="started_at" value={startedAt} />
       <input type="hidden" name="answers" value={JSON.stringify(payload)} readOnly />
@@ -601,7 +758,13 @@ export function PublicSurveyForm({
           accentColor={accentColor}
           appearance={appearance}
           onStepChange={live.check}
-          notice={live.notice}
+          submitLabel={registersForEvent ? "Submit & register" : "Submit survey"}
+          notice={
+            <>
+              {live.notice}
+              {registerNote}
+            </>
+          }
         />
       ) : (
         <div
@@ -628,10 +791,13 @@ export function PublicSurveyForm({
 
           <SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />
 
-          <div className="flex justify-end" style={accentColorVars(accentColor)}>
-            <button type="submit" className="btn btn-primary" disabled={isPending || quota.checking}>
-              {isPending || quota.checking ? "Submitting…" : "Submit survey"}
-            </button>
+          <div className="space-y-2" style={accentColorVars(accentColor)}>
+            {registerNote && <div className="text-right">{registerNote}</div>}
+            <div className="flex justify-end">
+              <button type="submit" className="btn btn-primary" disabled={isPending || quota.checking}>
+                {isPending || quota.checking ? "Submitting…" : registersForEvent ? "Submit & register" : "Submit survey"}
+              </button>
+            </div>
           </div>
         </div>
       )}
