@@ -386,7 +386,10 @@ Path alias: `@/*` → `./src/*`.
   per open sponsorship, what an *artist* owes (agreement, fulfilment-form consent,
   reward-code confirmation + deadline) and what is the *team's* (no code tiers, form
   not sent). Codes only issue once the artist confirms them (`auto_issue_reward_code`,
-  0075), so this is where an admin sees why people have no code.
+  0075), so this is where an admin sees why people have no code. Each item has a
+  **Nudge artist** button (`nudgeArtist()`, 0110): re-checks the item is still pending, one
+  reminder per event + item per 12 h, logged in `artist_nudges`, sent as the
+  `sponsorship.artist_nudge` notification.
 - `docs/payments-kyc-strategy.md`, `docs/email-branding-research.md` — design notes for work not yet built.
 - `docs/new-model-implementation-plan.md` — phased plan for the pricing-tier,
   admin-only-campaign, survey, artist-payment-split and admin-mediated-

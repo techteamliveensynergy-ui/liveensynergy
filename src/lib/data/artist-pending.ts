@@ -21,6 +21,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * "nothing found" rather than breaking the admin overview.
  */
 
+/** A second reminder for the same event + item inside this window is refused (0110). */
+export const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
 export type ArtistPendingKind = "agreement" | "fulfilment" | "codes";
 
 export interface ArtistPendingItem {

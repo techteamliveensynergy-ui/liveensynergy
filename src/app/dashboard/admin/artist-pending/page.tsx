@@ -3,8 +3,10 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState, MetricTile, PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import { formatDateTime, timeAgo } from "@/lib/format";
+import { nudgeArtist } from "./actions";
 import {
   loadArtistPending,
+  NUDGE_COOLDOWN_MS,
   type ArtistPendingItem,
   type ArtistPendingKind,
 } from "@/lib/data/artist-pending";
@@ -17,6 +19,18 @@ const KIND_LABEL: Record<ArtistPendingKind, string> = {
   agreement: "Agreement",
 };
 const KINDS = Object.keys(KIND_LABEL) as ArtistPendingKind[];
+
+const NOTICES: Record<string, { ok: boolean; text: string }> = {
+  nudged: { ok: true, text: "Reminder sent to the artist (in-app and by email)." },
+  too_soon: { ok: false, text: "They were reminded about this less than 12 hours ago. Give it a little longer." },
+  resolved: { ok: false, text: "That's already been done, so no reminder was sent." },
+  not_ready: {
+    ok: false,
+    text: "Reminders aren't set up on this database yet — apply migration 0110_artist_nudges.sql first.",
+  },
+  failed: { ok: false, text: "We couldn't record the reminder, so nothing was sent. Please try again." },
+  invalid: { ok: false, text: "Something went wrong with that request." },
+};
 
 function dueText(item: ArtistPendingItem): string | null {
   if (item.kind === "codes" && item.dueAt) {
@@ -32,17 +46,36 @@ function dueText(item: ArtistPendingItem): string | null {
   return null;
 }
 
+function recentlyNudged(sentAt: string | undefined): boolean {
+  return !!sentAt && Date.now() - new Date(sentAt).getTime() < NUDGE_COOLDOWN_MS;
+}
+
 export default async function ArtistPendingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; notice?: string }>;
 }) {
   await requireRole(["admin"]);
-  const { kind } = await searchParams;
+  const { kind, notice } = await searchParams;
   const filter = KINDS.find((k) => k === kind) ?? null;
 
   const supabase = await createClient();
   const summary = await loadArtistPending(supabase);
+
+  // When each item was last nudged (0110). A database without the table just
+  // shows no history.
+  const lastNudge = new Map<string, string>();
+  if (summary.rows.length > 0) {
+    const { data: nudges } = await supabase
+      .from("artist_nudges")
+      .select("sponsored_event_id, kind, sent_at")
+      .in("sponsored_event_id", summary.rows.map((r) => r.eventId))
+      .order("sent_at", { ascending: false });
+    for (const n of (nudges ?? []) as { sponsored_event_id: string; kind: string; sent_at: string }[]) {
+      const key = `${n.sponsored_event_id}:${n.kind}`;
+      if (!lastNudge.has(key)) lastNudge.set(key, n.sent_at);
+    }
+  }
 
   const rows = filter
     ? summary.rows.filter((r) => r.items.some((i) => i.kind === filter))
@@ -56,6 +89,19 @@ export default async function ArtistPendingPage({
         title="Waiting on artists"
         subtitle="Open sponsorships where an artist still has something to do — and why people on those events may not have their discount code yet."
       />
+
+      {notice && NOTICES[notice] && (
+        <p
+          role="status"
+          className={`rounded-xl px-4 py-3 text-sm ${
+            NOTICES[notice].ok
+              ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
+              : "bg-[var(--color-pink)] text-[var(--color-accent)]"
+          }`}
+        >
+          {NOTICES[notice].text}
+        </p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile label="Events waiting on an artist" value={summary.artistEvents} tint="bg-[var(--color-gold)]" />
@@ -151,12 +197,32 @@ export default async function ArtistPendingPage({
                               </p>
                             )}
                           </div>
-                          <Link
-                            href={`/dashboard/admin/events/sponsored/${r.eventId}${i.anchor}`}
-                            className="shrink-0 text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"
-                          >
-                            Open →
-                          </Link>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <div className="flex items-center gap-3">
+                              <form action={nudgeArtist}>
+                                <input type="hidden" name="event_id" value={r.eventId} />
+                                <input type="hidden" name="kind" value={i.kind} />
+                                <button
+                                  type="submit"
+                                  className="btn btn-ghost !px-3 !py-1.5 text-sm"
+                                  disabled={recentlyNudged(lastNudge.get(`${r.eventId}:${i.kind}`))}
+                                >
+                                  Nudge artist
+                                </button>
+                              </form>
+                              <Link
+                                href={`/dashboard/admin/events/sponsored/${r.eventId}${i.anchor}`}
+                                className="text-sm font-semibold text-[var(--color-brand-dark)] hover:underline"
+                              >
+                                Open →
+                              </Link>
+                            </div>
+                            {lastNudge.get(`${r.eventId}:${i.kind}`) && (
+                              <p className="text-xs text-[var(--color-ink-soft)]">
+                                Last nudged {timeAgo(lastNudge.get(`${r.eventId}:${i.kind}`))}
+                              </p>
+                            )}
+                          </div>
                         </li>
                       );
                     })}
