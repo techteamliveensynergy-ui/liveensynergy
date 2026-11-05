@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SIGNUP_ROLE_OPTIONS, ROLE_LABELS, type Role } from "@/lib/constants";
 import { termsForRole } from "@/lib/terms";
 import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "@/lib/password";
+import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { signUp, type AuthState } from "../actions";
 
 function isRole(value: string | undefined): value is Role {
@@ -26,11 +27,14 @@ function SubmitButton() {
 export function SignUpForm({
   initialRole,
   event,
+  googleEnabled = false,
 }: {
   initialRole?: string;
   /** A sponsored_events reference from a public survey's CTA — see signUp()'s
    *  pending_event_reference for where this ends up. */
   event?: string;
+  /** "Continue with Google" is configured (GOOGLE_SIGNIN_ENABLED). */
+  googleEnabled?: boolean;
 }) {
   const [state, formAction] = useActionState<AuthState, FormData>(signUp, {});
   const preset = isRole(initialRole) ? initialRole : "";
@@ -118,6 +122,15 @@ export function SignUpForm({
         <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
           {state.error}
         </p>
+      )}
+
+      {googleEnabled && (
+        <>
+          {/* The role card picked in step 1 travels with the Google round trip;
+              Terms are accepted on the next screen (/auth/complete). */}
+          <GoogleButton role={role} label="Sign up with Google" />
+          <OrDivider />
+        </>
       )}
 
       <Field label="Full name" htmlFor="fullName" required>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import { formatDateTime } from "@/lib/format";
 import type { SurveyQuestion, SurveyTemplate } from "@/lib/types";
 import { surveyAppearance } from "@/lib/survey-media";
 import { SurveyForm } from "@/app/dashboard/surveys/[templateId]/SurveyForm";
+import { googleSignInEnabled, needsGoogleCompletion } from "@/lib/google-auth";
 import { PublicSurveyForm, type PublicSurveyEvent, type SurveyPrefill } from "./PublicSurveyForm";
 
 export const metadata = { title: "Survey" };
@@ -38,11 +40,12 @@ function StatusCard({ title, body }: { title: string; body: ReactNode }) {
 }
 
 /**
- * Public, link-shareable pre-event survey — no account required. A visitor
- * who is already a signed-in, registered participant for this campaign gets
- * handed the existing authenticated SurveyForm unchanged (same component the
- * dashboard route renders); everyone else answers through PublicSurveyForm's
- * contact-capture path. See supabase/migrations/0037_public_surveys.sql for
+ * Public, link-shareable pre-event survey. Anyone can open the link, but a
+ * response needs an account (client note, 4 Nov; 0109): a signed-out visitor
+ * registers or signs in (email, or Google) first. A visitor who is already a
+ * signed-in, registered participant for this campaign gets handed the existing
+ * authenticated SurveyForm unchanged (same component the dashboard route
+ * renders); everyone else answers through PublicSurveyForm. See supabase/migrations/0037_public_surveys.sql for
  * the eligibility split this mirrors.
  */
 export default async function PublicSurveyPage({
@@ -218,13 +221,21 @@ export default async function PublicSurveyPage({
   let emailVerified = true;
   if (user) {
     const [{ data: profile }, { data: member }] = await Promise.all([
-      supabase.from("profiles").select("full_name, email, role, email_verified_at").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("full_name, email, role, email_verified_at, terms_accepted_at")
+        .eq("id", user.id)
+        .maybeSingle(),
       supabase
         .from("audience_members")
         .select("phone, phone_country_code")
         .eq("profile_id", user.id)
         .maybeSingle(),
     ]);
+    // A Google account that never finished its sign-up (role + Terms) does that first.
+    if (needsGoogleCompletion(user, profile)) {
+      redirect(`/auth/complete?next=${encodeURIComponent(`/survey/${templateId}`)}&role=audience&locked=1`);
+    }
     isAudience = profile?.role === "audience";
     emailVerified = profile?.role === "admin" || Boolean(profile?.email_verified_at);
     const name = (profile?.full_name ?? "").trim();
@@ -285,6 +296,7 @@ export default async function PublicSurveyPage({
         isAudience={isAudience}
         emailVerified={emailVerified}
         needsPassword={needsPassword}
+        googleEnabled={googleSignInEnabled()}
         prefill={prefill}
         showIntroGate={tpl.show_intro_gate}
         layoutMode={tpl.layout_mode}

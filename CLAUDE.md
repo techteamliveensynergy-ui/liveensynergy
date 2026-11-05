@@ -92,6 +92,10 @@ Env vars go in `.env.local` (copy from `.env.example`): `NEXT_PUBLIC_SUPABASE_UR
 the survey bot/fraud screen (unset in dev, the screen is skipped with a warning;
 unset in production it refuses submissions outright — see `src/lib/survey-abuse.ts`).
 
+`GOOGLE_SIGNIN_ENABLED=true` turns on "Continue with Google" for every role (off =
+no button anywhere); the Google Client ID/Secret live in Supabase, not here — see
+`docs/google-signin-setup.md`.
+
 `NEXT_PUBLIC_SITE_URL` must equal the origin real users browse — it builds the
 attendance QR code and the links inside confirmation/password-reset emails, so a
 preview origin here sends attendees and new sign-ups to a Vercel SSO wall (L5 in
@@ -164,6 +168,19 @@ Each dashboard domain has its own `actions.ts` (16 of them, e.g.
 
 Auth actions (`src/app/auth/actions.ts`) follow the same `(prevState, formData) -> AuthState` shape.
 
+**Google sign-in** (`signInWithGoogle` → Supabase → `/auth/callback?provider=google`):
+`finishGoogleSignIn()` (`src/lib/google-signin.ts`) refuses an unverified Google address,
+hardens a Google sign-in that links to an account whose address *we* never verified
+(marks it verified, rotates the password, signs out other sessions — Admin-API accounts
+look "confirmed" to Supabase, so linking would otherwise let a squatter keep a password),
+and sends a brand-new Google account to `/auth/complete` for role + Terms (+ mobile for
+audience). `needsGoogleCompletion()` (keyed on `app_metadata.provider === 'google'` so
+seeded accounts are never caught) guards `/dashboard`, `/onboarding` and the survey.
+
+Verification links can carry `next` (`sendVerificationEmail(..., next)` →
+`/auth/verify-email?token=…&next=/survey/<id>`): a survey respondent opens the link on any
+device and lands back on their survey, signed in.
+
 ### Logic that lives in Postgres, not TypeScript
 
 Some operations are `security definer` RPCs because RLS would otherwise make the
@@ -192,6 +209,7 @@ code edit.
 | `issue_email_verification()`, `verify_email_token()`, `email_verification_pending()`, `signup_gate()` | Email verification (0074). Every non-admin account is usable at once but locked behind the dashboard overlay until it opens the one-time link in our welcome email (`sendVerificationEmail()` in `src/lib/email-verification.ts` → `/auth/verify-email`). Only the token's sha-256 is stored; `verify_email_token` is anon-callable because the link is often opened signed out — the route then signs them in via an Admin-API magic link. `profiles.email_verified` is generated from `email_verified_at`. Sign-up uses the Admin API (no Supabase email), so `signup_gate` is the per-IP throttle. |
 | `auto_issue_reward_code()` (+ triggers), `notify_from_db()` | Discount codes release automatically when a campaign survey response becomes `pass` (0075) — from scoring or an admin's approval; also on registration and on the artist confirming codes. Runs as triggers because the participant can't write `reward_codes`. `notify_from_db()` is `notify()` for SQL callers: renders the same templates into `enqueue_notification()`. |
 | `public_event_page()`, `public_live_events()`, `sponsored_event_is_public()` | The public event page `/events/[id]` (0095, #48). `sponsored_events` is signed-in only, so the signed-out page reads one jsonb of chosen fields through a definer function that returns null unless the event is confirmed and its campaign is paid and live. The team's extra copy lives in admin-only `sponsored_event_pages`. A new field on the page needs adding to the function, not just the table. |
+| `submit_public_survey_response()` (0109 guard) | A survey response belongs to an account: the RPC (granted to `anon` since 0037) returns `invalid` when `auth.uid()` is null, matching the page, which makes a signed-out visitor create an account / sign in (email, emailed link or Google) before question 1. There is no "continue without an account". |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |

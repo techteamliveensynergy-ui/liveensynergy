@@ -213,8 +213,8 @@ export function SurveyTemplateForm({
               className="mt-0.5 h-4 w-4 shrink-0"
             />
             <span>
-              Public &amp; link-shareable — anyone with the link can answer, no account
-              required.
+              Public &amp; link-shareable — anyone with the link can open it; they
+              create an account or sign in (email or Google) before answering.
             </span>
           </label>
         )}

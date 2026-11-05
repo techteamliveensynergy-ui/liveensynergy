@@ -12,6 +12,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { callerIpHash } from "@/lib/survey-abuse";
 import { passwordProblem } from "@/lib/password";
+import { googleSignInEnabled } from "@/lib/google-auth";
+import { signupRoleOrNull } from "@/lib/google-signin";
 
 export interface AuthState {
   error?: string;
@@ -226,7 +228,15 @@ export async function signIn(
     // 0074, or the link expired): send the welcome email now.
     if (profile && profile.role !== "admin" && profile.email_verified_at === null) {
       const { data: pending } = await supabase.rpc("email_verification_pending");
-      if (pending === false) await sendVerificationEmail(supabase, data.user.id, ROLE_LABELS[profile.role]);
+      if (pending === false) {
+        await sendVerificationEmail(
+          supabase,
+          data.user.id,
+          ROLE_LABELS[profile.role],
+          // Someone signing in from a survey comes back to it after confirming.
+          redirectTo.startsWith("/survey/") ? redirectTo : null,
+        );
+      }
     }
 
     // Admins have no /dashboard home of their own — land them on the admin
@@ -272,8 +282,11 @@ export async function resendConfirmation(
  */
 export async function resendVerification(
   _prev: AuthState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<AuthState> {
+  // A survey's "confirm your email" step sends its own path so the new link
+  // brings the respondent back to the survey, signed in.
+  const returnTo = safeRedirectPath(String(formData.get("next") ?? ""), "");
   const supabase = await createClient();
   const {
     data: { user },
@@ -297,7 +310,12 @@ export async function resendVerification(
   if (profile?.email_verified_at) {
     return { message: "Your email is already confirmed — refresh the page." };
   }
-  const sent = await sendVerificationEmail(supabase, user.id, ROLE_LABELS[profile?.role ?? "audience"]);
+  const sent = await sendVerificationEmail(
+    supabase,
+    user.id,
+    ROLE_LABELS[profile?.role ?? "audience"],
+    returnTo.startsWith("/survey/") ? returnTo : null,
+  );
   if (!sent) {
     return { error: "We couldn't send the email just now. Please try again in a few minutes." };
   }
@@ -370,4 +388,41 @@ export async function updatePassword(
 
   revalidatePath("/", "layout");
   redirect("/dashboard");
+}
+
+/**
+ * "Continue with Google" — sign-in, sign-up and the survey's account step all
+ * post here. Hands the browser to Google; Google (via Supabase) returns to
+ * /auth/callback?provider=google, which secures the account and, for a new
+ * one, sends it on to /auth/complete.
+ *
+ * `role` is the sign-up card the person picked (or "audience", locked, from a
+ * survey) and only travels as a hint for /auth/complete — the role is written
+ * there, after Terms are accepted, never from this URL alone.
+ */
+export async function signInWithGoogle(formData: FormData): Promise<void> {
+  const next = safeRedirectPath(String(formData.get("next") ?? ""), "/onboarding");
+  if (!googleSignInEnabled()) {
+    redirect(`/auth/sign-in?error=google&redirectTo=${encodeURIComponent(next)}`);
+  }
+
+  const params = new URLSearchParams({ provider: "google", next });
+  const role = signupRoleOrNull(String(formData.get("role") ?? ""));
+  if (role) params.set("role", role);
+  if (formData.get("locked") === "1") params.set("locked", "1");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${await siteUrl()}/auth/callback?${params.toString()}`,
+      // Always show the account chooser — a shared computer shouldn't silently
+      // continue as whoever Google last signed in.
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error || !data.url) {
+    redirect(`/auth/sign-in?error=google&redirectTo=${encodeURIComponent(next)}`);
+  }
+  redirect(data.url);
 }

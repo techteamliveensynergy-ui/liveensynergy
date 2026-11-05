@@ -198,7 +198,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
       <Section title="How it works">
         <ol className="space-y-3">
           {[
-            ["Take the survey", "Answer a short survey about the event and the brand. No account needed to start."],
+            ["Take the survey", "Create a free account or sign in (email or Google), then answer a short survey about the event and the brand."],
             ["We check your answers", "Every response goes through a quick quality check."],
             ["Get your code", "If your response qualifies, your discount code is shown straight away and emailed to you."],
             [

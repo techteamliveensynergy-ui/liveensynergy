@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
+import { finishGoogleSignIn, signupRoleOrNull } from "@/lib/google-signin";
 
 const OTP_TYPES: EmailOtpType[] = ["signup", "invite", "magiclink", "recovery", "email_change", "email"];
 
@@ -15,6 +16,10 @@ const OTP_TYPES: EmailOtpType[] = ["signup", "invite", "magiclink", "recovery", 
  *    device, so a link opened on a phone no longer fails (client feedback,
  *    13 Oct; see docs/email-setup.md for the template).
  *
+ * "Continue with Google" returns here too (`?provider=google`, a PKCE `?code=`):
+ * finishGoogleSignIn() secures a linked account, then routes a brand-new Google
+ * account to /auth/complete for its role and Terms.
+ *
  * A failed link lands on sign-in with a reason rather than a bare form.
  */
 export async function GET(request: Request) {
@@ -23,6 +28,7 @@ export async function GET(request: Request) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = safeRedirectPath(searchParams.get("next"), "/onboarding");
+  const viaGoogle = searchParams.get("provider") === "google";
   const supabase = await createClient();
 
   let ok = false;
@@ -30,6 +36,18 @@ export async function GET(request: Request) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   } else if (code) {
     ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
+  }
+
+  if (viaGoogle) {
+    // Cancelled on Google's screen, denied, or the code was already used.
+    const dest = ok
+      ? await finishGoogleSignIn(supabase, {
+          next,
+          role: signupRoleOrNull(searchParams.get("role")),
+          lockRole: searchParams.get("locked") === "1",
+        })
+      : `/auth/sign-in?error=google&redirectTo=${encodeURIComponent(next)}`;
+    return NextResponse.redirect(`${origin}${dest}`);
   }
 
   if (ok) {

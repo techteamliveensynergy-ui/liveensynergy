@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
+import { googleSignInEnabled } from "@/lib/google-auth";
+import { safeRedirectPath } from "@/lib/urls";
 import { SignInForm } from "./SignInForm";
 
 export const metadata = { title: "Sign in" };
@@ -13,6 +15,7 @@ const LINK_ERRORS: Record<string, string> = {
     "That password-reset link has expired or was opened in a different browser. Use “Forgot password?” to get a new one.",
   auth: "We couldn't sign you in from that link. Please sign in below.",
   confirmed: "Your email address is confirmed. Sign in to carry on.",
+  google: "We couldn't sign you in with Google. Try again, or sign in with your email and password.",
 };
 
 export default async function SignInPage({
@@ -44,7 +47,10 @@ export default async function SignInPage({
           {linkError}
         </p>
       )}
-      <SignInForm redirectTo={redirectTo ?? "/dashboard"} />
+      <SignInForm
+        redirectTo={safeRedirectPath(redirectTo, "/dashboard")}
+        googleEnabled={googleSignInEnabled()}
+      />
     </AuthShell>
   );
 }
