@@ -381,6 +381,12 @@ Path alias: `@/*` → `./src/*`.
 - `docs/database-migrations.md` — running log of every numbered migration; migrations are applied manually, not by the deploy.
 - `docs/qa-creds.md` — seeded dev-only test accounts and how to add more.
 - `docs/TEST-CASES.md`, `docs/standup-*-tracker.md`, `docs/standup-*-testing-log.md` — client review items and their status; the standup trackers are what recent commits are working through.
+- `src/lib/data/artist-pending.ts` — the admin **Waiting on artists** tab
+  (`/dashboard/admin/artist-pending`) and the overview tile read this one loader:
+  per open sponsorship, what an *artist* owes (agreement, fulfilment-form consent,
+  reward-code confirmation + deadline) and what is the *team's* (no code tiers, form
+  not sent). Codes only issue once the artist confirms them (`auto_issue_reward_code`,
+  0075), so this is where an admin sees why people have no code.
 - `docs/payments-kyc-strategy.md`, `docs/email-branding-research.md` — design notes for work not yet built.
 - `docs/new-model-implementation-plan.md` — phased plan for the pricing-tier,
   admin-only-campaign, survey, artist-payment-split and admin-mediated-

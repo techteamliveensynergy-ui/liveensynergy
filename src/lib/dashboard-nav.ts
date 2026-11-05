@@ -86,6 +86,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
     // Artists replaces Events in the nav; the events pages stay reachable
     // from Artists and from each live campaign.
     { href: "/dashboard/admin/artists", label: "Artists", icon: "🎤" },
+    { href: "/dashboard/admin/artist-pending", label: "Waiting on artists", icon: "⏳" },
     { href: "/dashboard/admin/participants", label: "Participants", icon: "🎟️" },
     { href: "/dashboard/admin/marketing", label: "Marketing list", icon: "💌" },
     { href: "/dashboard/admin/campaigns/intake", label: "Campaign requests", icon: "📥" },
