@@ -17,6 +17,7 @@ import {
   screenSurveySubmission,
 } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
+import type { SurveyRewardOutcome } from "@/lib/survey-reward";
 import { siteUrl } from "@/lib/site-url";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -29,6 +30,12 @@ export interface PublicSurveyResponseState {
   /** The quality check did not pass the response outright (held or rejected).
    *  Never carries the score or reason (M-06). */
   underReview?: boolean;
+  /** The respondent is now registered for the survey's event (the submit
+   *  registers them — see registerAndRewardAfterSubmit). */
+  registered?: boolean;
+  /** Their discount code, or why there isn't one yet. Absent when the survey
+   *  has no event or the respondent isn't a signed-in audience account. */
+  reward?: SurveyRewardOutcome;
 }
 
 interface SubmitOutcome {
@@ -252,7 +259,158 @@ async function submitPublicSurveyResponseInner(
     }
   }
 
-  return { success: true, heldForReview, underReview };
+  // Registering is what lets a code be issued (a participation must exist), and
+  // the code is what the respondent is waiting to see.
+  const followUp = await registerAndRewardAfterSubmit(
+    supabase,
+    templateId,
+    String(formData.get("register_event_id") ?? "").trim(),
+    { underReview, heldForReview },
+  );
+
+  return { success: true, heldForReview, underReview, ...followUp };
+}
+
+/**
+ * After a public, event-linked survey is saved and scored: register the signed-in
+ * audience respondent for the event, then report their code (or why there isn't
+ * one yet).
+ *
+ * Why this exists (client test, 4 Nov): the register step used to be a separate
+ * button on the thank-you screen, and for an account the survey itself had just
+ * created it never appeared (the password form took its place, and the
+ * `survey_account` flag that chose it is never cleared). So the person was never
+ * registered, no code was ever issued (auto_issue_reward_code() needs a
+ * participation, 0075), the dashboard said "no events participated", and the
+ * thank-you screen had no way to show a code anyway.
+ *
+ * Rules:
+ *  - Only when the form asked for it (`register_event_id`, which the form sends
+ *    only alongside the sentence "Submitting also registers you for …") and
+ *    that event is the one this survey's campaign is actually running — the form
+ *    naming an event is not enough to register someone for it.
+ *  - Only an audience account. A brand or artist taking the link isn't registered.
+ *  - Registration also records the event-terms acceptance, as the old Register
+ *    button did: it follows an explicit, labelled Submit.
+ *  - Registering fires the existing participations trigger, which issues the code
+ *    if the response already passed (0075) — nothing here issues a code.
+ *  - NEVER throws and never undoes the saved response: any failure degrades to
+ *    "we'll email your code" wording.
+ */
+async function registerAndRewardAfterSubmit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  templateId: string,
+  requestedEventId: string,
+  flags: { underReview: boolean; heldForReview: boolean },
+): Promise<{ registered?: boolean; reward?: SurveyRewardOutcome }> {
+  if (!requestedEventId) return {};
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return {};
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string }>();
+    if (profile?.role !== "audience") return {};
+
+    const { data: tpl } = await supabase
+      .from("survey_templates")
+      .select("campaign_id")
+      .eq("id", templateId)
+      .maybeSingle<{ campaign_id: string | null }>();
+    if (!tpl?.campaign_id) return {};
+
+    // The same lookup the survey page uses to name the event.
+    const { data: evRows } = await supabase
+      .from("sponsored_events")
+      .select("id, artist_profile_id, reward_codes_confirmed_at")
+      .eq("campaign_id", tpl.campaign_id)
+      .in("status", ["confirmed", "completed"])
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const ev = (evRows?.[0] ?? null) as {
+      id: string;
+      artist_profile_id: string | null;
+      reward_codes_confirmed_at: string | null;
+    } | null;
+    if (!ev || ev.id !== requestedEventId) return {};
+
+    const { error: regError } = await supabase.from("participations").insert({
+      sponsored_event_id: ev.id,
+      audience_profile_id: user.id,
+      status: "registered",
+      terms_accepted_at: new Date().toISOString(),
+    });
+    // 23505 = already registered: fine, they may be completing a second survey.
+    if (regError && regError.code !== "23505") {
+      if (isRegistrationNotOpenError(regError.message)) {
+        return { registered: false, reward: { status: "pending", reason: "not_open" } };
+      }
+      console.error("[survey] registering after submit failed:", regError.message);
+      return { registered: false, reward: { status: "pending", reason: "unknown" } };
+    }
+    revalidatePath("/dashboard/participations");
+    revalidatePath("/dashboard/rewards");
+
+    // The code, if the registration trigger just issued one (or it already existed).
+    const { data: part } = await supabase
+      .from("participations")
+      .select("id")
+      .eq("sponsored_event_id", ev.id)
+      .eq("audience_profile_id", user.id)
+      .maybeSingle<{ id: string }>();
+    if (part) {
+      const { data: codeRow } = await supabase
+        .from("reward_codes")
+        .select("code, value_label, redemption_platform, redemption_url, redemption_instructions, expires_at, is_shared")
+        .eq("participation_id", part.id)
+        .neq("status", "void")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<{
+          code: string;
+          value_label: string | null;
+          redemption_platform: string | null;
+          redemption_url: string | null;
+          redemption_instructions: string | null;
+          expires_at: string | null;
+          is_shared: boolean;
+        }>();
+      if (codeRow) {
+        return {
+          registered: true,
+          reward: {
+            status: "issued",
+            code: codeRow.code,
+            valueLabel: codeRow.value_label,
+            platform: codeRow.redemption_platform,
+            url: codeRow.redemption_url,
+            instructions: codeRow.redemption_instructions,
+            expiresAt: codeRow.expires_at,
+            shared: codeRow.is_shared,
+          },
+        };
+      }
+    }
+
+    // No code. Say why, without revealing how the quality check works (M-06).
+    if (flags.heldForReview) return { registered: true, reward: { status: "pending", reason: "held" } };
+    if (flags.underReview) return { registered: true, reward: { status: "pending", reason: "review" } };
+    if (ev.artist_profile_id && !ev.reward_codes_confirmed_at) {
+      return { registered: true, reward: { status: "pending", reason: "not_ready" } };
+    }
+    const { data: codesState } = await supabase.rpc("survey_codes_state", { p_template_id: templateId });
+    if (codesState === "exhausted") return { registered: true, reward: { status: "pending", reason: "no_codes" } };
+    if (codesState === "none") return { registered: true, reward: { status: "pending", reason: "not_ready" } };
+    return { registered: true, reward: { status: "pending", reason: "unknown" } };
+  } catch (e) {
+    console.error("[survey] registerAndRewardAfterSubmit threw:", e);
+    return {};
+  }
 }
 
 export interface RegisterAfterSurveyState {
