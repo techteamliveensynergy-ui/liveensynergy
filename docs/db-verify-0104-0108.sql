@@ -1,5 +1,5 @@
 -- =============================================================================
--- Are migrations 0104, 0105, 0106 and 0107 reflected in this database?
+-- Are migrations 0104, 0105, 0106, 0107 and 0108 reflected in this database?
 --
 -- READ-ONLY. Paste the whole file into the Supabase SQL editor on the project
 -- you want to check (dev, then production). It returns one row per expected
@@ -9,6 +9,7 @@
 --   0105_survey_quota_alert.sql    (survey quota stage: admin alert at 100%)
 --   0106_listings_signed_in_only.sql (event listings no longer public)
 --   0107_fulfilment_consent_and_grants.sql (consent-log constraints + a grant fix)
+--   0108_survey_requires_verified_email.sql (a survey response needs a verified email)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -116,7 +117,16 @@ with checks (grp, ord, name, expected, actual) as (
   ('D. 0106 listings signed-in only', 2, 'new policy exists and is for signed-in users only', '{authenticated}',
      coalesce((select polroles::regrole[]::text from pg_policy where polrelid = to_regclass('public.event_listings')
                 and polname = 'event_listings: signed-in read available'), 'missing')
-       )
+       ),
+
+  -- ---- E. 0108: a survey response needs a verified email -------------------------
+  ('E. 0108 verified email before a survey', 1, 'trigger survey_responses_require_verified_email exists', '1',
+     (select count(*) from pg_trigger where not tgisinternal
+        and tgrelid = to_regclass('public.survey_responses')
+        and tgname = 'survey_responses_require_verified_email')::text),
+  ('E. 0108 verified email before a survey', 2, 'its function is SECURITY DEFINER', 'true',
+     coalesce((select bool_and(prosecdef) from pg_proc where pronamespace = 'public'::regnamespace
+                and proname = 'survey_responses_require_verified_email'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

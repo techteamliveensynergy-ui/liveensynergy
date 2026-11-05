@@ -18,6 +18,7 @@ import {
 } from "@/lib/survey-abuse";
 import type { SurveyQuestion } from "@/lib/types";
 import type { SurveyRewardOutcome } from "@/lib/survey-reward";
+import { EMAIL_NOT_VERIFIED_MESSAGE, isEmailNotVerifiedError } from "@/lib/survey-verify";
 import { siteUrl } from "@/lib/site-url";
 import { sendVerificationEmail } from "@/lib/email-verification";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -36,6 +37,9 @@ export interface PublicSurveyResponseState {
   /** Their discount code, or why there isn't one yet. Absent when the survey
    *  has no event or the respondent isn't a signed-in audience account. */
   reward?: SurveyRewardOutcome;
+  /** The database refused because the account's email isn't verified (0108):
+   *  the form returns to its "confirm your email" step with answers intact. */
+  needsEmailVerification?: boolean;
 }
 
 interface SubmitOutcome {
@@ -200,6 +204,9 @@ async function submitPublicSurveyResponseInner(
     }
     if (isSurveyNotOpenError(error.message)) {
       return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
+    }
+    if (isEmailNotVerifiedError(error.message)) {
+      return { error: EMAIL_NOT_VERIFIED_MESSAGE, needsEmailVerification: true };
     }
     return { error: error.message };
   }
@@ -646,4 +653,107 @@ export async function surveyAvailability(templateId: string): Promise<SurveyAvai
   if (capacity && atQuota(capacity)) return "quota_reached";
   if (capacity?.nearly_full) return "nearly_full";
   return "open";
+}
+
+/**
+ * Has the signed-in respondent confirmed their email yet? Asked by the survey's
+ * "check your inbox" step while the respondent opens the link (often on another
+ * device or tab), so the step carries on by itself. False for anyone not signed
+ * in — never throws.
+ */
+export async function checkEmailVerified(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email_verified_at")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string; email_verified_at: string | null }>();
+    return Boolean(profile && (profile.role === "admin" || profile.email_verified_at));
+  } catch {
+    return false;
+  }
+}
+
+export interface ChangeEmailState {
+  error?: string;
+  message?: string;
+  /** The address now on the account — the form updates its own copy from this. */
+  email?: string;
+}
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * "Wrong address?" on the confirm-your-email step. A respondent who mistyped
+ * their email can't verify it, and can't just start again: their phone number is
+ * already on the account (one number per audience account, phone_in_use()). So
+ * let them correct the address and send a fresh link.
+ *
+ * Deliberately narrow — only the signed-in respondent's own account, only an
+ * audience account, only while it is still UNVERIFIED (a verified address is
+ * proof of ownership and is never changed here), and rate-limited. The auth email
+ * is changed through the Admin API with email_confirm, which sends no Supabase
+ * email and does not re-fire the verified sync (that only fires on a first
+ * confirmation). profiles.email is updated by hand — nothing syncs it from auth —
+ * and our notifications are sent to that column.
+ */
+export async function changeUnverifiedEmail(
+  _prev: ChangeEmailState,
+  formData: FormData,
+): Promise<ChangeEmailState> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Please start the survey again." };
+
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    if (email.length > 254 || !EMAIL_SHAPE.test(email)) return { error: "Enter a valid email address." };
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email, email_verified_at")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string; email: string | null; email_verified_at: string | null }>();
+    if (!profile || profile.role !== "audience" || profile.email_verified_at) {
+      return { error: "This address can't be changed here." };
+    }
+
+    const { data: allowed } = await supabase.rpc("rate_limit_hit", {
+      p_action: "survey_email_change",
+      p_window_seconds: 600,
+      p_max: 4,
+    });
+    if (allowed === false) return { error: "Please wait a few minutes before trying again." };
+
+    if (email !== (profile.email ?? "").toLowerCase()) {
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { error: "We can't change the address right now." };
+      const admin = createAdminClient();
+      const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
+        email,
+        email_confirm: true,
+      });
+      if (updateError) {
+        // Never say whose address it is.
+        return /already|exists|registered|taken/i.test(updateError.message)
+          ? { error: "That address can't be used. Try another, or sign in with it." }
+          : { error: "We couldn't change the address just now. Please try again." };
+      }
+      const { error: profileError } = await admin.from("profiles").update({ email }).eq("id", user.id);
+      if (profileError) console.error("[survey] profiles.email update failed:", profileError.message);
+    }
+
+    const sent = await sendVerificationEmail(supabase, user.id, ROLE_LABELS.audience);
+    if (!sent) return { error: "We saved the new address but couldn't send the email. Use “Send it again”.", email };
+    return { message: `Sent — check ${email} (and your spam folder). The new link replaces any earlier one.`, email };
+  } catch (e) {
+    console.error("[survey] changeUnverifiedEmail threw:", e);
+    return { error: "Something went wrong. Please try again." };
+  }
 }

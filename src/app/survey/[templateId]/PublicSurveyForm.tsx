@@ -11,6 +11,7 @@ import { SurveyFooter } from "@/components/surveys/SurveyFooter";
 import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
 import { useSubmitQuotaConfirm } from "@/components/surveys/SubmitQuotaDialog";
+import { VerifyEmailStep } from "@/components/surveys/VerifyEmailStep";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
@@ -248,7 +249,7 @@ function ThankYouScreen({
   );
 }
 
-type Stage = "gate" | "contact" | "questions";
+type Stage = "gate" | "contact" | "verify" | "questions";
 
 export function PublicSurveyForm({
   templateId,
@@ -258,6 +259,7 @@ export function PublicSurveyForm({
   event,
   isAuthenticated,
   isAudience = false,
+  emailVerified = true,
   needsPassword = false,
   prefill = null,
   showIntroGate = true,
@@ -281,6 +283,9 @@ export function PublicSurveyForm({
   isAuthenticated: boolean;
   /** The signed-in account is an audience account (only those are registered on submit). */
   isAudience?: boolean;
+  /** The signed-in respondent has confirmed their email. False sends them to the
+   *  "confirm your email" step before the questions (0108). */
+  emailVerified?: boolean;
   needsPassword?: boolean;
   prefill?: SurveyPrefill | null;
   showIntroGate?: boolean;
@@ -302,9 +307,13 @@ export function PublicSurveyForm({
   const live = useLiveAvailability(templateId, initiallyFull);
   // At the submit step, ask first when the quota is full / codes are gone (2 Nov).
   const quota = useSubmitQuotaConfirm(templateId);
+  // The address must be confirmed BEFORE the questions (client test, 4 Nov;
+  // migration 0108 enforces it at the database too). Nothing is answered yet at
+  // that point, so waiting for the email loses nothing.
+  const [emailOk, setEmailOk] = useState(emailVerified);
   const [stage, setStage] = useState<Stage>(() => {
     if (showIntroGate) return "gate";
-    return prefill ? "questions" : "contact";
+    return prefill ? (emailVerified ? "questions" : "verify") : "contact";
   });
   const [consent, setConsent] = useState<SurveyConsent>({
     consentAccepted: false,
@@ -357,11 +366,13 @@ export function PublicSurveyForm({
       const result = await startSurveyAccount({}, form);
       setAccountPending(false);
       if (result.created) {
-        // Straight on to the first question (FB-00032), then pull the
-        // signed-in server props (needsPassword etc.) without remounting —
+        // On to the confirm-your-email step, then the first question (FB-00032).
+        // Pull the signed-in server props (needsPassword etc.) without remounting —
         // a remount would reset this form back to the welcome screen.
         setAccountCreated(true);
-        setStage("questions");
+        // A brand-new account's address is unproven: confirm it first (0108).
+        setEmailOk(false);
+        setStage("verify");
         router.refresh();
         return;
       }
@@ -402,6 +413,14 @@ export function PublicSurveyForm({
     submitPublicSurveyResponse,
     {},
   );
+  // The database refused because the email isn't confirmed (0108): back to the
+  // confirm step. The form stays mounted, so the answers are still here.
+  useEffect(() => {
+    if (state.needsEmailVerification) {
+      setEmailOk(false);
+      setStage("verify");
+    }
+  }, [state]);
   const [botToken, setBotToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
@@ -520,9 +539,25 @@ export function PublicSurveyForm({
         appearance={appearance}
         onStart={(c) => {
           setConsent(c);
-          setStage(prefill ? "questions" : "contact");
+          setStage(prefill ? (emailOk ? "questions" : "verify") : "contact");
         }}
       />
+    );
+  }
+
+  if (stage === "verify") {
+    return (
+      <div className="survey-scope space-y-4" style={typographyVars(typography ?? {})}>
+        <VerifyEmailStep
+          email={contactEmail}
+          onEmailChanged={setContactEmail}
+          onVerified={() => {
+            setEmailOk(true);
+            setStage("questions");
+            router.refresh();
+          }}
+        />
+      </div>
     );
   }
 
@@ -606,8 +641,8 @@ export function PublicSurveyForm({
               </div>
               <p className="text-xs text-[var(--color-ink-soft)]">
                 We&apos;ll create your Live·En·Synergy account so your answers, events and rewards stay
-                together. You&apos;ll go straight on to the questions — we&apos;ll also email you a link to set
-                your password (it arrives titled &ldquo;Reset your password&rdquo;).
+                together. We&apos;ll email you a link to confirm your address — open it and the questions start. You
+                can set a password at the end.
               </p>
               <button
                 type="button"

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isSurveyClosedError, surveyCapacityState } from "@/lib/survey-capacity";
+import { isEmailNotVerifiedError } from "@/lib/survey-verify";
 import { isSurveyNotOpenError, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
 import { requireRole } from "@/lib/profile";
 import { validateAnswers, type SurveyAnswerDraft } from "@/lib/surveys";
@@ -176,6 +177,9 @@ async function submitSurveyResponseInner(
   if (error) {
     if (isSurveyClosedError(error.message)) redirect("/dashboard/participations?notice=survey-closed");
     if (isSurveyNotOpenError(error.message)) return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
+    // 0108: an unverified account can't submit. The middleware already keeps such an
+    // account out of /dashboard/surveys, so this is the backstop — the same screen.
+    if (isEmailNotVerifiedError(error.message)) redirect("/dashboard?verify=required");
     return { error: error.message };
   }
 
