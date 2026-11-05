@@ -1,5 +1,5 @@
 -- =============================================================================
--- Are migrations 0104, 0105, 0106, 0107 and 0108 reflected in this database?
+-- Are migrations 0104 to 0109 reflected in this database?
 --
 -- READ-ONLY. Paste the whole file into the Supabase SQL editor on the project
 -- you want to check (dev, then production). It returns one row per expected
@@ -10,6 +10,7 @@
 --   0106_listings_signed_in_only.sql (event listings no longer public)
 --   0107_fulfilment_consent_and_grants.sql (consent-log constraints + a grant fix)
 --   0108_survey_requires_verified_email.sql (a survey response needs a verified email)
+--   0109_survey_requires_account.sql (a survey response needs an account - no anonymous submit)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -126,7 +127,16 @@ with checks (grp, ord, name, expected, actual) as (
         and tgname = 'survey_responses_require_verified_email')::text),
   ('E. 0108 verified email before a survey', 2, 'its function is SECURITY DEFINER', 'true',
      coalesce((select bool_and(prosecdef) from pg_proc where pronamespace = 'public'::regnamespace
-                and proname = 'survey_responses_require_verified_email'), false)::text)
+                and proname = 'survey_responses_require_verified_email'), false)::text),
+
+  -- ---- F. 0109: a survey response needs an account ---------------------------------
+  ('F. 0109 survey needs an account', 1, 'submit_public_survey_response() refuses a signed-out caller', 'true',
+     coalesce((select bool_and(pg_get_functiondef(p.oid) like '%Please sign in or create an account to answer this survey.%')
+                 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                  and p.proname = 'submit_public_survey_response'), false)::text),
+  ('F. 0109 survey needs an account', 2, 'it is still SECURITY DEFINER', 'true',
+     coalesce((select bool_and(prosecdef) from pg_proc where pronamespace = 'public'::regnamespace
+                and proname = 'submit_public_survey_response'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

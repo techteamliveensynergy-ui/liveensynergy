@@ -40,6 +40,9 @@ export interface PublicSurveyResponseState {
   /** The database refused because the account's email isn't verified (0108):
    *  the form returns to its "confirm your email" step with answers intact. */
   needsEmailVerification?: boolean;
+  /** The session ended (or never existed): a response needs an account, so the
+   *  form offers sign-in in a new tab rather than losing the answers. */
+  needsSignIn?: boolean;
 }
 
 interface SubmitOutcome {
@@ -76,6 +79,9 @@ export async function submitPublicSurveyResponse(
   }
 }
 
+const SIGN_IN_REQUIRED_MESSAGE =
+  "You need to be signed in to submit this survey. Your answers are still on this page — sign in, then press Submit again.";
+
 const SAVE_FAILED_MESSAGE =
   "Something went wrong and we couldn't confirm your response was saved. Your answers are still here — please press Submit again.";
 
@@ -110,6 +116,16 @@ async function submitPublicSurveyResponseInner(
       p_detail: null,
     });
     return { success: true };
+  }
+
+  // A response belongs to an account — register or sign in first (client note,
+  // 4 Nov; the database refuses it too, 0109). Checked before anything is
+  // charged to the rate limit or sent to Turnstile.
+  const {
+    data: { user: submitter },
+  } = await supabase.auth.getUser();
+  if (!submitter) {
+    return { error: SIGN_IN_REQUIRED_MESSAGE, needsSignIn: true };
   }
 
   // A deployment missing its bot-check keys can't accept anything — say so
@@ -482,10 +498,8 @@ export async function registerForEventAfterSurvey(
 export interface SurveyAccountState {
   error?: string;
   /** Set when the email already has an account — we can't auto-sign them in
-   *  (their real password is unknown to us), so a real password-reset email
-   *  has been sent instead and the UI should offer to continue without an
-   *  account rather than block. A successful new-account call never reaches
-   *  this — it redirect()s straight back into the authenticated survey. */
+   *  (their real password is unknown to us), so the form switches to sign-in.
+   *  There is no "continue without an account": a response needs one. */
   alreadyRegistered?: boolean;
   /** The account was created and signed in — the form moves straight on to
    *  the questions and refreshes its server props (FB-00032). Returned
@@ -595,16 +609,13 @@ export async function startSurveyAccount(
 
   if (createError) {
     // Duplicate email — we don't know their existing password, so we can't
-    // sign them in. Send a real reset-password email (same call shape as
-    // requestPasswordReset()) whose link also lands them back on this
-    // survey, authenticated, instead of just erroring out.
+    // sign them in. The form switches to sign-in (password, Google, or an
+    // emailed link they ask for). Nothing is emailed to the address here: the
+    // person who typed it may not be its owner.
     const code = (createError as { code?: string }).code;
     const alreadyRegistered =
       code === "email_exists" || /already.*registered/i.test(createError.message);
     if (alreadyRegistered) {
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${await siteUrl()}/auth/callback?next=/survey/${templateId}`,
-      });
       return { alreadyRegistered: true };
     }
     return { error: createError.message };
@@ -626,7 +637,13 @@ export async function startSurveyAccount(
   // read as "someone reset your password" (16 Oct). Its link verifies the
   // address and then asks them to choose a password (/auth/verify-email).
   // Never fails the flow: they're already signed in and can finish the survey.
-  await sendVerificationEmail(supabase, created.user.id, ROLE_LABELS.audience);
+  // The link returns them to this survey, signed in (client note, 4 Nov).
+  await sendVerificationEmail(
+    supabase,
+    created.user.id,
+    ROLE_LABELS.audience,
+    UUID_RE.test(templateId) ? `/survey/${templateId}` : null,
+  );
 
   revalidatePath(`/survey/${templateId}`);
   return { created: true };
@@ -749,11 +766,65 @@ export async function changeUnverifiedEmail(
       if (profileError) console.error("[survey] profiles.email update failed:", profileError.message);
     }
 
-    const sent = await sendVerificationEmail(supabase, user.id, ROLE_LABELS.audience);
+    const returnTo = String(formData.get("next") ?? "");
+    const sent = await sendVerificationEmail(
+      supabase,
+      user.id,
+      ROLE_LABELS.audience,
+      /^\/survey\/[0-9a-f-]{36}$/i.test(returnTo) ? returnTo : null,
+    );
     if (!sent) return { error: "We saved the new address but couldn't send the email. Use “Send it again”.", email };
     return { message: `Sent — check ${email} (and your spam folder). The new link replaces any earlier one.`, email };
   } catch (e) {
     console.error("[survey] changeUnverifiedEmail threw:", e);
     return { error: "Something went wrong. Please try again." };
   }
+}
+
+
+export interface SignInLinkState {
+  error?: string;
+  message?: string;
+}
+
+/**
+ * "Email me a link to sign in" — for a respondent who already has an account
+ * but doesn't have their password to hand (or is on a phone). Sent only when
+ * they ask, to the address they typed; the link signs them in and returns them
+ * to this survey (/auth/callback?next=). Always answers the same way so it
+ * can't be used to discover which addresses have accounts.
+ */
+export async function emailSurveySignInLink(
+  _prev: SignInLinkState,
+  formData: FormData,
+): Promise<SignInLinkState> {
+  const templateId = String(formData.get("template_id") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!UUID_RE.test(templateId)) return { error: "Something went wrong — please reload the page." };
+  if (email.length > 254 || !EMAIL_SHAPE.test(email)) return { error: "Enter a valid email address." };
+
+  const supabase = await createClient();
+  const { data: gateData, error: gateError } = await supabase.rpc("survey_submission_gate", {
+    p_template_id: templateId,
+    p_ip_hash: await callerIpHash(),
+    p_account_short_minutes: SURVEY_RATE_LIMITS.accountShortMinutes,
+    p_account_short_max: SURVEY_RATE_LIMITS.accountShortMax,
+    p_account_long_max: SURVEY_RATE_LIMITS.accountLongMax,
+    p_ip_short_minutes: SURVEY_RATE_LIMITS.ipShortMinutes,
+    p_ip_short_max: SURVEY_RATE_LIMITS.ipShortMax,
+    p_ip_long_max: SURVEY_RATE_LIMITS.ipLongMax,
+  });
+  if (gateError || !(gateData as { allowed: boolean }).allowed) {
+    return { error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${await siteUrl()}/auth/callback?next=/survey/${templateId}`,
+  });
+  if (error && (error.code === "over_email_send_rate_limit" || /rate|too many|seconds/i.test(error.message))) {
+    return { error: "We've just sent one — please wait a minute before asking for another." };
+  }
+  return {
+    message: `If ${email} has an account, a sign-in link is on its way — open it in this browser and you'll come straight back to the survey. Check your spam folder too.`,
+  };
 }

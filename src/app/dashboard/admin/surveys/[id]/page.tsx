@@ -170,7 +170,7 @@ export default async function EditSurveyPage({
           <div className="text-sm">
             <p className="font-medium text-[var(--color-ink)]">Public survey link</p>
             <p className="text-[var(--color-ink-soft)]">
-              Share this link anywhere — no account required to answer.
+              Share this link anywhere — people create an account or sign in (email or Google) before they answer.
             </p>
           </div>
           <CopyLinkButton url={publicUrl} />

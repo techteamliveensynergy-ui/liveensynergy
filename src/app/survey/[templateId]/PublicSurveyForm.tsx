@@ -12,6 +12,8 @@ import { SteppedQuestions } from "@/components/surveys/SteppedQuestions";
 import { useLiveAvailability } from "@/components/surveys/LiveAvailabilityNotice";
 import { useSubmitQuotaConfirm } from "@/components/surveys/SubmitQuotaDialog";
 import { VerifyEmailStep } from "@/components/surveys/VerifyEmailStep";
+import { SurveySignInPanel } from "@/components/surveys/SurveySignInPanel";
+import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { SurveyIntroGate, type SurveyConsent } from "@/components/surveys/SurveyIntroGate";
 import { SurveyBlockCard } from "@/components/surveys/SurveyBlock";
 import { SurveySlide } from "@/components/surveys/SurveySlide";
@@ -261,6 +263,7 @@ export function PublicSurveyForm({
   isAudience = false,
   emailVerified = true,
   needsPassword = false,
+  googleEnabled = false,
   prefill = null,
   showIntroGate = true,
   layoutMode = "single_page",
@@ -287,6 +290,8 @@ export function PublicSurveyForm({
    *  "confirm your email" step before the questions (0108). */
   emailVerified?: boolean;
   needsPassword?: boolean;
+  /** "Continue with Google" is configured (GOOGLE_SIGNIN_ENABLED). */
+  googleEnabled?: boolean;
   prefill?: SurveyPrefill | null;
   showIntroGate?: boolean;
   layoutMode?: SurveyTemplateLayoutMode;
@@ -326,6 +331,9 @@ export function PublicSurveyForm({
   const [contactPhoneCode, setContactPhoneCode] = useState("+44");
   const [contactPhone, setContactPhone] = useState("");
   const [accountState, setAccountState] = useState<SurveyAccountState>({});
+  // A response belongs to an account: signed-out visitors register or sign in
+  // first (client note, 4 Nov) — there is no "continue without an account".
+  const [accountMode, setAccountMode] = useState<"create" | "signin">("create");
   const [accountPending, setAccountPending] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   // A signed-in respondent on an event-linked survey is registered for the event
@@ -376,6 +384,7 @@ export function PublicSurveyForm({
         router.refresh();
         return;
       }
+      if (result.alreadyRegistered) setAccountMode("signin");
       setAccountState(result);
     } catch {
       setAccountPending(false);
@@ -550,6 +559,7 @@ export function PublicSurveyForm({
       <div className="survey-scope space-y-4" style={typographyVars(typography ?? {})}>
         <VerifyEmailStep
           email={contactEmail}
+          templateId={templateId}
           onEmailChanged={setContactEmail}
           onVerified={() => {
             setEmailOk(true);
@@ -562,26 +572,59 @@ export function PublicSurveyForm({
   }
 
   if (stage === "contact") {
+    const signingIn = accountMode === "signin";
     return (
       <div className="survey-scope space-y-4" style={typographyVars(typography ?? {})}>
-        <div className="card space-y-4 p-5">
-          <h2 className="text-sm font-semibold text-[var(--color-ink)]">About you</h2>
+        <div className="card space-y-4 p-5" data-testid="survey-account-step">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold text-[var(--color-ink)]">
+              {signingIn ? "Sign in to start" : "Create your account to start"}
+            </h2>
+            <p className="text-sm text-[var(--color-ink-soft)]">
+              {signingIn
+                ? "Sign in with the account you already have — we'll bring you straight back to the questions."
+                : "You need a Live·En·Synergy account to take this survey. It keeps your answers, your event and your discount code together."}
+            </p>
+          </div>
           <ErrorBanner error={accountState.error} />
+          {accountState.alreadyRegistered && (
+            <p
+              role="status"
+              className="rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]"
+            >
+              There&apos;s already an account for <strong>{contactEmail}</strong>. Sign in below to continue.
+            </p>
+          )}
 
-          {accountState.alreadyRegistered ? (
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--color-ink-soft)]">
-                We&apos;ve emailed <strong>{contactEmail}</strong> a link to continue as yourself — or keep
-                going below and we&apos;ll save your answers without an account.
+          {googleEnabled && (
+            <>
+              <GoogleButton
+                next={`/survey/${templateId}`}
+                role="audience"
+                lockRole
+                label={signingIn ? "Sign in with Google" : "Continue with Google"}
+              />
+              <OrDivider />
+            </>
+          )}
+
+          {signingIn ? (
+            <>
+              <SurveySignInPanel templateId={templateId} defaultEmail={contactEmail} />
+              <p className="text-center text-sm text-[var(--color-ink-soft)]">
+                New here?{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-[var(--color-brand-dark)] underline"
+                  onClick={() => {
+                    setAccountState({});
+                    setAccountMode("create");
+                  }}
+                >
+                  Create an account
+                </button>
               </p>
-              <button
-                type="button"
-                className="btn btn-ghost w-full"
-                onClick={() => setStage("questions")}
-              >
-                Continue without an account
-              </button>
-            </div>
+            </>
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -640,9 +683,9 @@ export function PublicSurveyForm({
                 </Field>
               </div>
               <p className="text-xs text-[var(--color-ink-soft)]">
-                We&apos;ll create your Live·En·Synergy account so your answers, events and rewards stay
-                together. We&apos;ll email you a link to confirm your address — open it and the questions start. You
-                can set a password at the end.
+                We&apos;ll create your account and email you a link to confirm your address. The link signs you in
+                and brings you back here — the questions start once it&apos;s confirmed. You can set a password at
+                the end.
               </p>
               <button
                 type="button"
@@ -652,20 +695,19 @@ export function PublicSurveyForm({
               >
                 {accountPending ? "Creating your account…" : "Create my account & continue"}
               </button>
-              {/* Resilience, not the primary path: if account creation ever
-                  fails outright (a config problem, a network blip), this
-                  keeps the survey completable rather than a hard dead end —
-                  same reasoning as the "already registered" branch above. */}
-              {accountState.error && (
+              <p className="text-center text-sm text-[var(--color-ink-soft)]">
+                Already have an account?{" "}
                 <button
                   type="button"
-                  className="btn btn-ghost w-full"
-                  disabled={accountPending}
-                  onClick={() => setStage("questions")}
+                  className="font-semibold text-[var(--color-brand-dark)] underline"
+                  onClick={() => {
+                    setAccountState({});
+                    setAccountMode("signin");
+                  }}
                 >
-                  Continue without an account
+                  Sign in
                 </button>
-              )}
+              </p>
             </>
           )}
         </div>
@@ -690,6 +732,19 @@ export function PublicSurveyForm({
       style={typographyVars(typography ?? {})}
     >
       <ErrorBanner error={state.error} />
+      {state.needsSignIn && (
+        <p className="text-sm">
+          <a
+            href={`/auth/sign-in?redirectTo=${encodeURIComponent(`/survey/${templateId}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[var(--color-brand-dark)] underline"
+          >
+            Sign in in a new tab
+          </a>
+          , then come back here and press Submit again.
+        </p>
+      )}
       {quota.dialog}
       {registersForEvent && event && <input type="hidden" name="register_event_id" value={event.id} readOnly />}
       <input type="hidden" name="template_id" value={templateId} />
@@ -708,8 +763,8 @@ export function PublicSurveyForm({
       ) : null}
       {accountCreated && (
         <p className="rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm">
-          ✓ Your account is set up. We&apos;ve emailed <strong>{contactEmail}</strong> a link to set your
-          password — use it whenever you like.
+          ✓ Your account is set up and <strong>{contactEmail}</strong> is confirmed. You can set a password once
+          you&apos;ve finished.
         </p>
       )}
       <input

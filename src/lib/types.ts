@@ -827,7 +827,7 @@ export interface SurveyTemplate {
   status: SurveyTemplateStatus;
   title: string;
   description: string | null;
-  /** Public/link-shareable pre-event survey — no account required to answer. */
+  /** Public/link-shareable pre-event survey — openable by anyone; answering needs an account (0109). */
   is_public: boolean;
   /** Shown on the public page before the questions start. */
   intro_message: string | null;

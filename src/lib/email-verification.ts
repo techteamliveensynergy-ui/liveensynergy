@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notify } from "@/lib/notifications";
 import { siteUrl } from "@/lib/site-url";
+import { safeRedirectPath } from "@/lib/urls";
 
 /**
  * Emails a signed-in, unverified account its welcome / confirm-your-email
@@ -13,13 +14,21 @@ import { siteUrl } from "@/lib/site-url";
  *
  * `supabase` must be the caller's own cookie client, signed in as the
  * account being verified.
+ *
+ * `next` is a same-site path to land on after the link is opened (a survey
+ * respondent returns to their survey, signed in — client note, 4 Nov). It is
+ * re-validated when the link is used (/auth/verify-email); anything that isn't
+ * a plain site path is dropped here too.
  */
 export async function sendVerificationEmail(
   supabase: SupabaseClient,
   profileId: string,
   roleLabel: string,
+  next?: string | null,
 ): Promise<boolean> {
   try {
+    const returnTo = safeRedirectPath(next, "");
+    const nextQuery = returnTo ? `&next=${encodeURIComponent(returnTo)}` : "";
     const token = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(token).digest("hex");
     const { data: issued, error } = await supabase.rpc("issue_email_verification", {
@@ -33,7 +42,7 @@ export async function sendVerificationEmail(
         recipientProfileId: profileId,
         variables: {
           role_label: roleLabel,
-          verify_link: `${await siteUrl()}/auth/verify-email?token=${token}`,
+          verify_link: `${await siteUrl()}/auth/verify-email?token=${token}${nextQuery}`,
         },
       },
       { client: supabase },

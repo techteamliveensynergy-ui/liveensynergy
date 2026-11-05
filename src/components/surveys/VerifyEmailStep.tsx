@@ -36,10 +36,13 @@ function PendingButton({ label, pending, className }: { label: string; pending: 
  */
 export function VerifyEmailStep({
   email,
+  templateId,
   onVerified,
   onEmailChanged,
 }: {
   email: string;
+  /** The survey the link in the email should bring the respondent back to. */
+  templateId: string;
   onVerified: () => void;
   onEmailChanged: (email: string) => void;
 }) {
@@ -113,8 +116,9 @@ export function VerifyEmailStep({
       <h2 className="text-sm font-semibold text-[var(--color-ink)]">Confirm your email to start</h2>
       <p className="text-sm text-[var(--color-ink-soft)]">
         We&apos;ve sent a link to <strong className="break-all text-[var(--color-ink)]">{email}</strong>. Open it to
-        confirm the address is yours, then come back to this page — the survey starts by itself. We need a real
-        address because your discount code is sent there.
+        confirm the address is yours. The link signs you in and brings you straight back to this survey — or, if
+        this page is still open, it carries on by itself. We need a real address because your discount code is
+        sent there.
       </p>
 
       <div role="status" aria-live="polite" className="space-y-1 text-sm">
@@ -134,6 +138,7 @@ export function VerifyEmailStep({
           {checking ? "Checking…" : "I've confirmed it"}
         </button>
         <form action={resendAction}>
+          <input type="hidden" name="next" value={`/survey/${templateId}`} />
           <PendingButton label="Send it again" pending="Sending…" className="btn btn-ghost" />
         </form>
         {!changing && (
@@ -145,6 +150,7 @@ export function VerifyEmailStep({
 
       {changing && (
         <form action={changeAction} className="space-y-2 rounded-xl bg-[var(--color-mist)] p-4">
+          <input type="hidden" name="next" value={`/survey/${templateId}`} />
           <label htmlFor="verify_new_email" className="block text-sm font-medium text-[var(--color-ink)]">
             Your correct email address
           </label>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { requireProfile } from "@/lib/profile";
+import { needsGoogleCompletion } from "@/lib/google-auth";
 import { createClient } from "@/lib/supabase/server";
 import { navForRole } from "@/lib/dashboard-nav";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -27,6 +28,8 @@ export default async function DashboardLayout({
 
   // No profile row yet, or onboarding not finished → route to onboarding.
   if (!profile) redirect("/onboarding");
+  // A Google sign-up that stopped before choosing a role / accepting the Terms.
+  if (needsGoogleCompletion(user, profile)) redirect("/auth/complete?next=/dashboard");
 
   // Deactivated accounts can't use the dashboard.
   if (!profile.is_active) {

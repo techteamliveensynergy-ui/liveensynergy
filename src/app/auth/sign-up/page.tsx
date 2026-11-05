@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
+import { googleSignInEnabled } from "@/lib/google-auth";
 import { SignUpForm } from "./SignUpForm";
 
 export const metadata = { title: "Create your account" };
@@ -27,7 +28,7 @@ export default async function SignUpPage({
         </>
       }
     >
-      <SignUpForm initialRole={role} event={event} />
+      <SignUpForm initialRole={role} event={event} googleEnabled={googleSignInEnabled()} />
     </AuthShell>
   );
 }

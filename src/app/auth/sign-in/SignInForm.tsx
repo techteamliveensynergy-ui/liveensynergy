@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { signIn, type AuthState } from "../actions";
 import { ResendConfirmationForm } from "../check-email/ResendConfirmationForm";
 
@@ -17,11 +18,23 @@ function SubmitButton() {
   );
 }
 
-export function SignInForm({ redirectTo }: { redirectTo: string }) {
+export function SignInForm({
+  redirectTo,
+  googleEnabled = false,
+}: {
+  redirectTo: string;
+  googleEnabled?: boolean;
+}) {
   const [state, formAction] = useActionState<AuthState, FormData>(signIn, {});
 
   return (
     <div className="space-y-4">
+    {googleEnabled && (
+      <>
+        <GoogleButton next={redirectTo === "/dashboard" ? "/onboarding" : redirectTo} label="Sign in with Google" />
+        <OrDivider />
+      </>
+    )}
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="redirectTo" value={redirectTo} />
 
