@@ -6,6 +6,7 @@ import { formatDate, timeAgo, ukDayKey } from "@/lib/format";
 import { formatEventDateTime } from "@/lib/event-time";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStagesFor } from "@/lib/data/campaign-stages";
+import { loadArtistPending } from "@/lib/data/artist-pending";
 import type { CampaignStatus } from "@/lib/types";
 
 export const metadata = { title: "Admin console" };
@@ -127,6 +128,8 @@ export default async function AdminPage() {
     (p) => p.status === "attendance_verified",
   );
 
+  const artistPending = await loadArtistPending(supabase);
+
   const awaitingPayment = campaigns.filter((c) => c.status === "awaiting_payment");
   const liveDeals = sponsored.filter((e) => e.status === "confirmed");
   const liveCampaignIds = new Set(liveDeals.map((e) => e.campaign_id).filter(Boolean));
@@ -162,6 +165,19 @@ export default async function AdminPage() {
         ? `/dashboard/admin/events/sponsored/${formsToSetUp[0].id}#fulfilment`
         : "/dashboard/admin/events?tab=sponsored",
       tint: "bg-[var(--color-gold)]",
+    },
+    {
+      label: "Codes & artist steps",
+      count: artistPending.artistEvents + artistPending.teamOnlyEvents,
+      href: "/dashboard/admin/artist-pending",
+      tint: artistPending.overdueEvents ? "bg-[var(--color-pink)]" : "bg-[var(--color-gold)]",
+      hint: artistPending.overdueEvents
+        ? `${artistPending.overdueEvents} past the codes deadline`
+        : artistPending.peopleWaiting
+          ? `${artistPending.peopleWaiting} waiting for a code`
+          : artistPending.readyToOpen
+            ? `${artistPending.readyToOpen} ready to open`
+            : undefined,
     },
     {
       label: "Awaiting agreement",
@@ -249,6 +265,9 @@ export default async function AdminPage() {
                 {a.count}
               </p>
               <p className="mt-1 text-sm text-[var(--color-ink)]/75">{a.label}</p>
+              {"hint" in a && a.hint && (
+                <p className="mt-0.5 text-xs font-medium text-[var(--color-accent)]">{a.hint}</p>
+              )}
             </Link>
           ))}
         </div>

@@ -21,6 +21,7 @@ import type { SurveyRewardOutcome } from "@/lib/survey-reward";
 import { EMAIL_NOT_VERIFIED_MESSAGE, isEmailNotVerifiedError } from "@/lib/survey-verify";
 import { siteUrl } from "@/lib/site-url";
 import { sendVerificationEmail } from "@/lib/email-verification";
+import { rewardOutcomeFor } from "@/lib/survey-reward-lookup";
 import { ROLE_LABELS } from "@/lib/constants";
 
 export interface PublicSurveyResponseState {
@@ -105,8 +106,15 @@ async function submitPublicSurveyResponseInner(
 
   const ipHash = await callerIpHash();
 
-  // 1. Honeypot — a filled trap reports the same success as a real
-  // submission, so nothing tips off the bot operator.
+  // 1. Honeypot — a filled trap from a SIGNED-OUT caller reports the same
+  // success as a real submission, so nothing tips off the bot operator.
+  //
+  // A signed-in respondent is never silently dropped: they have an account and
+  // a confirmed email behind them, and a browser's autofill can fill an
+  // off-screen field. That is what happened to a signed-in tester on 5 Nov — the
+  // thank-you appeared, nothing was saved, no registration, no code. The attempt
+  // is still logged as a honeypot hit (for the audit), then processed normally;
+  // the rate limit and the bot check below still apply.
   const honeypot = String(formData.get(SURVEY_HONEYPOT_FIELD) ?? "").trim();
   if (honeypot) {
     await supabase.rpc("log_survey_attempt", {
@@ -115,7 +123,10 @@ async function submitPublicSurveyResponseInner(
       p_outcome: "honeypot",
       p_detail: null,
     });
-    return { success: true };
+    const {
+      data: { user: honeypotUser },
+    } = await supabase.auth.getUser();
+    if (!honeypotUser) return { success: true };
   }
 
   // A response belongs to an account — register or sign in first (client note,
@@ -379,57 +390,16 @@ async function registerAndRewardAfterSubmit(
     revalidatePath("/dashboard/participations");
     revalidatePath("/dashboard/rewards");
 
-    // The code, if the registration trigger just issued one (or it already existed).
-    const { data: part } = await supabase
-      .from("participations")
-      .select("id")
-      .eq("sponsored_event_id", ev.id)
-      .eq("audience_profile_id", user.id)
-      .maybeSingle<{ id: string }>();
-    if (part) {
-      const { data: codeRow } = await supabase
-        .from("reward_codes")
-        .select("code, value_label, redemption_platform, redemption_url, redemption_instructions, expires_at, is_shared")
-        .eq("participation_id", part.id)
-        .neq("status", "void")
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<{
-          code: string;
-          value_label: string | null;
-          redemption_platform: string | null;
-          redemption_url: string | null;
-          redemption_instructions: string | null;
-          expires_at: string | null;
-          is_shared: boolean;
-        }>();
-      if (codeRow) {
-        return {
-          registered: true,
-          reward: {
-            status: "issued",
-            code: codeRow.code,
-            valueLabel: codeRow.value_label,
-            platform: codeRow.redemption_platform,
-            url: codeRow.redemption_url,
-            instructions: codeRow.redemption_instructions,
-            expiresAt: codeRow.expires_at,
-            shared: codeRow.is_shared,
-          },
-        };
-      }
-    }
-
-    // No code. Say why, without revealing how the quality check works (M-06).
-    if (flags.heldForReview) return { registered: true, reward: { status: "pending", reason: "held" } };
-    if (flags.underReview) return { registered: true, reward: { status: "pending", reason: "review" } };
-    if (ev.artist_profile_id && !ev.reward_codes_confirmed_at) {
-      return { registered: true, reward: { status: "pending", reason: "not_ready" } };
-    }
-    const { data: codesState } = await supabase.rpc("survey_codes_state", { p_template_id: templateId });
-    if (codesState === "exhausted") return { registered: true, reward: { status: "pending", reason: "no_codes" } };
-    if (codesState === "none") return { registered: true, reward: { status: "pending", reason: "not_ready" } };
-    return { registered: true, reward: { status: "pending", reason: "unknown" } };
+    // The code, if the registration trigger just issued one (or it already
+    // existed) — or why there isn't one yet.
+    const reward = await rewardOutcomeFor(supabase, {
+      templateId,
+      eventId: ev.id,
+      userId: user.id,
+      underReview: flags.underReview,
+      heldForReview: flags.heldForReview,
+    });
+    return { registered: true, reward };
   } catch (e) {
     console.error("[survey] registerAndRewardAfterSubmit threw:", e);
     return {};

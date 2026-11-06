@@ -73,10 +73,12 @@ async function submitSurveyResponseInner(
   // Turnstile (the only outbound network call in the whole pipeline) ->
   // submit_survey_response().
 
-  // 1. Honeypot. A filled trap is conclusive, so the response looks
-  // identical to a real success — nothing tips off the bot operator. The
-  // redirect must stay outside any try/catch: it works by throwing, and
-  // swallowing that would turn the fake success into a hang.
+  // 1. Honeypot. Every caller here is a signed-in, verified audience account
+  // (requireRole above), and a browser's autofill can fill an off-screen field,
+  // so a filled trap is NOT conclusive: silently dropping the response while
+  // showing "received" lost a real tester's answers on 5 Nov. The hit is still
+  // logged for the audit, then the submission is processed normally — the rate
+  // limit and the bot check below still apply.
   const honeypot = String(formData.get(SURVEY_HONEYPOT_FIELD) ?? "").trim();
   if (honeypot) {
     await supabase.rpc("log_survey_attempt", {
@@ -85,8 +87,6 @@ async function submitSurveyResponseInner(
       p_outcome: "honeypot",
       p_detail: null,
     });
-    revalidatePath("/dashboard/participations");
-    redirect("/dashboard/participations?notice=survey-submitted");
   }
 
   // A deployment missing its bot-check keys can't accept anything — say so

@@ -210,6 +210,7 @@ code edit.
 | `auto_issue_reward_code()` (+ triggers), `notify_from_db()` | Discount codes release automatically when a campaign survey response becomes `pass` (0075) — from scoring or an admin's approval; also on registration and on the artist confirming codes. Runs as triggers because the participant can't write `reward_codes`. `notify_from_db()` is `notify()` for SQL callers: renders the same templates into `enqueue_notification()`. |
 | `public_event_page()`, `public_live_events()`, `sponsored_event_is_public()` | The public event page `/events/[id]` (0095, #48). `sponsored_events` is signed-in only, so the signed-out page reads one jsonb of chosen fields through a definer function that returns null unless the event is confirmed and its campaign is paid and live. The team's extra copy lives in admin-only `sponsored_event_pages`. A new field on the page needs adding to the function, not just the table. |
 | `submit_public_survey_response()` (0109 guard) | A survey response belongs to an account: the RPC (granted to `anon` since 0037) returns `invalid` when `auth.uid()` is null, matching the page, which makes a signed-out visitor create an account / sign in (email, emailed link or Google) before question 1. There is no "continue without an account". |
+| `my_survey_response()` (0111) | "Have I answered this survey, and did it pass?" for the caller only. A response saved from the survey link has `respondent_profile_id` but no `participation_id`, and the only respondent read policy on `survey_responses` goes through `participation_id` — so the page could not see it. The survey page uses this to show `CompletedSurveyCard` (thank-you + discount code, from `rewardOutcomeFor()` in `src/lib/survey-reward-lookup.ts`) instead of the intro. 0111 also re-declares `sponsored_event_survey_completions` to count survey-link responses (the "Surveys completed" tiles). |
 | `phone_in_use()` | Answers "is this number taken?" without revealing whose. Scoped to `audience_members` only (0023) — one person, one audience account; artists and brands may reuse a number. |
 | `admin_auth_activity()` | Hands admins the `auth.users.last_sign_in_at` mapping RLS hides. |
 | `submit_survey_response()` | Validates every answer against its question's own options/config, then writes the response + all its answers in one call — Supabase-js can't wrap that in a client transaction. No respondent insert policy exists on `survey_responses`/`survey_answers` at all, since a `with check` can't restrict which columns an inserting client sets (it would let the raw SDK write a fabricated `quality_status`). |
@@ -381,6 +382,18 @@ Path alias: `@/*` → `./src/*`.
 - `docs/database-migrations.md` — running log of every numbered migration; migrations are applied manually, not by the deploy.
 - `docs/qa-creds.md` — seeded dev-only test accounts and how to add more.
 - `docs/TEST-CASES.md`, `docs/standup-*-tracker.md`, `docs/standup-*-testing-log.md` — client review items and their status; the standup trackers are what recent commits are working through.
+- `src/lib/data/artist-pending.ts` — the admin **Waiting on artists** tab
+  (`/dashboard/admin/artist-pending`) and the overview tile read this one loader:
+  per open sponsorship, what an *artist* owes (agreement, fulfilment-form consent,
+  reward-code confirmation + deadline) and what is the *team's* (no code tiers, form
+  not sent). Codes only issue once the artist confirms them (`auto_issue_reward_code`,
+  0075), so this is where an admin sees why people have no code. Team-side prompts
+  sit in the same list ("Waiting on us"): no code tiers, unique codes not generated,
+  fulfilment form not sent, and **ready to open** (artist finished, nobody pressed
+  "Open now" — the last manual step). Each item has a
+  **Nudge artist** button (`nudgeArtist()`, 0110): re-checks the item is still pending, one
+  reminder per event + item per 12 h, logged in `artist_nudges`, sent as the
+  `sponsorship.artist_nudge` notification.
 - `docs/payments-kyc-strategy.md`, `docs/email-branding-research.md` — design notes for work not yet built.
 - `docs/new-model-implementation-plan.md` — phased plan for the pricing-tier,
   admin-only-campaign, survey, artist-payment-split and admin-mediated-

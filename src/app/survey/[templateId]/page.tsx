@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CompletedSurveyCard } from "@/components/surveys/CompletedSurveyCard";
+import { rewardOutcomeFor } from "@/lib/survey-reward-lookup";
 import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { createClient } from "@/lib/supabase/server";
@@ -120,6 +122,51 @@ export default async function PublicSurveyPage({
   if (event) {
     const { data: isPublic } = await supabase.rpc("sponsored_event_is_public", { p_id: event.id });
     if (isPublic === true) eventPageHref = `/events/${event.id}`;
+  }
+
+  // Someone who has already answered sees their thank-you — and their discount
+  // code — again, from the database (0111). This also is what a respondent sees
+  // straight after submitting: the submit registers them, the page re-renders,
+  // and without this the re-render fell through to the survey intro and the
+  // code they had just been given disappeared (QA 5 Nov).
+  if (user) {
+    const { data: own } = await supabase.rpc("my_survey_response", { p_template_id: templateId });
+    const answered = own as { submitted_at: string; passed: boolean } | null;
+    if (answered?.submitted_at) {
+      const [{ data: viewer }, { data: part }] = await Promise.all([
+        supabase.from("profiles").select("role").eq("id", user.id).maybeSingle<{ role: string }>(),
+        event
+          ? supabase
+              .from("participations")
+              .select("id")
+              .eq("sponsored_event_id", event.id)
+              .eq("audience_profile_id", user.id)
+              .maybeSingle<{ id: string }>()
+          : Promise.resolve({ data: null }),
+      ]);
+      const registered = Boolean(part) && viewer?.role === "audience";
+      const reward =
+        registered && event
+          ? await rewardOutcomeFor(supabase, {
+              templateId,
+              eventId: event.id,
+              userId: user.id,
+              underReview: !answered.passed,
+              heldForReview: false,
+            })
+          : null;
+      return (
+        <Shell>
+          <CompletedSurveyCard
+            surveyTitle={tpl.title}
+            submittedAt={formatDateTime(answered.submitted_at)}
+            eventName={viewer?.role === "audience" ? (event?.name ?? null) : null}
+            registered={registered}
+            reward={reward}
+          />
+        </Shell>
+      );
+    }
   }
 
   // Already-registered participant taking their own campaign's survey via a

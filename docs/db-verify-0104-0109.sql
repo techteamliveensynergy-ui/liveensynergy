@@ -1,5 +1,5 @@
 -- =============================================================================
--- Are migrations 0104 to 0109 reflected in this database?
+-- Are migrations 0104 to 0111 reflected in this database?
 --
 -- READ-ONLY. Paste the whole file into the Supabase SQL editor on the project
 -- you want to check (dev, then production). It returns one row per expected
@@ -11,6 +11,8 @@
 --   0107_fulfilment_consent_and_grants.sql (consent-log constraints + a grant fix)
 --   0108_survey_requires_verified_email.sql (a survey response needs a verified email)
 --   0109_survey_requires_account.sql (a survey response needs an account - no anonymous submit)
+--   0110_artist_nudges.sql (admin "Nudge artist" reminders: log table + notification event)
+--   0111_survey_own_response_and_completions.sql (survey-link responses visible: own-response RPC + completions view)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -136,7 +138,30 @@ with checks (grp, ord, name, expected, actual) as (
                   and p.proname = 'submit_public_survey_response'), false)::text),
   ('F. 0109 survey needs an account', 2, 'it is still SECURITY DEFINER', 'true',
      coalesce((select bool_and(prosecdef) from pg_proc where pronamespace = 'public'::regnamespace
-                and proname = 'submit_public_survey_response'), false)::text)
+                and proname = 'submit_public_survey_response'), false)::text),
+
+  -- ---- G. 0110: Nudge artist -----------------------------------------------------
+  ('G. 0110 nudge artist', 1, 'artist_nudges table exists with row level security on', 'true',
+     coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.artist_nudges')), false)::text),
+  ('G. 0110 nudge artist', 2, 'admin-only policy', '1',
+     (select count(*) from pg_policy where polrelid = to_regclass('public.artist_nudges')
+        and polname = 'artist_nudges: admin all')::text),
+  ('G. 0110 nudge artist', 3, 'notification event + settings + 2 templates', '1/1/2',
+     (select count(*) from public.notification_events    where key = 'sponsorship.artist_nudge')::text || '/' ||
+     (select count(*) from public.notification_settings  where event_key = 'sponsorship.artist_nudge')::text || '/' ||
+     (select count(*) from public.notification_templates where event_key = 'sponsorship.artist_nudge')::text),
+
+  -- ---- H. 0111: survey-link responses are visible --------------------------------
+  ('H. 0111 survey-link responses', 1, 'my_survey_response() exists, SECURITY DEFINER', 'true',
+     coalesce((select bool_and(prosecdef) from pg_proc where pronamespace = 'public'::regnamespace
+                and proname = 'my_survey_response'), false)::text),
+  ('H. 0111 survey-link responses', 2, 'signed-out cannot call it; signed-in can', 'false/true',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' ||
+                      has_function_privilege('authenticated', p.oid, 'EXECUTE')::text
+                 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                  and p.proname = 'my_survey_response' limit 1), 'missing')),
+  ('H. 0111 survey-link responses', 3, 'completions view also matches respondent_profile_id', 'true',
+     coalesce((select pg_get_viewdef(to_regclass('public.sponsored_event_survey_completions')) like '%respondent_profile_id%'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result
