@@ -1,6 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
-import { renderEmailHtml } from "./layout";
+import { renderEmailHtml, siteOrigin } from "./layout";
+import { emailActionFor } from "@/lib/notification-links";
 import { loadEmailBranding, renderEmailText } from "./branding";
 import { sendViaResend } from "./resend";
 
@@ -13,6 +14,8 @@ interface ClaimedRow {
   bcc: string[] | null;
   subject: string | null;
   body: string | null;
+  /** Site path the email's action button points at (0112); null for older rows. */
+  link?: string | null;
   attempts: number;
 }
 
@@ -97,6 +100,7 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
 
     const subject = row.subject ?? "(no subject)";
     const text = row.body ?? "";
+    const action = emailActionFor(row.link, siteOrigin(), text);
     const keep = (a: string) => !suppressed.has(a.toLowerCase());
 
     const outcome = await sendViaResend({
@@ -106,8 +110,8 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
       bcc: redirectTo && !isProduction ? null : (row.bcc ?? []).filter(keep),
       subject:
         redirectTo && !isProduction ? `[preview → ${row.to_email}] ${subject}` : subject,
-      text: renderEmailText(text, branding),
-      html: renderEmailHtml({ subject, body: text }, branding),
+      text: renderEmailText(text, branding, action),
+      html: renderEmailHtml({ subject, body: text, action }, branding),
     });
 
     if (outcome.ok) {

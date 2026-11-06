@@ -1,5 +1,5 @@
 -- =============================================================================
--- Are migrations 0104 to 0111 reflected in this database?
+-- Are migrations 0104 to 0112 reflected in this database?
 --
 -- READ-ONLY. Paste the whole file into the Supabase SQL editor on the project
 -- you want to check (dev, then production). It returns one row per expected
@@ -13,6 +13,7 @@
 --   0109_survey_requires_account.sql (a survey response needs an account - no anonymous submit)
 --   0110_artist_nudges.sql (admin "Nudge artist" reminders: log table + notification event)
 --   0111_survey_own_response_and_completions.sql (survey-link responses visible: own-response RPC + completions view)
+--   0112_notification_links_and_survey_review.sql (links on emails; review notifications to admin + respondent)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -161,7 +162,24 @@ with checks (grp, ord, name, expected, actual) as (
                  from pg_proc p where p.pronamespace = 'public'::regnamespace
                   and p.proname = 'my_survey_response' limit 1), 'missing')),
   ('H. 0111 survey-link responses', 3, 'completions view also matches respondent_profile_id', 'true',
-     coalesce((select pg_get_viewdef(to_regclass('public.sponsored_event_survey_completions')) like '%respondent_profile_id%'), false)::text)
+     coalesce((select pg_get_viewdef(to_regclass('public.sponsored_event_survey_completions')) like '%respondent_profile_id%'), false)::text),
+
+  -- ---- I. 0112: links on emails + review notifications ---------------------------
+  ('I. 0112 notification links + review', 1, 'email_outbox.link exists', '1',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and table_name = 'email_outbox' and column_name = 'link')::text),
+  ('I. 0112 notification links + review', 2, 'enqueue_notification() stores the link on the email row', 'true',
+     coalesce((select bool_and(pg_get_functiondef(p.oid) like '%status, link)%')
+                 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                  and p.proname = 'enqueue_notification'), false)::text),
+  ('I. 0112 notification links + review', 3, '3 events + 3 settings + 6 templates', '3/3/6',
+     (select count(*) from public.notification_events where key in ('admin.survey_needs_review','survey.under_review','survey.review_declined'))::text || '/' ||
+     (select count(*) from public.notification_settings where event_key in ('admin.survey_needs_review','survey.under_review','survey.review_declined'))::text || '/' ||
+     (select count(*) from public.notification_templates where event_key in ('admin.survey_needs_review','survey.under_review','survey.review_declined'))::text),
+  ('I. 0112 notification links + review', 4, 'three review triggers on survey_responses', '3',
+     (select count(*) from pg_trigger where not tgisinternal and tgrelid = to_regclass('public.survey_responses')
+        and tgname in ('survey_responses_review_notify_insert', 'survey_responses_review_notify_update',
+                       'survey_responses_review_declined'))::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

@@ -43,7 +43,21 @@ export function OnboardingShell({
       <header className="border-b border-black/10 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <Logo />
-          <span className="chip">{ROLE_LABELS[role]} setup</span>
+          <div className="flex items-center gap-3">
+            <span className="chip">{ROLE_LABELS[role]} setup</span>
+            {/* Onboarding has no sidebar, and every page sends an unfinished
+                account back here — without this a new account could not leave
+                (QA 5 Nov: stuck until the site's data was cleared). A plain
+                form post, so it also works from the client form pages. */}
+            <form action="/auth/sign-out" method="post">
+              <button
+                type="submit"
+                className="text-sm font-medium text-[var(--color-ink-soft)] underline hover:text-[var(--color-ink)]"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       {/* pb-28 so the form's submit row clears the fixed feedback tab. */}

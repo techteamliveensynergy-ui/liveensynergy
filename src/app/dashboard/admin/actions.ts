@@ -64,6 +64,7 @@ export async function setUserRole(formData: FormData) {
   await notify({
     eventKey: "account.role_changed",
     recipientProfileId: userId,
+    link: "/dashboard",
     variables: { role_label: ROLE_LABELS[role as Role] ?? role },
   });
   revalidatePath("/dashboard/admin/users");
@@ -82,6 +83,7 @@ export async function assignPlan(formData: FormData) {
   await notify({
     eventKey: "account.plan_changed",
     recipientProfileId: userId,
+    link: "/dashboard",
     variables: { plan_name: plan?.name ?? "No plan" },
   });
 
@@ -109,6 +111,8 @@ export async function toggleUserActive(formData: FormData) {
   await notify({
     eventKey: next ? "account.restored" : "account.blocked",
     recipientProfileId: userId,
+    // A blocked account can't open the app, so only the restored one links.
+    link: next ? "/dashboard" : undefined,
     variables: { reason: reason ?? undefined },
   });
 

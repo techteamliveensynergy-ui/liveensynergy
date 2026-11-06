@@ -2,6 +2,7 @@ import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { drainOutbox } from "@/lib/email/drain";
+import { safeAppPath } from "@/lib/notification-links";
 
 /**
  * Notification dispatch.
@@ -67,7 +68,10 @@ export async function notify(
 ): Promise<void> {
   try {
     const supabase = opts.client ?? (await createClient());
-    const { eventKey, recipientProfileId, variables = {}, link } = input;
+    const { eventKey, recipientProfileId, variables = {} } = input;
+    // A same-site path or nothing: the link becomes the in-app row's target AND
+    // the email's action button (0112), so it must never point off-site.
+    const link = safeAppPath(input.link);
 
     const [{ data: settings }, { data: templateRows }, { data: profile }] =
       await Promise.all([
@@ -113,7 +117,9 @@ export async function notify(
         ? renderTemplate(inApp!.subject, vars) || eventKey
         : null,
       p_in_app_body: wantsInApp ? renderTemplate(inApp!.body, vars) : null,
-      p_link: wantsInApp ? (link ?? null) : null,
+      // Whichever channel is on: the in-app row uses it as its target, the
+      // email as its action button.
+      p_link: link,
       p_email_to: wantsEmail ? toEmail : null,
       p_email_cc: wantsEmail ? (settings.email_cc ?? null) : null,
       p_email_bcc: wantsEmail ? (settings.email_bcc ?? null) : null,

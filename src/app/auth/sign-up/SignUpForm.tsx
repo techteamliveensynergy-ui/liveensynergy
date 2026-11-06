@@ -97,11 +97,15 @@ export function SignUpForm({
   }
 
   // Step 2 — account details.
+  //
+  // "Sign up with Google" is its OWN <form> (it posts to the Google action), so
+  // it must sit OUTSIDE the sign-up <form>: a form nested in a form is invalid
+  // HTML, the browser drops the inner tag, and the Google button silently
+  // became a submit button of the sign-up form — which then failed validation
+  // (empty name/email/password) or ran sign-up instead. QA 5 Nov: "Opening
+  // Google…" and nothing happened, on sign-up only (sign-in has no outer form).
   return (
-    <form action={formAction} className="space-y-5">
-      <input type="hidden" name="role" value={role} />
-      {event && <input type="hidden" name="event" value={event} />}
-
+    <div className="space-y-5">
       <div className="flex items-center justify-between rounded-lg bg-[var(--color-mist)] px-3 py-2 text-sm">
         <span>
           Joining as{" "}
@@ -118,12 +122,6 @@ export function SignUpForm({
         </button>
       </div>
 
-      {state.error && (
-        <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
-          {state.error}
-        </p>
-      )}
-
       {googleEnabled && (
         <>
           {/* The role card picked in step 1 travels with the Google round trip;
@@ -131,6 +129,16 @@ export function SignUpForm({
           <GoogleButton role={role} label="Sign up with Google" />
           <OrDivider />
         </>
+      )}
+
+    <form action={formAction} className="space-y-5">
+      <input type="hidden" name="role" value={role} />
+      {event && <input type="hidden" name="event" value={event} />}
+
+      {state.error && (
+        <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
+          {state.error}
+        </p>
       )}
 
       <Field label="Full name" htmlFor="fullName" required>
@@ -216,5 +224,6 @@ export function SignUpForm({
 
       <SubmitButton />
     </form>
+    </div>
   );
 }

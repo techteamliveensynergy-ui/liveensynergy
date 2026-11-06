@@ -47,6 +47,7 @@ export async function submitContactMessage(
   // Contact submissions are invisible without this — there's no inbox screen yet.
   await notifyAdmins({
     eventKey: "admin.contact_message",
+    link: "/dashboard/admin/enquiries",
     variables: {
       name,
       email,
