@@ -47,7 +47,7 @@ export const SURVEY_HELD_FOR_REVIEW_MESSAGE =
  * thresholds, so respondents can't learn the rules (M-06).
  */
 export const SURVEY_UNDER_REVIEW_MESSAGE =
-  "Thanks - your response has been received and is being reviewed. Any reward depends on it passing review.";
+  "Thanks - your response has been received and is under review. We'll get back to you shortly: if everything is fine, your discount code will be emailed to you and will appear under My rewards.";
 /** Shown when the response passed the quality check at submit time. */
 export const SURVEY_RECEIVED_MESSAGE = "Thanks - your survey response has been received.";
 

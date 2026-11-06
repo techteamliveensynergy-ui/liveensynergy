@@ -44,12 +44,12 @@ export type SurveyRewardOutcome =
 
 export const REWARD_PENDING_COPY: Record<SurveyRewardPendingReason, { title: string; body: string }> = {
   review: {
-    title: "Your response is being reviewed",
-    body: "Thanks - your response has been received and is being reviewed. Any reward depends on it passing review. You're registered for the event, and if a code is issued we'll email it to you and show it under My rewards.",
+    title: "Your response is under review",
+    body: "Thanks - we've received your response and our team is taking a look at it. We'll get back to you shortly: if everything is fine, your discount code will be emailed to you and will appear under My rewards. You're registered for the event in the meantime, and there's nothing you need to do.",
   },
   held: {
-    title: "Your response will be reviewed",
-    body: "Your response has been recorded. As it arrived after the participant limit was reached, our team will review it before any discount code is issued. You're registered for the event.",
+    title: "Your response is under review",
+    body: "Thanks - we've received your response. As it arrived after the participant limit was reached, our team will review it before any discount code is issued. We'll get back to you shortly by email, and any code will appear under My rewards. You're registered for the event.",
   },
   not_ready: {
     title: "Your discount code isn't ready yet",

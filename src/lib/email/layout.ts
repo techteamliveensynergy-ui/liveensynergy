@@ -11,6 +11,7 @@ import "server-only";
  */
 
 import { DEFAULT_HEADER_BG, DEFAULT_HEADER_TEXT, EMAIL_FONTS, type EmailBranding } from "./branding";
+import type { EmailAction } from "@/lib/notification-links";
 
 const BRAND = "#e8590c"; // --color-brand
 const INK = "#1c1917"; // --color-ink
@@ -26,7 +27,7 @@ export function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function siteOrigin(): string | null {
+export function siteOrigin(): string | null {
   const raw = process.env.NEXT_PUBLIC_SITE_URL;
   if (!raw) return null;
   try {
@@ -53,7 +54,7 @@ function linkifyOwnOrigin(escapedLine: string): string {
 }
 
 export function renderEmailHtml(
-  input: { subject: string; body: string },
+  input: { subject: string; body: string; action?: EmailAction | null },
   branding: EmailBranding = {},
 ): string {
   const origin = siteOrigin();
@@ -82,6 +83,19 @@ export function renderEmailHtml(
     )
     .join("");
 
+  // The notification's link as a button, so the email says what to do AND takes
+  // you straight there. The URL is repeated underneath for clients that block
+  // buttons. Both are escaped; the sender only ever passes a same-site path.
+  const action = input.action
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 20px;"><tr><td style="background:${BRAND};border-radius:10px;"><a href="${escapeHtml(
+        input.action.url,
+      )}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${escapeHtml(
+        input.action.label,
+      )}</a></td></tr></table><p style="margin:0 0 16px;font-size:12px;line-height:1.5;color:${INK_SOFT};">If the button doesn&rsquo;t work, copy this link into your browser:<br>${escapeHtml(
+        input.action.url,
+      )}</p>`
+    : "";
+
   const settingsLink = origin
     ? ` &middot; <a href="${origin}/dashboard/settings" style="color:${INK_SOFT};">Notification settings</a>`
     : "";
@@ -96,7 +110,7 @@ export function renderEmailHtml(
 <tr><td align="center">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;font-family:${font};">
 <tr><td style="background:${headerBg};padding:18px 28px;color:${headerText};font-size:16px;font-weight:700;letter-spacing:.2px;">${header}</td></tr>
-<tr><td style="padding:28px 28px 12px;">${paragraphs}</td></tr>
+<tr><td style="padding:28px 28px 12px;">${paragraphs}${action}</td></tr>
 <tr><td style="padding:16px 28px 24px;border-top:1px solid #eee;font-size:12px;line-height:1.5;color:${INK_SOFT};">${footerText}You&rsquo;re receiving this because of activity on your Live&middot;En&middot;Synergy account${settingsLink}</td></tr>
 </table>
 </td></tr>

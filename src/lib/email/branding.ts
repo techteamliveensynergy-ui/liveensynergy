@@ -57,7 +57,12 @@ export async function loadEmailBranding(supabase: SupabaseClient): Promise<Email
 }
 
 /** Plain-text part: the body, then the footer text when one is set. */
-export function renderEmailText(body: string, branding: EmailBranding = {}): string {
+export function renderEmailText(
+  body: string,
+  branding: EmailBranding = {},
+  action?: { label: string; url: string } | null,
+): string {
   const footer = branding.footer_text?.trim();
-  return footer ? `${body}\n\n--\n${footer}` : body;
+  const withAction = action ? `${body}\n\n${action.label}: ${action.url}` : body;
+  return footer ? `${withAction}\n\n--\n${footer}` : withAction;
 }

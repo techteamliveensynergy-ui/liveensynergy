@@ -241,6 +241,14 @@ point, used from ~14 call sites. Two rules:
    The outbox also doubles as the audit log admins preview. Setup:
    `docs/email-setup.md`.
 
+**Every notification should take the person straight to what they need to do.** Pass
+`link` (a same-site path with the id/anchor, e.g. `/dashboard/sponsored/<id>#discount-codes`);
+`notify()` runs it through `safeAppPath()` and stores it for **both** channels — the in-app row
+is clickable, and the email gets an action button (`email_outbox.link`, 0112) labelled by
+`actionLabelFor()` in `src/lib/notification-links.ts` (add a pattern there for a new
+destination). SQL callers pass the same path as `notify_from_db()`'s 4th argument. A response
+that lands in `review` notifies the admins (link to that response) and the respondent (0112).
+
 Behaviour is data, not code: `notification_events` (catalogue, keyed by a stable
 string), `notification_settings` (per-event in-app/email toggles + CC/BCC) and
 `notification_templates` (`{{token}}` bodies, editable by admins at
