@@ -167,15 +167,17 @@ export default async function AdminPage() {
       tint: "bg-[var(--color-gold)]",
     },
     {
-      label: "Waiting on artists",
-      count: artistPending.artistEvents,
+      label: "Codes & artist steps",
+      count: artistPending.artistEvents + artistPending.teamOnlyEvents,
       href: "/dashboard/admin/artist-pending",
       tint: artistPending.overdueEvents ? "bg-[var(--color-pink)]" : "bg-[var(--color-gold)]",
       hint: artistPending.overdueEvents
         ? `${artistPending.overdueEvents} past the codes deadline`
         : artistPending.peopleWaiting
           ? `${artistPending.peopleWaiting} waiting for a code`
-          : undefined,
+          : artistPending.readyToOpen
+            ? `${artistPending.readyToOpen} ready to open`
+            : undefined,
     },
     {
       label: "Awaiting agreement",

@@ -116,7 +116,12 @@ export default async function ArtistPendingPage({
           hint="on events whose codes are unconfirmed"
           tint="bg-[var(--color-sage)]"
         />
-        <MetricTile label="Blocked on us only" value={summary.teamOnlyEvents} tint="bg-[var(--color-lavender)]" />
+        <MetricTile
+          label="Waiting on us"
+          value={summary.teamOnlyEvents}
+          hint={summary.readyToOpen ? `${summary.readyToOpen} ready to open` : undefined}
+          tint="bg-[var(--color-lavender)]"
+        />
       </div>
 
       <div className="flex flex-wrap gap-2" role="navigation" aria-label="Filter by what is pending">
@@ -236,7 +241,17 @@ export default async function ArtistPendingPage({
                     </p>
                     <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-[var(--color-ink-soft)]">
                       {r.waitingOnUs.map((w) => (
-                        <li key={w}>{w}</li>
+                        <li key={w.text}>
+                          {w.text}
+                          {w.href && (
+                            <>
+                              {" "}
+                              <Link href={w.href} className="font-semibold text-[var(--color-brand-dark)] hover:underline">
+                                Open →
+                              </Link>
+                            </>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </div>
