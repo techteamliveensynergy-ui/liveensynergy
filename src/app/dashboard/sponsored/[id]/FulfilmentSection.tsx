@@ -7,12 +7,17 @@ import { giveFulfilmentConsent } from "../actions";
  * The artist's read-only view of the fulfilment form (0104): promotional
  * commitments and any other special terms, filled in by the team. Until the
  * team marks it ready the artist sees a placeholder.
+ *
+ * One card titled "Fulfilment form" with its status (sent when, consented when)
+ * — QA 6 Nov: the same content as separate "Promotional commitments" / "special
+ * terms" cards read as the brief, and the tester couldn't find "the form" the
+ * admin said she had consented to.
  */
 export function FulfilmentCards({ form }: { form: FulfilmentForm | null }) {
   if (!form) {
     return (
       <div id="fulfilment" className="card p-6">
-        <h2 className="text-lg font-semibold">Promotional commitments</h2>
+        <h2 className="text-lg font-semibold">Fulfilment form</h2>
         <p className="mt-2 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
           Your fulfilment form is being prepared by the Live·En·Synergy team. We&apos;ll let you know in the app and
           by email as soon as it&apos;s ready to review.
@@ -24,10 +29,24 @@ export function FulfilmentCards({ form }: { form: FulfilmentForm | null }) {
   return (
     <>
       <div id="fulfilment" className="card p-6">
-        <h2 className="text-lg font-semibold">Promotional commitments</h2>
-        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Agreed with the brand and filled in by the Live·En·Synergy team. Contact the team if anything looks wrong.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Fulfilment form</h2>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+              Filled in by the Live·En·Synergy team from what was agreed with the brand
+              {form.ready_at ? ` · sent ${formatDateTime(form.ready_at)}` : ""}. Contact the team if anything looks
+              wrong.
+            </p>
+          </div>
+          <span
+            className={`chip ${form.artist_ack_at ? "bg-[var(--color-sage)]" : "bg-[var(--color-gold)]"}`}
+            data-testid="fulfilment-status"
+          >
+            {form.artist_ack_at ? `Consent given ${formatDateTime(form.artist_ack_at)}` : "Waiting for your consent"}
+          </span>
+        </div>
+
+        <h3 className="mt-6 text-base font-semibold">Promotional commitments</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Item label="Agreed promotional channels">
             <List items={form.promo_channels} />
@@ -66,14 +85,12 @@ export function FulfilmentCards({ form }: { form: FulfilmentForm | null }) {
             <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{form.promo_other}</p>
           </div>
         )}
-      </div>
 
-      {form.special_terms && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold">Any other special terms</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{form.special_terms}</p>
-        </div>
-      )}
+        <h3 className="mt-6 text-base font-semibold">Any other special terms</h3>
+        <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-ink)]">
+          {form.special_terms || "None."}
+        </p>
+      </div>
     </>
   );
 }

@@ -175,9 +175,11 @@ export default async function AdminPage() {
         ? `${artistPending.overdueEvents} past the codes deadline`
         : artistPending.peopleWaiting
           ? `${artistPending.peopleWaiting} waiting for a code`
-          : artistPending.readyToOpen
-            ? `${artistPending.readyToOpen} ready to open`
-            : undefined,
+          : artistPending.responsesToReview
+            ? `${artistPending.responsesToReview} responses to review`
+            : artistPending.readyToOpen
+              ? `${artistPending.readyToOpen} ready to open`
+              : undefined,
     },
     {
       label: "Awaiting agreement",

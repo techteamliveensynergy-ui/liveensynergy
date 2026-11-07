@@ -54,7 +54,7 @@ export interface ArtistPendingRow {
   artistName: string;
   items: ArtistPendingItem[];
   /** Blockers on our side (never counted against the artist). */
-  waitingOnUs: { text: string; href: string | null; kind: "codes_setup" | "fulfilment" | "open" }[];
+  waitingOnUs: { text: string; href: string | null; kind: "codes_setup" | "fulfilment" | "open" | "review" }[];
   /** Checked in / answered but no live code (only counted while codes are unconfirmed). */
   peopleWaiting: number;
   /** Registered, not yet through to a code. */
@@ -72,9 +72,19 @@ export interface ArtistPendingSummary {
   teamOnlyEvents: number;
   /** Everything the artist owed is done; nobody has opened registration yet. */
   readyToOpen: number;
+  /** Survey responses on these events waiting for an admin's decision. */
+  responsesToReview: number;
 }
 
-const EMPTY: ArtistPendingSummary = { rows: [], artistEvents: 0, overdueEvents: 0, peopleWaiting: 0, teamOnlyEvents: 0, readyToOpen: 0 };
+const EMPTY: ArtistPendingSummary = {
+  rows: [],
+  artistEvents: 0,
+  overdueEvents: 0,
+  peopleWaiting: 0,
+  teamOnlyEvents: 0,
+  readyToOpen: 0,
+  responsesToReview: 0,
+};
 
 type EventRow = {
   id: string;
@@ -126,6 +136,28 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
     supabase.from("profiles").select("id, full_name").in("id", artistIds),
     eventOpenStates(supabase, events.filter((e) => e.campaign_id).map((e) => e.id)),
   ]);
+
+  // Responses held for review on these events' surveys: no code is issued until
+  // an admin passes them, so they belong on the same "waiting on us" list
+  // (QA 6 Nov: held responses sat with nothing pointing at them).
+  const campaignIds = [...new Set(events.map((e) => e.campaign_id).filter((c): c is string => Boolean(c)))];
+  const reviewByCampaign = new Map<string, string[]>();
+  if (campaignIds.length) {
+    const { data: tplRows } = await supabase.from("survey_templates").select("id, campaign_id").in("campaign_id", campaignIds);
+    const campaignOf = new Map(((tplRows ?? []) as { id: string; campaign_id: string }[]).map((t) => [t.id, t.campaign_id]));
+    if (campaignOf.size) {
+      const { data: heldRows } = await supabase
+        .from("survey_responses")
+        .select("id, template_id")
+        .eq("quality_status", "review")
+        .in("template_id", [...campaignOf.keys()]);
+      for (const r of (heldRows ?? []) as { id: string; template_id: string }[]) {
+        const c = campaignOf.get(r.template_id);
+        if (!c) continue;
+        reviewByCampaign.set(c, [...(reviewByCampaign.get(c) ?? []), r.id]);
+      }
+    }
+  }
 
   // Is every tier able to hand out a code? A unique-code tier needs its codes
   // generated (the pool); a shared tier needs its shared code.
@@ -248,6 +280,21 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
       }
     }
 
+    const held = e.campaign_id ? (reviewByCampaign.get(e.campaign_id) ?? []) : [];
+    if (held.length > 0) {
+      waitingOnUs.push({
+        text:
+          held.length === 1
+            ? "1 survey response is waiting for your review — no discount code is issued until you pass it"
+            : `${held.length} survey responses are waiting for your review — no discount codes are issued until you pass them`,
+        href:
+          held.length === 1
+            ? `/dashboard/admin/surveys/responses/${held[0]}`
+            : "/dashboard/admin/surveys/responses?status=review",
+        kind: "review",
+      });
+    }
+
     // The last manual step: the artist has done everything, nobody has opened
     // registration. (A campaign-less event is always open.)
     const open = openStates.get(e.id);
@@ -295,5 +342,6 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
     peopleWaiting: artistRows.reduce((t, r) => t + r.peopleWaiting, 0),
     teamOnlyEvents: rows.length - artistRows.length,
     readyToOpen: rows.filter((r) => r.waitingOnUs.some((w) => w.kind === "open")).length,
+    responsesToReview: [...reviewByCampaign.values()].reduce((t, ids) => t + ids.length, 0),
   };
 }

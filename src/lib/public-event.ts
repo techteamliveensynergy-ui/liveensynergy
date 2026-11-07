@@ -165,11 +165,20 @@ export type SurveyCta =
   | { kind: "not_open"; opensAt: string | null }
   | { kind: "deadline_passed" }
   | { kind: "closed" }
+  /** The signed-in visitor has already answered (0111). `passed` = not held for review. */
+  | { kind: "done"; surveyId: string; passed: boolean }
   | { kind: "open"; surveyId: string; full: boolean; quota: boolean; codes: "available" | "exhausted" | "none" };
 
 export async function surveyCta(supabase: SupabaseClient, ev: PublicEvent): Promise<SurveyCta> {
   if (eventHasEnded(ev)) return { kind: "ended" };
   if (!ev.survey) return { kind: "no_survey" };
+  // Someone who has already answered must not be invited to "Start survey" with
+  // "Codes still available: Yes" (QA 6 Nov). my_survey_response() (0111) answers
+  // for the caller only; signed out (or on a database without it) it errors and
+  // the page carries on as before.
+  const { data: own, error: ownError } = await supabase.rpc("my_survey_response", { p_template_id: ev.survey.id });
+  const answered = ownError ? null : (own as { submitted_at?: string; passed?: boolean } | null);
+  if (answered?.submitted_at) return { kind: "done", surveyId: ev.survey.id, passed: answered.passed === true };
   if (!ev.is_open) return { kind: "not_open", opensAt: ev.opens_at };
   if (ev.participation_deadline && new Date(ev.participation_deadline) < new Date()) {
     return { kind: "deadline_passed" };

@@ -66,18 +66,26 @@ export default async function DashboardLayout({
 
   const supabase = await createClient();
 
-  let workspaceName: string | undefined;
-  let workspaceSubtitle: string | undefined;
+  // The sidebar's workspace card and unread count are independent — fetched
+  // together rather than one after the other (one round trip, not two).
   const workspace = WORKSPACE_TABLE[profile.role];
-  if (workspace) {
-    const { data } = await supabase
-      .from(workspace.table)
-      .select(`${workspace.name}, ${workspace.category}`)
-      .eq("profile_id", profile.id)
-      .maybeSingle<Record<string, string | null>>();
-    workspaceName = data?.[workspace.name] ?? undefined;
-    workspaceSubtitle = data?.[workspace.category] ?? undefined;
-  }
+  const [workspaceRes, unreadRes] = await Promise.all([
+    workspace
+      ? supabase
+          .from(workspace.table)
+          .select(`${workspace.name}, ${workspace.category}`)
+          .eq("profile_id", profile.id)
+          .maybeSingle<Record<string, string | null>>()
+      : Promise.resolve({ data: null as Record<string, string | null> | null }),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_profile_id", profile.id)
+      .is("read_at", null),
+  ]);
+  const workspaceName = workspace ? (workspaceRes.data?.[workspace.name] ?? undefined) : undefined;
+  const workspaceSubtitle = workspace ? (workspaceRes.data?.[workspace.category] ?? undefined) : undefined;
+  const unreadCount = unreadRes.count;
 
   // Audience and admin have no public page, so the card stays unlinked.
   const publicPath = PUBLIC_PROFILE_PATH[profile.role];
@@ -85,11 +93,6 @@ export default async function DashboardLayout({
     ? `/${publicPath}/${profile.id}`
     : null;
 
-  const { count: unreadCount } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("recipient_profile_id", profile.id)
-    .is("read_at", null);
 
   return (
     <div className="min-h-screen bg-[var(--color-mist)] md:flex">

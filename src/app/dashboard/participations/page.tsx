@@ -6,8 +6,7 @@ import {
   ParticipationProgress,
   isImagePath,
   participationBadge,
-  participationSteps,
-} from "@/components/dashboard/ParticipationProgress";
+  participationSteps, type CodeWait } from "@/components/dashboard/ParticipationProgress";
 import { signedUrlFor } from "@/lib/storage";
 import { FileDrop } from "@/components/ui/FileDrop";
 import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
@@ -74,15 +73,21 @@ export default async function ParticipationsPage({
           .eq("status", "published")
       : Promise.resolve({ data: [] as SurveyTemplate[] }),
     // Dashboard responses carry the participation; public-link ones (0043)
-    // only the respondent — readable by them since 0076.
-    supabase
-      .from("survey_responses")
-      .select("template_id, participation_id")
-      .or(
+    // only the respondent — readable by them since 0076. quality_status says
+    // why a code hasn't arrived (under review / not approved / being set up);
+    // if it can't be read the card simply says less, as before.
+    (async () => {
+      const filter =
         participationIds.length > 0
           ? `participation_id.in.(${participationIds.join(",")}),respondent_profile_id.eq.${profile.id}`
-          : `respondent_profile_id.eq.${profile.id}`,
-      ),
+          : `respondent_profile_id.eq.${profile.id}`;
+      const withStatus = await supabase
+        .from("survey_responses")
+        .select("template_id, participation_id, quality_status, decided_at")
+        .or(filter);
+      if (!withStatus.error) return withStatus;
+      return supabase.from("survey_responses").select("template_id, participation_id").or(filter);
+    })(),
     // Codes are released as soon as a survey passes (0075), so they belong on
     // the event card too — "they can see the discount code anytime" (16 Oct).
     participationIds.length > 0
@@ -97,7 +102,13 @@ export default async function ParticipationsPage({
     SurveyTemplate,
     "id" | "campaign_id" | "kind" | "title" | "is_public"
   >[];
-  const responses = (surveyResponseRows ?? []) as { template_id: string; participation_id: string | null }[];
+  const responses = (surveyResponseRows ?? []) as {
+    template_id: string;
+    participation_id: string | null;
+    quality_status?: string | null;
+    /** Set when a person decided it (0035) — an automatic reject has none. */
+    decided_at?: string | null;
+  }[];
   const respondedKeys = new Set(responses.map((r) => `${r.template_id}:${r.participation_id}`));
   const respondedPublicly = new Set(responses.filter((r) => !r.participation_id).map((r) => r.template_id));
   // Answered any of this event's surveys — on the dashboard (carries the
@@ -109,6 +120,25 @@ export default async function ParticipationsPage({
         (!r.participation_id &&
           surveyTemplates.some((t) => t.id === r.template_id && t.campaign_id === p.sponsored_events?.campaign_id)),
     );
+  // Why someone who has answered has no code yet. Never says why a response was
+  // held (M-06) — only that it is being reviewed, wasn't approved, or passed.
+  const codeWaitFor = (p: Row): CodeWait | null => {
+    const mine = responses.filter(
+      (r) =>
+        r.participation_id === p.id ||
+        (!r.participation_id &&
+          surveyTemplates.some((t) => t.id === r.template_id && t.campaign_id === p.sponsored_events?.campaign_id)),
+    );
+    if (mine.length === 0) return null;
+    const statuses = mine.map((r) => r.quality_status ?? null);
+    if (statuses.every((s) => s == null)) return null; // couldn't read it: say nothing new
+    if (statuses.includes("pass")) return "setup";
+    // "Not approved" only once a PERSON has rejected it. An automatic reject
+    // reads as "under review", exactly as the thank-you screen says, so the
+    // scoring rules aren't given away (M-06).
+    if (mine.some((r) => r.quality_status === "reject" && r.decided_at)) return "declined";
+    return "review";
+  };
   const codeByParticipation = new Map(
     ((codeRows ?? []) as Pick<
       RewardCode,
@@ -289,6 +319,7 @@ export default async function ParticipationsPage({
                     steps={participationSteps(p, {
                       surveyDone: surveyDone(p),
                       hasCode: codeByParticipation.has(p.id),
+                      codeWait: codeByParticipation.has(p.id) ? null : codeWaitFor(p),
                     })}
                     rejected={p.status === "rejected"}
                     ticketHref={ticketLinks.get(p.id)}
@@ -330,6 +361,7 @@ export default async function ParticipationsPage({
                               ✓ {t.kind === "pre_event" ? "Pre-event" : "Post-event"} survey
                               completed — thank you!
                               {!codeByParticipation.has(p.id) &&
+                                !codeWaitFor(p) &&
                                 " Your discount code appears here as soon as it's released."}
                             </p>
                           ) : (
@@ -353,6 +385,32 @@ export default async function ParticipationsPage({
                         </div>
                       );
                     })}
+
+                {(() => {
+                  // Answered, no code: say plainly what happens next.
+                  if (codeByParticipation.has(p.id) || !surveyDone(p)) return null;
+                  const wait = codeWaitFor(p);
+                  if (!wait) return null;
+                  const copy: Record<CodeWait, { tone: string; text: string }> = {
+                    review: {
+                      tone: "bg-[var(--color-gold)]/40",
+                      text: "⏳ Your survey response is under review. We'll get back to you shortly — if everything is fine, your discount code will be emailed to you and will appear in My rewards. There's nothing you need to do.",
+                    },
+                    setup: {
+                      tone: "bg-[var(--color-sage)]/60",
+                      text: "✓ Your response passed. Your discount code is being set up — we'll email it to you as soon as it's issued, and it will appear in My rewards.",
+                    },
+                    declined: {
+                      tone: "bg-[var(--color-mist)]",
+                      text: "We reviewed your survey response and weren't able to approve it, so no discount code was issued for it. If you think that's wrong, tell us using the Feedback button.",
+                    },
+                  };
+                  return (
+                    <p className={`mt-4 rounded-xl px-4 py-3 text-sm text-[var(--color-ink)] ${copy[wait].tone}`} data-testid="code-wait" data-reason={wait}>
+                      {copy[wait].text}
+                    </p>
+                  );
+                })()}
 
                 {(() => {
                   const c = codeByParticipation.get(p.id);
@@ -381,7 +439,7 @@ export default async function ParticipationsPage({
                 })()}
 
                 {/* Not yet selected — nothing to do until the sponsor confirms who's in. */}
-                {p.status === "registered" && !p.selected && (
+                {p.status === "registered" && !p.selected && !surveyDone(p) && !codeByParticipation.has(p.id) && (
                   <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
                     ⏳ You&apos;re registered. We&apos;ll email you if you&apos;re
                     selected for the reward — it&apos;ll also show here.
@@ -425,7 +483,7 @@ export default async function ParticipationsPage({
                   </p>
                 )}
 
-                {p.status === "attendance_verified" && !codeByParticipation.has(p.id) && (
+                {p.status === "attendance_verified" && !codeByParticipation.has(p.id) && !surveyDone(p) && (
                   <p className="mt-4 text-sm text-[var(--color-purple-deep)]">
                     🎉 Attendance verified — complete the survey to receive your discount code.
                   </p>
