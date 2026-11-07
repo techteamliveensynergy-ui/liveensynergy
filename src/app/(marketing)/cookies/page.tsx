@@ -39,7 +39,7 @@ export default function CookiesPage() {
     <div>
       <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
         <LegalTabs active="/cookies" />
-        <p className="les-eyebrow mt-6">Last updated · 28 October 2026</p>
+        <p className="les-eyebrow mt-6">Last updated · 7 November 2026</p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
           Cookie Policy
         </h1>
@@ -121,7 +121,16 @@ export default function CookiesPage() {
             </p>
           </section>
 
-          <p className="text-[var(--color-ink-soft)]">…full copy to be finalised before launch.</p>
+          <section>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">Questions</h2>
+            <p className="mt-2">
+              If you have a question about cookies on this site,{" "}
+              <Link href="/contact" className="font-semibold text-[var(--color-brand-dark)] underline">
+                contact us
+              </Link>
+              .
+            </p>
+          </section>
         </article>
       </div>
     </div>

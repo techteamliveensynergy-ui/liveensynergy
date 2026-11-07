@@ -236,9 +236,8 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             page?.participation_limit ?? "One response per person.",
             page?.code_limit_note ?? "Codes are issued while they last, one per qualifying response.",
             "Responses are quality-checked before a code is issued.",
-            page?.account_required
-              ? "You'll need a Live·En·Synergy account — you can create one as you start the survey."
-              : "You don't need a Live·En·Synergy account to take part.",
+            // Answering always needs an account (0109) — whatever the page row says.
+            "You'll need a Live·En·Synergy account — you can create one (or sign in) as you start the survey.",
             ...(page?.eligibility_lines ?? []),
           ]}
         />
@@ -310,7 +309,7 @@ function ParticipationFaq({ ev }: { ev: PublicEvent }) {
     ],
     [
       "When do I get my code?",
-      "As soon as your response passes the check, your code is shown on screen and emailed to you. If the survey had already reached its participant limit when you answered, your response is reviewed by the team first and a code isn't guaranteed.",
+      "As soon as your response passes the check, your code is shown on screen and emailed to you. If the check flags your response for a closer look, or the survey had already reached its participant limit when you answered, the team reviews it first and we'll email you once it's decided — a code isn't guaranteed.",
     ],
     [
       "I haven't received my code, or it doesn't work",
@@ -439,6 +438,25 @@ function CtaButton({ cta, compact = false }: { cta: SurveyCta; compact?: boolean
     case "deadline_passed":
     case "closed":
       return muted("Survey closed");
+    case "done":
+      // Already answered: what happens next, not another invitation to start.
+      return (
+        <div data-testid="event-survey-done">
+          <p className={`text-sm font-semibold ${compact ? "text-[var(--color-ink)]" : ""}`}>
+            ✓ You&apos;ve completed the survey
+          </p>
+          {!compact && (
+            <p className="mt-1 text-sm opacity-80">
+              {cta.passed
+                ? "Your discount code is in My rewards, and we've emailed it to you."
+                : "Your response is under review. We'll get back to you shortly — if everything is fine, your code will be emailed to you and will appear in My rewards."}
+            </p>
+          )}
+          <Link href={cta.passed ? "/dashboard/rewards" : "/dashboard/participations"} className="btn btn-primary mt-3">
+            {cta.passed ? "View my rewards" : "View my events"}
+          </Link>
+        </div>
+      );
     case "open": {
       const codesOut = cta.codes === "exhausted";
       return (

@@ -30,9 +30,18 @@ export interface ProgressStep {
  * survey (0075) left the participation at attendance_verified, so the last
  * step stayed open while the code was already under My rewards.
  */
+/** Why a surveyed participant has no code yet (see codeWaitFor on My events). */
+export type CodeWait = "review" | "declined" | "setup";
+
+const CODE_WAIT_HINT: Record<CodeWait, string> = {
+  review: "Your survey response is under review — we'll get back to you shortly",
+  declined: "Your survey response wasn't approved, so no code was issued for it",
+  setup: "Your response passed — your code is being set up and will be emailed to you",
+};
+
 export function participationSteps(
   p: Participation,
-  extra: { surveyDone?: boolean; hasCode?: boolean } = {},
+  extra: { surveyDone?: boolean; hasCode?: boolean; codeWait?: CodeWait | null } = {},
 ): ProgressStep[] {
   const verified = ["attendance_verified", "reward_released"].includes(p.status);
   const rewarded = p.status === "reward_released" || Boolean(extra.hasCode);
@@ -57,7 +66,15 @@ export function participationSteps(
     },
   ];
 
-  const firstPending = done.indexOf(false);
+  // A code is released by the survey (0075), not by selection, ticket or
+  // attendance. So once the survey is done and there is no code, the code step
+  // is what they are waiting on — "Selected" must not read as the blocker
+  // (QA 6 Nov: a held response showed as "selection pending").
+  if (surveyed && !rewarded && extra.codeWait) {
+    labels[4] = { ...labels[4], hint: extra.codeWait === "review" ? "Done — your response is under review" : "Done" };
+    labels[5] = { ...labels[5], hint: CODE_WAIT_HINT[extra.codeWait] };
+  }
+  const firstPending = surveyed && !rewarded ? 5 : done.indexOf(false);
 
   return labels.map((l, i) => ({
     ...l,

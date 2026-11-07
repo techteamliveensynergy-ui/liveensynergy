@@ -119,7 +119,14 @@ export default async function ArtistPendingPage({
         <MetricTile
           label="Waiting on us"
           value={summary.teamOnlyEvents}
-          hint={summary.readyToOpen ? `${summary.readyToOpen} ready to open` : undefined}
+          hint={
+            [
+              summary.responsesToReview ? `${summary.responsesToReview} to review` : null,
+              summary.readyToOpen ? `${summary.readyToOpen} ready to open` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
           tint="bg-[var(--color-lavender)]"
         />
       </div>

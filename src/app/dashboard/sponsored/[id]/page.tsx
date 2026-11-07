@@ -35,7 +35,7 @@ import { FulfilmentCards, FulfilmentConsent } from "./FulfilmentSection";
 import type { FulfilmentForm } from "@/lib/fulfilment";
 import { ARTIST_TYPES } from "@/lib/constants";
 import { ChangeRequestSection } from "./ChangeRequestSection";
-import { UK_TIME_ZONE } from "@/lib/format";
+import { UK_TIME_ZONE, formatDateTime } from "@/lib/format";
 
 export const metadata = { title: "Partnered event" };
 
@@ -347,6 +347,28 @@ export default async function SponsoredEventPage({
         }
         action={<StatusBadge status={event.status} />}
       />
+
+      {/* Where the artist's fulfilment form stands, at the top, so it can't be
+          missed among the event, codes and branding cards below (QA 6 Nov). */}
+      {isArtist && fulfilment?.ready_at && !fulfilment.artist_ack_at && notice !== "consented" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--color-gold)]/50 px-4 py-3 text-sm text-[var(--color-ink)]">
+          <span>
+            <strong>Your fulfilment form is ready</strong> — sent {formatDateTime(fulfilment.ready_at)}. Review it and give
+            your consent.
+          </span>
+          <a href="#fulfilment" className="font-semibold text-[var(--color-brand-dark)] underline">
+            Review the fulfilment form ↓
+          </a>
+        </div>
+      )}
+      {isArtist && fulfilment?.artist_ack_at && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--color-sage)]/60 px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          <span>✓ Fulfilment form: you gave your consent on {formatDateTime(fulfilment.artist_ack_at)}.</span>
+          <a href="#fulfilment" className="font-semibold underline">
+            View the form ↓
+          </a>
+        </div>
+      )}
 
       {/* An agreement that couldn't be honoured — the campaign was settled on
           another event, or this listing is already committed elsewhere. Says

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 import {
@@ -8,27 +9,41 @@ import {
 import type { Profile } from "./types";
 
 /**
- * Returns the signed-in user's auth record and profile row, redirecting to
- * sign-in when there is no session. The profile row is created by a database
- * trigger on sign-up (see supabase/migrations).
+ * The session check and profile read, done once per request.
+ *
+ * The dashboard layout and the page inside it both need them; without this the
+ * same two round trips (an Auth check and a profile read) ran twice on every
+ * dashboard page, on top of the middleware's own — part of why signing in took
+ * ~11 s (QA 6 Nov). React's cache() is per request on the server, so nothing is
+ * shared between users or carried across requests; in a server action it is a
+ * plain call.
  */
-export async function requireProfile() {
+const loadSessionProfile = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/auth/sign-in");
-  }
+  if (!user) return { supabase, user: null, profile: null as Profile | null };
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
-
   return { supabase, user, profile: profile as Profile | null };
+});
+
+/**
+ * Returns the signed-in user's auth record and profile row, redirecting to
+ * sign-in when there is no session. The profile row is created by a database
+ * trigger on sign-up (see supabase/migrations).
+ */
+export async function requireProfile() {
+  const { supabase, user, profile } = await loadSessionProfile();
+  if (!user) {
+    redirect("/auth/sign-in");
+  }
+  return { supabase, user, profile };
 }
 
 /**
