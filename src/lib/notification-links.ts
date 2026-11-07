@@ -63,19 +63,83 @@ export interface EmailAction {
   url: string;
 }
 
+/** The full address of a notification's page, or null. */
+export function absoluteLink(link: string | null | undefined, origin: string | null): string | null {
+  const path = safeAppPath(link);
+  return path && origin ? `${origin}${path}` : null;
+}
+
 /**
- * The button for an email, or null when there is nothing to add: no usable link,
- * no known site origin, or the body already contains that exact URL (a template
- * that spells out its own link isn't given a second one).
+ * Fills the `{{link}}` token an admin can put anywhere in an email template
+ * (Notification setup) with the address of the related page. It is filled at
+ * send time, so it works for notifications sent from the app and from the
+ * database alike. With no page to link to, the token is removed.
+ */
+export function fillLinkToken(text: string, url: string | null): string {
+  return text.replace(/\{\{\s*link\s*\}\}/g, url ?? "");
+}
+
+/** Removes a `{{link}}` token from in-app text — the row itself is the link there. */
+export function stripLinkToken(text: string): string {
+  return text.replace(/\s*\{\{\s*link\s*\}\}/g, "").trim();
+}
+
+/**
+ * The button for an email, or null when there is nothing to add: the admin has
+ * switched the button off for this notification (0113 — only relevant emails get
+ * one), there's no usable link or site origin, or the body already contains that
+ * exact URL (via {{link}} or a template that spells out its own link — it isn't
+ * given a second one). `opts.label` is the admin's own button text; blank means
+ * automatic.
  */
 export function emailActionFor(
   link: string | null | undefined,
   origin: string | null,
   body: string,
+  opts: { enabled?: boolean; label?: string | null } = {},
 ): EmailAction | null {
+  if (opts.enabled === false) return null;
   const path = safeAppPath(link);
   if (!path || !origin) return null;
   const url = `${origin}${path}`;
   if (body.includes(url)) return null;
-  return { label: actionLabelFor(path), url };
+  return { label: opts.label?.trim() || actionLabelFor(path), url };
+}
+
+/**
+ * Where an in-app notification goes when it was stored without a link (older
+ * rows, or a sender that had none): the page for that kind of notification, so
+ * every row in the app opens something useful. Keyed on the event family; the
+ * recipient is always the person viewing, so the family picks their own page.
+ */
+const FALLBACK_BY_FAMILY: [string, string][] = [
+  ["admin.", "/dashboard/admin"],
+  ["reward.", "/dashboard/rewards"],
+  ["survey.", "/dashboard/participations"],
+  ["participation.", "/dashboard/participations"],
+  ["participant.", "/dashboard/sponsored"],
+  ["fulfilment.", "/dashboard/sponsored"],
+  ["sponsorship.", "/dashboard/sponsored"],
+  ["sponsored.", "/dashboard/sponsored"],
+  ["offer.", "/dashboard/sponsored"],
+  ["invoice.", "/dashboard/invoices"],
+  ["order_form.", "/dashboard/campaigns"],
+  ["campaign_intake.", "/dashboard/campaigns"],
+  ["campaign.", "/dashboard/campaigns"],
+  ["brand.", "/dashboard/settings"],
+  ["message.", "/dashboard/messages"],
+  ["feedback.", "/dashboard/feedback"],
+  ["listing.", "/dashboard/events"],
+  ["account.", "/dashboard/settings"],
+];
+
+export function fallbackLinkFor(eventKey: string | null | undefined): string {
+  const key = eventKey ?? "";
+  for (const [prefix, path] of FALLBACK_BY_FAMILY) if (key.startsWith(prefix)) return path;
+  return "/dashboard";
+}
+
+/** The page an in-app notification opens: its own link, else its family's page. */
+export function inAppDestination(link: string | null | undefined, eventKey: string | null | undefined): string {
+  return safeAppPath(link) ?? fallbackLinkFor(eventKey);
 }

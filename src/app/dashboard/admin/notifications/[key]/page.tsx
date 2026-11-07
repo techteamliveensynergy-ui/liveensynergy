@@ -1,10 +1,32 @@
 import Link from "next/link";
+import { actionLabelFor, DEFAULT_ACTION_LABEL, safeAppPath } from "@/lib/notification-links";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { NotificationEditor } from "./NotificationEditor";
 
 export const metadata = { title: "Edit notification · Admin" };
+
+/**
+ * What the button says when an admin leaves its text blank: worked out from the
+ * link this notification most recently carried (the same rule the sender uses).
+ * A notification never sent yet shows the generic label.
+ */
+async function sampleButtonLabel(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventKey: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from("notifications")
+    .select("link")
+    .eq("event_key", eventKey)
+    .not("link", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ link: string | null }>();
+  const path = safeAppPath(data?.link);
+  return path ? actionLabelFor(path) : DEFAULT_ACTION_LABEL;
+}
 
 export default async function NotificationDetailPage({
   params,
@@ -86,7 +108,10 @@ export default async function NotificationDetailPage({
           email_enabled: settings?.email_enabled ?? true,
           email_cc: settings?.email_cc ?? null,
           email_bcc: settings?.email_bcc ?? null,
+          email_button: settings?.email_button ?? false,
+          email_button_label: settings?.email_button_label ?? null,
         }}
+        autoButtonLabel={await sampleButtonLabel(supabase, event.key)}
         inApp={inApp}
         email={email}
       />

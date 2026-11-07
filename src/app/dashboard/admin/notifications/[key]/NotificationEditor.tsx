@@ -50,6 +50,7 @@ export function NotificationEditor({
   eventKey,
   variables,
   settings,
+  autoButtonLabel,
   inApp,
   email,
 }: {
@@ -60,7 +61,12 @@ export function NotificationEditor({
     email_enabled: boolean;
     email_cc: string[] | null;
     email_bcc: string[] | null;
+    /** 0113: show the "open the related page" button in this email. */
+    email_button: boolean;
+    email_button_label: string | null;
   };
+  /** What the button says when its text is left blank, from this event's usual link. */
+  autoButtonLabel: string;
   inApp: { subject: string | null; body: string | null };
   email: { subject: string | null; body: string | null };
 }) {
@@ -74,10 +80,14 @@ export function NotificationEditor({
   const [emailSubject, setEmailSubject] = useState(email.subject ?? "");
   const [emailBody, setEmailBody] = useState(email.body ?? "");
   const [cc, setCc] = useState((settings.email_cc ?? []).join(", "));
+  const [button, setButton] = useState(settings.email_button);
+  const [buttonLabel, setButtonLabel] = useState(settings.email_button_label ?? "");
 
   // Only sample the variables this event actually declares.
   const sample: Record<string, string> = {};
   for (const v of variables) if (SAMPLE[v]) sample[v] = SAMPLE[v];
+  // {{link}} works in every email (filled at send time with the related page).
+  if (!sample.link) sample.link = "https://liveensynergy.com/dashboard/…";
   if (!sample.user_name) sample.user_name = SAMPLE.user_name;
 
   return (
@@ -208,6 +218,50 @@ export function NotificationEditor({
                 defaultValue={(settings.email_bcc ?? []).join(", ")}
               />
             </Field>
+            {/* 0113 — only relevant emails get a button: ones that ask the
+                person to do something. Informational ones are clearer without. */}
+            <div className="rounded-xl border border-black/10 p-4">
+              <label htmlFor="email_button" className="flex items-start gap-3 text-sm">
+                <input
+                  id="email_button"
+                  type="checkbox"
+                  name="email_button"
+                  checked={button}
+                  onChange={(e) => setButton(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  <span className="font-semibold">Add a button that opens the related page</span>
+                  <span className="mt-0.5 block text-xs text-[var(--color-ink-soft)]">
+                    Turn on for emails that ask the person to do something (review, pay, confirm, reply). Each
+                    email&apos;s button goes to that person&apos;s own page — the right response, invoice or event.
+                  </span>
+                </span>
+              </label>
+              {button && (
+                <div className="mt-3">
+                  <Field
+                    label="Button text"
+                    htmlFor="email_button_label"
+                    hint={`Leave blank for "${autoButtonLabel}".`}
+                  >
+                    <input
+                      id="email_button_label"
+                      name="email_button_label"
+                      className="input"
+                      maxLength={40}
+                      placeholder={autoButtonLabel}
+                      value={buttonLabel}
+                      onChange={(e) => setButtonLabel(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              )}
+              <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
+                Tip: write <code className="rounded bg-[var(--color-mist)] px-1">{"{{link}}"}</code> anywhere in the
+                email body to include the address of the related page as a link.
+              </p>
+            </div>
             <Field label="Subject" htmlFor="email_subject">
               <input
                 id="email_subject"
@@ -250,6 +304,13 @@ export function NotificationEditor({
             <div className="whitespace-pre-wrap px-4 py-4 text-sm leading-relaxed text-[var(--color-ink)]">
               {render(emailBody, sample)}
             </div>
+            {button && !emailBody.includes("{{link}}") && (
+              <div className="px-4 pb-4">
+                <span className="inline-block rounded-[10px] bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white">
+                  {buttonLabel.trim() || autoButtonLabel}
+                </span>
+              </div>
+            )}
           </div>
         </section>
       </div>

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { requireProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/dashboard/ui";
 import { timeAgo } from "@/lib/format";
 import { MarkAllReadButton } from "./MarkAllReadButton";
+import { stripLinkToken } from "@/lib/notification-links";
 
 export const metadata = { title: "Notifications" };
 
@@ -65,9 +65,9 @@ export default async function NotificationsPage() {
                   >
                     {n.title}
                   </p>
-                  {n.body && (
+                  {n.body && stripLinkToken(n.body) && (
                     <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">
-                      {n.body}
+                      {stripLinkToken(n.body)}
                     </p>
                   )}
                   <p className="mt-1 text-xs text-[var(--color-ink-soft)]/70">
@@ -77,16 +77,18 @@ export default async function NotificationsPage() {
               </div>
             );
 
-            return n.link ? (
-              <Link
+            // Every row opens its page, and opening it marks it read
+            // (./[id]/route.ts). A plain <a>, not next/link: a prefetch must
+            // not mark anything read before it is clicked.
+            return (
+              <a
                 key={n.id}
-                href={n.link}
+                href={`/dashboard/notifications/${n.id}`}
                 className="block transition hover:bg-[var(--color-mist)]"
+                aria-label={`${n.title} — open`}
               >
                 {inner}
-              </Link>
-            ) : (
-              <div key={n.id}>{inner}</div>
+              </a>
             );
           })}
         </div>

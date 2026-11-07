@@ -243,10 +243,14 @@ point, used from ~14 call sites. Two rules:
 
 **Every notification should take the person straight to what they need to do.** Pass
 `link` (a same-site path with the id/anchor, e.g. `/dashboard/sponsored/<id>#discount-codes`);
-`notify()` runs it through `safeAppPath()` and stores it for **both** channels — the in-app row
-is clickable, and the email gets an action button (`email_outbox.link`, 0112) labelled by
-`actionLabelFor()` in `src/lib/notification-links.ts` (add a pattern there for a new
-destination). SQL callers pass the same path as `notify_from_db()`'s 4th argument. A response
+`notify()` runs it through `safeAppPath()` and stores it for **both** channels. In the app every
+row opens its page via `/dashboard/notifications/[id]` (marks it read, then redirects; rows
+with no link go to their family's page, `fallbackLinkFor()`). In email (`email_outbox.link`,
+0112) the link becomes an action button **only where an admin has switched it on** for that
+notification (`notification_settings.email_button`, 0113 — on by default only for events that
+ask the recipient to act), with the admin's text or `actionLabelFor()`'s
+(`src/lib/notification-links.ts`; add a pattern there for a new destination). `{{link}}` in any
+email template is filled at send time (`drain.ts`) with the page's address. SQL callers pass the same path as `notify_from_db()`'s 4th argument. A response
 that lands in `review` notifies the admins (link to that response) and the respondent (0112).
 
 Behaviour is data, not code: `notification_events` (catalogue, keyed by a stable

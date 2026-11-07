@@ -1,7 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { renderEmailHtml, siteOrigin } from "./layout";
-import { emailActionFor } from "@/lib/notification-links";
+import { absoluteLink, emailActionFor, fillLinkToken } from "@/lib/notification-links";
 import { loadEmailBranding, renderEmailText } from "./branding";
 import { sendViaResend } from "./resend";
 
@@ -14,6 +14,7 @@ interface ClaimedRow {
   bcc: string[] | null;
   subject: string | null;
   body: string | null;
+  event_key?: string | null;
   /** Site path the email's action button points at (0112); null for older rows. */
   link?: string | null;
   attempts: number;
@@ -85,6 +86,23 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
   // Admin email branding (#66), read once per batch; {} on any failure.
   const branding = await loadEmailBranding(supabase);
 
+  // Which notifications carry an action button, and its text (0113 — set per
+  // notification by an admin). If the columns aren't there yet, every email with
+  // a link keeps its button, as under 0112.
+  const eventKeys = [...new Set(rows.map((r) => r.event_key).filter((k): k is string => Boolean(k)))];
+  const { data: buttonRows, error: buttonError } = eventKeys.length
+    ? await supabase
+        .from("notification_settings")
+        .select("event_key, email_button, email_button_label")
+        .in("event_key", eventKeys)
+    : { data: [], error: null };
+  const buttonFor = new Map(
+    ((buttonRows ?? []) as { event_key: string; email_button: boolean; email_button_label: string | null }[]).map(
+      (b) => [b.event_key, b],
+    ),
+  );
+  const origin = siteOrigin();
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
 
@@ -98,9 +116,17 @@ export async function drainOutbox({ limit }: { limit: number }): Promise<DrainRe
       continue;
     }
 
-    const subject = row.subject ?? "(no subject)";
-    const text = row.body ?? "";
-    const action = emailActionFor(row.link, siteOrigin(), text);
+    // {{link}} in the admin's template becomes the related page's address.
+    const url = absoluteLink(row.link, origin);
+    const subject = fillLinkToken(row.subject ?? "(no subject)", url);
+    const text = fillLinkToken(row.body ?? "", url);
+    const setting = row.event_key ? buttonFor.get(row.event_key) : undefined;
+    const action = emailActionFor(
+      row.link,
+      origin,
+      text,
+      buttonError ? {} : { enabled: setting?.email_button ?? false, label: setting?.email_button_label ?? null },
+    );
     const keep = (a: string) => !suppressed.has(a.toLowerCase());
 
     const outcome = await sendViaResend({
