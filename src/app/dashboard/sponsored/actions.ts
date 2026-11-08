@@ -15,6 +15,7 @@ import { ukLocalInputToIso } from "@/lib/format";
 
 export interface SponsoredState {
   error?: string;
+  message?: string;
 }
 
 function str(v: FormDataEntryValue | null): string | null {
@@ -968,4 +969,28 @@ export async function confirmRewardCodes(
     message:
       "Confirmed — the team can now issue these codes. Registration opens when the team opens the campaign to the audience.",
   };
+}
+
+/**
+ * Ask the team to cancel this partnership (0114). Only the team can cancel —
+ * it stops registrations and surveys, tells everyone and starts any refund —
+ * so a party's request goes to the admins, with the reason.
+ */
+export async function requestEventCancellation(
+  _prev: SponsoredState,
+  formData: FormData,
+): Promise<SponsoredState> {
+  const { supabase } = await requireUser();
+  const eventId = str(formData.get("id"));
+  const reason = str(formData.get("reason"));
+  if (!eventId) return { error: "Missing partnership." };
+  if (!reason || reason.length < 10) return { error: "Please tell the team why (at least a sentence)." };
+
+  const { error } = await supabase.rpc("request_event_cancellation", {
+    p_event_id: eventId,
+    p_reason: reason,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/sponsored/${eventId}`);
+  return { message: "Sent. The team will look at it and get back to you — nothing changes until they do." };
 }

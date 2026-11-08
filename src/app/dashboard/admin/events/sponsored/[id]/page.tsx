@@ -6,8 +6,10 @@ import { StatusBadge } from "@/components/dashboard/ui";
 import { computePlatformFee } from "@/lib/constants";
 import { formatDate, formatDateTime, ukDayKey, ukLocalInputValue } from "@/lib/format";
 import { codesDeadlineState } from "@/lib/codes-deadline";
-import type { Participation } from "@/lib/types";
+import type { Participation, SponsoredEventCancellationRequest } from "@/lib/types";
 import { setSponsoredStatus } from "../../../actions";
+import { CancellationPanel, CapacityPanel, type PaidInvoice } from "./SafetyPanels";
+import { eventCapacity } from "@/lib/event-safety";
 import {
   adminUpdateParticipation,
   adminMarkNoShow,
@@ -127,11 +129,19 @@ export default async function AdminSponsoredDetailPage({
     held?: string;
     unplaced?: string;
     msg?: string;
+    cancel_error?: string;
+    cancelled?: string;
+    told?: string;
+    holders?: string;
+    declined?: string;
+    cap_saved?: string;
+    cap_error?: string;
   }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
-  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced, msg } = await searchParams;
+  const sp = await searchParams;
+  const { notice, drawn, pool, gate: gateNotice, who, issued, held, unplaced, msg } = sp;
   const supabase = await createClient();
 
   const { data: event } = await supabase
@@ -169,6 +179,9 @@ export default async function AdminSponsoredDetailPage({
       artist_remainder_released_at: string | null;
       reward_codes_confirmed_at: string | null;
       codes_due_at?: string | null;
+      cancelled_at?: string | null;
+      cancel_reason?: string | null;
+      registration_cap?: number | null;
       brands: { brand_name: string; profile_id: string } | null;
       campaigns: {
         reference: string;
@@ -238,6 +251,48 @@ export default async function AdminSponsoredDetailPage({
       .eq("sponsored_event_id", id)
       .order("created_at", { ascending: true }),
   ]);
+
+  // Cancellation + capacity (0114). Each read degrades to "nothing" if the
+  // migration isn't in yet.
+  const [{ data: cancelRows }, regCapacity, { data: waitRows }, { data: paidRows }] = await Promise.all([
+    supabase
+      .from("sponsored_event_cancellation_requests")
+      .select("*")
+      .eq("sponsored_event_id", id)
+      .order("created_at", { ascending: false }),
+    eventCapacity(supabase, id),
+    supabase
+      .from("event_waitlist")
+      .select("id, created_at, profiles(full_name, email)")
+      .eq("sponsored_event_id", id)
+      .is("promoted_at", null)
+      .is("left_at", null)
+      .is("cancelled_at", null)
+      .order("created_at"),
+    event.campaign_id
+      ? supabase
+          .from("invoices")
+          .select("id, reference, amount_gbp, refunded_gbp")
+          .eq("status", "paid")
+          .or(`sponsored_event_id.eq.${id},campaign_id.eq.${event.campaign_id}`)
+      : supabase.from("invoices").select("id, reference, amount_gbp, refunded_gbp").eq("status", "paid").eq("sponsored_event_id", id),
+  ]);
+  const cancellationRequests = (cancelRows ?? []) as SponsoredEventCancellationRequest[];
+  const requesterIds = [...new Set(cancellationRequests.map((r) => r.requested_by).filter((x): x is string => !!x))];
+  const { data: requesterRows } = requesterIds.length
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", requesterIds)
+    : { data: [] };
+  const requesterNames = Object.fromEntries(
+    ((requesterRows ?? []) as { id: string; full_name: string | null; email: string | null }[]).map((p) => [
+      p.id,
+      p.full_name ?? p.email ?? "Unknown",
+    ]),
+  );
+  const waitlist = ((waitRows ?? []) as unknown as {
+    id: string;
+    created_at: string;
+    profiles: { full_name: string | null; email: string | null } | null;
+  }[]).map((w) => ({ id: w.id, created_at: w.created_at, name: w.profiles?.full_name ?? w.profiles?.email ?? "Participant" }));
 
   const [{ data: invoiceRows }, { data: pageCopy }, { data: isPublic }, { data: orderTerms }] = await Promise.all([
     supabase.from("invoices").select("*").eq("sponsored_event_id", id).order("created_at", { ascending: false }),
@@ -383,8 +438,18 @@ export default async function AdminSponsoredDetailPage({
             Raise an enquiry about this ↗
           </a>
         </div>
-        <StatusBadge status={event.status} />
+        {event.cancelled_at ? (
+          <a href="#cancellation" className="chip bg-[var(--color-pink)] text-[var(--color-accent)]">Cancelled</a>
+        ) : (
+          <StatusBadge status={event.status} />
+        )}
       </div>
+
+      {cancellationRequests.some((r) => r.status === "pending") && !event.cancelled_at && (
+        <a href="#cancellation" className="block rounded-xl bg-[var(--color-gold)]/50 px-5 py-3 text-sm font-semibold text-[var(--color-ink)]">
+          ⚠ A party has asked to cancel this partnership — review the request →
+        </a>
+      )}
 
       {/* Money */}
       <div className="grid gap-3 sm:grid-cols-4">
@@ -641,6 +706,29 @@ export default async function AdminSponsoredDetailPage({
           money-movement UI held back pending a later go-ahead. */}
 
       <ChangeRequestsSection eventId={event.id} requests={changeRequests} />
+
+      <CapacityPanel
+        eventId={event.id}
+        cap={event.registration_cap ?? null}
+        capacity={regCapacity}
+        waitlist={waitlist}
+        flash={{ saved: sp.cap_saved === "1", error: sp.cap_error }}
+        disabled={Boolean(event.cancelled_at) || event.status === "completed"}
+      />
+
+      <CancellationPanel
+        event={event}
+        requests={cancellationRequests}
+        paidInvoices={(paidRows ?? []) as PaidInvoice[]}
+        requesterNames={requesterNames}
+        flash={{
+          error: sp.cancel_error,
+          cancelled: sp.cancelled === "1",
+          told: sp.told,
+          holders: sp.holders,
+          declined: sp.declined === "1",
+        }}
+      />
 
       <InvoiceSection eventId={event.id} invoices={invoices} />
 

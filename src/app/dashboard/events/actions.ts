@@ -8,6 +8,7 @@ import { uploadImage } from "@/lib/storage";
 import { assessProfile } from "@/lib/profile-completeness";
 import { normaliseUrl } from "@/lib/urls";
 import { DEFAULT_TIMEZONE } from "@/lib/event-time";
+import { listingErrorMessage } from "@/lib/event-safety";
 
 export interface ListingState {
   error?: string;
@@ -164,12 +165,40 @@ export async function deleteListing(formData: FormData) {
   const { supabase, userId } = await currentContext();
   const id = str(formData.get("id"));
   if (!id) return;
-  await supabase
+  // The database refuses a listing in (or with) a partnership — 0114. Say why
+  // instead of the button appearing to do nothing.
+  const { data, error } = await supabase
     .from("event_listings")
     .delete()
     .eq("id", id)
+    .eq("owner_profile_id", userId)
+    .select("id");
+  revalidatePath("/dashboard/events");
+  if (error) {
+    redirect(`/dashboard/events?error=${encodeURIComponent(listingErrorMessage(error.message) ?? error.message)}`);
+  }
+  redirect(data?.length ? "/dashboard/events?notice=deleted" : "/dashboard/events");
+}
+
+/**
+ * Archive (or restore) a listing: hidden from sponsors and from the owner's
+ * list, kept for its partnership history. Refused while a partnership is live.
+ */
+export async function archiveListing(formData: FormData) {
+  const { supabase, userId } = await currentContext();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  const restore = formData.get("restore") === "1";
+  const { error } = await supabase
+    .from("event_listings")
+    .update(restore ? { archived_at: null, status: "draft" } : { archived_at: new Date().toISOString(), status: "closed" })
+    .eq("id", id)
     .eq("owner_profile_id", userId);
   revalidatePath("/dashboard/events");
+  if (error) {
+    redirect(`/dashboard/events?error=${encodeURIComponent(listingErrorMessage(error.message) ?? error.message)}`);
+  }
+  redirect(`/dashboard/events?notice=${restore ? "restored" : "archived"}`);
 }
 
 /** Toggle a listing between draft and available. */
@@ -180,7 +209,7 @@ export async function toggleListingStatus(formData: FormData) {
   // Publish / unpublish only moves between draft and available; a matched or
   // closed listing is left alone (it would otherwise reopen to sponsors).
   if (!id || (next !== "draft" && next !== "available")) return;
-  const { data: updated } = await supabase
+  const { data: updated, error } = await supabase
     .from("event_listings")
     .update({ status: next })
     .eq("id", id)
@@ -188,6 +217,10 @@ export async function toggleListingStatus(formData: FormData) {
     .in("status", ["draft", "available"])
     .select("name")
     .maybeSingle();
+  if (error) {
+    revalidatePath("/dashboard/events");
+    redirect(`/dashboard/events?error=${encodeURIComponent(listingErrorMessage(error.message) ?? error.message)}`);
+  }
 
   if (next === "available" && updated) {
     await notify({

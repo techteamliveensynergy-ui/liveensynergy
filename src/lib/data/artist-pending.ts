@@ -29,7 +29,7 @@ import { eventOpenStates } from "@/lib/campaign-opening";
 /** A second reminder for the same event + item inside this window is refused (0110). */
 export const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
-export type ArtistPendingKind = "agreement" | "fulfilment" | "codes";
+export type ArtistPendingKind = "agreement" | "fulfilment" | "codes" | "codes_out";
 
 export interface ArtistPendingItem {
   kind: ArtistPendingKind;
@@ -155,7 +155,7 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
 
   // Both lookups at once (QA 8 Nov: slow admin landing). The held responses come
   // with their survey's campaign in one query rather than templates-then-responses.
-  const [heldRes, poolRes] = await Promise.all([
+  const [heldRes, poolRes, outageRes] = await Promise.all([
     campaignIds.length
       ? supabase
           .from("survey_responses")
@@ -166,7 +166,19 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
     uniqueTierIds.length
       ? supabase.from("reward_code_pool").select("tier_id").in("tier_id", uniqueTierIds)
       : Promise.resolve({ data: [] as { tier_id: string }[] }),
+    // Live events whose codes ran out (0114). Missing table → none.
+    supabase
+      .from("reward_code_outages")
+      .select("sponsored_event_id, started_at")
+      .in("sponsored_event_id", eventIds)
+      .is("resolved_at", null),
   ]);
+  const outageSince = new Map(
+    ((outageRes.data ?? []) as { sponsored_event_id: string; started_at: string }[]).map((o) => [
+      o.sponsored_event_id,
+      o.started_at,
+    ]),
+  );
   type HeldRow = { id: string; survey_templates: { campaign_id: string } | { campaign_id: string }[] | null };
   for (const r of (heldRes.data ?? []) as HeldRow[]) {
     const tpl = Array.isArray(r.survey_templates) ? r.survey_templates[0] : r.survey_templates;
@@ -282,6 +294,23 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
           anchor: "#discount-codes",
         });
       }
+    }
+
+    // Codes ran out on a live event (0114): new participants get nothing until
+    // the artist adds more (after the team reopens confirmed codes).
+    const ranOutAt = outageSince.get(e.id);
+    if (ranOutAt) {
+      items.push({
+        kind: "codes_out",
+        label: "Discount codes ran out",
+        detail: e.reward_codes_confirmed_at
+          ? "Every code has been given out. Reopen the codes so the artist can add more — people answering now are held."
+          : "Every code has been given out. The artist needs to add more — people answering now are held.",
+        since: ranOutAt,
+        dueAt: null,
+        overdue: Date.now() - new Date(ranOutAt).getTime() > 48 * 60 * 60 * 1000,
+        anchor: "#discount-codes",
+      });
     }
 
     const held = e.campaign_id ? (reviewByCampaign.get(e.campaign_id) ?? []) : [];

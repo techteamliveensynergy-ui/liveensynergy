@@ -10,6 +10,7 @@ import type {
   SponsoredEvent,
   SponsoredEventAsset,
   SponsoredEventChangeRequest,
+  SponsoredEventCancellationRequest,
   SponsoredEventProof,
   SponsoredEventRewardTier,
   RewardCode,
@@ -35,6 +36,8 @@ import { FulfilmentCards, FulfilmentConsent } from "./FulfilmentSection";
 import type { FulfilmentForm } from "@/lib/fulfilment";
 import { ARTIST_TYPES } from "@/lib/constants";
 import { ChangeRequestSection } from "./ChangeRequestSection";
+import { CancellationRequestSection } from "./CancellationRequestSection";
+import { isCancelledEvent } from "@/lib/event-safety";
 import { UK_TIME_ZONE, formatDateTime } from "@/lib/format";
 
 export const metadata = { title: "Partnered event" };
@@ -80,6 +83,7 @@ export default async function SponsoredEventPage({
     { data: tierRows },
     { data: changeRows },
     { data: reportRows },
+    { data: cancelRows },
   ] =
     await Promise.all([
       supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle(),
@@ -133,6 +137,12 @@ export default async function SponsoredEventPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("ticket_sales_reports")
+        .select("*")
+        .eq("sponsored_event_id", id)
+        .order("created_at", { ascending: false }),
+      // Cancellation requests (0114). Missing table → none.
+      supabase
+        .from("sponsored_event_cancellation_requests")
         .select("*")
         .eq("sponsored_event_id", id)
         .order("created_at", { ascending: false }),
@@ -201,6 +211,8 @@ export default async function SponsoredEventPage({
   const proofs = (proofRows ?? []) as SponsoredEventProof[];
   const rewardTiers = (tierRows ?? []) as SponsoredEventRewardTier[];
   const changeRequests = (changeRows ?? []) as SponsoredEventChangeRequest[];
+  const cancellationRequests = (cancelRows ?? []) as SponsoredEventCancellationRequest[];
+  const cancelled = isCancelledEvent(event);
   const salesReports = (reportRows ?? []) as TicketSalesReport[];
 
   const isBrand = !!brand && brand.id === event.brand_id;
@@ -345,8 +357,27 @@ export default async function SponsoredEventPage({
             ? `Partnership ref ${event.reference} · with ${actName}`
             : `Partnership ref ${event.reference}`
         }
-        action={<StatusBadge status={event.status} />}
+        action={
+          cancelled ? (
+            <span className="chip bg-[var(--color-pink)] text-[var(--color-accent)]">Cancelled</span>
+          ) : (
+            <StatusBadge status={event.status} />
+          )
+        }
       />
+
+      {cancelled && (
+        <div role="status" className="rounded-xl bg-[var(--color-pink)] px-5 py-4 text-sm text-[var(--color-ink)]">
+          <p className="font-semibold text-[var(--color-accent)]">
+            The team cancelled this partnership on {formatDateTime(event.cancelled_at)}.
+          </p>
+          {event.cancel_reason && <p className="mt-1">Reason: {event.cancel_reason}</p>}
+          <p className="mt-1 text-[var(--color-ink-soft)]">
+            Registrations, surveys and discount codes for it have stopped and everyone registered has been told.
+            The team will be in touch about what happens next.
+          </p>
+        </div>
+      )}
 
       {/* Where the artist's fulfilment form stands, at the top, so it can't be
           missed among the event, codes and branding cards below (QA 6 Nov). */}
@@ -728,7 +759,11 @@ export default async function SponsoredEventPage({
       {!isArtist && proofSection}
       {!isArtist && rewardSection}
 
-      {locked && (isBrand || isArtist) && (
+      {!cancelled && (isBrand || isArtist) && (event.status === "in_progress" || event.status === "confirmed") && (
+        <CancellationRequestSection eventId={event.id} requests={cancellationRequests} />
+      )}
+
+      {locked && !cancelled && (isBrand || isArtist) && (
         <ChangeRequestSection
           eventId={event.id}
           requests={changeRequests}

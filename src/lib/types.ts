@@ -416,6 +416,8 @@ export interface EventListing {
   sponsor_benefits: string | null;
   image_url: string | null;
   status: ListingStatus;
+  /** Archived by its owner (0114): hidden from their list, kept for history. */
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -464,8 +466,28 @@ export interface SponsoredEvent {
   reward_codes_confirmed_by: string | null;
   /** Discount-code set-up deadline (0091, #58); null = none set. */
   codes_due_at?: string | null;
+  /** Cancelled by the team (0114). Status is then `withdrawn`. */
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  cancel_reason?: string | null;
+  /** Most registrations allowed (0114); null = no limit. Then a 10% waitlist. */
+  registration_cap?: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A party's request that the team cancel a partnership (0114). */
+export interface SponsoredEventCancellationRequest {
+  id: string;
+  sponsored_event_id: string;
+  requested_by: string | null;
+  requester_role: "brand" | "artist" | null;
+  reason: string;
+  status: "pending" | "declined" | "accepted";
+  admin_note: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
 }
 
 export interface SponsoredEventAsset {

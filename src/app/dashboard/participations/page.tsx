@@ -13,6 +13,8 @@ import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import type { Participation, SponsoredEvent } from "@/lib/types";
 import { platformLabel } from "@/lib/discount-codes";
 import { loadAudienceProgress } from "@/lib/data/audience-progress";
+import { eventCapacity, isCancelledEvent, waitlistedMessage } from "@/lib/event-safety";
+import { leaveWaitlist } from "../discover/actions";
 import { SURVEY_HELD_FOR_REVIEW_MESSAGE, SURVEY_RECEIVED_MESSAGE, SURVEY_UNDER_REVIEW_MESSAGE } from "@/lib/survey-capacity";
 import { formatEventDateTime } from "@/lib/event-time";
 import { addDays, formatDateTime, UK_TIME_ZONE } from "@/lib/format";
@@ -63,6 +65,24 @@ export default async function ParticipationsPage({
   const { surveyTemplates, respondedKeys, respondedPublicly, surveyDone, codeWaitFor, codeByParticipation } =
     await loadAudienceProgress(supabase, profile.id, allRows);
 
+  // Waitlist places (0114) — with the event and the person's place in the queue.
+  const { data: waitRows } = await supabase
+    .from("event_waitlist")
+    .select("id, sponsored_event_id, created_at, sponsored_events(name, event_date, start_time, timezone)")
+    .eq("profile_id", profile.id)
+    .is("promoted_at", null)
+    .is("left_at", null)
+    .is("cancelled_at", null)
+    .order("created_at");
+  const waiting = await Promise.all(
+    ((waitRows ?? []) as unknown as {
+      id: string;
+      sponsored_event_id: string;
+      created_at: string;
+      sponsored_events: Pick<SponsoredEvent, "name" | "event_date" | "start_time" | "timezone"> | null;
+    }[]).map(async (w) => ({ ...w, position: (await eventCapacity(supabase, w.sponsored_event_id))?.my_position ?? null })),
+  );
+
   // Ticket proofs sit in the private bucket — each thumbnail needs its own
   // short-lived signed URL, generated per render.
   const ticketLinks = new Map(
@@ -98,6 +118,16 @@ export default async function ParticipationsPage({
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
           ✓ You&apos;re registered. Buy your ticket, then come back here and add
           your ticket reference so your attendance can be verified.
+        </p>
+      )}
+      {notice === "waitlisted" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+          {waitlistedMessage(waiting[waiting.length - 1]?.position)}
+        </p>
+      )}
+      {notice === "left-waitlist" && (
+        <p className="mb-5 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          You&apos;ve left the waitlist.
         </p>
       )}
       {notice === "already-registered" && (
@@ -151,6 +181,35 @@ export default async function ParticipationsPage({
         </p>
       )}
 
+      {waiting.length > 0 && (
+        <div id="waitlist" className="card mb-5 scroll-mt-6 p-5">
+          <h2 className="font-semibold">On the waitlist</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            These events are full. If a place opens up it&apos;s yours automatically — we&apos;ll email you, and any
+            discount code you&apos;ve earned follows.
+          </p>
+          <ul className="mt-3 divide-y divide-black/5">
+            {waiting.map((w) => (
+              <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <div>
+                  <p className="font-medium">{w.sponsored_events?.name ?? "Event"}</p>
+                  <p className="text-xs text-[var(--color-ink-soft)]">
+                    {w.position ? `Number ${w.position} in the queue` : "Waiting"}
+                    {w.sponsored_events?.event_date
+                      ? ` · ${formatEventDateTime({ date: w.sponsored_events.event_date, time: w.sponsored_events.start_time, timeZone: w.sponsored_events.timezone })}`
+                      : ""}
+                  </p>
+                </div>
+                <form action={leaveWaitlist}>
+                  <input type="hidden" name="sponsored_event_id" value={w.sponsored_event_id} />
+                  <button type="submit" className="btn btn-ghost text-sm">Leave waitlist</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mb-5 flex flex-wrap gap-2">
         <TabLink
           href="/dashboard/participations"
@@ -196,7 +255,11 @@ export default async function ParticipationsPage({
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{ev?.name ?? "Event"}</h3>
-                      <StatusBadge status={participationBadge(p, codeByParticipation.has(p.id))} />
+                      {isCancelledEvent(ev) ? (
+                        <span className="chip bg-[var(--color-pink)] text-[var(--color-accent)]">Cancelled</span>
+                      ) : (
+                        <StatusBadge status={participationBadge(p, codeByParticipation.has(p.id))} />
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                       {[
@@ -229,6 +292,16 @@ export default async function ParticipationsPage({
                     </form>
                   )}
                 </div>
+
+                {isCancelledEvent(ev) && (
+                  <p className="mt-3 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-ink)]">
+                    This event has been cancelled{ev?.cancel_reason ? `: ${ev.cancel_reason}` : "."} There&apos;s nothing
+                    you need to do.
+                    {codeByParticipation.has(p.id)
+                      ? " Your discount code may no longer be usable — the organiser's ticketing platform decides that."
+                      : ""}
+                  </p>
+                )}
 
                 {/* Book → selected → upload → attend → reward, with ticks
                     (3 Aug standup). */}

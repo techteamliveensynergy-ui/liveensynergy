@@ -1,3 +1,4 @@
+import { sponsorshipStatus } from "@/lib/event-safety";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -33,6 +34,7 @@ interface SponsorshipRow {
   reward_codes_confirmed_at: string | null;
   brand_agreed: boolean;
   artist_agreed: boolean;
+  cancelled_at?: string | null;
 }
 
 const money = (n: number | null | undefined) =>
@@ -88,7 +90,7 @@ export default async function AdminCampaignPage({
         .maybeSingle<{ id: string; reference: string; status: string; due_date: string | null }>(),
       supabase
         .from("sponsored_events")
-        .select("id, reference, name, status, event_date, artist_display_name, reward_codes_confirmed_at, brand_agreed, artist_agreed")
+        .select("id, reference, name, status, event_date, artist_display_name, reward_codes_confirmed_at, brand_agreed, artist_agreed, cancelled_at")
         .eq("campaign_id", id)
         .order("created_at", { ascending: true }),
       supabase
@@ -436,7 +438,7 @@ export default async function AdminCampaignPage({
                       : ""}
                   </span>
                 </span>
-                <StatusBadge status={s.status} />
+                <StatusBadge status={sponsorshipStatus(s)} />
               </li>
             ))}
           </ul>

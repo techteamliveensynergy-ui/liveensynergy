@@ -15,6 +15,7 @@ export const metadata = { title: "Waiting on artists" };
 
 const KIND_LABEL: Record<ArtistPendingKind, string> = {
   codes: "Reward codes",
+  codes_out: "Codes ran out",
   fulfilment: "Fulfilment form",
   agreement: "Agreement",
 };

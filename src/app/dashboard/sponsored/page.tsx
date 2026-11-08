@@ -1,3 +1,4 @@
+import { sponsorshipStatus } from "@/lib/event-safety";
 import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -164,7 +165,7 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
       <div>
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{e.name}</h3>
-          <StatusBadge status={e.status} />
+          <StatusBadge status={sponsorshipStatus(e)} />
         </div>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           {[

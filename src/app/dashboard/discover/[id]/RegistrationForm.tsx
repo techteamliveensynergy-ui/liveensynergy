@@ -8,11 +8,11 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { confirmRegistration, type RegistrationState } from "../actions";
 
-function Submit() {
+function Submit({ waitlist }: { waitlist: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn btn-primary w-full" disabled={pending}>
-      {pending ? "Registering…" : "Confirm registration"}
+      {pending ? (waitlist ? "Joining…" : "Registering…") : waitlist ? "Join the waitlist" : "Confirm registration"}
     </button>
   );
 }
@@ -29,6 +29,7 @@ export function RegistrationForm({
   defaultDateOfBirth,
   defaultPhone,
   defaultPhoneCountryCode,
+  waitlistOnly = false,
 }: {
   eventId: string;
   eventName: string;
@@ -36,6 +37,8 @@ export function RegistrationForm({
   defaultDateOfBirth: string;
   defaultPhone: string;
   defaultPhoneCountryCode: string;
+  /** The event is at its registration limit (0114): this joins the waitlist. */
+  waitlistOnly?: boolean;
 }) {
   const [state, formAction] = useActionState<RegistrationState, FormData>(
     confirmRegistration,
@@ -46,6 +49,12 @@ export function RegistrationForm({
     <form action={formAction} className="card space-y-4 p-6">
       <input type="hidden" name="sponsored_event_id" value={eventId} />
       <ErrorBanner error={state.error} />
+      {waitlistOnly && (
+        <p className="rounded-lg bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+          This event is full. Confirming puts you on its waitlist — if a place opens up it&apos;s yours
+          automatically and we&apos;ll email you. You can still answer the survey in the meantime.
+        </p>
+      )}
 
       <div>
         <h2 className="text-lg font-semibold">Confirm your details</h2>
@@ -112,7 +121,7 @@ export function RegistrationForm({
         </span>
       </label>
 
-      <Submit />
+      <Submit waitlist={waitlistOnly} />
     </form>
   );
 }
