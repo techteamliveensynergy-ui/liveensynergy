@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SURVEY_ENDED_COPY, surveyClosedReason } from "@/lib/event-safety";
 import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
 import { requireRole } from "@/lib/profile";
@@ -110,6 +111,25 @@ export default async function TakeSurveyPage({
             Submitted {formatDateTime(existingResponse.submitted_at)}.
           </p>
           <Link href="/dashboard/participations" className="btn btn-primary mt-4">
+            Back to My events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Closed (0114): campaign over, event cancelled, or a pre-event survey after
+  // the event. The database refuses the answer anyway; say so first.
+  const closedReason = await surveyClosedReason(supabase, templateId);
+  if (closedReason && closedReason !== "not_open") {
+    const c = SURVEY_ENDED_COPY[closedReason];
+    return (
+      <div>
+        <PageHeader title={tpl.title} />
+        <div className="card p-10 text-center">
+          <p className="text-xl font-semibold">{c.title}</p>
+          <p className="mt-2 text-[var(--color-ink-soft)]">{c.body}</p>
+          <Link href="/dashboard/participations" className="btn btn-primary mt-5">
             Back to My events
           </Link>
         </div>

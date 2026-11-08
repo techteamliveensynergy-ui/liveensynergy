@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { notify, notifyAdmins } from "@/lib/notifications";
 import { isRegistrationNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE } from "@/lib/campaign-opening";
+import { EVENT_AND_WAITLIST_FULL_MESSAGE, isEventFullError, joinWaitlist } from "@/lib/event-safety";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -153,6 +154,18 @@ export async function confirmRegistration(
     // double submit lands them on the registration they already have.
     if (insertError.code !== "23505") {
       if (isRegistrationNotOpenError(insertError.message)) return { error: REGISTRATION_NOT_OPEN_MESSAGE };
+      // At the registration limit (0114): the details and terms are already
+      // confirmed, so put them on the waitlist instead.
+      if (isEventFullError(insertError.message)) {
+        const { result, error: waitError } = await joinWaitlist(supabase, sponsoredEventId);
+        if (waitError) return { error: waitError };
+        if (result?.status === "full") return { error: EVENT_AND_WAITLIST_FULL_MESSAGE };
+        revalidatePath("/dashboard/participations");
+        revalidatePath(`/dashboard/discover/${sponsoredEventId}`);
+        if (result?.status === "registered") redirect("/dashboard/participations?notice=already-registered");
+        if (result?.status === "not_full") return { error: "A place has just opened up — please confirm again to register." };
+        redirect("/dashboard/participations?notice=waitlisted#waitlist");
+      }
       console.error("[confirmRegistration] insert failed", insertError);
       return { error: insertError.message };
     }
@@ -191,4 +204,15 @@ export async function confirmRegistration(
   // Landing on My events with no message read as "nothing happened" even when
   // the registration had worked.
   redirect("/dashboard/participations?notice=registered");
+}
+
+/** Leave an event's waitlist (0114). */
+export async function leaveWaitlist(formData: FormData) {
+  const { supabase } = await requireUser();
+  const eventId = String(formData.get("sponsored_event_id") ?? "");
+  if (!eventId) return;
+  await supabase.rpc("leave_event_waitlist", { p_event_id: eventId });
+  revalidatePath("/dashboard/participations");
+  revalidatePath(`/dashboard/discover/${eventId}`);
+  redirect("/dashboard/participations?notice=left-waitlist");
 }

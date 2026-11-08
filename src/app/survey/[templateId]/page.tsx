@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CompletedSurveyCard } from "@/components/surveys/CompletedSurveyCard";
+import { SURVEY_ENDED_COPY, eventCapacity, surveyClosedReason } from "@/lib/event-safety";
 import { rewardOutcomeFor } from "@/lib/survey-reward-lookup";
 import { SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, atQuota, surveyCapacityState } from "@/lib/survey-capacity";
 import { CapacityNotice } from "@/components/surveys/CapacityNotice";
@@ -145,6 +146,11 @@ export default async function PublicSurveyPage({
           : Promise.resolve({ data: null }),
       ]);
       const registered = Boolean(part) && viewer?.role === "audience";
+      // On the waitlist (0114): their answers are kept, the code waits for a place.
+      const waitlisted =
+        !registered && event && viewer?.role === "audience"
+          ? (await eventCapacity(supabase, event.id))?.my_position != null
+          : false;
       const reward =
         registered && event
           ? await rewardOutcomeFor(supabase, {
@@ -154,7 +160,9 @@ export default async function PublicSurveyPage({
               underReview: !answered.passed,
               heldForReview: false,
             })
-          : null;
+          : waitlisted
+            ? ({ status: "pending", reason: "waitlisted" } as const)
+            : null;
       return (
         <Shell>
           <CompletedSurveyCard
@@ -167,6 +175,19 @@ export default async function PublicSurveyPage({
         </Shell>
       );
     }
+  }
+
+  // Closed for this person (0114): campaign over, event cancelled or past, or —
+  // for someone not yet registered — the deadline passed or the event (and its
+  // waitlist) is full. The database refuses the answer anyway; say so first.
+  const closedReason = await surveyClosedReason(supabase, templateId);
+  if (closedReason && closedReason !== "not_open") {
+    const c = SURVEY_ENDED_COPY[closedReason];
+    return (
+      <Shell>
+        <StatusCard title={c.title} body={c.body} />
+      </Shell>
+    );
   }
 
   // Already-registered participant taking their own campaign's survey via a

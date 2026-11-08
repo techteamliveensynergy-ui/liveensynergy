@@ -8,13 +8,14 @@ import { formatDateTime } from "@/lib/format";
 import { loadArtistPending, NUDGE_COOLDOWN_MS, type ArtistPendingKind } from "@/lib/data/artist-pending";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const KINDS: readonly ArtistPendingKind[] = ["agreement", "fulfilment", "codes"];
+const KINDS: readonly ArtistPendingKind[] = ["agreement", "fulfilment", "codes", "codes_out"];
 
 /** What the reminder asks for, and where it sends the artist. */
 const ASK: Record<ArtistPendingKind, { what: string; anchor: string }> = {
   agreement: { what: "agree to the sponsorship", anchor: "" },
   fulfilment: { what: "review and consent to the fulfilment form", anchor: "#fulfilment" },
   codes: { what: "confirm the discount codes", anchor: "#discount-codes" },
+  codes_out: { what: "add more discount codes", anchor: "#discount-codes" },
 };
 
 function back(notice: string, kind?: string): never {

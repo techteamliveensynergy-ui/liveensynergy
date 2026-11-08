@@ -1,3 +1,4 @@
+import { sponsorshipStatus } from "@/lib/event-safety";
 import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -204,7 +205,7 @@ export default async function AdminEventsPage({
                     <span className="font-semibold text-[var(--color-ink)]">
                       {e.name}
                     </span>
-                    <StatusBadge status={e.status} />
+                    <StatusBadge status={sponsorshipStatus(e)} />
                     {datePassed(e) && (
                       <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-soft)]">
                         Date passed — not yet marked completed

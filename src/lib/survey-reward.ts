@@ -24,6 +24,8 @@ export type SurveyRewardPendingReason =
   | "no_codes"
   /** The event isn't open for registration. */
   | "not_open"
+  /** The event was full, so they joined its waitlist (0114). */
+  | "waitlisted"
   /** Registered and nothing is wrong that we can name — the email follows. */
   | "unknown";
 
@@ -62,6 +64,10 @@ export const REWARD_PENDING_COPY: Record<SurveyRewardPendingReason, { title: str
   not_open: {
     title: "Registration isn't open yet",
     body: "Your answers are in, but registration for this event hasn't opened yet. We'll let you know when it does.",
+  },
+  waitlisted: {
+    title: "You're on the waitlist",
+    body: "Your answers are in, but the event is full, so we've put you on its waitlist. If a place opens up it's yours automatically — we'll email you, and if your response passed, your discount code follows straight away.",
   },
   unknown: {
     title: "Your discount code is on its way",

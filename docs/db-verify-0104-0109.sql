@@ -188,7 +188,40 @@ with checks (grp, ord, name, expected, actual) as (
         and table_name = 'notification_settings' and column_name in ('email_button', 'email_button_label'))::text),
   ('J. 0113 email button settings', 2, 'the review alert has its button on by default', 'true',
      coalesce((select to_jsonb(s) ->> 'email_button' from public.notification_settings s
-                where s.event_key = 'admin.survey_needs_review'), 'missing'))
+                where s.event_key = 'admin.survey_needs_review'), 'missing')),
+
+  -- ---- K. 0114: cancellation, listing guards, survey cut-offs, codes out, cap ---------
+  ('K. 0114 event safety', 1, 'new sponsored_events / event_listings columns', '5',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and ((table_name = 'sponsored_events' and column_name in ('cancelled_at','cancelled_by','cancel_reason','registration_cap'))
+          or (table_name = 'event_listings' and column_name = 'archived_at')))::text),
+  ('K. 0114 event safety', 2, 'new tables', '3',
+     (select count(*) from information_schema.tables where table_schema = 'public'
+        and table_name in ('sponsored_event_cancellation_requests','event_waitlist','reward_code_outages'))::text),
+  ('K. 0114 event safety', 3, 'guard / gate / waitlist / outage triggers', '11',
+     (select count(*) from pg_trigger where not tgisinternal and tgname in (
+        'sponsored_events_cancel_guard','event_listings_deal_guard','reward_codes_block_cancelled',
+        'participations_cap_guard','participations_promote_on_delete','participations_promote_on_reject',
+        'sponsored_events_promote_on_cap','reward_codes_outage_check','reward_code_pool_outage_check',
+        'reward_tiers_outage_check','survey_responses_require_open'))::text),
+  ('K. 0114 event safety', 4, 'survey gate knows SURVEY_ENDED', 'true',
+     coalesce((select pg_get_functiondef(p.oid) like '%SURVEY_ENDED%' from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'survey_responses_require_open'), false)::text),
+  ('K. 0114 event safety', 5, 'admin_cancel_sponsored_event: signed-out no, signed-in yes', 'false/true',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' ||
+                      has_function_privilege('authenticated', p.oid, 'EXECUTE')::text
+                 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                  and p.proname = 'admin_cancel_sponsored_event' limit 1), 'missing')),
+  ('K. 0114 event safety', 6, 'promote_event_waitlist not callable by clients', 'false',
+     coalesce((select has_function_privilege('authenticated', p.oid, 'EXECUTE')::text
+                 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                  and p.proname = 'promote_event_waitlist' limit 1), 'missing')),
+  ('K. 0114 event safety', 7, '9 events + 9 settings + 18 templates', '9/9/18',
+     (select count(*) from public.notification_events where key in ('admin.cancellation_requested','sponsorship.cancellation_declined','sponsorship.cancelled','participation.event_cancelled','admin.codes_ran_out','sponsorship.codes_ran_out','brand.codes_ran_out','participation.waitlisted','participation.promoted'))::text || '/' ||
+     (select count(*) from public.notification_settings where event_key in ('admin.cancellation_requested','sponsorship.cancellation_declined','sponsorship.cancelled','participation.event_cancelled','admin.codes_ran_out','sponsorship.codes_ran_out','brand.codes_ran_out','participation.waitlisted','participation.promoted'))::text || '/' ||
+     (select count(*) from public.notification_templates where event_key in ('admin.cancellation_requested','sponsorship.cancellation_declined','sponsorship.cancelled','participation.event_cancelled','admin.codes_ran_out','sponsorship.codes_ran_out','brand.codes_ran_out','participation.waitlisted','participation.promoted'))::text),
+  ('K. 0114 event safety', 8, 'waitlist size: cap 30 → 3, cap 31 → 4', '3/4',
+     coalesce((select public.event_waitlist_size(30)::text || '/' || public.event_waitlist_size(31)::text), 'missing'))
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

@@ -94,6 +94,8 @@ const STATUS_STYLES: Record<string, string> = {
   completed: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   closed: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   withdrawn: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",
+  /** A partnership the team cancelled (0114) — see sponsorshipStatus(). */
+  cancelled: "bg-[var(--color-pink)] text-[var(--color-accent)]",
   draft: "bg-[var(--color-mint)] text-[var(--color-ink-soft)]",
   published: "bg-[var(--color-sage)] text-[var(--color-olive-deep)]",
   archived: "bg-[var(--color-mist)] text-[var(--color-ink-soft)]",

@@ -2,6 +2,7 @@
 
 import { atQuota, isSurveyClosedError, SURVEY_CLOSED_BODY, SURVEY_CLOSED_TITLE, surveyCapacityState, type SurveyAvailability } from "@/lib/survey-capacity";
 import { isRegistrationNotOpenError, isSurveyNotOpenError, REGISTRATION_NOT_OPEN_MESSAGE, SURVEY_NOT_OPEN_TITLE, surveyNotOpenBody } from "@/lib/campaign-opening";
+import { EVENT_AND_WAITLIST_FULL_MESSAGE, isEventFullError, joinWaitlist, surveyEndedError } from "@/lib/event-safety";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -232,6 +233,8 @@ async function submitPublicSurveyResponseInner(
     if (isSurveyNotOpenError(error.message)) {
       return { error: `${SURVEY_NOT_OPEN_TITLE}. ${surveyNotOpenBody(null)}` };
     }
+    const ended = surveyEndedError(error.message);
+    if (ended) return { error: ended };
     if (isEmailNotVerifiedError(error.message)) {
       return { error: EMAIL_NOT_VERIFIED_MESSAGE, needsEmailVerification: true };
     }
@@ -384,6 +387,16 @@ async function registerAndRewardAfterSubmit(
       if (isRegistrationNotOpenError(regError.message)) {
         return { registered: false, reward: { status: "pending", reason: "not_open" } };
       }
+      // Full (0114): keep their answers and put them on the waitlist; the code
+      // issues if and when they're promoted.
+      if (isEventFullError(regError.message)) {
+        const { result } = await joinWaitlist(supabase, ev.id);
+        revalidatePath("/dashboard/participations");
+        if (result?.status === "waitlisted") {
+          return { registered: false, reward: { status: "pending", reason: "waitlisted" } };
+        }
+        return { registered: false, reward: { status: "pending", reason: "unknown" } };
+      }
       console.error("[survey] registering after submit failed:", regError.message);
       return { registered: false, reward: { status: "pending", reason: "unknown" } };
     }
@@ -449,6 +462,17 @@ export async function registerForEventAfterSurvey(
   // 23505 = already registered — treat as success, same as confirmRegistration().
   if (error && error.code !== "23505") {
     if (isRegistrationNotOpenError(error.message)) return { error: REGISTRATION_NOT_OPEN_MESSAGE };
+    if (isEventFullError(error.message)) {
+      const { result, error: waitError } = await joinWaitlist(supabase, sponsoredEventId);
+      if (waitError) return { error: waitError };
+      if (result?.status === "full") return { error: EVENT_AND_WAITLIST_FULL_MESSAGE };
+      revalidatePath("/dashboard/participations");
+      redirect(
+        profile.onboarding_completed
+          ? "/dashboard/participations?notice=waitlisted#waitlist"
+          : "/onboarding/audience?notice=registered",
+      );
+    }
     return { error: error.message };
   }
 

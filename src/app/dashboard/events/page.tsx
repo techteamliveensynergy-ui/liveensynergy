@@ -3,20 +3,28 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
 import type { EventListing, SponsoredEvent } from "@/lib/types";
-import { toggleListingStatus, deleteListing } from "./actions";
+import { toggleListingStatus, deleteListing, archiveListing } from "./actions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { isCancelledEvent, listingDealState } from "@/lib/event-safety";
 import { formatEventDateTime } from "@/lib/event-time";
 
 export const metadata = { title: "My events" };
+
+const LISTING_NOTICES: Record<string, string> = {
+  deleted: "Event deleted.",
+  archived: "Event archived — it's hidden from sponsors and kept under Archived below.",
+  restored: "Event restored to your list.",
+};
 
 type Tab = "published" | "sponsored";
 
 export default async function EventsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; notice?: string; error?: string }>;
 }) {
   const { profile } = await requireRole(["artist", "event"]);
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, notice, error: errorText } = await searchParams;
   const tab: Tab = rawTab === "sponsored" ? "sponsored" : "published";
   const supabase = await createClient();
 
@@ -33,8 +41,22 @@ export default async function EventsPage({
       .order("created_at", { ascending: false }),
   ]);
 
-  const listings = (listingData ?? []) as EventListing[];
+  const allListings = (listingData ?? []) as EventListing[];
   const sponsored = (sponsoredData ?? []) as SponsoredEvent[];
+  // Which listings are in a partnership (0114: those can't be deleted or
+  // unpublished; ones with history can only be archived). The artist's own
+  // sponsorships, plus any other deal on their listings they can read.
+  const { data: dealRows } = allListings.length
+    ? await supabase
+        .from("sponsored_events")
+        .select("id, reference, listing_id, status")
+        .in("listing_id", allListings.map((l) => l.id))
+    : { data: [] };
+  const deals = (dealRows ?? []) as { id: string; reference: string; listing_id: string | null; status: string }[];
+  const liveDealFor = (listingId: string) =>
+    deals.find((d) => d.listing_id === listingId && (d.status === "in_progress" || d.status === "confirmed"));
+  const listings = allListings.filter((l) => !l.archived_at);
+  const archived = allListings.filter((l) => l.archived_at);
 
   return (
     <div>
@@ -47,6 +69,17 @@ export default async function EventsPage({
           </Link>
         }
       />
+
+      {notice && LISTING_NOTICES[notice] && (
+        <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
+          {LISTING_NOTICES[notice]}
+        </p>
+      )}
+      {errorText && (
+        <p role="alert" className="mb-5 rounded-lg bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
+          {errorText}
+        </p>
+      )}
 
       <div className="mb-5 flex flex-wrap gap-2">
         <TabLink
@@ -112,47 +145,106 @@ export default async function EventsPage({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {(l.status === "draft" || l.status === "available") && (
-                    <form action={toggleListingStatus}>
-                      <input type="hidden" name="id" value={l.id} />
-                      <input
-                        type="hidden"
-                        name="next_status"
-                        value={l.status === "available" ? "draft" : "available"}
-                      />
-                      <button className="btn btn-ghost text-sm" type="submit">
-                        {l.status === "available" ? "Unpublish" : "Publish"}
-                      </button>
-                    </form>
-                  )}
-                  <Link
-                    href={`/dashboard/events/${l.id}/view`}
-                    className="btn btn-ghost text-sm"
-                  >
-                    View
-                  </Link>
-                  <Link
-                    href={`/dashboard/events/${l.id}`}
-                    className="btn btn-ghost text-sm"
-                  >
-                    Edit
-                  </Link>
-                  <form action={deleteListing}>
-                    <input type="hidden" name="id" value={l.id} />
-                    <button
-                      className="btn btn-ghost text-sm text-[var(--color-accent)]"
-                      type="submit"
-                    >
-                      Delete
-                    </button>
-                  </form>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const state = listingDealState(l.id, deals);
+                    const live = liveDealFor(l.id);
+                    return (
+                      <>
+                        {/* A live partnership can't be unpublished (0114). */}
+                        {state !== "live" && (l.status === "draft" || l.status === "available") && (
+                          <form action={toggleListingStatus}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <input
+                              type="hidden"
+                              name="next_status"
+                              value={l.status === "available" ? "draft" : "available"}
+                            />
+                            <button className="btn btn-ghost text-sm" type="submit">
+                              {l.status === "available" ? "Unpublish" : "Publish"}
+                            </button>
+                          </form>
+                        )}
+                        <Link href={`/dashboard/events/${l.id}/view`} className="btn btn-ghost text-sm">
+                          View
+                        </Link>
+                        <Link href={`/dashboard/events/${l.id}`} className="btn btn-ghost text-sm">
+                          Edit
+                        </Link>
+                        {state === "live" && live ? (
+                          <Link
+                            href={`/dashboard/sponsored/${live.id}#cancellation`}
+                            className="btn btn-ghost text-sm"
+                            title="This event is in a partnership, so it can't be deleted or unpublished. Ask the team to cancel it."
+                          >
+                            In partnership {live.reference} · Request cancellation
+                          </Link>
+                        ) : state === "history" ? (
+                          <form action={archiveListing}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <ConfirmSubmitButton
+                              label="Archive"
+                              className="btn btn-ghost text-sm"
+                              title={`Archive “${l.name}”?`}
+                              points={[
+                                "It's hidden from sponsors and from your list (you'll find it under Archived).",
+                                "Its partnership history is kept — that's why it can't be deleted.",
+                              ]}
+                              confirmLabel="Archive it"
+                              pendingLabel="Archiving…"
+                            />
+                          </form>
+                        ) : (
+                          <form action={deleteListing}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <ConfirmSubmitButton
+                              label="Delete"
+                              className="btn btn-ghost text-sm text-[var(--color-accent)]"
+                              title={`Delete “${l.name}”?`}
+                              points={[
+                                "The event is removed for good, with its details and image.",
+                                "This can't be undone.",
+                              ]}
+                              confirmLabel="Delete it"
+                              danger
+                              pendingLabel="Deleting…"
+                            />
+                          </form>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
           </div>
         )
-      ) : sponsored.length === 0 ? (
+      ) : null}
+
+      {tab === "published" && archived.length > 0 && (
+        <details className="mt-6">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--color-ink-soft)]">
+            Archived ({archived.length})
+          </summary>
+          <div className="mt-3 space-y-2">
+            {archived.map((l) => (
+              <div key={l.id} className="card flex flex-wrap items-center justify-between gap-3 p-4 opacity-80">
+                <div>
+                  <p className="font-semibold">{l.name}</p>
+                  <p className="text-xs text-[var(--color-ink-soft)]">Listing ref {l.reference}</p>
+                </div>
+                <form action={archiveListing}>
+                  <input type="hidden" name="id" value={l.id} />
+                  <input type="hidden" name="restore" value="1" />
+                  <button type="submit" className="btn btn-ghost text-sm">Restore</button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {tab === "published" ? null : sponsored.length === 0 ? (
         <EmptyState
           icon="🤝"
           title="No partnered events yet"
@@ -173,7 +265,11 @@ export default async function EventsPage({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{e.name}</h3>
-                  <StatusBadge status={e.status} />
+                  {isCancelledEvent(e) ? (
+                    <span className="chip bg-[var(--color-pink)] text-[var(--color-accent)]">Cancelled</span>
+                  ) : (
+                    <StatusBadge status={e.status} />
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                   {[

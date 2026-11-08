@@ -49,6 +49,13 @@ export function CompletedSurveyCard({
             {reward.status === "issued" ? "View my rewards" : "View my events"}
           </Link>
         </>
+      ) : reward && reward.status === "pending" && reward.reason === "waitlisted" ? (
+        <>
+          <RewardPanel reward={reward} />
+          <Link href="/dashboard/participations#waitlist" className="btn btn-primary w-full">
+            View my events
+          </Link>
+        </>
       ) : eventName ? (
         <>
           <p className="text-sm text-[var(--color-ink-soft)]">

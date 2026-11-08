@@ -425,7 +425,7 @@ export default async function InvoiceDetailPage({
         </div>
 
         {invoice.status === "paid" && (
-          <div className="mt-4 border-t border-black/10 pt-4">
+          <div id="refund" className="mt-4 scroll-mt-6 border-t border-black/10 pt-4">
             <p className="field-label">Refunds</p>
             {refunds.length > 0 ? (
               <ul className="mb-3 space-y-1 text-sm">

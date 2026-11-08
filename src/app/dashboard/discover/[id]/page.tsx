@@ -7,6 +7,8 @@ import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
 import type { AudienceMember, Participation, SponsoredEvent } from "@/lib/types";
 import { RegistrationForm } from "./RegistrationForm";
+import { leaveWaitlist } from "../actions";
+import { EVENT_AND_WAITLIST_FULL_MESSAGE, eventCapacity } from "@/lib/event-safety";
 import { eventOpenStates, opensLabel } from "@/lib/campaign-opening";
 import { UK_TIME_ZONE } from "@/lib/format";
 
@@ -52,6 +54,13 @@ export default async function EventDetailsPage({
   // Upcoming → Open (0070): shown with all its details, but registration
   // waits until the team opens the campaign.
   const openState = (await eventOpenStates(supabase, [event.id])).get(event.id) ?? { is_open: true, opens_at: null };
+
+  // Registration limit + waitlist (0114). Null when there's no limit or the
+  // migration isn't in yet — the form then behaves as before.
+  const capacity = existing ? null : await eventCapacity(supabase, event.id);
+  const onWaitlist = capacity?.my_position != null;
+  const full = Boolean(capacity?.is_full);
+  const fullAndWaitlistFull = full && Boolean(capacity?.waitlist_full) && !onWaitlist;
 
   const deadlinePassed =
     event.participation_deadline != null &&
@@ -155,8 +164,27 @@ export default async function EventDetailsPage({
             Registration for this event has closed.
           </p>
         </div>
+      ) : onWaitlist ? (
+        <div id="waitlist" className="card p-6 text-center">
+          <span className="chip">Waitlist</span>
+          <p className="mt-3 text-lg font-semibold">You&apos;re number {capacity?.my_position} on the waitlist</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            If a place opens up it&apos;s yours automatically, and we&apos;ll email you.
+          </p>
+          <form action={leaveWaitlist} className="mt-4">
+            <input type="hidden" name="sponsored_event_id" value={event.id} />
+            <button type="submit" className="btn btn-ghost text-sm">Leave the waitlist</button>
+          </form>
+        </div>
+      ) : fullAndWaitlistFull ? (
+        <div className="card p-6">
+          <p className="rounded-lg bg-[var(--color-pink)] px-4 py-3 text-center text-sm font-semibold text-[var(--color-accent)]">
+            {EVENT_AND_WAITLIST_FULL_MESSAGE}
+          </p>
+        </div>
       ) : (
         <RegistrationForm
+          waitlistOnly={full}
           eventId={event.id}
           eventName={event.name}
           defaultName={member?.full_name ?? profile.full_name ?? ""}
