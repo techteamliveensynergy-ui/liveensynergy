@@ -337,6 +337,13 @@ zone (0013) — wall-clock + zone, deliberately not a UTC instant, so "doors
 `formatEventDateTime()` in `src/lib/event-time.ts`; it resolves the right
 abbreviation for that specific date (July reads BST, December GMT).
 
+Every other timestamp is shown in UK time (`src/lib/format.ts`) **except chat**,
+which uses the reader's own zone (QA 8 Nov): `<ViewerTimeZoneCookie>` in the
+dashboard layout writes the browser's zone to the `les_tz` cookie and
+`viewerTimeZone()` (`src/lib/viewer-time-server.ts`) reads it, falling back to UK
+time. The `format.ts` helpers take an optional zone for this; keep deadlines,
+invoices and event times in UK/event time.
+
 ### URLs in forms
 
 Profile/listing web-address fields are plain text, not `<input type="url">` —

@@ -58,7 +58,7 @@ Rules:
 - Quotes may come only from the "samples" of written answers, word for word, and must stay anonymous.
 - Say how many people answered when a finding rests on a small number (under 30), and treat it as indicative.
 - Connect findings to the brand's partnership: awareness, perception, purchase intent, fit between the brand and the event's audience.
-- Each section may chart up to three columns by their id (e.g. "c3"), choosing the ones that best support its point. Only use ids that exist.
+- Each section may chart up to three columns by their id (e.g. "c3"), choosing the ones that best support its point. Only use ids that exist. Chart each column at most ONCE in the whole report — a section that refers back to a figure already charted should give no chart for it.
 - 3 to 6 sections. 3 to 6 recommendations, each one sentence, actionable for the brand's next partnership.
 - caveats: data limitations worth stating (sample size, skipped questions, self-selection). Empty if none matter.`;
 
@@ -152,6 +152,26 @@ export async function writeNarrative(ctx: AnalysisContext, figures: AnalysisFigu
   }
   // Charts may only point at figures we computed.
   const ids = new Set(figures.columns.map((c) => c.id));
-  parsed.sections = parsed.sections.map((s) => ({ ...s, charts: s.charts.filter((c) => ids.has(c)).slice(0, 3) }));
+  parsed.sections = uniqueCharts(
+    parsed.sections.map((s) => ({ ...s, charts: s.charts.filter((c) => ids.has(c)).slice(0, 3) })),
+  );
   return parsed;
+}
+
+/**
+ * Each chart once per report, under the first section that uses it (QA 8 Nov:
+ * the same charts repeated section after section). Applied when the report is
+ * written and again when it is shown, so reports saved before this read the
+ * same way.
+ */
+export function uniqueCharts(sections: ReportSection[]): ReportSection[] {
+  const seen = new Set<string>();
+  return sections.map((s) => ({
+    ...s,
+    charts: (s.charts ?? []).filter((c) => {
+      if (seen.has(c)) return false;
+      seen.add(c);
+      return true;
+    }),
+  }));
 }

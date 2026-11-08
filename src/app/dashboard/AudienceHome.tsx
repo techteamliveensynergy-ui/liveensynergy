@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MetricTile, StatusBadge } from "@/components/dashboard/ui";
-import {
-  ParticipationProgress,
-  isImagePath,
-  participationBadge,
-  participationSteps,
-} from "@/components/dashboard/ParticipationProgress";
-import { signedUrlFor } from "@/lib/storage";
+import { participationBadge, participationSteps } from "@/components/dashboard/ParticipationProgress";
+import { loadAudienceProgress } from "@/lib/data/audience-progress";
 import type { AudienceMember, Participation, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 import { UK_TIME_ZONE } from "@/lib/format";
@@ -17,7 +12,7 @@ type Row = Participation & { sponsored_events: SponsoredEvent | null };
 export async function AudienceHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
 
-  const [{ data: memberData }, { data: rowData }, { data: codeRows }, { data: responseRows }] = await Promise.all([
+  const [{ data: memberData }, { data: rowData }] = await Promise.all([
     supabase
       .from("audience_members")
       .select("*")
@@ -28,35 +23,40 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
       .select("*, sponsored_events(*)")
       .eq("audience_profile_id", profile.id)
       .order("created_at", { ascending: false }),
-    // What the tracker needs beyond the row (QA 30 Oct #21). Own rows only,
-    // under RLS; a public-link response without a participation isn't
-    // matched here — My events has the full picture.
-    supabase.from("reward_codes").select("participation_id").neq("status", "void"),
-    supabase.from("survey_responses").select("participation_id").not("participation_id", "is", null),
   ]);
-  const withCode = new Set(
-    ((codeRows ?? []) as { participation_id: string | null }[]).map((c) => c.participation_id),
-  );
-  const surveyed = new Set(
-    ((responseRows ?? []) as { participation_id: string | null }[]).map((r) => r.participation_id),
-  );
-
   const member = memberData as AudienceMember | null;
   const rows = (rowData ?? []) as Row[];
 
-  // Ticket proofs live in the private bucket, so each thumbnail needs its own
-  // short-lived signed URL. Only the handful shown in the tracker are signed.
-  const tracked = rows.slice(0, 4);
-  const ticketLinks = await Promise.all(
-    tracked.map(async (r) => {
-      if (!r.ticket_proof_url) return null;
-      return (
-        (await signedUrlFor(r.ticket_proof_url)) ??
-        // Rows from before the upload flow stored a pasted external link.
-        (/^https?:\/\//.test(r.ticket_proof_url) ? r.ticket_proof_url : null)
-      );
-    }),
-  );
+  // Same survey/code picture as My events (survey-link responses included),
+  // so the two pages never disagree about where someone is.
+  const { surveyDone, codeWaitFor, codeByParticipation } = await loadAudienceProgress(supabase, profile.id, rows);
+  const withCode = { has: (id: string) => codeByParticipation.has(id) };
+
+  // The Overview is "what do I do next?" — one line per event, the events that
+  // need the member first. The full step trackers live on My events (QA 8 Nov:
+  // the two pages showed the same thing).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const isPast = (r: Row) =>
+    Boolean(r.sponsored_events?.event_date) && new Date(`${r.sponsored_events!.event_date}T23:59:59`) < startOfToday;
+  const NEEDS_YOU = new Set(["Ticket uploaded", "Attended", "Survey"]);
+  const nextSteps = rows
+    .filter((r) => r.status !== "rejected")
+    .map((r) => {
+      const hasCode = codeByParticipation.has(r.id);
+      const steps = participationSteps(r, {
+        surveyDone: surveyDone(r),
+        hasCode,
+        codeWait: hasCode ? null : codeWaitFor(r),
+      });
+      const current = steps.find((st) => st.state === "current");
+      // Ticket upload only once selected; before that the team is choosing.
+      const needsYou = Boolean(current && NEEDS_YOU.has(current.label) && (r.selected || current.label === "Survey"));
+      return { r, current, needsYou, hasCode, done: !current };
+    })
+    .sort((a, b) => Number(b.needsYou) - Number(a.needsYou) || Number(a.done) - Number(b.done))
+    .slice(0, 5);
+  const needsYouCount = nextSteps.filter((n) => n.needsYou).length;
 
   const verifiedCount = rows.filter((r) =>
     ["attendance_verified", "reward_released"].includes(r.status),
@@ -183,63 +183,73 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Reward tracker last, across the full width — the step trackers need
-          the room, and it's the thing people scroll down to check. */}
+      {/* What's next — one line per event, the ones waiting on the member
+          first. The full step-by-step trackers are on My events. */}
       <div className="card mt-5 p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
-            Your events
-          </h2>
-          <Link
-            href="/dashboard/participations"
-            className="text-sm font-semibold text-[var(--color-brand-dark)]"
-          >
-            See all →
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">What&apos;s next</h2>
+            {rows.length > 0 && (
+              <p className="text-sm text-[var(--color-ink-soft)]">
+                {needsYouCount > 0
+                  ? `${needsYouCount} event${needsYouCount === 1 ? " needs" : "s need"} something from you.`
+                  : "Nothing needs you right now — we'll email you when it does."}
+              </p>
+            )}
+          </div>
+          <Link href="/dashboard/participations" className="text-sm font-semibold text-[var(--color-brand-dark)]">
+            All my events →
           </Link>
         </div>
         {rows.length === 0 ? (
           <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
             No events yet.{" "}
-            <Link
-              href="/dashboard/discover"
-              className="font-semibold text-[var(--color-brand-dark)]"
-            >
+            <Link href="/dashboard/discover" className="font-semibold text-[var(--color-brand-dark)]">
               Discover events →
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {tracked.map((r, i) => (
-              <div
-                key={r.id}
-                className="rounded-2xl border border-black/10 bg-[var(--color-mist)] p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-[var(--color-ink)]">
-                      {r.sponsored_events?.name ?? "Event"}
-                    </p>
-                    <p className="text-xs text-[var(--color-ink-soft)]">
-                      {r.sponsored_events?.event_date
-                        ? formatEventDateTime({ date: r.sponsored_events.event_date, time: r.sponsored_events.start_time, timeZone: r.sponsored_events.timezone })
-                        : "Date TBC"}
-                    </p>
+          <ul className="divide-y divide-black/5">
+            {nextSteps.map(({ r, current, needsYou, hasCode }) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-[var(--color-ink)]">{r.sponsored_events?.name ?? "Event"}</p>
+                    <StatusBadge status={participationBadge(r, hasCode)} />
                   </div>
-                  <StatusBadge status={participationBadge(r, withCode.has(r.id))} />
+                  <p className="text-xs text-[var(--color-ink-soft)]">
+                    {r.sponsored_events?.event_date
+                      ? formatEventDateTime({
+                          date: r.sponsored_events.event_date,
+                          time: r.sponsored_events.start_time,
+                          timeZone: r.sponsored_events.timezone,
+                        })
+                      : "Date TBC"}
+                  </p>
+                  <p className={`mt-1 text-sm ${needsYou ? "font-medium text-[var(--color-ink)]" : "text-[var(--color-ink-soft)]"}`}>
+                    {current
+                      ? `${needsYou ? "Your next step" : "Next"}: ${current.hint ?? current.label}`
+                      : "All done — your discount code is under My rewards."}
+                  </p>
                 </div>
-
-                {/* Where they are in the flow, at a glance (3 Aug standup). */}
-                <div className="mt-4">
-                  <ParticipationProgress
-                    steps={participationSteps(r, { surveyDone: surveyed.has(r.id), hasCode: withCode.has(r.id) })}
-                    rejected={r.status === "rejected"}
-                    ticketHref={ticketLinks[i]}
-                    ticketIsImage={isImagePath(r.ticket_proof_url)}
-                  />
-                </div>
-              </div>
+                <Link
+                  href={
+                    current
+                      ? `/dashboard/participations${isPast(r) ? "?tab=past" : ""}#event-${r.id}`
+                      : "/dashboard/rewards"
+                  }
+                  className={`btn shrink-0 text-sm ${needsYou ? "btn-primary" : "btn-ghost"}`}
+                >
+                  {current ? (needsYou ? "Do this now" : "View") : "My rewards"}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
+        )}
+        {rows.length > nextSteps.length && (
+          <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
+            Showing {nextSteps.length} of {rows.length} — see the rest under My events.
+          </p>
         )}
       </div>
     </div>

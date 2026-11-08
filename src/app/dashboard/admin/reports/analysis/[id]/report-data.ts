@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalysisFigures } from "@/lib/analysis/figures";
-import type { AnalysisNarrative } from "@/lib/analysis/narrative";
+import { uniqueCharts, type AnalysisNarrative } from "@/lib/analysis/narrative";
 import { formatDate } from "@/lib/format";
 import { campaignLabel } from "@/lib/campaign-requests";
 
@@ -26,7 +26,12 @@ export async function loadReport(supabase: SupabaseClient, id: string): Promise<
     .select("*, campaigns(id, reference, campaign_name, brands(brand_name))")
     .eq("id", id)
     .maybeSingle();
-  return (data as AnalysisReportRow | null) ?? null;
+  const report = (data as AnalysisReportRow | null) ?? null;
+  // Reports written before charts were de-duplicated read the same as new ones.
+  if (report?.narrative?.sections) {
+    report.narrative = { ...report.narrative, sections: uniqueCharts(report.narrative.sections) };
+  }
+  return report;
 }
 
 /** "Northwave · “Summer push” (CMP-00010) · 120 responses · 15 Oct 2026" */

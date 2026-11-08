@@ -18,6 +18,8 @@ import { Composer } from "./Composer";
 import { NewAdminThread } from "./NewAdminThread";
 import { RecallButton } from "./RecallButton";
 import { AdminThreadList, roleTint, type OrgGroup } from "./AdminThreadList";
+import { viewerTimeZone } from "@/lib/viewer-time-server";
+import { timeZoneLabel } from "@/lib/viewer-time";
 
 export const metadata = { title: "Messages" };
 
@@ -44,6 +46,8 @@ export default async function MessagesPage({
   const { c: activeId, tab: rawTab, notice, q: rawQuery } = await searchParams;
   const query = (rawQuery ?? "").trim();
   const supabase = await createClient();
+  // Chat times in the reader's own zone (QA 8 Nov), not UK time.
+  const tz = await viewerTimeZone();
 
   const { data: convData } = await supabase
     .from("conversations")
@@ -431,6 +435,7 @@ export default async function MessagesPage({
                 activeId={active?.id ?? null}
                 tab={tab}
                 query={query}
+                timeZone={tz}
                 hrefFor={(id) =>
                   `/dashboard/messages?c=${id}${query ? `&q=${encodeURIComponent(query)}` : ""}`
                 }
@@ -457,8 +462,8 @@ export default async function MessagesPage({
                         className="shrink-0 text-[11px] font-normal text-[var(--color-ink-soft)]"
                         title={
                           lastMessageAt.has(conv.id)
-                            ? formatDateTime(lastMessageAt.get(conv.id))
-                            : `Started ${formatDateTime(conv.created_at)}`
+                            ? formatDateTime(lastMessageAt.get(conv.id), tz)
+                            : `Started ${formatDateTime(conv.created_at, tz)}`
                         }
                       >
                         {lastMessageAt.has(conv.id)
@@ -550,7 +555,7 @@ export default async function MessagesPage({
                       const previous = messages[i - 1];
                       const newDay =
                         !previous ||
-                        ukDayKey(previous.created_at) !== ukDayKey(m.created_at);
+                        ukDayKey(previous.created_at, tz) !== ukDayKey(m.created_at, tz);
                       // Watching someone else's thread, "mine" is never true,
                       // so the two speakers have to be told apart some other
                       // way: the brand side goes right, the partner left, and
@@ -571,7 +576,7 @@ export default async function MessagesPage({
                             <div className="my-3 flex items-center gap-3">
                               <span className="h-px flex-1 bg-black/10" />
                               <span className="text-xs font-semibold text-[var(--color-ink-soft)]">
-                                {formatDayLabel(m.created_at)}
+                                {formatDayLabel(m.created_at, tz)}
                               </span>
                               <span className="h-px flex-1 bg-black/10" />
                             </div>
@@ -583,9 +588,9 @@ export default async function MessagesPage({
                             {partyLabel(m.sender_profile_id)}
                             <span
                               className="ml-2 font-normal"
-                              title={formatDateTime(m.created_at)}
+                              title={formatDateTime(m.created_at, tz)}
                             >
-                              {formatTime(m.created_at)}
+                              {formatTime(m.created_at, tz)}
                             </span>
                           </p>
                           {m.recalled_at ? (
@@ -640,8 +645,8 @@ export default async function MessagesPage({
                                 m.sender_profile_id !== active.partner_profile_id)) && (
                             // A div, not a p: RecallButton is a <form>.
                             <div className="mt-0.5 px-1 text-[11px] text-[var(--color-ink-soft)]">
-                              <span title={m.read_at ? `Seen ${formatDateTime(m.read_at)}` : "Delivered"}>
-                                {m.read_at ? `✓✓ Seen ${formatTime(m.read_at)}` : "✓ Sent"}
+                              <span title={m.read_at ? `Seen ${formatDateTime(m.read_at, tz)}` : "Delivered"}>
+                                {m.read_at ? `✓✓ Seen ${formatTime(m.read_at, tz)}` : "✓ Sent"}
                               </span>
                               {recallable && (
                                 <>
@@ -657,6 +662,9 @@ export default async function MessagesPage({
                     })
                   )}
                 </div>
+                <p className="px-5 pb-1 pt-2 text-right text-[11px] text-[var(--color-ink-soft)]">
+                  Times shown in your time zone ({timeZoneLabel(tz)})
+                </p>
 
                 {active.kind === "support" ? (
                   <Composer conversationId={active.id} />

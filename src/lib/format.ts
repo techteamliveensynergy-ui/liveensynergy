@@ -5,10 +5,14 @@
  */
 export const UK_TIME_ZONE = "Europe/London";
 
-/** "YYYY-MM-DD" of the instant's UK calendar day — for "same day?" checks. */
-export function ukDayKey(iso: string | Date): string {
+/**
+ * "YYYY-MM-DD" of the instant's UK calendar day — for "same day?" checks.
+ * `timeZone` overrides UK time for the few screens shown in the viewer's own
+ * zone (chat — see src/lib/viewer-time.ts).
+ */
+export function ukDayKey(iso: string | Date, timeZone: string = UK_TIME_ZONE): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: UK_TIME_ZONE,
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -105,12 +109,12 @@ export function formatDate(iso: string | null | undefined): string {
   });
 }
 
-export function formatDateTime(iso: string | null | undefined): string {
+export function formatDateTime(iso: string | null | undefined, timeZone: string = UK_TIME_ZONE): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("en-GB", {
-    timeZone: UK_TIME_ZONE,
+    timeZone,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -120,11 +124,11 @@ export function formatDateTime(iso: string | null | undefined): string {
 }
 
 /** Clock time on its own, e.g. "19:48" — for stamping a chat message. */
-export function formatTime(iso: string | null | undefined): string {
+export function formatTime(iso: string | null | undefined, timeZone: string = UK_TIME_ZONE): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("en-GB", { timeZone: UK_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit" });
 }
 
 /**
@@ -132,22 +136,22 @@ export function formatTime(iso: string | null | undefined): string {
  * Compared on calendar days rather than elapsed hours, so a message sent at
  * 23:50 doesn't still read "Today" the following morning.
  */
-export function formatDayLabel(iso: string | null | undefined): string {
+export function formatDayLabel(iso: string | null | undefined, timeZone: string = UK_TIME_ZONE): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
 
-  // Whole UK calendar days between the two, via their UK dates at UTC noon
+  // Whole calendar days between the two, via their dates at UTC noon
   // (immune to the clock change).
   const noon = (key: string) => new Date(`${key}T12:00:00Z`).getTime();
-  const todayKey = ukDayKey(new Date());
-  const dayKey = ukDayKey(d);
+  const todayKey = ukDayKey(new Date(), timeZone);
+  const dayKey = ukDayKey(d, timeZone);
   const days = Math.round((noon(todayKey) - noon(dayKey)) / 86400000);
 
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   return d.toLocaleDateString("en-GB", {
-    timeZone: UK_TIME_ZONE,
+    timeZone,
     weekday: days < 7 ? "long" : undefined,
     day: "numeric",
     month: "short",
