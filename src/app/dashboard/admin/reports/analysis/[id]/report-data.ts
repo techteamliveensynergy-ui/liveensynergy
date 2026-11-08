@@ -17,6 +17,8 @@ export interface AnalysisReportRow {
   status: "complete" | "figures_only";
   error: string | null;
   created_at: string;
+  /** Published to the campaign's brand (0115). */
+  shared_with_brand_at?: string | null;
   campaigns: { id: string; reference: string; campaign_name: string | null; brands: { brand_name: string } | null } | null;
 }
 

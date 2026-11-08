@@ -47,6 +47,7 @@ const LABELS: [RegExp, string][] = [
   [/^\/dashboard\/admin\/enquiries/, "Open the enquiry"],
   [/^\/dashboard\/admin\/users/, "Open users"],
   [/^\/dashboard\/messages/, "Open the conversation"],
+  [/^\/dashboard\/campaigns\/live\/[^/?#]+\/reports\//, "Read the report"],
   [/^\/dashboard\/campaigns\/(live|requests)/, "Open the campaign"],
   [/^\/dashboard\/events\//, "Open the event listing"],
   [/^\/dashboard\/feedback/, "Open feedback"],

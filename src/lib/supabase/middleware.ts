@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { sessionUser } from "./auth-user";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -25,7 +26,7 @@ const SEEN_COOKIE = "les-seen";
  * gate: a blocked account is signed out on its next request no matter where
  * it is in the app, and cannot reach anything authenticated again.
  */
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest, waitUntil?: (p: Promise<unknown>) => void) {
   // An email link whose redirect Supabase didn't recognise falls back to the
   // bare Site URL, i.e. "/?code=…" — hand it to the callback that knows what
   // to do with it rather than showing the home page with the person still
@@ -63,10 +64,10 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: do not run code between createServerClient and getUser().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANT: do not run code between createServerClient and the session
+  // check. sessionUser() verifies the token locally (getClaims), refreshing an
+  // expired session first — no Auth-server round trip per request (QA 9 Nov).
+  const user = await sessionUser(supabase);
 
   const { pathname } = request.nextUrl;
 
@@ -154,7 +155,11 @@ export async function updateSession(request: NextRequest) {
     // Stamp activity at most once per throttle window (cookie-gated so this
     // costs one DB write per 5 minutes, not one per request).
     if (!request.cookies.get(SEEN_COOKIE)) {
-      await supabase.rpc("touch_last_seen");
+      // Not awaited when the platform can finish it after the response: the
+      // page shouldn't wait on a "last seen" stamp (QA 9 Nov).
+      const touch = Promise.resolve(supabase.rpc("touch_last_seen")).catch(() => undefined);
+      if (waitUntil) waitUntil(touch);
+      else await touch;
       supabaseResponse.cookies.set(SEEN_COOKIE, "1", {
         maxAge: SEEN_THROTTLE_SECONDS,
         httpOnly: true,

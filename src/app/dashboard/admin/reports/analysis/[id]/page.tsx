@@ -3,18 +3,13 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
-import { FigureChart } from "../FigureChart";
-import { deleteAnalysisReport } from "../actions";
+import { ReportArticle } from "@/components/reports/ReportArticle";
+import { deleteAnalysisReport, shareAnalysisReport } from "../actions";
+import { formatDateTime } from "@/lib/format";
 import { loadReport, reportSubtitle } from "./report-data";
 import { PrintButton } from "./PrintButton";
 
 export const metadata = { title: "Analysis report · Admin" };
-
-const paragraphs = (text: string) =>
-  text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
 
 /**
  * One playground report (14 Oct standup): the write-up with its charts on the
@@ -22,15 +17,20 @@ const paragraphs = (text: string) =>
  * from figures computed in code (src/lib/analysis/figures.ts); the AI only
  * chose which to show.
  */
-export default async function AnalysisReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AnalysisReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ shared?: string; share_error?: string }>;
+}) {
   await requireRole(["admin"]);
   const { id } = await params;
+  const { shared, share_error: shareError } = await searchParams;
   const supabase = await createClient();
   const report = await loadReport(supabase, id);
   if (!report) notFound();
 
-  const byId = new Map(report.figures.columns.map((c) => [c.id, c]));
-  const n = report.narrative;
 
   return (
     <div className="space-y-6">
@@ -50,85 +50,77 @@ export default async function AnalysisReportPage({ params }: { params: Promise<{
         <p className="no-print rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm">{report.error}</p>
       )}
 
-      <article data-print-report className="space-y-6 bg-[var(--color-mist)]">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
-            Live·En·Synergy survey report
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-semibold text-[var(--color-ink)]">{report.title}</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{reportSubtitle(report)}</p>
-        </header>
-
-        {n && (
+      <ReportArticle
+        report={report}
+        subtitle={reportSubtitle(report)}
+        footer={
           <>
-            <section className="card print-avoid-break p-6">
-              <h2 className="text-xl font-semibold">{n.headline}</h2>
-              {paragraphs(n.summary).map((p, i) => (
-                <p key={i} className="mt-3 text-[var(--color-ink)]">
-                  {p}
-                </p>
-              ))}
-            </section>
-
-            {n.sections.map((s, i) => (
-              <section key={i} className="card space-y-4 p-6">
-                <h2 className="text-lg font-semibold">{s.heading}</h2>
-                {paragraphs(s.body).map((p, k) => (
-                  <p key={k} className="text-[var(--color-ink)]">
-                    {p}
-                  </p>
-                ))}
-                {s.charts.length > 0 && (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {s.charts.map((cid) => {
-                      const c = byId.get(cid);
-                      return c ? <FigureChart key={cid} column={c} compact /> : null;
-                    })}
-                  </div>
-                )}
-              </section>
-            ))}
-
-            {n.recommendations.length > 0 && (
-              <section className="card print-avoid-break p-6">
-                <h2 className="text-lg font-semibold">Recommendations</h2>
-                <ul className="mt-3 list-disc space-y-1.5 pl-5">
-                  {n.recommendations.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {n.caveats.length > 0 && (
-              <section className="card print-avoid-break p-6">
-                <h2 className="text-lg font-semibold">About the data</h2>
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-[var(--color-ink-soft)]">
-                  {n.caveats.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            {report.source_filename ? `From ${report.source_filename}. ` : ""}
+            {report.dropped_columns.length > 0
+              ? `Removed as personal before analysis: ${report.dropped_columns.join(", ")}. `
+              : ""}
+            {report.model ? `Written with ${report.model} from the figures above; every number is computed from the file.` : ""}
           </>
+        }
+      />
+
+      {/* Publish to the brand (0115): only a reviewed report reaches a brand. */}
+      <div className="no-print card p-5">
+        <h2 className="font-semibold">Share with the brand</h2>
+        {shareError && (
+          <p role="alert" className="mt-2 rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
+            {shareError}
+          </p>
         )}
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">{n ? "Appendix: all figures" : "Figures"}</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {report.figures.columns.map((c) => (
-              <FigureChart key={c.id} column={c} />
-            ))}
+        {shared === "1" && !shareError && (
+          <p className="mt-2 rounded-lg bg-[var(--color-sage)] px-3 py-2 text-sm text-[var(--color-olive-deep)]">
+            Published — the brand has been told and can read and download it from their campaign.
+          </p>
+        )}
+        {report.shared_with_brand_at ? (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p>
+              Published to {report.campaigns?.brands?.brand_name ?? "the brand"} on{" "}
+              {formatDateTime(report.shared_with_brand_at)}. They see the write-up and charts — not your instructions
+              or the file name.
+            </p>
+            <form action={shareAnalysisReport}>
+              <input type="hidden" name="id" value={report.id} />
+              <input type="hidden" name="share" value="0" />
+              <button type="submit" className="btn btn-ghost text-sm">Unpublish</button>
+            </form>
           </div>
-        </section>
-
-        <footer className="text-xs text-[var(--color-ink-soft)]">
-          {report.source_filename ? `From ${report.source_filename}. ` : ""}
-          {report.dropped_columns.length > 0
-            ? `Removed as personal before analysis: ${report.dropped_columns.join(", ")}. `
-            : ""}
-          {report.model ? `Written with ${report.model} from the figures above; every number is computed from the file.` : ""}
-        </footer>
-      </article>
+        ) : !report.campaigns ? (
+          <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+            This report isn&apos;t linked to a campaign, so there&apos;s no brand to share it with.
+          </p>
+        ) : report.row_count < 5 ? (
+          <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+            Brands only see results from 5 responses up — this report has {report.row_count}.
+          </p>
+        ) : (
+          <form action={shareAnalysisReport} className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <input type="hidden" name="id" value={report.id} />
+            <input type="hidden" name="share" value="1" />
+            <p className="text-sm text-[var(--color-ink-soft)]">
+              Read it through first. Publishing shows the write-up, charts and quotes to{" "}
+              {report.campaigns.brands?.brand_name ?? "the brand"} on their campaign, with a Word download, and emails them.
+            </p>
+            <ConfirmSubmitButton
+              label="Publish to brand…"
+              className="btn btn-primary text-sm"
+              title={`Publish “${report.title}” to ${report.campaigns.brands?.brand_name ?? "the brand"}?`}
+              points={[
+                "The brand sees the write-up, charts and the anonymous quotes in it — never your instructions, the file name or who answered.",
+                "They're emailed and can download it as a Word document.",
+                "You can unpublish it later.",
+              ]}
+              confirmLabel="Publish"
+              pendingLabel="Publishing…"
+            />
+          </form>
+        )}
+      </div>
 
       <form action={deleteAnalysisReport} className="no-print">
         <input type="hidden" name="id" value={report.id} />

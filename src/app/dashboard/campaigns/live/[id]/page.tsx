@@ -53,7 +53,14 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
   if (!data) notFound();
   const c = data as Campaign;
 
-  const [{ data: eventData }, { data: invoiceData }, { data: orderFormData }, { data: requestData }, { data: surveyData }] =
+  const [
+    { data: eventData },
+    { data: invoiceData },
+    { data: orderFormData },
+    { data: requestData },
+    { data: surveyData },
+    { data: reportData },
+  ] =
     await Promise.all([
       supabase
         .from("sponsored_events")
@@ -82,6 +89,8 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
       c.status === "awaiting_payment"
         ? Promise.resolve({ data: [] })
         : supabase.rpc("campaign_party_surveys", { p_campaign_id: c.id }),
+      // Survey reports the team published to this brand (0115). Missing → none.
+      supabase.rpc("brand_analysis_reports", { p_campaign_id: c.id }),
     ]);
 
   const events = (eventData ?? []) as EventRow[];
@@ -260,6 +269,41 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
           )}
         </section>
       </div>
+
+      <section id="reports" className="card scroll-mt-6 p-6">
+        <h2 className="font-display text-lg font-semibold">Survey reports</h2>
+        {((reportData ?? []) as { id: string; title: string; row_count: number; shared_at: string }[]).length === 0 ? (
+          <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+            Our team writes up what your audience told you — findings, charts and recommendations — and publishes it
+            here once there are enough responses. We&apos;ll email you when it&apos;s ready.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {((reportData ?? []) as { id: string; title: string; row_count: number; shared_at: string }[]).map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm"
+              >
+                <span>
+                  <span className="font-semibold">{r.title}</span>
+                  <span className="text-[var(--color-ink-soft)]">
+                    {" "}
+                    · {r.row_count} responses · published {formatDate(r.shared_at)}
+                  </span>
+                </span>
+                <span className="flex flex-wrap gap-2">
+                  <Link href={`/dashboard/campaigns/live/${c.id}/reports/${r.id}`} className="btn btn-primary text-xs">
+                    Read report
+                  </Link>
+                  <a href={`/dashboard/campaigns/live/${c.id}/reports/${r.id}/docx`} className="btn btn-ghost text-xs">
+                    Word
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="card p-6">
         <h2 className="font-display text-lg font-semibold">Campaign details</h2>

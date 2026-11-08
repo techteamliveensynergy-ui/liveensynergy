@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
+import { sessionUser } from "./supabase/auth-user";
 import {
   assessProfile,
   PROFILE_TABLE,
@@ -20,9 +21,8 @@ import type { Profile } from "./types";
  */
 const loadSessionProfile = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // From the verified session token — no Auth-server round trip (QA 9 Nov).
+  const user = await sessionUser(supabase);
   if (!user) return { supabase, user: null, profile: null as Profile | null };
 
   const { data: profile } = await supabase

@@ -42,19 +42,26 @@ export async function adminCancelEvent(formData: FormData) {
   });
 }
 
-export async function declineCancellationRequest(formData: FormData) {
+export interface DeclineState {
+  error?: string;
+  message?: string;
+}
+
+/** Decline a cancellation request, with the outcome on screen (QA 9 Nov). */
+export async function declineCancellationRequest(_prev: DeclineState, formData: FormData): Promise<DeclineState> {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("event_id"));
   const requestId = str(formData.get("request_id"));
   const note = str(formData.get("note")) || null;
-  if (!id || !requestId) return;
+  if (!id || !requestId) return { error: "Missing request — refresh the page." };
   const { error } = await supabase.rpc("admin_decline_cancellation_request", {
     p_request_id: requestId,
     p_note: note,
   });
+  if (error) return { error: error.message };
   revalidatePath(`/dashboard/admin/events/sponsored/${id}`);
-  if (error) back(id, { cancel_error: error.message });
-  back(id, { declined: "1" });
+  revalidatePath(`/dashboard/sponsored/${id}`);
+  return { message: "Request declined — the requester has been told." };
 }
 
 export async function setRegistrationCap(formData: FormData) {

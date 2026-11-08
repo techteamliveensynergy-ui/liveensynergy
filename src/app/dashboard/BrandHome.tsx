@@ -1,32 +1,47 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { profileCompleteness } from "@/lib/profile";
+import { assessProfile } from "@/lib/profile-completeness";
 import { MetricTile } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import type { Campaign, CampaignIntakeRequest, Invoice, Profile, SponsoredEvent } from "@/lib/types";
 import { formatEventDateTime } from "@/lib/event-time";
 import { CampaignStageBadge } from "@/components/campaigns/CampaignStageBadge";
 import { campaignStagesFor } from "@/lib/data/campaign-stages";
+import type { CampaignStageKey } from "@/lib/campaign-stage";
 import { CAMPAIGN_INTAKE_STATUS_LABELS, campaignTitle } from "@/lib/campaign-requests";
 import { formatGbp } from "@/lib/billing";
 import { formatDate } from "@/lib/format";
 import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 import { ProfileLinks } from "@/components/dashboard/ProfileLinks";
+/** Brand-facing words for where a campaign is (the badge says the stage). */
+const CAMPAIGN_STAGE_NEXT: Record<CampaignStageKey, string> = {
+  awaiting_payment: "Opens to artists once its invoice is paid.",
+  needs_matching: "Our team is lining up the right artist or event.",
+  awaiting_artist: "The artist is setting up the discount codes.",
+  awaiting_survey: "Our team is finishing the audience survey.",
+  ready_to_open: "Everything's ready — registration opens shortly.",
+  live: "Live — the audience is registering and answering the survey.",
+  completed: "Completed.",
+  closed: "Closed.",
+};
+
 export async function BrandHome({ profile }: { profile: Profile }) {
   const supabase = await createClient();
-  const completeness = await profileCompleteness(profile);
-
-  const { data: brand } = await supabase
+  // One read of the brand row serves both the completeness score and the page
+  // (it was read twice, one after the other — QA 9 Nov, slow brand sign-in).
+  const { data: brandRow } = await supabase
     .from("brands")
-    .select("id, brand_name, product_category")
+    .select("*")
     .eq("profile_id", profile.id)
     .maybeSingle();
+  const completeness = assessProfile(profile.role, brandRow);
+  const brand = brandRow as { id: string; brand_name: string; product_category: string | null } | null;
 
   let campaigns: Campaign[] = [];
   let sponsored: SponsoredEvent[] = [];
   let requests: CampaignIntakeRequest[] = [];
-  let openInvoices: Pick<Invoice, "id" | "amount_gbp" | "status" | "due_date">[] = [];
+  let openInvoices: Pick<Invoice, "id" | "reference" | "amount_gbp" | "status" | "due_date">[] = [];
   let checkedInCount = 0;
 
   if (brand) {
@@ -52,7 +67,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           .order("created_at", { ascending: false }),
         supabase
           .from("invoices")
-          .select("id, amount_gbp, status, due_date")
+          .select("id, reference, amount_gbp, status, due_date")
           .eq("brand_id", brand.id)
           .in("status", ["sent", "overdue"]),
       ]);
@@ -62,15 +77,6 @@ export async function BrandHome({ profile }: { profile: Profile }) {
     requests = (requestData ?? []) as CampaignIntakeRequest[];
     openInvoices = (invoiceData ?? []) as typeof openInvoices;
 
-    const sponsoredIds = sponsored.map((s) => s.id);
-    if (sponsoredIds.length > 0) {
-      const { count } = await supabase
-        .from("participations")
-        .select("id", { count: "exact", head: true })
-        .in("sponsored_event_id", sponsoredIds)
-        .not("attendance_verified_at", "is", null);
-      checkedInCount = count ?? 0;
-    }
   }
 
   // Dashboard cards corrected (General Notes, 13 Oct): "active" counts every
@@ -78,7 +84,101 @@ export async function BrandHome({ profile }: { profile: Profile }) {
   // below shows only those; closed/completed ones live on Campaigns live.
   const inFlight = campaigns.filter((c) => c.status === "awaiting_payment" || c.status === "in_progress");
   const activeCampaigns = inFlight.length;
-  const stages = await campaignStagesFor(supabase, inFlight.slice(0, 4), "brand");
+  // Independent of each other — loaded together (QA 9 Nov).
+  const sponsoredIds = sponsored.map((s) => s.id);
+  const campaignIds = campaigns.map((c) => c.id);
+  const [checkedIn, stages, { data: formRows }, { data: reportRows }] = await Promise.all([
+    sponsoredIds.length > 0
+      ? supabase
+          .from("participations")
+          .select("id", { count: "exact", head: true })
+          .in("sponsored_event_id", sponsoredIds)
+          .not("attendance_verified_at", "is", null)
+      : Promise.resolve({ count: 0 }),
+    campaignStagesFor(supabase, inFlight, "brand"),
+    // Order forms waiting for the brand's approval.
+    campaignIds.length > 0
+      ? supabase.from("campaign_order_forms").select("id, campaign_id").eq("status", "sent").in("campaign_id", campaignIds)
+      : Promise.resolve({ data: [] }),
+    // Survey reports the team has published to this brand (0115). Missing → none.
+    brand ? supabase.rpc("brand_analysis_reports", { p_campaign_id: null }) : Promise.resolve({ data: [] }),
+  ]);
+  checkedInCount = checkedIn.count ?? 0;
+
+  // What's next (QA 9 Nov: brands had no "what do I do now?"). What needs the
+  // brand comes first; then where each campaign is with the team.
+  const campaignName = (id: string | null | undefined) => {
+    const c = campaigns.find((x) => x.id === id);
+    return c ? campaignTitle(c, `Campaign ${c.reference}`) : "your campaign";
+  };
+  type NextItem = { key: string; text: string; detail?: string; href: string; cta: string; needsYou: boolean };
+  const nextItems: NextItem[] = [];
+  for (const f of (formRows ?? []) as { id: string; campaign_id: string }[]) {
+    nextItems.push({
+      key: `form-${f.id}`,
+      text: `Review and approve the order form for ${campaignName(f.campaign_id)}`,
+      detail: "Your invoice is sent as soon as you approve it.",
+      href: `/order-forms/${f.id}`,
+      cta: "Review",
+      needsYou: true,
+    });
+  }
+  for (const i of openInvoices) {
+    nextItems.push({
+      key: `inv-${i.id}`,
+      text: `Pay invoice ${i.reference ?? ""} — ${formatGbp(Number(i.amount_gbp))}`.replace("  ", " "),
+      detail: i.status === "overdue" ? "Overdue — your campaign opens to artists once it's paid." : "Your campaign opens to artists once it's paid.",
+      href: `/dashboard/campaigns/invoices/${i.id}`,
+      cta: "Pay",
+      needsYou: true,
+    });
+  }
+  for (const e of sponsored.filter((x) => x.status === "in_progress" && !x.brand_agreed && !x.cancelled_at)) {
+    nextItems.push({
+      key: `prop-${e.id}`,
+      text: `Review the proposed event: ${e.name}`,
+      detail: "The team has matched your campaign with this event — agree it to go ahead.",
+      href: `/dashboard/sponsored/${e.id}`,
+      cta: "Review",
+      needsYou: true,
+    });
+  }
+  const recentReports = ((reportRows ?? []) as { id: string; campaign_id: string; title: string; shared_at: string }[])
+    .filter((r) => Date.now() - new Date(r.shared_at).getTime() < 30 * 24 * 60 * 60 * 1000);
+  for (const r of recentReports) {
+    nextItems.push({
+      key: `rep-${r.id}`,
+      text: `Read your survey report: ${r.title}`,
+      detail: `Published for ${campaignName(r.campaign_id)}.`,
+      href: `/dashboard/campaigns/live/${r.campaign_id}/reports/${r.id}`,
+      cta: "Read",
+      needsYou: true,
+    });
+  }
+  const covered = new Set(nextItems.map((n) => n.key));
+  for (const c of inFlight) {
+    const stage = stages.get(c.id);
+    if (!stage || covered.has(`camp-${c.id}`)) continue;
+    nextItems.push({
+      key: `camp-${c.id}`,
+      text: `${campaignTitle(c, `Campaign ${c.reference}`)}: ${stage.label}`,
+      detail: CAMPAIGN_STAGE_NEXT[stage.key],
+      href: `/dashboard/campaigns/live/${c.id}`,
+      cta: "View",
+      needsYou: false,
+    });
+  }
+  if (requests.length > 0) {
+    nextItems.push({
+      key: "requests",
+      text: `${requests.length} campaign request${requests.length === 1 ? " is" : "s are"} with our team`,
+      detail: "We'll be in touch within 3 days to set the campaign up.",
+      href: "/dashboard/campaigns",
+      cta: "View",
+      needsYou: false,
+    });
+  }
+  const needsYouCount = nextItems.filter((n) => n.needsYou).length;
   const liveEvents = sponsored.filter((s) => s.status === "confirmed");
   const toPay = openInvoices.reduce((sum, i) => sum + Number(i.amount_gbp), 0);
 
@@ -137,6 +237,36 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           tint="bg-[#fbeadd]"
         />
       </div>
+
+      {brand && (
+        <div className="card mt-6 p-6" data-testid="brand-whats-next">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">What&apos;s next</h2>
+          <p className="text-sm text-[var(--color-ink-soft)]">
+            {nextItems.length === 0
+              ? "Nothing waiting — request a campaign to get started."
+              : needsYouCount > 0
+                ? `${needsYouCount} thing${needsYouCount === 1 ? " needs" : "s need"} you.`
+                : "Nothing needs you right now — here's where your campaigns are with our team."}
+          </p>
+          {nextItems.length > 0 && (
+            <ul className="mt-3 divide-y divide-black/5">
+              {nextItems.slice(0, 8).map((n) => (
+                <li key={n.key} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm ${n.needsYou ? "font-semibold text-[var(--color-ink)]" : "text-[var(--color-ink)]"}`}>
+                      {n.text}
+                    </p>
+                    {n.detail && <p className="text-xs text-[var(--color-ink-soft)]">{n.detail}</p>}
+                  </div>
+                  <Link href={n.href} className={`btn shrink-0 text-sm ${n.needsYou ? "btn-primary" : "btn-ghost"}`}>
+                    {n.cta}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <div className="card p-6">
