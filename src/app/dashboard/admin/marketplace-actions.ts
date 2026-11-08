@@ -1866,38 +1866,77 @@ export async function releaseArtistRemainder(formData: FormData) {
 
 // --- Event change requests ---------------------------------------------------
 
-export async function resolveEventChangeRequest(formData: FormData) {
+export interface ChangeDecisionState {
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Approve / Decline a party's change request (0115). Runs as one admin-checked
+ * database call that says why when it can't, tells the requester the decision
+ * with the admin's reply, and is audited. QA 9 Nov: the old direct update's
+ * result was never checked, so a decision that didn't land left the request
+ * "Pending" with nothing on screen and the requester never heard.
+ */
+export async function resolveEventChangeRequest(
+  _prev: ChangeDecisionState,
+  formData: FormData,
+): Promise<ChangeDecisionState> {
   const { supabase, userId } = await requireAdmin();
   const id = str(formData.get("id"));
   const eventId = str(formData.get("event_id"));
   const op = str(formData.get("op")); // "approve" | "decline"
-  if (!id || !op) return;
+  const response = str(formData.get("admin_response"));
+  if (!id || (op !== "approve" && op !== "decline")) return { error: "Choose Approve or Decline." };
 
-  const { data: updated } = await supabase
-    .from("sponsored_event_change_requests")
-    .update({
-      status: op === "approve" ? "approved" : "declined",
-      admin_response: str(formData.get("admin_response")),
-      resolved_by: userId,
-      resolved_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("requested_by, sponsored_events(name)")
-    .maybeSingle<{ requested_by: string; sponsored_events: { name: string } | null }>();
+  const { data: status, error } = await supabase.rpc("admin_resolve_change_request", {
+    p_request_id: id,
+    p_op: op,
+    p_response: response,
+  });
 
-  if (updated) {
-    await notify({
-      eventKey: "sponsored.change_resolved",
-      recipientProfileId: updated.requested_by,
-      link: eventId ? `/dashboard/sponsored/${eventId}` : "/dashboard/sponsored",
-      variables: {
-        event_name: updated.sponsored_events?.name ?? "your partnership",
-        status: op === "approve" ? "approved" : "declined",
-      },
-    });
+  if (error) {
+    // Before 0115 is applied: the old direct update, but checked this time.
+    if (/admin_resolve_change_request/.test(error.message) && /function|schema cache/i.test(error.message)) {
+      const { data: rows, error: updError } = await supabase
+        .from("sponsored_event_change_requests")
+        .update({
+          status: op === "approve" ? "approved" : "declined",
+          admin_response: response,
+          resolved_by: userId,
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("status", "pending")
+        .select("requested_by, sponsored_event_id");
+      if (updError) return { error: updError.message };
+      const row = (rows ?? [])[0] as { requested_by: string; sponsored_event_id: string } | undefined;
+      if (!row) return { error: "That request couldn't be updated — it may already have been decided. Refresh the page." };
+      const { data: ev } = await supabase
+        .from("sponsored_events")
+        .select("name, reference")
+        .eq("id", row.sponsored_event_id)
+        .maybeSingle<{ name: string; reference: string }>();
+      await notify({
+        eventKey: "sponsored.change_resolved",
+        recipientProfileId: row.requested_by,
+        link: `/dashboard/sponsored/${row.sponsored_event_id}#change-requests`,
+        variables: {
+          event_name: ev?.name ?? "your partnership",
+          reference: ev?.reference ?? "",
+          status: op === "approve" ? "approved" : "declined",
+          response: response ?? "",
+        },
+      });
+    } else {
+      return { error: error.message };
+    }
   }
 
   if (eventId) revalidatePath(`/dashboard/admin/events/sponsored/${eventId}`);
+  if (eventId) revalidatePath(`/dashboard/sponsored/${eventId}`);
+  const decided = (status as string | null) ?? (op === "approve" ? "approved" : "declined");
+  return { message: `Request ${decided} — the requester has been told.` };
 }
 
 /** "yes" / "no" / "" from a not-stated/yes/no select. */

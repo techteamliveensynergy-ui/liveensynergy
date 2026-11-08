@@ -30,7 +30,7 @@ export function ChangeRequestSection({
   );
 
   return (
-    <div className="card p-6">
+    <div id="change-requests" className="card scroll-mt-6 p-6">
       <h2 className="text-lg font-semibold">Request a change</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
         Ask to change the event or artist on this partnership — available up

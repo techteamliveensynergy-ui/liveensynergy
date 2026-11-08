@@ -3,7 +3,8 @@ import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatDateTime } from "@/lib/format";
 import { waitlistSize, type EventCapacity } from "@/lib/event-safety";
 import type { SponsoredEventCancellationRequest } from "@/lib/types";
-import { adminCancelEvent, declineCancellationRequest, setRegistrationCap } from "./safety-actions";
+import { adminCancelEvent, setRegistrationCap } from "./safety-actions";
+import { DeclineCancellationForm } from "./DeclineCancellationForm";
 
 export interface PaidInvoice {
   id: string;
@@ -102,15 +103,7 @@ export function CancellationPanel({
                 </strong>{" "}
                 asked to cancel on {formatDateTime(r.created_at)}: &ldquo;{r.reason}&rdquo;
               </p>
-              <form action={declineCancellationRequest} className="mt-2 flex flex-wrap items-end gap-2">
-                <input type="hidden" name="event_id" value={event.id} />
-                <input type="hidden" name="request_id" value={r.id} />
-                <label className="min-w-[14rem] flex-1">
-                  <span className="field-label">Note to them (optional)</span>
-                  <input name="note" className="input mt-1" maxLength={1000} />
-                </label>
-                <button type="submit" className="btn btn-ghost text-sm">Decline request</button>
-              </form>
+              <DeclineCancellationForm eventId={event.id} requestId={r.id} />
             </div>
           ))}
 

@@ -152,3 +152,20 @@ export async function deleteAnalysisReport(formData: FormData) {
   revalidatePath("/dashboard/admin/reports/analysis");
   redirect("/dashboard/admin/reports/analysis");
 }
+
+/**
+ * Publish this report to its campaign's brand, or take it back (0115). The
+ * database refuses a report with no campaign or under 5 responses, and tells
+ * the brand once when it is first published.
+ */
+export async function shareAnalysisReport(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const share = formData.get("share") === "1";
+  if (!id) return;
+  const { error } = await supabase.rpc("admin_share_analysis_report", { p_report_id: id, p_share: share });
+  revalidatePath(`/dashboard/admin/reports/analysis/${id}`);
+  revalidatePath("/dashboard/admin/reports/analysis");
+  if (error) redirect(`/dashboard/admin/reports/analysis/${id}?share_error=${encodeURIComponent(error.message)}`);
+  redirect(`/dashboard/admin/reports/analysis/${id}?shared=${share ? "1" : "0"}`);
+}

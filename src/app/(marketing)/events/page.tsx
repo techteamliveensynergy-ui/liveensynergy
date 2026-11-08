@@ -15,14 +15,82 @@ export const metadata = { title: "Events" };
  * team, and 0106 closes the listings' anonymous read as well, so nothing here
  * can bring them back by accident.
  */
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; category?: string; open?: string }>;
+}) {
+  const { q: rawQ, category: rawCategory, open: rawOpen } = await searchParams;
   const supabase = await createClient();
   // Live research campaigns (#48): paid, agreed events. Sponsorship listings
   // are NOT shown here any more — brands enquire through the team (0106).
-  const live = await getPublicLiveEvents(supabase);
+  const all = await getPublicLiveEvents(supabase);
+
+  // Search (QA 9 Nov: the list had none). Matches the event, artist, brand,
+  // venue and category; filters by category and "open now". A plain GET form,
+  // so results are linkable and work without JavaScript.
+  const q = (rawQ ?? "").trim().slice(0, 100);
+  const category = (rawCategory ?? "").trim();
+  const openOnly = rawOpen === "1";
+  const categories = [...new Set(all.map((e) => e.category).filter((c): c is string => Boolean(c)))].sort();
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const live = all.filter((e) => {
+    if (category && e.category !== category) return false;
+    if (openOnly && !e.is_open) return false;
+    if (terms.length === 0) return true;
+    const hay = [e.name, e.artist_name, e.brand_name, e.venue, e.category].filter(Boolean).join(" ").toLowerCase();
+    return terms.every((t) => hay.includes(t));
+  });
+  const filtering = Boolean(q || category || openOnly);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+      {all.length > 0 && (
+        <form method="get" role="search" className="mb-10 flex flex-wrap items-end gap-3" data-testid="events-search">
+          <label className="min-w-[14rem] flex-1 text-sm">
+            <span className="field-label">Search events</span>
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Event, artist, brand or venue"
+              className="input mt-1"
+              maxLength={100}
+            />
+          </label>
+          {categories.length > 1 && (
+            <label className="text-sm">
+              <span className="field-label">Category</span>
+              <select name="category" defaultValue={category} className="select mt-1 w-auto">
+                <option value="">All</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="inline-flex items-center gap-2 pb-2 text-sm">
+            <input type="checkbox" name="open" value="1" defaultChecked={openOnly} /> Open for sign-up now
+          </label>
+          <button type="submit" className="btn btn-primary">
+            Search
+          </button>
+          {filtering && (
+            <Link href="/events" className="btn btn-ghost">
+              Clear
+            </Link>
+          )}
+        </form>
+      )}
+
+      {all.length > 0 && filtering && live.length === 0 && (
+        <div className="mb-16 rounded-3xl border border-[var(--color-les-line)] p-10 text-center text-[var(--color-ink-soft)]">
+          No events match{q ? ` “${q}”` : ""}. <Link href="/events" className="font-semibold text-[var(--color-brand)]">Show all events</Link>
+        </div>
+      )}
+
       {live.length > 0 && (
         <section className="mb-16">
           <span className="chip">Live now</span>
@@ -32,6 +100,11 @@ export default async function EventsPage() {
           <p className="mt-3 max-w-2xl text-[var(--color-ink-soft)]">
             Answer a short survey for one of these events and get a discount code for your ticket.
           </p>
+          {filtering && (
+            <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+              {live.length} of {all.length} event{all.length === 1 ? "" : "s"}
+            </p>
+          )}
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {live.map((e) => {
               const image = eventImage(e.banner_url, e.category);
@@ -71,7 +144,7 @@ export default async function EventsPage() {
         </section>
       )}
 
-      {live.length === 0 && (
+      {all.length === 0 && (
         <>
           <span className="chip">Live now</span>
           <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">

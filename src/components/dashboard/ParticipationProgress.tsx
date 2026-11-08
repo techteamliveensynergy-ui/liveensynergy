@@ -74,7 +74,11 @@ export function participationSteps(
     labels[4] = { ...labels[4], hint: extra.codeWait === "review" ? "Done — your response is under review" : "Done" };
     labels[5] = { ...labels[5], hint: CODE_WAIT_HINT[extra.codeWait] };
   }
-  const firstPending = surveyed && !rewarded ? 5 : done.indexOf(false);
+  // Once a code is issued there is nothing left to wait for: selection, the
+  // ticket and check-in don't gate the code (it comes from the survey), so an
+  // earlier step left undone mustn't read as "next" beside a "Code issued"
+  // badge (QA 9 Nov: "Code issued" + "Next: the team chooses who takes part").
+  const firstPending = rewarded ? -1 : surveyed ? 5 : done.indexOf(false);
 
   return labels.map((l, i) => ({
     ...l,
@@ -188,6 +192,11 @@ export function ParticipationProgress({
       {!compact && current?.hint && (
         <p className="mt-2.5 text-center text-xs text-[var(--color-ink-soft)]">
           Next: {current.hint}
+        </p>
+      )}
+      {!compact && !current && steps[steps.length - 1]?.state === "done" && (
+        <p className="mt-2.5 text-center text-xs font-medium text-[var(--color-olive-deep)]">
+          Your discount code is ready — it&apos;s under My rewards. Use it when you book your ticket.
         </p>
       )}
 

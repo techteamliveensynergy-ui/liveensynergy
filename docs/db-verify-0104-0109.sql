@@ -221,7 +221,31 @@ with checks (grp, ord, name, expected, actual) as (
      (select count(*) from public.notification_settings where event_key in ('admin.cancellation_requested','sponsorship.cancellation_declined','sponsorship.cancelled','participation.event_cancelled','admin.codes_ran_out','sponsorship.codes_ran_out','brand.codes_ran_out','participation.waitlisted','participation.promoted'))::text || '/' ||
      (select count(*) from public.notification_templates where event_key in ('admin.cancellation_requested','sponsorship.cancellation_declined','sponsorship.cancelled','participation.event_cancelled','admin.codes_ran_out','sponsorship.codes_ran_out','brand.codes_ran_out','participation.waitlisted','participation.promoted'))::text),
   ('K. 0114 event safety', 8, 'waitlist size: cap 30 → 3, cap 31 → 4', '3/4',
-     coalesce((select public.event_waitlist_size(30)::text || '/' || public.event_waitlist_size(31)::text), 'missing'))
+     coalesce((select public.event_waitlist_size(30)::text || '/' || public.event_waitlist_size(31)::text), 'missing')),
+
+  -- ---- L. 0115: change-request decisions, brand reports, brand files, blank answers --
+  ('L. 0115 brand + decisions', 1, 'new functions exist', '6',
+     (select count(distinct proname) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('admin_resolve_change_request','admin_share_analysis_report','brand_analysis_reports',
+                        'brand_analysis_report','can_read_brand_files','is_my_brand_campaign'))::text),
+  ('L. 0115 brand + decisions', 2, 'none callable signed-out', '0',
+     (select count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace
+        and p.proname in ('admin_resolve_change_request','admin_share_analysis_report','brand_analysis_reports',
+                          'brand_analysis_report','can_read_brand_files','is_my_brand_campaign')
+        and has_function_privilege('anon', p.oid, 'EXECUTE'))::text),
+  ('L. 0115 brand + decisions', 3, 'analysis_reports.shared_with_brand_at + brand_files table', '2',
+     ((select count(*) from information_schema.columns where table_schema = 'public'
+         and table_name = 'analysis_reports' and column_name = 'shared_with_brand_at')
+      + (select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'brand_files'))::text),
+  ('L. 0115 brand + decisions', 4, 'partner storage policy on brand files', '1',
+     (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects'
+        and policyname = 'private-uploads: brand files for partners')::text),
+  ('L. 0115 brand + decisions', 5, 'change-request notice says the decision', 'true',
+     coalesce((select bool_or(body like '%{{status}}%') from public.notification_templates
+                where event_key = 'sponsored.change_resolved'), false)::text),
+  ('L. 0115 brand + decisions', 6, 'required questions refuse blank text', 'true',
+     coalesce((select pg_get_functiondef(p.oid) like '%btrim(v_val%' from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'validate_survey_answer_types'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result
