@@ -19,6 +19,8 @@ interface SettingRow {
   in_app_enabled: boolean;
   email_enabled: boolean;
   email_cc: string[] | null;
+  /** 0113 — the email carries a "open the related page" button. */
+  email_button?: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -174,6 +176,15 @@ export default async function AdminNotificationsPage({
                   {e.audience ? ` · ${e.audience}` : ""}
                 </p>
               </div>
+
+              {s?.email_button ? (
+                <span
+                  className="rounded-full bg-[var(--color-gold)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-soft)]"
+                  title="The email has a button that opens the related page"
+                >
+                  Button
+                </span>
+              ) : null}
 
               {s?.email_cc?.length ? (
                 <span className="rounded-full bg-[var(--color-mint)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-soft)]">

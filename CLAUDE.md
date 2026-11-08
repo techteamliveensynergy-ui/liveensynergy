@@ -243,10 +243,14 @@ point, used from ~14 call sites. Two rules:
 
 **Every notification should take the person straight to what they need to do.** Pass
 `link` (a same-site path with the id/anchor, e.g. `/dashboard/sponsored/<id>#discount-codes`);
-`notify()` runs it through `safeAppPath()` and stores it for **both** channels — the in-app row
-is clickable, and the email gets an action button (`email_outbox.link`, 0112) labelled by
-`actionLabelFor()` in `src/lib/notification-links.ts` (add a pattern there for a new
-destination). SQL callers pass the same path as `notify_from_db()`'s 4th argument. A response
+`notify()` runs it through `safeAppPath()` and stores it for **both** channels. In the app every
+row opens its page via `/dashboard/notifications/[id]` (marks it read, then redirects; rows
+with no link go to their family's page, `fallbackLinkFor()`). In email (`email_outbox.link`,
+0112) the link becomes an action button **only where an admin has switched it on** for that
+notification (`notification_settings.email_button`, 0113 — on by default only for events that
+ask the recipient to act), with the admin's text or `actionLabelFor()`'s
+(`src/lib/notification-links.ts`; add a pattern there for a new destination). `{{link}}` in any
+email template is filled at send time (`drain.ts`) with the page's address. SQL callers pass the same path as `notify_from_db()`'s 4th argument. A response
 that lands in `review` notifies the admins (link to that response) and the respondent (0112).
 
 Behaviour is data, not code: `notification_events` (catalogue, keyed by a stable
@@ -332,6 +336,13 @@ zone (0013) — wall-clock + zone, deliberately not a UTC instant, so "doors
 19:30" stays 19:30 across a GMT/BST change. Always format through
 `formatEventDateTime()` in `src/lib/event-time.ts`; it resolves the right
 abbreviation for that specific date (July reads BST, December GMT).
+
+Every other timestamp is shown in UK time (`src/lib/format.ts`) **except chat**,
+which uses the reader's own zone (QA 8 Nov): `<ViewerTimeZoneCookie>` in the
+dashboard layout writes the browser's zone to the `les_tz` cookie and
+`viewerTimeZone()` (`src/lib/viewer-time-server.ts`) reads it, falling back to UK
+time. The `format.ts` helpers take an optional zone for this; keep deadlines,
+invoices and event times in UK/event time.
 
 ### URLs in forms
 

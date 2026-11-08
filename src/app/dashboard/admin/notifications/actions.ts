@@ -53,17 +53,28 @@ export async function saveNotification(
   const eventKey = str(formData.get("event_key"));
   if (!eventKey) return { error: "Missing event key." };
 
-  const { error: settingsError } = await supabase
+  const base = {
+    in_app_enabled: String(formData.get("in_app_enabled") ?? "") === "on",
+    email_enabled: String(formData.get("email_enabled") ?? "") === "on",
+    email_cc: emails(formData.get("email_cc")),
+    email_bcc: emails(formData.get("email_bcc")),
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
+  };
+  // The email's action button (0113). Before that migration the columns don't
+  // exist, so the rest of the settings still save.
+  const label = str(formData.get("email_button_label"));
+  let { error: settingsError } = await supabase
     .from("notification_settings")
     .update({
-      in_app_enabled: String(formData.get("in_app_enabled") ?? "") === "on",
-      email_enabled: String(formData.get("email_enabled") ?? "") === "on",
-      email_cc: emails(formData.get("email_cc")),
-      email_bcc: emails(formData.get("email_bcc")),
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
+      ...base,
+      email_button: String(formData.get("email_button") ?? "") === "on",
+      email_button_label: label ? label.slice(0, 40) : null,
     })
     .eq("event_key", eventKey);
+  if (settingsError && /email_button/.test(settingsError.message)) {
+    ({ error: settingsError } = await supabase.from("notification_settings").update(base).eq("event_key", eventKey));
+  }
   if (settingsError) return { error: settingsError.message };
 
   const templates = [

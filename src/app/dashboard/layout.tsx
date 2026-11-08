@@ -10,6 +10,7 @@ import { PUBLIC_PROFILE_PATH } from "@/lib/public-profiles";
 import { Suspense } from "react";
 import { EmailConfirmedNotice } from "@/components/EmailConfirmedNotice";
 import { VerifyEmailOverlay } from "@/components/VerifyEmailOverlay";
+import { ViewerTimeZoneCookie } from "@/components/ViewerTimeZoneCookie";
 
 const WORKSPACE_TABLE: Partial<
   Record<string, { table: string; name: string; category: string }>
@@ -122,6 +123,7 @@ export default async function DashboardLayout({
           layout rather than the root one so the public marketing pages, which
           are static and don't need it, stay that way. */}
       {!emailUnverified && <FeedbackWidget />}
+      <ViewerTimeZoneCookie />
     </div>
   );
 }

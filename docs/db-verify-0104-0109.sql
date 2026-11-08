@@ -1,5 +1,5 @@
 -- =============================================================================
--- Are migrations 0104 to 0112 reflected in this database?
+-- Are migrations 0104 to 0113 reflected in this database?
 --
 -- READ-ONLY. Paste the whole file into the Supabase SQL editor on the project
 -- you want to check (dev, then production). It returns one row per expected
@@ -14,6 +14,7 @@
 --   0110_artist_nudges.sql (admin "Nudge artist" reminders: log table + notification event)
 --   0111_survey_own_response_and_completions.sql (survey-link responses visible: own-response RPC + completions view)
 --   0112_notification_links_and_survey_review.sql (links on emails; review notifications to admin + respondent)
+--   0113_email_button_settings.sql (admins choose which emails carry the action button)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -179,7 +180,15 @@ with checks (grp, ord, name, expected, actual) as (
   ('I. 0112 notification links + review', 4, 'three review triggers on survey_responses', '3',
      (select count(*) from pg_trigger where not tgisinternal and tgrelid = to_regclass('public.survey_responses')
         and tgname in ('survey_responses_review_notify_insert', 'survey_responses_review_notify_update',
-                       'survey_responses_review_declined'))::text)
+                       'survey_responses_review_declined'))::text),
+
+  -- ---- J. 0113: email button is an admin choice ----------------------------------
+  ('J. 0113 email button settings', 1, 'notification_settings.email_button + email_button_label exist', '2',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and table_name = 'notification_settings' and column_name in ('email_button', 'email_button_label'))::text),
+  ('J. 0113 email button settings', 2, 'the review alert has its button on by default', 'true',
+     coalesce((select to_jsonb(s) ->> 'email_button' from public.notification_settings s
+                where s.event_key = 'admin.survey_needs_review'), 'missing'))
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

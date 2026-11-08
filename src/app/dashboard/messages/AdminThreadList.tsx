@@ -42,12 +42,15 @@ export function AdminThreadList({
   hrefFor,
   query,
   tab,
+  timeZone,
 }: {
   groups: OrgGroup[];
   activeId: string | null;
   hrefFor: (conversationId: string) => string;
   query: string;
   tab: string;
+  /** The reader's zone (viewer-time.ts) — chat times are shown in it. */
+  timeZone?: string;
 }) {
   return (
     <div className="space-y-3">
@@ -79,7 +82,7 @@ export function AdminThreadList({
                     </p>
                     <span
                       className="shrink-0 text-[11px] text-[var(--color-ink-soft)]"
-                      title={g.lastAt ? formatDateTime(g.lastAt) : undefined}
+                      title={g.lastAt ? formatDateTime(g.lastAt, timeZone) : undefined}
                     >
                       {g.lastAt ? timeAgo(g.lastAt) : "No messages"}
                     </span>

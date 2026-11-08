@@ -83,11 +83,21 @@ export default async function AdminPage() {
   // One stage definition for the whole portal (campaign-stage.ts): the
   // "Campaigns to match" count below and the Campaigns tab's "Needs matching"
   // chip both read it, so they can't disagree (QA 31 Oct M-03).
-  const allStages = await campaignStagesFor(
-    supabase,
-    campaigns as { id: string; status: CampaignStatus; opens_at: string | null }[],
-    "admin",
-  );
+  //
+  // The stages, the ready fulfilment forms and the artist-pending list don't
+  // depend on each other, so they load together — one wait instead of three
+  // (QA 8 Nov: admin sign-in ~10s).
+  const [allStages, { data: readyForms }, artistPending] = await Promise.all([
+    campaignStagesFor(
+      supabase,
+      campaigns as { id: string; status: CampaignStatus; opens_at: string | null }[],
+      "admin",
+    ),
+    // Fulfilment forms the team still has to fill in and send (0104): open
+    // proposals with an artist and no form marked ready. Missing table → none.
+    supabase.from("sponsored_event_fulfilment").select("sponsored_event_id").not("ready_at", "is", null),
+    loadArtistPending(supabase),
+  ]);
   const recentStages = new Map(
     (campaigns as { id: string }[]).slice(0, 5).flatMap((c) => {
       const st = allStages.get(c.id);
@@ -114,12 +124,6 @@ export default async function AdminPage() {
   );
   const openEnquiries = enquiries.filter((e) => !e.handled_at);
 
-  // Fulfilment forms the team still has to fill in and send (0104): open
-  // proposals with an artist and no form marked ready. Missing table → none.
-  const { data: readyForms } = await supabase
-    .from("sponsored_event_fulfilment")
-    .select("sponsored_event_id")
-    .not("ready_at", "is", null);
   const readyIds = new Set(((readyForms ?? []) as { sponsored_event_id: string }[]).map((r) => r.sponsored_event_id));
   const formsToSetUp = sponsored.filter(
     (e) => e.status === "in_progress" && e.artist_profile_id && !readyIds.has(e.id),
@@ -128,7 +132,6 @@ export default async function AdminPage() {
     (p) => p.status === "attendance_verified",
   );
 
-  const artistPending = await loadArtistPending(supabase);
 
   const awaitingPayment = campaigns.filter((c) => c.status === "awaiting_payment");
   const liveDeals = sponsored.filter((e) => e.status === "confirmed");

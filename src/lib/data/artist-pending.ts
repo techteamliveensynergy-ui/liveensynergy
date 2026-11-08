@@ -142,22 +142,6 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
   // (QA 6 Nov: held responses sat with nothing pointing at them).
   const campaignIds = [...new Set(events.map((e) => e.campaign_id).filter((c): c is string => Boolean(c)))];
   const reviewByCampaign = new Map<string, string[]>();
-  if (campaignIds.length) {
-    const { data: tplRows } = await supabase.from("survey_templates").select("id, campaign_id").in("campaign_id", campaignIds);
-    const campaignOf = new Map(((tplRows ?? []) as { id: string; campaign_id: string }[]).map((t) => [t.id, t.campaign_id]));
-    if (campaignOf.size) {
-      const { data: heldRows } = await supabase
-        .from("survey_responses")
-        .select("id, template_id")
-        .eq("quality_status", "review")
-        .in("template_id", [...campaignOf.keys()]);
-      for (const r of (heldRows ?? []) as { id: string; template_id: string }[]) {
-        const c = campaignOf.get(r.template_id);
-        if (!c) continue;
-        reviewByCampaign.set(c, [...(reviewByCampaign.get(c) ?? []), r.id]);
-      }
-    }
-  }
 
   // Is every tier able to hand out a code? A unique-code tier needs its codes
   // generated (the pool); a shared tier needs its shared code.
@@ -168,9 +152,29 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
     shared_code: string | null;
   }[];
   const uniqueTierIds = tierRows.filter((t) => t.distribution_model !== "shared").map((t) => t.id);
-  const { data: poolRows } = uniqueTierIds.length
-    ? await supabase.from("reward_code_pool").select("tier_id").in("tier_id", uniqueTierIds)
-    : { data: [] as { tier_id: string }[] };
+
+  // Both lookups at once (QA 8 Nov: slow admin landing). The held responses come
+  // with their survey's campaign in one query rather than templates-then-responses.
+  const [heldRes, poolRes] = await Promise.all([
+    campaignIds.length
+      ? supabase
+          .from("survey_responses")
+          .select("id, survey_templates!inner(campaign_id)")
+          .eq("quality_status", "review")
+          .in("survey_templates.campaign_id", campaignIds)
+      : Promise.resolve({ data: [] }),
+    uniqueTierIds.length
+      ? supabase.from("reward_code_pool").select("tier_id").in("tier_id", uniqueTierIds)
+      : Promise.resolve({ data: [] as { tier_id: string }[] }),
+  ]);
+  type HeldRow = { id: string; survey_templates: { campaign_id: string } | { campaign_id: string }[] | null };
+  for (const r of (heldRes.data ?? []) as HeldRow[]) {
+    const tpl = Array.isArray(r.survey_templates) ? r.survey_templates[0] : r.survey_templates;
+    const c = tpl?.campaign_id;
+    if (!c) continue;
+    reviewByCampaign.set(c, [...(reviewByCampaign.get(c) ?? []), r.id]);
+  }
+  const poolRows = poolRes.data;
   const pooled = new Set(((poolRows ?? []) as { tier_id: string }[]).map((p) => p.tier_id));
   const tierState = new Map<string, { count: number; notReady: number }>();
   for (const t of tierRows) {
