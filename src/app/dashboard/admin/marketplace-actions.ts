@@ -1883,11 +1883,12 @@ export async function resolveEventChangeRequest(
   formData: FormData,
 ): Promise<ChangeDecisionState> {
   const { supabase, userId } = await requireAdmin();
-  const id = str(formData.get("id"));
+  const id = str(formData.get("request_id"));
   const eventId = str(formData.get("event_id"));
   const op = str(formData.get("op")); // "approve" | "decline"
   const response = str(formData.get("admin_response"));
-  if (!id || (op !== "approve" && op !== "decline")) return { error: "Choose Approve or Decline." };
+  if (!id) return { error: "That request couldn't be found — refresh the page and try again." };
+  if (op !== "approve" && op !== "decline") return { error: "Choose Approve or Decline." };
 
   const { data: status, error } = await supabase.rpc("admin_resolve_change_request", {
     p_request_id: id,

@@ -602,6 +602,41 @@ signed-out browser context rather than asserting them from the source.
 
 ---
 
+## L12 — A form field named `id` silently drops the clicked button's value
+
+**What the client saw (9–10 Nov):** the admin's Decline on a change request did
+nothing — the request stayed Pending, no error. It had been built as
+`<form action={…}>` with a hidden `<input name="id">` and two submit buttons
+`name="op" value="approve|decline"`. The action read `op`, found nothing, and
+returned quietly (`if (!id || !op) return;`). A rewrite through a database
+function didn't help, because the data never arrived to be validated.
+
+**Cause:** React builds the form data for a clicked button in
+`createFormDataWithSubmitter`, which tags a stand-in input with
+`form.id`. When the form contains a control called `id`, the browser makes
+`form.id` return *that input element*, not the form's id, so the stand-in is
+attached to a form called `"[object HTMLInputElement]"` and `new FormData(form)`
+leaves the button's name/value out. Everything else in the form arrives — only
+the button is lost — so it looks like the click did nothing.
+
+**Fix:** call the field `request_id` (or anything but `id`). A one-line rename;
+proved in a real browser against the production build, which is the only
+place this shows (`tsc`, the build and a database test all pass).
+
+**Rules that come out of it**
+
+1. **Never name a form control `id`** in a form that has named submit buttons
+   (`<button name="op" value="…">`). Use `<thing>_id`.
+2. **An action must say why when it can't act.** The silent `return` is what
+   made this a two-round mystery; return an error the screen shows.
+3. **Reproduce interactions in a browser before declaring them fixed.** I had
+   "fixed" this once by changing the server side without ever clicking the
+   button.
+4. A one-line Enter-key hazard in the same form: a single-line text input next
+   to Approve/Decline submits the *first* button on Enter. Use a `<textarea>`.
+
+---
+
 ## Pre-push checklist
 
 Run through this before `git push liveensynergy HEAD:main`. Most of it is a

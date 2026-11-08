@@ -29,11 +29,14 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
   await requireRole(["brand", "admin"]);
   const { templateId } = await params;
   const supabase = await createClient();
-  const [{ data }, { data: reachData }] = await Promise.all([
+  const [{ data }, { data: reachData }, { data: reportData }] = await Promise.all([
     supabase.rpc("brand_survey_results", { p_template_id: templateId }),
     // Per-question "shown to" counts when the survey branches (0073).
     supabase.rpc("survey_question_reach", { p_template_id: templateId }),
+    // Written reports the team has published to this brand (0115).
+    supabase.rpc("brand_analysis_reports", { p_campaign_id: null }),
   ]);
+  const reportCount = ((reportData ?? []) as unknown[]).length;
   const reach = (reachData ?? null) as Record<string, number> | null;
   const results = data as BrandResults | null;
   if (!results) notFound();
@@ -56,8 +59,29 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
           label="Latest response"
           value={results.last_response_at ? formatDateTime(results.last_response_at) : "—"}
         />
-        <MetricTile label="Questions shown" value={enough ? results.questions.length : "—"} hint="Open-text questions are summarised by our team" />
+        <MetricTile label="Questions shown" value={enough ? results.questions.length : "—"} hint="Written answers are summarised in your written report" />
       </div>
+
+      <p className="mb-6 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+        {reportCount > 0 ? (
+          <>
+            Our team has published {reportCount === 1 ? "a written report" : `${reportCount} written reports`} with the
+            findings, charts and recommendations.{" "}
+            <Link href="/dashboard/reports#written-reports" className="font-semibold text-[var(--color-brand)]">
+              Read {reportCount === 1 ? "it" : "them"} →
+            </Link>
+          </>
+        ) : (
+          <>
+            Open-text answers aren&apos;t shown here. Once enough responses are in, our team writes them up in a
+            written report and publishes it under{" "}
+            <Link href="/dashboard/reports#written-reports" className="font-semibold text-[var(--color-brand)]">
+              Reporting &amp; analysis
+            </Link>{" "}
+            — we&apos;ll email you.
+          </>
+        )}
+      </p>
 
       {!enough ? (
         <EmptyState
