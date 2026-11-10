@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState, MetricTile, PageHeader } from "@/components/dashboard/ui";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { campaignTitle } from "@/lib/campaign-requests";
 import type { LiveCampaignSurvey } from "@/components/campaigns/LiveCampaignPanel";
 
@@ -22,6 +22,14 @@ interface CampaignRow {
   category_other: string | null;
 }
 
+interface PublishedReport {
+  id: string;
+  campaign_id: string;
+  title: string;
+  row_count: number;
+  shared_at: string;
+}
+
 interface ResultsSummary {
   counted: number;
   min_responses: number;
@@ -39,7 +47,13 @@ export default async function BrandReportsPage() {
   const { profile } = await requireRole(["brand"]);
   const supabase = await createClient();
 
-  const { data: brand } = await supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle();
+  // The brand row and the written reports the team has published to this brand
+  // (0115) don't depend on each other. Before 0115 the call errors → none.
+  const [{ data: brand }, { data: reportData }] = await Promise.all([
+    supabase.from("brands").select("id").eq("profile_id", profile.id).maybeSingle(),
+    supabase.rpc("brand_analysis_reports", { p_campaign_id: null }),
+  ]);
+  const reports = (reportData ?? []) as PublishedReport[];
   const { data: campaignRows } = brand
     ? await supabase
         .from("campaigns")
@@ -71,7 +85,7 @@ export default async function BrandReportsPage() {
     <div>
       <PageHeader
         title="Reporting & analysis"
-        subtitle="Results from every survey on your campaigns — totals and charts only, never names or individual answers."
+        subtitle="Written reports and survey results for your campaigns — totals and charts only, never names or individual answers."
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
@@ -79,6 +93,48 @@ export default async function BrandReportsPage() {
         <MetricTile label="Responses" value={totalResponses} hint="Across all your campaigns" />
         <MetricTile label="Campaigns" value={campaigns.length} />
       </div>
+
+      {/* The written, AI-assisted report an admin has reviewed and published —
+          the thing "reporting" means beyond totals (QA 10 Nov: brands couldn't
+          find it). */}
+      <section id="written-reports" className="card mb-6 scroll-mt-6 p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">Written survey reports</h2>
+        {reports.length === 0 ? (
+          <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+            None published yet. Once enough responses are in, our team writes up what your audience told you — the
+            findings, charts, quotes and recommendations — checks it, and publishes it here. We&apos;ll email you when
+            it&apos;s ready, and you can print it or download it as a Word document.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {reports.map((r) => {
+              const c = campaigns.find((x) => x.id === r.campaign_id);
+              return (
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm"
+                >
+                  <span>
+                    <span className="font-semibold">{r.title}</span>
+                    <span className="text-[var(--color-ink-soft)]">
+                      {c ? ` · ${campaignTitle(c, c.reference)}` : ""} · {r.row_count} responses · published{" "}
+                      {formatDate(r.shared_at)}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap gap-2">
+                    <Link href={`/dashboard/campaigns/live/${r.campaign_id}/reports/${r.id}`} className="btn btn-primary text-xs">
+                      Read report
+                    </Link>
+                    <a href={`/dashboard/campaigns/live/${r.campaign_id}/reports/${r.id}/docx`} className="btn btn-ghost text-xs">
+                      Word
+                    </a>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {rows.length === 0 ? (
         <EmptyState

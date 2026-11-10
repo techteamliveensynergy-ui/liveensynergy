@@ -34,16 +34,23 @@ export function ChangeRequestDecision({ requestId, eventId }: { requestId: strin
   const [state, formAction] = useActionState<ChangeDecisionState, FormData>(resolveEventChangeRequest, {});
   return (
     <form action={formAction} className="mt-3 space-y-2">
-      <input type="hidden" name="id" value={requestId} />
+      {/* NOT name="id": React builds the form data from the clicked button using
+          form.id, and a field called "id" shadows it, so the button's own
+          name/value ("op" = decline) was silently dropped and Decline did
+          nothing (QA 9–10 Nov). Keep "id" out of any form that has named
+          submit buttons — see CLAUDE.md. */}
+      <input type="hidden" name="request_id" value={requestId} />
       <input type="hidden" name="event_id" value={eventId} />
+      {/* A textarea, not a text input: Enter in a one-line box submits the
+          form's first button, which here is Approve. */}
+      <textarea
+        name="admin_response"
+        placeholder="Reply to the requester (optional)"
+        maxLength={1000}
+        rows={2}
+        className="textarea w-full text-sm"
+      />
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          name="admin_response"
-          placeholder="Reply to the requester (optional)"
-          maxLength={1000}
-          className="input flex-1 py-1.5 text-sm"
-        />
         <DecisionButtons />
       </div>
       <div role="status" aria-live="polite">

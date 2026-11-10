@@ -351,6 +351,15 @@ dashboard layout writes the browser's zone to the `les_tz` cookie and
 time. The `format.ts` helpers take an optional zone for this; keep deadlines,
 invoices and event times in UK/event time.
 
+### Forms with named submit buttons
+
+Never give a form control the name `id` when the form has submit buttons that
+carry their own `name`/`value` (Approve/Decline, Save/Send): React reads
+`form.id` to attach the clicked button's value, and a field called `id` shadows
+it, so the button's value is silently dropped and the action sees nothing (L12 —
+the Decline button that "did nothing"). Call the field `request_id`, `event_id`,
+etc. Actions should return an error the screen shows, never a silent `return`.
+
 ### URLs in forms
 
 Profile/listing web-address fields are plain text, not `<input type="url">` —

@@ -38,3 +38,16 @@ Terms & Privacy were left out on purpose (waiting on the client's legal text).
 4. **My files** — the brand uploads a file shared with partners and one team-only. The partner artist sees only the first under Repository; admin sees both.
 5. **Events search** — `/events?q=<artist name>` narrows the list; "Open for sign-up now" hides upcoming ones.
 6. **Priya** — her "Code issued" event shows "Your discount code is ready" and no "next: team chooses".
+
+---
+
+## Follow-up (10 Nov): the Decline bug's real cause, and where brands find reports
+
+Tester's report: Decline now said "Choose Approve or Decline" and the request stayed Pending. Terms and Privacy are still waiting on the client's legal text.
+
+| Reported | Cause and fix |
+|---|---|
+| **Decline on change requests still does nothing** | My 9 Nov fix changed the server side, but the problem was in the browser. The form had a hidden field named `id`, and React builds a clicked button's value from `form.id` — which a field called `id` shadows — so `op=decline` never left the browser. That is why the original did nothing too. Reproduced in a real browser against the production build (`op=null`), then fixed by renaming the field to `request_id`: Decline and Approve both reach the server, with or without a reply. I scanned every form in the app for the same combination (a field named `id` plus a named submit button); this was the only one. The reply box is now a multi-line field, because pressing Enter in a one-line box submitted the first button, Approve. Recorded as L12 in `lessons.md` and a note in `CLAUDE.md`. |
+| **Brands still don't get an AI report** | The report publishing from 9 Nov was reachable only from a live campaign's page, while brands look under **Reporting & analysis**, which showed totals only. That page now has a **Written survey reports** section at the top (read, print, Word), or a plain explanation when none is published yet. The survey-results page no longer just says "summarised by our team": it links to the published report, or says when it will arrive and that they'll be emailed. A report still appears only after an admin publishes it. |
+
+No new migration. Browser checks: (1) as admin, Decline a change request with and without a reply → "Request declined — the requester has been told", badge turns red, the artist is notified; Approve one too; press Enter in the reply box → it adds a line, doesn't submit. (2) As the brand, Reporting & analysis shows "None published yet" before publishing, and the report with Read/Word after the admin publishes it.
