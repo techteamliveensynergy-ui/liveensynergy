@@ -267,9 +267,18 @@ export function OrderFormEditor({
           <Field label="Potential research questions" htmlFor="research_questions">
             <textarea id="research_questions" name="research_questions" rows={4} className="textarea" defaultValue={v(initial.research_questions)} />
           </Field>
-          <Field label="Draft survey link" htmlFor="draft_survey_link" hint="Paste the survey preview link for the brand to review.">
-            <input id="draft_survey_link" name="draft_survey_link" className="input" defaultValue={displayUrl(initial.draft_survey_link)} />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Pre-event survey link"
+              htmlFor="draft_survey_link"
+              hint="Paste the survey's preview link from the survey builder — the brand gets a preview they can open. Any other link is shown as it is."
+            >
+              <input id="draft_survey_link" name="draft_survey_link" className="input" defaultValue={displayUrl(initial.draft_survey_link)} />
+            </Field>
+            <Field label="Post-event survey link" htmlFor="post_survey_link" hint="Optional — the same, for the survey after the event.">
+              <input id="post_survey_link" name="post_survey_link" className="input" defaultValue={displayUrl(initial.post_survey_link ?? null)} />
+            </Field>
+          </div>
         </div>
       </FormSection>
 

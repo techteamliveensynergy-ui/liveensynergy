@@ -231,7 +231,7 @@ export default async function AdminEventsPage({
 
                 <div className="w-24 text-right">
                   <p className="text-xs text-[var(--color-ink-soft)]">
-                    Budget (gross)
+                    Package value
                   </p>
                   <p className="text-sm font-medium text-[var(--color-ink)]">
                     {e.budget_gbp != null

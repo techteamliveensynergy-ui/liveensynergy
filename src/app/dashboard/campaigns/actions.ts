@@ -18,6 +18,11 @@ function str(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "").trim();
   return s || null;
 }
+function uuidOrNull(v: FormDataEntryValue | null): string | null {
+  const s = String(v ?? "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s) ? s : null;
+}
+
 function num(v: FormDataEntryValue | null): number | null {
   const s = String(v ?? "").trim();
   if (!s) return null;
@@ -64,8 +69,16 @@ function payload(formData: FormData) {
     preferred_location: str(formData.get("preferred_location")),
     preferred_timeline: str(formData.get("preferred_timeline")),
     target_name: str(formData.get("target_name")),
-    reward_rules: str(formData.get("reward_rules")),
+    // "Potential campaign questions" on the form (Testing notes 7 Nov); the
+    // column keeps its old name so earlier requests still read.
     expected_outcomes: str(formData.get("expected_outcomes")),
+    // Package instead of a typed budget, and audience criteria instead of
+    // "reward rules" (Testing notes 7 Nov, 0117). reward_rules isn't sent any
+    // more, so editing an old request leaves what it had.
+    package_id: uuidOrNull(formData.get("package_id")),
+    audience_age_min: num(formData.get("audience_age_min")),
+    audience_age_max: num(formData.get("audience_age_max")),
+    audience_criteria: str(formData.get("audience_criteria"))?.slice(0, 2000) ?? null,
     additional_info: str(formData.get("additional_info")),
     // The sponsor's own suggestion for what to sponsor (10 Aug standup). The
     // link is normalised here rather than trusted — the same rule the profile
@@ -94,7 +107,14 @@ function validate(
   formData: FormData,
 ): string | null {
   if (!p.campaign_name) return "Campaign name is required.";
-  if (!p.description) return "Campaign description is required.";
+  if (!p.description) return "Campaign objective and description is required.";
+  const ageOk = (n: number | null) => n === null || (Number.isInteger(n) && n >= 18 && n <= 120);
+  if (!ageOk(p.audience_age_min) || !ageOk(p.audience_age_max)) {
+    return "Ages must be whole numbers from 18 to 120 — everyone taking part is an adult.";
+  }
+  if (p.audience_age_min !== null && p.audience_age_max !== null && p.audience_age_min > p.audience_age_max) {
+    return "The youngest age can't be above the oldest.";
+  }
   // A link that couldn't be parsed comes back null, which would otherwise be
   // indistinguishable from an empty field and silently drop what they typed.
   const link = normaliseUrl(
@@ -108,6 +128,23 @@ function validate(
   return null;
 }
 
+/** The chosen package's name; false if it isn't an active package. A fixed-price
+ *  package needs no budget figure, so one typed for it is dropped. */
+async function checkPackage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  p: ReturnType<typeof payload>,
+): Promise<string | null | false> {
+  if (!p.package_id) return null;
+  const { data } = await supabase
+    .from("campaign_packages")
+    .select("name, is_custom_price, is_active")
+    .eq("id", p.package_id)
+    .maybeSingle<{ name: string; is_custom_price: boolean; is_active: boolean }>();
+  if (!data || !data.is_active) return false;
+  if (!data.is_custom_price) p.budget_expectation_gbp = null;
+  return data.name;
+}
+
 export async function submitCampaignIntake(
   _prev: CampaignState,
   formData: FormData,
@@ -116,6 +153,8 @@ export async function submitCampaignIntake(
   const p = payload(formData);
   const invalid = validate(p, formData);
   if (invalid) return { error: invalid };
+  const packageName = await checkPackage(supabase, p);
+  if (packageName === false) return { error: "That package isn't available any more — choose another." };
 
   // Mirrors the gate on /dashboard/campaigns/new — the team can't action a
   // request from a brand it has no way to contact.
@@ -159,9 +198,11 @@ export async function submitCampaignIntake(
     variables: {
       reference: created.reference,
       brand_name: brand.brand_name ?? "A brand",
-      budget: p.budget_expectation_gbp
-        ? `£${Number(p.budget_expectation_gbp).toLocaleString("en-GB")}`
-        : "not given",
+      budget: packageName
+        ? `${packageName}${p.budget_expectation_gbp ? ` (£${Number(p.budget_expectation_gbp).toLocaleString("en-GB")})` : ""}`
+        : p.budget_expectation_gbp
+          ? `£${Number(p.budget_expectation_gbp).toLocaleString("en-GB")}`
+          : "not given",
     },
   });
 
@@ -180,6 +221,7 @@ export async function updateCampaignIntake(
   const p = payload(formData);
   const invalid = validate(p, formData);
   if (invalid) return { error: invalid };
+  if ((await checkPackage(supabase, p)) === false) return { error: "That package isn't available any more — choose another." };
 
   const image = await uploadImage(formData.get("image"), "campaign");
   if (image.error) return { error: image.error };

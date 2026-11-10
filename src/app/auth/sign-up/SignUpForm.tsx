@@ -27,8 +27,11 @@ function SubmitButton() {
 export function SignUpForm({
   initialRole,
   event,
+  returnTo,
   googleEnabled = false,
 }: {
+  /** A survey page to come back to after signing up (Testing notes 7 Nov). */
+  returnTo?: string;
   initialRole?: string;
   /** A sponsored_events reference from a public survey's CTA — see signUp()'s
    *  pending_event_reference for where this ends up. */
@@ -126,7 +129,7 @@ export function SignUpForm({
         <>
           {/* The role card picked in step 1 travels with the Google round trip;
               Terms are accepted on the next screen (/auth/complete). */}
-          <GoogleButton role={role} label="Sign up with Google" />
+          <GoogleButton role={role} next={returnTo} label="Sign up with Google" />
           <OrDivider />
         </>
       )}
@@ -134,6 +137,7 @@ export function SignUpForm({
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="role" value={role} />
       {event && <input type="hidden" name="event" value={event} />}
+      {returnTo && <input type="hidden" name="redirectTo" value={returnTo} />}
 
       {state.error && (
         <p className="rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">

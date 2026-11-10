@@ -44,20 +44,32 @@ export function CampaignAdminForm({
   const d = campaign;
   const i = intake;
 
+  // A request now names the package the brand wants (Testing notes 7 Nov) —
+  // start from it when converting.
+  const intakePackage = !d && i?.package_id ? packages.find((p) => p.id === i.package_id) ?? null : null;
   const [packageId, setPackageId] = useState<string>(
-    d?.campaign_package_id ?? "",
+    d?.campaign_package_id ?? intakePackage?.id ?? "",
   );
   const selectedPackage = useMemo(
     () => packages.find((p) => p.id === packageId) ?? null,
     [packages, packageId],
   );
   const [budget, setBudget] = useState<string>(
-    d?.budget_gbp != null ? String(d.budget_gbp) : "",
+    d?.budget_gbp != null
+      ? String(d.budget_gbp)
+      : intakePackage
+        ? String((intakePackage.is_custom_price ? i?.budget_expectation_gbp ?? intakePackage.min_price_gbp : intakePackage.price_gbp) ?? "")
+        : "",
   );
+  // The margin isn't shown any more (Testing notes 7 Nov: old-model figure);
+  // it still comes from the package and travels in a hidden field, because the
+  // event's reward budget is worked out from it (0085).
   const [margin, setMargin] = useState<string>(
     d?.package_platform_margin_gbp != null
       ? String(d.package_platform_margin_gbp)
-      : "",
+      : intakePackage
+        ? String(intakePackage.platform_margin_gbp)
+        : "",
   );
 
   function onPackageChange(id: string) {
@@ -148,22 +160,7 @@ export function CampaignAdminForm({
               onChange={(e) => setBudget(e.target.value)}
             />
           </Field>
-          <Field
-            label="Platform margin (GBP)"
-            htmlFor="package_platform_margin_gbp"
-            hint="What the platform keeps — the rest becomes the reward pool. Pre-filled from the package, editable per campaign."
-          >
-            <input
-              id="package_platform_margin_gbp"
-              name="package_platform_margin_gbp"
-              type="number"
-              min={0}
-              step="0.01"
-              className="input"
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-            />
-          </Field>
+          <input type="hidden" name="package_platform_margin_gbp" value={margin} />
         </div>
       </FormSection>
 
@@ -252,7 +249,7 @@ export function CampaignAdminForm({
           />
         </Field>
 
-        <Field label="Expected outcomes" htmlFor="expected_outcomes">
+        <Field label="Potential campaign questions" htmlFor="expected_outcomes" hint="What the brand wants to learn from the audience — feeds the survey.">
           <textarea
             id="expected_outcomes"
             name="expected_outcomes"

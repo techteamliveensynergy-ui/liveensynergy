@@ -37,6 +37,8 @@ export interface CampaignOrderForm {
   survey_question_count: number | null;
   research_questions: string | null;
   draft_survey_link: string | null;
+  /** Post-event survey (0117). Absent before 0117 is applied. */
+  post_survey_link?: string | null;
   discount_reward: string | null;
   rewards_available: number | null;
   redemption_arrangements: string | null;
@@ -137,3 +139,14 @@ export function embedUrl(url: string | null | undefined): string | null {
 
 export const isDirectVideo = (url: string | null | undefined) =>
   !!url && /\.(mp4|webm|mov)(\?|$)/i.test(url);
+
+/**
+ * The id of one of OUR surveys in a pasted link (the admin builder, its preview
+ * or the public /survey/<id> page) — so the order form can show the brand a
+ * preview they can open instead of an admin-only page. Null for other links.
+ */
+export function ownSurveyIdFromLink(link: string | null | undefined): string | null {
+  if (!link) return null;
+  const m = link.match(/\/(?:dashboard\/admin\/surveys|survey)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  return m ? m[1].toLowerCase() : null;
+}

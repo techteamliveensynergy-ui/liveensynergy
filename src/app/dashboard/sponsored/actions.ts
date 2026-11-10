@@ -226,9 +226,9 @@ export async function createSponsoredEvent(
         // rather than being left undefined.
         reference: created.reference,
         budget:
-          budget != null
+          budget != null && !initiatedByBrand
             ? `£${budget.toLocaleString("en-GB")}`
-            : "to be agreed",
+            : "as agreed with our team",
       },
     });
   }
@@ -327,7 +327,8 @@ export async function toggleAgreement(formData: FormData) {
               variables: {
                 event_name: full.name,
                 reference: full.reference,
-                budget,
+                // The package value is the brand's, not the artist's (7 Nov).
+                budget: pid === brandProfileId ? budget : "as agreed with our team",
               },
             },
             notifyOpts,

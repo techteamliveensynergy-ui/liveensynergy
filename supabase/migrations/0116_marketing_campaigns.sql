@@ -27,6 +27,34 @@
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
+-- Preflight: stop with one clear message if an earlier migration this builds
+-- on isn't in this database (rather than failing half-way through).
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_missing text[] := '{}';
+begin
+  if to_regclass('public.email_suppressions') is null then
+    v_missing := array_append(v_missing, '0046_email_delivery.sql (email_suppressions)');
+  end if;
+  if to_regprocedure('public.notify_from_db(text, uuid, jsonb, text)') is null
+     and not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'notify_from_db') then
+    v_missing := array_append(v_missing, '0075_auto_issue_reward_codes.sql (notify_from_db)');
+  end if;
+  if to_regclass('public.consent_records') is null then
+    v_missing := array_append(v_missing, '0080_consent_records.sql (consent_records)');
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public'
+                  and table_name = 'participations' and column_name = 'newsletter_opt_in') then
+    v_missing := array_append(v_missing, 'participations.newsletter_opt_in (an early migration)');
+  end if;
+  if array_length(v_missing, 1) > 0 then
+    raise exception 'MIGRATIONS_MISSING: 0116 needs earlier migrations that this database does not have yet: %. Apply the missing migrations in number order first (see docs/database-migrations.md), then run 0116 again. Nothing has been changed.',
+      array_to_string(v_missing, '; ');
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- 0. Consent log: sources for withdrawals made outside My events
 -- ---------------------------------------------------------------------------
 do $$

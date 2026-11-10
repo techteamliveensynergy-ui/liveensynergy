@@ -90,7 +90,32 @@ function CategoryPicker({ initial, initialOther }: { initial: string[]; initialO
   );
 }
 
-export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest; draft?: FormDraft | null }) {
+/** An active package a brand can ask for (campaign_packages, admin-managed). */
+export interface RequestPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  participant_count: number | null;
+  price_gbp: number | null;
+  is_custom_price: boolean;
+  min_price_gbp: number | null;
+}
+
+function packageLabel(p: RequestPackage): string {
+  if (p.is_custom_price) return `${p.name} — custom budget${p.min_price_gbp ? ` from £${Number(p.min_price_gbp).toLocaleString("en-GB")}` : ""}`;
+  const people = p.participant_count ? ` · ${p.participant_count.toLocaleString("en-GB")} participants` : "";
+  return `${p.name} — £${Number(p.price_gbp ?? 0).toLocaleString("en-GB")}${people}`;
+}
+
+export function CampaignForm({
+  intake,
+  draft,
+  packages = [],
+}: {
+  intake?: CampaignIntakeRequest;
+  draft?: FormDraft | null;
+  packages?: RequestPackage[];
+}) {
   const editing = Boolean(intake);
   const action = editing ? updateCampaignIntake : submitCampaignIntake;
   const [state, formAction] = useActionState<CampaignState, FormData>(
@@ -137,10 +162,10 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
         </Field>
 
         <Field
-          label="Campaign description"
+          label="Campaign objective and description"
           htmlFor="description"
           required
-          hint="A brief objective for this campaign (up to ~50 words)."
+          hint="What you want this campaign to achieve, and a short description of it (up to ~50 words)."
         >
           <textarea
             id="description"
@@ -153,20 +178,50 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
         </Field>
 
         <Field
-          label="Partnership budget guidance (GBP)"
-          htmlFor="budget_expectation_gbp"
-          hint="Optional — a rough figure to work from. Our team will put together a package and confirm the real budget with you."
+          label="Potential campaign questions"
+          htmlFor="expected_outcomes"
+          hint="What you'd like to learn from the event audience. Our team turns these into the survey — rough questions are fine."
         >
-          <input
-            id="budget_expectation_gbp"
-            name="budget_expectation_gbp"
-            type="number"
-            min={0}
-            step="0.01"
-            className="input"
-            defaultValue={d?.budget_expectation_gbp ?? ""}
+          <textarea
+            id="expected_outcomes"
+            name="expected_outcomes"
+            className="textarea"
+            placeholder="For example: “Had you heard of us before the event? Would you try our new drink? What would make you buy it?”"
+            defaultValue={d?.expected_outcomes ?? ""}
           />
         </Field>
+
+        <Field
+          label="Package"
+          htmlFor="package_id"
+          hint="The package you're interested in. Our team confirms the details with you before anything is invoiced."
+        >
+          <select id="package_id" name="package_id" className="select" defaultValue={d?.package_id ?? ""}>
+            <option value="">Not sure yet — please advise</option>
+            {packages.map((p) => (
+              <option key={p.id} value={p.id}>
+                {packageLabel(p)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {packages.some((p) => p.is_custom_price) && (
+          <Field
+            label="Your budget (custom package only, GBP)"
+            htmlFor="budget_expectation_gbp"
+            hint="Only needed if you chose the custom package."
+          >
+            <input
+              id="budget_expectation_gbp"
+              name="budget_expectation_gbp"
+              type="number"
+              min={0}
+              step="0.01"
+              className="input"
+              defaultValue={d?.budget_expectation_gbp ?? ""}
+            />
+          </Field>
+        )}
 
         <CategoryPicker
           initial={d ? (d.categories?.length ? d.categories : d.category ? [d.category] : []) : []}
@@ -219,30 +274,47 @@ export function CampaignForm({ intake, draft }: { intake?: CampaignIntakeRequest
           />
         </Field>
 
-        <Field
-          label="Expected outcomes"
-          htmlFor="expected_outcomes"
-          hint="What you expect to receive in return — branding on creatives, social content, mentions, onsite banners, merch stations, data capture."
-        >
-          <textarea
-            id="expected_outcomes"
-            name="expected_outcomes"
-            className="textarea"
-            placeholder="For example: “Logo on all event creatives, two Instagram posts from the artist, a branded merch stand at the venue.”"
-            defaultValue={d?.expected_outcomes ?? ""}
-          />
-        </Field>
 
         <Field
-          label="Preferred reward rules"
-          htmlFor="reward_rules"
-          hint="e.g. first 20 sign-ups, random 50 people, a particular institution or postcode (up to ~200 words)."
+          label="Any specific audience criteria"
+          htmlFor="audience_criteria"
+          hint="Who you'd most like to hear from. Everyone taking part is 18 or over."
         >
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-[var(--color-ink-soft)]">Age range</span>
+            <input
+              id="audience_age_min"
+              name="audience_age_min"
+              type="number"
+              min={18}
+              max={120}
+              inputMode="numeric"
+              aria-label="Youngest age"
+              placeholder="18"
+              className="input w-24"
+              defaultValue={d?.audience_age_min ?? ""}
+            />
+            <span aria-hidden>to</span>
+            <input
+              id="audience_age_max"
+              name="audience_age_max"
+              type="number"
+              min={18}
+              max={120}
+              inputMode="numeric"
+              aria-label="Oldest age"
+              placeholder="65"
+              className="input w-24"
+              defaultValue={d?.audience_age_max ?? ""}
+            />
+          </div>
           <textarea
-            id="reward_rules"
-            name="reward_rules"
+            id="audience_criteria"
+            name="audience_criteria"
             className="textarea"
-            defaultValue={d?.reward_rules ?? ""}
+            maxLength={2000}
+            placeholder="For example: “Students and young professionals in London who go to live music at least once a month.”"
+            defaultValue={d?.audience_criteria ?? ""}
           />
         </Field>
 

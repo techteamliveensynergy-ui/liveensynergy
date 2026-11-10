@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PublicProfile } from "@/lib/public-profiles";
+import type { PublicLiveEvent } from "@/lib/public-event";
 import { formatEventDateTime } from "@/lib/event-time";
 import { toEmbed, videoList } from "@/lib/video-embeds";
 import { displayUrl } from "@/lib/urls";
@@ -30,8 +31,11 @@ export function PublicProfileView({
   profile,
   preview,
   showSponsorSections = false,
+  liveEvents = [],
 }: {
   profile: PublicProfile;
+  /** Their live partnered events — each already has a public page (Testing notes 7 Nov). */
+  liveEvents?: PublicLiveEvent[];
   /** Shows a banner explaining this is how others see the page. */
   preview?: boolean;
   /** Reveals the sponsor-only sections. See `canSeeSponsorSections`. */
@@ -166,6 +170,38 @@ export function PublicProfileView({
                   </a>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {liveEvents.length > 0 && (
+          <section className="mt-6" data-testid="profile-live-events">
+            <h2 className="mb-2 font-display text-lg font-semibold text-[var(--color-ink)]">Upcoming events</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {liveEvents.map((e) => (
+                <Link
+                  key={e.id}
+                  href={`/events/${e.id}`}
+                  className="card flex items-center gap-3 p-4 transition hover:-translate-y-0.5"
+                >
+                  {e.banner_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={e.banner_url} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-[var(--color-ink)]">{e.name}</span>
+                    <span className="block text-xs text-[var(--color-ink-soft)]">
+                      {e.event_date
+                        ? formatEventDateTime({ date: e.event_date, time: e.start_time, timeZone: e.timezone })
+                        : "Date to be announced"}
+                      {e.venue ? ` · ${e.venue}` : ""}
+                    </span>
+                    {e.brand_name && (
+                      <span className="block text-xs text-[var(--color-ink-soft)]">In partnership with {e.brand_name}</span>
+                    )}
+                  </span>
+                </Link>
+              ))}
             </div>
           </section>
         )}

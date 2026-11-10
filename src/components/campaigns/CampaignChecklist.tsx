@@ -89,7 +89,7 @@ export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
       text: `Event suggested: ${e.name} — awaiting ${waitingOn || "confirmation"} to agree`,
     });
   } else if (open.length > 1) {
-    items.push({ key: "event", state: "awaited", text: `${open.length} events suggested — awaiting brand and artist to agree one` });
+    items.push({ key: "event", state: "awaited", text: `${open.length} events suggested — the brand and artist need to agree on one together` });
   } else if (unpaid) {
     items.push({ key: "event", state: "later", text: "Event — once paid" });
   } else {

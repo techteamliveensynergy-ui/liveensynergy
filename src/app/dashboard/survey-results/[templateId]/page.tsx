@@ -73,8 +73,8 @@ export default async function BrandSurveyResultsPage({ params }: { params: Promi
           </>
         ) : (
           <>
-            Open-text answers aren&apos;t shown here. Once enough responses are in, our team writes them up in a
-            written report and publishes it under{" "}
+            Open-text answers aren&apos;t shown here. Once enough responses are in, they&apos;re summarised in your
+            survey report under{" "}
             <Link href="/dashboard/reports#written-reports" className="font-semibold text-[var(--color-brand)]">
               Reporting &amp; analysis
             </Link>{" "}

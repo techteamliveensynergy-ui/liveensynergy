@@ -16,6 +16,7 @@
 --   0112_notification_links_and_survey_review.sql (links on emails; review notifications to admin + respondent)
 --   0113_email_button_settings.sql (admins choose which emails carry the action button)
 --   0114 / 0115 (groups K, L) and 0116_marketing_campaigns.sql (group M: marketing email)
+--   0117_testing_notes_0711.sql (group N: Testing notes 7 Nov)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -272,7 +273,25 @@ with checks (grp, ord, name, expected, actual) as (
      coalesce((select bool_or(pg_get_constraintdef(c.oid) like '%one_click_unsubscribe%') from pg_constraint c
                 where c.conrelid = 'public.consent_records'::regclass and c.contype = 'c'), false)::text),
   ('M. 0116 marketing', 6, 'auto-pause notification seeded', '1',
-     (select count(*) from public.notification_events where key = 'admin.marketing_paused')::text)
+     (select count(*) from public.notification_events where key = 'admin.marketing_paused')::text),
+
+  -- ---- N. 0117: Testing notes 7 Nov ----------------------------------------
+  ('N. 0117 testing notes', 1, 'new columns (request package/audience, order form post-survey link)', '5',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and ((table_name = 'campaign_intake_requests' and column_name in ('package_id','audience_age_min','audience_age_max','audience_criteria'))
+          or (table_name = 'campaign_order_forms' and column_name = 'post_survey_link')))::text),
+  ('N. 0117 testing notes', 2, 'survey preview + profile live events functions', '2',
+     (select count(distinct proname) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('order_form_survey_preview','public_profile_live_events'))::text),
+  ('N. 0117 testing notes', 3, 'order form preview not callable signed-out', 'false',
+     coalesce((select bool_or(has_function_privilege('anon', p.oid, 'EXECUTE')) from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'order_form_survey_preview'), false)::text),
+  ('N. 0117 testing notes', 4, 'reset email carries a link', 'true',
+     coalesce((select body ~ '\{\{\s*(reset_link|link)\s*\}\}' from public.notification_templates
+                where event_key = 'account.password_reset' and channel = 'email'), false)::text),
+  ('N. 0117 testing notes', 5, 'artist emails no longer quote the package value', '0',
+     (select count(*) from public.notification_templates
+       where event_key in ('sponsorship.confirmed','offer.proposal_received') and body like '%{{budget}}%')::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

@@ -14,6 +14,7 @@ import { EnquireButton } from "./EnquireButton";
 import { FlashToast } from "@/components/ui/FlashToast";
 import { formatEventDateTime } from "@/lib/event-time";
 import { eventImage } from "@/lib/event-images";
+import { getPublicLiveEvents } from "@/lib/public-event";
 import { UK_TIME_ZONE } from "@/lib/format";
 import { eventOpenStates, opensLabel } from "@/lib/campaign-opening";
 
@@ -299,8 +300,15 @@ export default async function DiscoverPage({
   );
   // Upcoming → Open (0070): a paid, agreed event is listed straight away with
   // its details, but registration opens only when the team opens it.
-  const openStates = await eventOpenStates(supabase, events.map((e) => e.id));
+  const [openStates, liveRows] = await Promise.all([
+    eventOpenStates(supabase, events.map((e) => e.id)),
+    getPublicLiveEvents(supabase),
+  ]);
   const isOpen = (id: string) => openStates.get(id)?.is_open ?? true;
+  // Every card showed the same stock picture (Testing notes 7 Nov): the event's
+  // own banner is often empty, and the listing/campaign artwork isn't readable
+  // here. public_live_events() resolves banner → listing image → campaign image.
+  const artworkById = new Map(liveRows.map((r) => [r.id, r.banner_url]));
 
   return (
     <div>
@@ -353,7 +361,7 @@ export default async function DiscoverPage({
           {events.map((e) => (
             <div key={e.id} className="card flex flex-col overflow-hidden">
               {(() => {
-                const art = eventImage(e.banner_url, e.event_listings?.category);
+                const art = eventImage(e.banner_url || artworkById.get(e.id), e.event_listings?.category);
                 return (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

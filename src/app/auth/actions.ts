@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
 import { siteUrl } from "@/lib/site-url";
+import { sendPasswordResetEmail } from "@/lib/password-reset";
 import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type Role, type SignupRole } from "@/lib/constants";
 import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
@@ -38,6 +39,10 @@ export async function signUp(
   // by saveAudience() (src/app/onboarding/actions.ts) once onboarding
   // completes.
   const pendingEventReference = String(formData.get("event") ?? "").trim() || null;
+  // Came from a survey (Testing notes 7 Nov): the welcome email's link and the
+  // page after sign-up both go back to it, not to profile set-up.
+  const surveyReturn = safeRedirectPath(String(formData.get("redirectTo") ?? ""), "");
+  const returnToSurvey = surveyReturn.startsWith("/survey/") ? surveyReturn : null;
 
   if (!fullName || !email || !password) {
     return { error: "Please fill in your name, email and password." };
@@ -102,7 +107,7 @@ export async function signUp(
       return { error: "Your account was created, but we couldn't sign you in. Please sign in." };
     }
 
-    await sendVerificationEmail(supabase, created.user.id, ROLE_LABELS[role]);
+    await sendVerificationEmail(supabase, created.user.id, ROLE_LABELS[role], returnToSurvey);
     await notify({
       eventKey: "account.welcome",
       recipientProfileId: created.user.id,
@@ -116,14 +121,14 @@ export async function signUp(
     });
 
     revalidatePath("/", "layout");
-    redirect("/onboarding");
+    redirect(returnToSurvey ?? "/onboarding");
   }
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(returnToSurvey ?? "/onboarding")}`,
       // The profile row is created by the `handle_new_user` trigger, not here,
       // so the terms acceptance travels with the sign-up metadata — there's no
       // session to write with yet when email confirmation is on (0021).
@@ -338,13 +343,20 @@ export async function requestPasswordReset(
     return { error: "Please enter your email address." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
-  });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "That email address doesn't look right." };
+  }
 
-  if (error) {
-    return { error: error.message };
+  // Our own branded email (works on any device, no Supabase redirect
+  // settings involved); Supabase's email only where that isn't set up yet.
+  if ((await sendPasswordResetEmail(email.toLowerCase())) === "fallback") {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
+    });
+    if (error) {
+      return { error: error.message };
+    }
   }
 
   // Don't reveal whether the email exists.

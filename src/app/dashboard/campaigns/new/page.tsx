@@ -2,11 +2,22 @@ import Link from "next/link";
 import { requireRole, profileCompleteness } from "@/lib/profile";
 import { PageHeader } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
-import { CampaignForm } from "../CampaignForm";
+import { CampaignForm, type RequestPackage } from "../CampaignForm";
 import { createClient } from "@/lib/supabase/server";
 import { loadDraft } from "@/lib/drafts";
 
 export const metadata = { title: "New campaign" };
+
+/** Active packages a brand can ask for on the request form (Testing notes 7 Nov). */
+async function requestPackages(supabase: Awaited<ReturnType<typeof createClient>>): Promise<RequestPackage[]> {
+  const { data } = await supabase
+    .from("campaign_packages")
+    .select("id, name, description, participant_count, price_gbp, is_custom_price, min_price_gbp")
+    .eq("is_active", true)
+    .order("sort_order");
+  return (data ?? []) as RequestPackage[];
+}
+
 
 export default async function NewCampaignPage({
   searchParams,
@@ -16,7 +27,11 @@ export default async function NewCampaignPage({
   const { profile } = await requireRole(["brand"]);
   const { draft: draftId } = await searchParams;
   // Continuing a saved draft (#79); RLS keeps it to its owner.
-  const draft = draftId ? await loadDraft(await createClient(), profile.id, "campaign_request", draftId) : null;
+  const supabase = await createClient();
+  const [draft, packages] = await Promise.all([
+    draftId ? loadDraft(supabase, profile.id, "campaign_request", draftId) : Promise.resolve(null),
+    requestPackages(supabase),
+  ]);
   const completeness = await profileCompleteness(profile);
   const blocked = completeness.blocking.length > 0;
 
@@ -37,7 +52,7 @@ export default async function NewCampaignPage({
       ) : (
         <>
           <ProfileCompleteness completeness={completeness} className="mb-5" />
-          <CampaignForm draft={draft} />
+          <CampaignForm draft={draft} packages={packages} />
         </>
       )}
     </div>

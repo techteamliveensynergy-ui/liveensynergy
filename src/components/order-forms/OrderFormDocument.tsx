@@ -6,6 +6,7 @@ import {
   SURVEY_TYPE_LABELS,
   embedUrl,
   isDirectVideo,
+  ownSurveyIdFromLink,
   type CampaignOrderForm,
   type OrderFormSection,
 } from "@/lib/order-forms";
@@ -104,6 +105,28 @@ function Video({ url }: { url: string }) {
   );
 }
 
+/**
+ * A survey link on the order form. One of our own surveys opens the brand-safe
+ * preview (/order-forms/<form>/survey/<id>) — the admin builder link the team
+ * pastes is admin-only and bounced brands to their dashboard (Testing notes 7 Nov).
+ */
+function surveyLinkNode(formId: string | undefined, link: string | null) {
+  if (!link) return null;
+  const own = ownSurveyIdFromLink(link);
+  if (own && formId) {
+    return (
+      <a href={`/order-forms/${formId}/survey/${own}`} target="_blank" rel="noopener noreferrer" className="underline">
+        Preview the survey ↗
+      </a>
+    );
+  }
+  return (
+    <a href={link} target="_blank" rel="noopener noreferrer" className="underline">
+      {displayUrl(link)}
+    </a>
+  );
+}
+
 export function OrderFormDocument({
   form,
   sections,
@@ -191,14 +214,8 @@ export function OrderFormDocument({
               ["Approx. number of participants", form.approx_participants?.toLocaleString("en-GB")],
               ["Type of survey", form.survey_type ? SURVEY_TYPE_LABELS[form.survey_type] : null],
               ["Number of survey questions", form.survey_question_count],
-              [
-                "Draft survey link",
-                form.draft_survey_link ? (
-                  <a href={form.draft_survey_link} target="_blank" rel="noopener noreferrer" className="underline">
-                    {displayUrl(form.draft_survey_link)}
-                  </a>
-                ) : null,
-              ],
+              ["Pre-event survey", surveyLinkNode(form.id, form.draft_survey_link ?? null)],
+              ["Post-event survey", surveyLinkNode(form.id, form.post_survey_link ?? null)],
             ]}
           />
           <LongText label="Potential research questions" text={form.research_questions} />

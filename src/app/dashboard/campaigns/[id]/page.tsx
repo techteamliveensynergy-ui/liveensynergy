@@ -4,9 +4,19 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import type { CampaignIntakeRequest } from "@/lib/types";
-import { CampaignForm } from "../CampaignForm";
+import { CampaignForm, type RequestPackage } from "../CampaignForm";
 
 export const metadata = { title: "Edit campaign request" };
+
+/** Active packages a brand can ask for on the request form (Testing notes 7 Nov). */
+async function requestPackages(supabase: Awaited<ReturnType<typeof createClient>>): Promise<RequestPackage[]> {
+  const { data } = await supabase
+    .from("campaign_packages")
+    .select("id, name, description, participant_count, price_gbp, is_custom_price, min_price_gbp")
+    .eq("is_active", true)
+    .order("sort_order");
+  return (data ?? []) as RequestPackage[];
+}
 
 export default async function EditCampaignPage({
   params,
@@ -60,7 +70,7 @@ export default async function EditCampaignPage({
       >
         ← Back to request
       </Link>
-      <CampaignForm intake={data as CampaignIntakeRequest} />
+      <CampaignForm intake={data as CampaignIntakeRequest} packages={await requestPackages(supabase)} />
     </div>
   );
 }

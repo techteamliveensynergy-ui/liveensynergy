@@ -26,7 +26,6 @@ export function RegistrationForm({
   eventId,
   eventName,
   defaultName,
-  defaultDateOfBirth,
   defaultPhone,
   defaultPhoneCountryCode,
   waitlistOnly = false,
@@ -34,7 +33,6 @@ export function RegistrationForm({
   eventId: string;
   eventName: string;
   defaultName: string;
-  defaultDateOfBirth: string;
   defaultPhone: string;
   defaultPhoneCountryCode: string;
   /** The event is at its registration limit (0114): this joins the waitlist. */
@@ -74,22 +72,8 @@ export function RegistrationForm({
         />
       </Field>
 
+      {/* No date of birth or gender anywhere (Testing notes 7 Nov, GDPR). */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label="Date of birth"
-          htmlFor="date_of_birth"
-          required
-          hint="Some partners set an age requirement for their rewards."
-        >
-          <input
-            id="date_of_birth"
-            name="date_of_birth"
-            type="date"
-            className="input"
-            required
-            defaultValue={defaultDateOfBirth}
-          />
-        </Field>
         <Field label="Contact phone" htmlFor="phone" required>
           <PhoneInput
             defaultCountryCode={defaultPhoneCountryCode}

@@ -23,7 +23,6 @@ import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
 import { EventEditForm } from "./EventEditForm";
-import { SelectionDrawForm } from "./SelectionDrawForm";
 import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
@@ -387,18 +386,7 @@ export default async function AdminSponsoredDetailPage({
   const fee = event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
   const pct = (n: number) => (registered ? Math.round((n / registered) * 100) : 0);
 
-  // The random draw (10 Aug standup). "Waiting" is everyone still registered
-  // and unselected; the suggested number of places is what's left of the
-  // event's capacity. (It used to be the remaining cash budget ÷ ticket price,
-  // from the cash reward model — rewards are discount codes now.)
-  const waiting = participants.filter(
-    (p) => !p.selected && p.status === "registered",
-  ).length;
   const ticketPrice = event.event_listings?.ticket_price_gbp ?? null;
-  const capacity = event.event_listings?.capacity ?? null;
-  const alreadySelected = participants.filter((p) => p.selected).length;
-  const suggestedPlaces =
-    capacity != null ? Math.max(0, Math.min(waiting, Number(capacity) - alreadySelected)) : null;
 
   return (
     <div className="space-y-6">
@@ -455,7 +443,7 @@ export default async function AdminSponsoredDetailPage({
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           {
-            label: "Budget (gross)",
+            label: "Package value",
             value: <Money value={event.budget_gbp} />,
             tint: "bg-[#faf5ee]",
           },
@@ -816,23 +804,12 @@ export default async function AdminSponsoredDetailPage({
           Participants ({participants.length})
         </h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Selection is a random draw run here — the brand and the artist can no
-          longer pick participants themselves (10 Aug standup). Verification,
-          no-shows and reward release stay available per person below.
+          Everyone registered for this event. Discount codes are issued
+          automatically when a survey response passes; people check in by
+          scanning the QR code at the venue. There is no selection step
+          (Testing notes 7 Nov) — use &ldquo;Mark checked in&rdquo; only if
+          someone&apos;s scan didn&apos;t work.
         </p>
-
-        {/* Reported here rather than inside the draw form: drawing the last of
-            the pool hides that form, so a message rendered inside it would
-            unmount before it could be read. */}
-        {notice === "draw" && (
-          <p className="mt-4 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-            ✓ Drew {drawn} of {pool} waiting
-            {Number(pool) - Number(drawn) > 0
-              ? ` — ${Number(pool) - Number(drawn)} still in the pool for a later round.`
-              : " — the pool is now empty."}{" "}
-            Everyone drawn has been notified.
-          </p>
-        )}
 
         {/* Same "form unmounts on success, so report through the URL instead"
             reasoning as the draw notice above — issueRewardCode() and
@@ -847,22 +824,6 @@ export default async function AdminSponsoredDetailPage({
             })()}
             {GATE_NOTICES[gateNotice] ?? "That action wasn't allowed."}
           </p>
-        )}
-
-        {/* The draw itself. Hidden once there's nobody left to draw, so a
-            finished event doesn't show a dead control. */}
-        {waiting > 0 && (
-          <div className="mt-4 rounded-xl border border-black/10 bg-[var(--color-mist)] p-4">
-            <h3 className="font-semibold text-[var(--color-ink)]">
-              Random selection draw
-            </h3>
-            <SelectionDrawForm
-              eventId={event.id}
-              waiting={waiting}
-              suggestedPlaces={suggestedPlaces}
-              ticketPriceKnown={ticketPrice != null && Number(ticketPrice) > 0}
-            />
-          </div>
         )}
 
         {participants.length === 0 ? (
@@ -883,11 +844,6 @@ export default async function AdminSponsoredDetailPage({
                     </span>
                     <StatusBadge status={p.status} />
                     <SurveyGatePill gate={gates.get(p.id)} />
-                    {p.selected && (
-                      <span className="text-xs text-[var(--color-olive-deep)]">
-                        selected
-                      </span>
-                    )}
                     {p.no_show && (
                       <span className="text-xs text-[var(--color-accent)]">
                         ⚠ no-show
@@ -901,7 +857,8 @@ export default async function AdminSponsoredDetailPage({
                       : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]/70">
-                    {p.ticketHref ? (
+                    {/* Tickets aren't uploaded any more; older proofs still open. */}
+                    {p.ticketHref && (
                       <a
                         href={p.ticketHref}
                         target="_blank"
@@ -910,33 +867,23 @@ export default async function AdminSponsoredDetailPage({
                       >
                         Ticket proof ↗
                       </a>
-                    ) : (
-                      "No ticket proof"
                     )}
-                    {p.newsletter_opt_in ? " · newsletter opt-in" : ""}
+                    {p.ticketHref && p.newsletter_opt_in ? " · " : ""}
+                    {p.newsletter_opt_in ? "newsletter opt-in" : ""}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Manual selection survives as an admin override — for
-                      fixing a draw, not for running one. */}
-                  {!p.selected && p.status !== "rejected" && (
+                  {/* Selection and Reject are gone (Testing notes 7 Nov). A
+                      manual check-in stays, for a QR scan that didn't work. */}
+                  {(p.status === "registered" || p.status === "ticket_uploaded") && !p.attendance_verified_at && (
                     <AdminBtn
                       eventId={event.id}
                       id={p.id}
-                      op="select"
-                      label="Select by hand"
+                      op="verify"
+                      label="Mark checked in"
                     />
                   )}
-                  {p.selected &&
-                    (p.status === "registered" || p.status === "ticket_uploaded") && (
-                      <AdminBtn
-                        eventId={event.id}
-                        id={p.id}
-                        op="verify"
-                        label="Verify"
-                      />
-                    )}
                   {p.selected &&
                     p.status !== "reward_released" &&
                     !p.no_show && (
@@ -1015,15 +962,6 @@ export default async function AdminSponsoredDetailPage({
                         </form>
                       );
                     })()}
-                  {!p.selected && p.status !== "rejected" && (
-                    <AdminBtn
-                      eventId={event.id}
-                      id={p.id}
-                      op="reject"
-                      label="Reject"
-                      danger
-                    />
-                  )}
                 </div>
               </div>
             ))}

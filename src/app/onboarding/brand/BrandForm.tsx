@@ -95,6 +95,15 @@ export function BrandForm({
             />
           </Field>
         </div>
+        {/* Testing notes 7 Nov: "options to upload more images (brand assets)". */}
+        <p className="-mt-2 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
+          <span className="font-semibold text-[var(--color-ink)]">More brand assets?</span> Upload as many logos, product
+          shots, brand guidelines and decks as you like under{" "}
+          <a href="/dashboard/resources#my-files" className="font-semibold text-[var(--color-brand-dark)] underline">
+            Repository → My files
+          </a>{" "}
+          once your profile is saved. Choose for each file whether only our team sees it or your partner artists do too.
+        </p>
 
         <Field
           label="Brand video links"
