@@ -15,6 +15,7 @@
 --   0111_survey_own_response_and_completions.sql (survey-link responses visible: own-response RPC + completions view)
 --   0112_notification_links_and_survey_review.sql (links on emails; review notifications to admin + respondent)
 --   0113_email_button_settings.sql (admins choose which emails carry the action button)
+--   0114 / 0115 (groups K, L) and 0116_marketing_campaigns.sql (group M: marketing email)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -245,7 +246,33 @@ with checks (grp, ord, name, expected, actual) as (
                 where event_key = 'sponsored.change_resolved'), false)::text),
   ('L. 0115 brand + decisions', 6, 'required questions refuse blank text', 'true',
      coalesce((select pg_get_functiondef(p.oid) like '%btrim(v_val%' from pg_proc p
-                where p.pronamespace = 'public'::regnamespace and p.proname = 'validate_survey_answer_types'), false)::text)
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'validate_survey_answer_types'), false)::text),
+
+  -- ---- M. 0116: marketing email (subscriptions, campaigns, sends) ----------
+  ('M. 0116 marketing', 1, 'tables exist', '6',
+     (select count(*) from information_schema.tables where table_schema = 'public'
+        and table_name in ('brand_subscriptions','marketing_suppressions','brand_marketing_settings',
+                           'marketing_campaigns','marketing_sends','marketing_webhook_events'))::text),
+  ('M. 0116 marketing', 2, 'functions exist', '11',
+     (select count(distinct proname) from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('marketing_sync_subscription','marketing_unsubscribe','marketing_unsubscribe_state','marketing_eligible',
+                        'marketing_audience_count','marketing_start_campaign','marketing_claim_batch','marketing_complete_batch',
+                        'marketing_fail_batch','marketing_apply_event','marketing_check_health'))::text),
+  ('M. 0116 marketing', 3, 'only the audience count is callable by signed-in users', 'marketing_audience_count',
+     coalesce((select string_agg(p.proname, ',' order by p.proname) from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname like 'marketing\_%'
+                  and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                       or has_function_privilege('authenticated', p.oid, 'EXECUTE'))), 'none')),
+  ('M. 0116 marketing', 4, 'opt-in ticks backfilled into subscriptions', 'true',
+     (not exists (select 1 from public.participations pa join public.sponsored_events se on se.id = pa.sponsored_event_id
+                   where pa.newsletter_opt_in
+                     and not exists (select 1 from public.brand_subscriptions bs
+                                      where bs.profile_id = pa.audience_profile_id and bs.brand_id = se.brand_id)))::text),
+  ('M. 0116 marketing', 5, 'consent log accepts unsubscribe sources', 'true',
+     coalesce((select bool_or(pg_get_constraintdef(c.oid) like '%one_click_unsubscribe%') from pg_constraint c
+                where c.conrelid = 'public.consent_records'::regclass and c.contype = 'c'), false)::text),
+  ('M. 0116 marketing', 6, 'auto-pause notification seeded', '1',
+     (select count(*) from public.notification_events where key = 'admin.marketing_paused')::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

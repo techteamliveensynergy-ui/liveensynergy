@@ -3,148 +3,134 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import { formatDateTime } from "@/lib/format";
-import { isoDay, loadMarketingList } from "@/lib/marketing-list";
+import { marketingConfig } from "@/lib/marketing/send";
+import { MarketingTabs, CampaignStatusChip } from "./MarketingTabs";
+import { NewCampaignForm } from "./NewCampaignForm";
 
-export const metadata = { title: "Marketing list · Admin" };
+export const metadata = { title: "Marketing · Admin" };
+
+type Row = {
+  id: string;
+  reference: string;
+  name: string;
+  subject: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  recipients: number;
+  paused_reason: string | null;
+  created_at: string;
+  brands: { brand_name: string } | null;
+};
 
 /**
- * Everyone who currently agrees to a partner's newsletter & promotions
- * (GitHub #62), one row per person — the rules live in loadMarketingList().
- * Filters are a plain GET form, so the CSV link carries the same query.
+ * Marketing → Campaigns: partner promotions emailed to people who ticked
+ * "Partner newsletter & promotions" for that brand. Each email comes from the
+ * brand, carries its own unsubscribe, and is sent by the worker in batches.
  */
-export default async function AdminMarketingPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ brand?: string; event?: string; from?: string; to?: string }>;
-}) {
+export default async function MarketingCampaignsPage() {
   await requireRole(["admin"]);
-  const sp = await searchParams;
-  const filters = {
-    brand: sp.brand || null,
-    event: sp.event || null,
-    from: isoDay(sp.from),
-    to: isoDay(sp.to),
-  };
   const supabase = await createClient();
-  const { people, brands, events } = await loadMarketingList(supabase, filters);
-
-  const query = new URLSearchParams();
-  for (const [k, v] of Object.entries(filters)) if (v) query.set(k, v);
-  const exportHref = `/dashboard/admin/marketing/export${query.toString() ? `?${query}` : ""}`;
-  const filtered = query.toString() !== "";
-  const doNotEmail = people.filter((p) => p.suppressed).length;
+  const [{ data: rows }, { data: brands }, { data: pausedBrands }] = await Promise.all([
+    supabase
+      .from("marketing_campaigns")
+      .select(
+        "id, reference, name, subject, status, scheduled_at, started_at, finished_at, recipients, paused_reason, created_at, brands(brand_name)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.from("brands").select("id, brand_name").order("brand_name"),
+    supabase.from("brand_marketing_settings").select("brand_id, paused_reason, brands(brand_name)").not("paused_at", "is", null),
+  ]);
+  const campaigns = (rows ?? []) as unknown as Row[];
+  const { missing } = marketingConfig();
 
   return (
     <div>
+      <MarketingTabs active="campaigns" />
       <PageHeader
-        title="Marketing list"
-        subtitle={`${people.length} ${people.length === 1 ? "person has" : "people have"} agreed to partner newsletters & promotions${
-          filtered ? " (filtered)" : ""
-        }.${doNotEmail ? ` ${doNotEmail} marked “do not email” after a bounce or complaint.` : ""}`}
-        action={
-          people.length > 0 ? (
-            <a href={exportHref} className="btn btn-ghost text-sm">
-              ⬇ Download CSV
-            </a>
-          ) : undefined
-        }
+        title="Marketing campaigns"
+        subtitle="Promotions sent on behalf of a brand to people who agreed to hear from that brand. Every email carries the brand's footer and a one-click unsubscribe."
       />
 
-      <form method="get" className="card mb-5 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto_auto] lg:items-end">
-        <label className="block text-sm">
-          <span className="field-label">Brand</span>
-          <select name="brand" defaultValue={filters.brand ?? ""} className="select mt-1">
-            <option value="">All brands</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="field-label">Event</span>
-          <select name="event" defaultValue={filters.event ?? ""} className="select mt-1">
-            <option value="">All events</option>
-            {events.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="field-label">Agreed from</span>
-          <input type="date" name="from" defaultValue={filters.from ?? ""} className="input mt-1" />
-        </label>
-        <label className="block text-sm">
-          <span className="field-label">Agreed to</span>
-          <input type="date" name="to" defaultValue={filters.to ?? ""} className="input mt-1" />
-        </label>
-        <div className="flex gap-2">
-          <button type="submit" className="btn btn-primary text-sm">
-            Filter
-          </button>
-          {filtered && (
-            <Link href="/dashboard/admin/marketing" className="btn btn-ghost text-sm">
-              Clear
-            </Link>
-          )}
+      {missing && (
+        <div className="card mb-5 border-l-4 border-[var(--color-accent)] p-4 text-sm">
+          <p className="font-semibold text-[var(--color-ink)]">Sending isn&rsquo;t switched on yet</p>
+          <p className="mt-1 text-[var(--color-ink-soft)]">
+            {missing} You can build and preview campaigns meanwhile. Setup steps: <code>docs/marketing-email-setup.md</code>.
+          </p>
         </div>
-      </form>
+      )}
 
-      <p className="mb-4 text-xs text-[var(--color-ink-soft)]">
-        Someone is listed while at least one of their event registrations has the &ldquo;Partner newsletter &amp;
-        promotions&rdquo; box ticked. Un-ticking it under My events removes them. Blocked accounts are left out. The
-        CSV holds names, emails, events and consent dates — no phone numbers or dates of birth — and every download is
-        recorded in the audit log.
-      </p>
+      {(pausedBrands ?? []).length > 0 && (
+        <div className="card mb-5 border-l-4 border-[var(--color-accent)] p-4 text-sm">
+          <p className="font-semibold text-[var(--color-ink)]">Sending is paused for some brands</p>
+          <ul className="mt-1 list-disc pl-5 text-[var(--color-ink-soft)]">
+            {(pausedBrands as unknown as { brand_id: string; paused_reason: string | null; brands: { brand_name: string } | null }[]).map(
+              (b) => (
+                <li key={b.brand_id}>
+                  <Link href={`/dashboard/admin/marketing/brands?brand=${b.brand_id}`} className="font-semibold underline">
+                    {b.brands?.brand_name ?? "Brand"}
+                  </Link>{" "}
+                  — {b.paused_reason ?? "paused by an admin"}
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      )}
 
-      {people.length === 0 ? (
+      <NewCampaignForm brands={(brands ?? []).map((b) => ({ id: b.id as string, name: b.brand_name as string }))} />
+
+      {campaigns.length === 0 ? (
         <div className="card p-10 text-center text-sm text-[var(--color-ink-soft)]">
-          {filtered ? "Nobody matches these filters." : "Nobody has agreed to marketing yet."}
+          No campaigns yet. Start one above — it stays a draft until you schedule it.
         </div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wide text-[var(--color-ink-soft)]">
-                <th className="px-5 py-3 font-semibold">Person</th>
-                <th className="px-5 py-3 font-semibold">Agreed for</th>
-                <th className="px-5 py-3 font-semibold">Latest consent</th>
+                <th className="px-5 py-3 font-semibold">Campaign</th>
+                <th className="px-5 py-3 font-semibold">Brand</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3 font-semibold">When</th>
+                <th className="px-5 py-3 text-right font-semibold">Recipients</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/10">
-              {people.map((p) => (
-                <tr key={p.profileId} className="align-top">
+              {campaigns.map((c) => (
+                <tr key={c.id} className="align-top">
                   <td className="px-5 py-3">
                     <Link
-                      href={`/dashboard/admin/users/${p.profileId}`}
+                      href={`/dashboard/admin/marketing/campaigns/${c.id}`}
                       className="font-semibold text-[var(--color-ink)] hover:text-[var(--color-brand-dark)]"
                     >
-                      {p.name || "Unnamed"}
+                      {c.name}
                     </Link>
-                    <p className="text-[var(--color-ink-soft)]">{p.email}</p>
-                    {p.suppressed && (
-                      <span className="mt-1 inline-block rounded-full bg-[var(--color-pink)] px-2 py-0.5 text-xs font-semibold text-[var(--color-accent)]">
-                        Do not email · {p.suppressed}
-                      </span>
+                    <p className="text-xs text-[var(--color-ink-soft)]">
+                      {c.reference}
+                      {c.subject ? ` · “${c.subject}”` : ""}
+                    </p>
+                  </td>
+                  <td className="px-5 py-3">{c.brands?.brand_name ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    <CampaignStatusChip status={c.status} />
+                    {c.status === "paused" && c.paused_reason && (
+                      <p className="mt-1 max-w-xs text-xs text-[var(--color-accent)]">{c.paused_reason}</p>
                     )}
                   </td>
-                  <td className="px-5 py-3">
-                    <ul className="space-y-1">
-                      {p.events.map((e) => (
-                        <li key={e.id}>
-                          <span className="font-medium text-[var(--color-ink)]">{e.name}</span>
-                          {e.brandName && <span className="text-[var(--color-ink-soft)]"> · {e.brandName}</span>}
-                        </li>
-                      ))}
-                    </ul>
+                  <td className="px-5 py-3 text-[var(--color-ink-soft)]">
+                    {c.status === "sent" || c.status === "cancelled"
+                      ? formatDateTime(c.finished_at)
+                      : c.started_at
+                        ? `Started ${formatDateTime(c.started_at)}`
+                        : c.scheduled_at
+                          ? formatDateTime(c.scheduled_at)
+                          : `Created ${formatDateTime(c.created_at)}`}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 text-[var(--color-ink-soft)]">
-                    {formatDateTime(p.latestConsentAt)}
-                    <p className="text-xs">{p.latestSource}</p>
-                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums">{c.started_at ? c.recipients : "—"}</td>
                 </tr>
               ))}
             </tbody>
