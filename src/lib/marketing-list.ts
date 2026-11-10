@@ -48,7 +48,8 @@ export interface MarketingPerson {
   events: MarketingEvent[];
   latestConsentAt: string;
   latestSource: string;
-  suppressed: "bounced" | "complained" | null;
+  /** Why we must not email them: an account-email bounce/complaint, or a marketing-only block (0116). */
+  suppressed: "bounced" | "complained" | "marketing bounce" | "marketing complaint" | "unsubscribed from all" | null;
 }
 
 interface OptInRow {
@@ -101,7 +102,7 @@ export async function loadMarketingList(
   supabase: SupabaseClient,
   filters: MarketingFilters = {},
 ): Promise<{ people: MarketingPerson[]; brands: { id: string; name: string }[]; events: { id: string; name: string }[] }> {
-  const [optIns, consents, suppressionRows] = await Promise.all([
+  const [optIns, consents, suppressionRows, marketingBlocks] = await Promise.all([
     readAll<OptInRow>((from, to) =>
       supabase
         .from("participations")
@@ -124,6 +125,9 @@ export async function loadMarketingList(
     readAll<{ email: string; reason: "bounced" | "complained" }>((from, to) =>
       supabase.from("email_suppressions").select("email, reason").order("email").range(from, to),
     ),
+    readAll<{ email: string; reason: "unsub_all" | "complaint" | "hard_bounce" }>((from, to) =>
+      supabase.from("marketing_suppressions").select("email, reason").order("email").range(from, to),
+    ),
   ]);
 
   // Latest consent record per (person, event) — ascending order, so the
@@ -133,7 +137,16 @@ export async function loadMarketingList(
     const ev = c.context?.sponsored_event_id;
     if (c.profile_id && ev) latest.set(`${c.profile_id}|${ev}`, c);
   }
-  const suppressed = new Map(suppressionRows.map((s) => [s.email.toLowerCase(), s.reason]));
+  const MARKETING_REASON = {
+    unsub_all: "unsubscribed from all",
+    complaint: "marketing complaint",
+    hard_bounce: "marketing bounce",
+  } as const;
+  const suppressed = new Map<string, MarketingPerson["suppressed"]>(
+    marketingBlocks.map((s) => [s.email.toLowerCase(), MARKETING_REASON[s.reason]]),
+  );
+  // An account-email bounce/complaint is the stronger fact; it wins.
+  for (const s of suppressionRows) suppressed.set(s.email.toLowerCase(), s.reason);
 
   // Options for the filters: every brand/event anyone is opted in at.
   const brandOptions = new Map<string, string>();
