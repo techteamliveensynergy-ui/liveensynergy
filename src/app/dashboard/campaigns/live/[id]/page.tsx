@@ -274,8 +274,8 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
         <h2 className="font-display text-lg font-semibold">Survey reports</h2>
         {((reportData ?? []) as { id: string; title: string; row_count: number; shared_at: string }[]).length === 0 ? (
           <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-            Our team writes up what your audience told you — findings, charts and recommendations — and publishes it
-            here once there are enough responses. We&apos;ll email you when it&apos;s ready.
+            Your survey report — what your audience told you, with findings, charts and recommendations — appears here
+            once there are enough responses. We&apos;ll email you when it&apos;s ready.
           </p>
         ) : (
           <ul className="mt-3 space-y-2">

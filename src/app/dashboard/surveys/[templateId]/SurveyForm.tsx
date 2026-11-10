@@ -115,6 +115,7 @@ export function SurveyForm({
     {},
   );
   const [botToken, setBotToken] = useState<string | null>(null);
+  const [reachedLastStep, setReachedLastStep] = useState(false);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   // A Turnstile token is single-use and the server has now spent it. The
@@ -285,7 +286,12 @@ export function SurveyForm({
       </div>
 
       <input type="hidden" name="cf-turnstile-response" value={botToken ?? ""} readOnly />
-      <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
+      {/* Stepped surveys start the bot check on the last page: mounted on
+          page one, its token expired part-way through a long survey and the
+          "Verify you are human" box came back (Testing notes 7 Nov). */}
+      {(layoutMode !== "stepped" || reachedLastStep) && (
+        <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
+      )}
 
       {layoutMode === "stepped" ? (
         <SteppedQuestions
@@ -294,6 +300,7 @@ export function SurveyForm({
           otherTexts={otherTexts}
           onChange={handleChange}
           onOtherTextChange={handleOtherText}
+          onReachLastStep={() => setReachedLastStep(true)}
           onShown={markShown}
           isPending={isPending || quota.checking}
           footer={footer}

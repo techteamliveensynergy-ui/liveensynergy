@@ -64,7 +64,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
       .from("participations")
       .select("id", { count: "exact", head: true })
       .in("sponsored_event_id", sponsoredIds)
-      .not("attendance_verified_at", "is", null);
+      .neq("status", "rejected") // Testing notes 7 Nov: participants, not check-ins (old model);
     checkedInCount = count ?? 0;
   }
 
@@ -102,7 +102,7 @@ export async function ArtistHome({ profile }: { profile: Profile }) {
           tint="bg-[var(--color-gold)]"
         />
         <MetricTile label="Partnered events" value={live.length} hint="agreed with a brand" tint="bg-[var(--color-sage)]" />
-        <MetricTile label="Attendees checked in" value={checkedInCount} hint="across your partnered events" tint="bg-[var(--color-pink)]" />
+        <MetricTile label="Participants" value={checkedInCount} hint="registered across your partnered events" tint="bg-[var(--color-pink)]" />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">

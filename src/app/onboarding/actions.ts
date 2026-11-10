@@ -11,7 +11,7 @@ import { uploadImage } from "@/lib/storage";
 import { normaliseUrl, normaliseUrlFields } from "@/lib/urls";
 import { MAX_BIO_CHARS } from "@/lib/upload-limits";
 import { isValidEmail, validateVatNumber } from "@/lib/billing";
-import { ARTIST_TYPES, GENDER_SELF_DESCRIBE, ROLE_LABELS, type Role } from "@/lib/constants";
+import { ARTIST_TYPES, ROLE_LABELS, type Role } from "@/lib/constants";
 
 export interface OnboardingState {
   error?: string;
@@ -589,9 +589,6 @@ export async function saveAudience(
     "full_name",
     "phone",
     "phone_country_code",
-    "date_of_birth",
-    "gender",
-    "gender_self_describe",
     "country_of_residence",
     "address",
     "postcode",
@@ -614,14 +611,6 @@ export async function saveAudience(
   const takenError = await phoneTaken(`${countryCode}${phone ?? ""}`, userId);
   if (takenError) return reject(takenError);
 
-  // Only kept when they actually chose to self-describe — otherwise a stale
-  // value would linger behind a since-changed answer.
-  const gender = str(formData.get("gender"));
-  const selfDescribe =
-    gender === GENDER_SELF_DESCRIBE
-      ? str(formData.get("gender_self_describe"))
-      : null;
-
   const supabase = await createClient();
   const { error } = await supabase.from("audience_members").upsert(
     {
@@ -629,9 +618,8 @@ export async function saveAudience(
       full_name: fullName,
       phone,
       phone_country_code: countryCode,
-      date_of_birth: str(formData.get("date_of_birth")),
-      gender,
-      gender_self_describe: selfDescribe,
+      // No date of birth or gender (Testing notes 7 Nov, GDPR) — not asked,
+      // not written; anything stored earlier is left as it was.
       country_of_residence: str(formData.get("country_of_residence")),
       address: str(formData.get("address")),
       postcode: str(formData.get("postcode")),

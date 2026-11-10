@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getPublicProfile } from "@/lib/public-profiles";
 import { PublicProfileView } from "@/components/PublicProfileView";
+import { createClient } from "@/lib/supabase/server";
+import type { PublicLiveEvent } from "@/lib/public-event";
 import { canSeeSponsorSections } from "@/lib/profile-viewer";
 
 export async function generateMetadata({
@@ -26,12 +28,15 @@ export default async function ArtistProfilePage({
 
   // Sponsor-only sections stay hidden from the general public view.
   const showSponsorSections = await canSeeSponsorSections(profile.profileId);
+  // Live partnered events only — raw listings stay off the public site (0106). Before 0117: none.
+  const { data: liveEvents } = await (await createClient()).rpc("public_profile_live_events", { p_profile_id: profile.profileId });
 
   return (
     <PublicProfileView
       profile={profile}
       preview={preview === "1"}
       showSponsorSections={showSponsorSections}
+      liveEvents={(liveEvents ?? []) as PublicLiveEvent[]}
     />
   );
 }

@@ -93,7 +93,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           .from("participations")
           .select("id", { count: "exact", head: true })
           .in("sponsored_event_id", sponsoredIds)
-          .not("attendance_verified_at", "is", null)
+          .neq("status", "rejected") // Testing notes 7 Nov: participants, not check-ins (old model)
       : Promise.resolve({ count: 0 }),
     campaignStagesFor(supabase, inFlight, "brand"),
     // Order forms waiting for the brand's approval.
@@ -221,9 +221,9 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           tint="bg-[var(--color-lavender)]"
         />
         <MetricTile
-          label="Attendees checked in"
+          label="Participants"
           value={checkedInCount}
-          hint="across your events"
+          hint="registered across your events"
           tint="bg-[var(--color-sage)]"
         />
         <MetricTile
@@ -286,13 +286,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           </div>
           {inFlight.length === 0 ? (
             <div className="rounded-xl bg-[var(--color-mist)] p-6 text-center text-sm text-[var(--color-ink-soft)]">
-              No active campaigns.{" "}
-              <Link
-                href="/dashboard/campaigns/new"
-                className="font-semibold text-[var(--color-brand-dark)]"
-              >
-                Request one →
-              </Link>
+              No live campaigns yet. A campaign appears here as soon as our team sets it up from your request.
             </div>
           ) : (
             <div className="space-y-2">

@@ -255,7 +255,9 @@ export async function matchCampaign(
         // The proposal's own reference, not the campaign's — that's the number
         // the artist will quote back at us.
         reference: proposal?.reference ?? campaign.reference,
-        budget: budgetLabel ?? "to be agreed",
+        // Artists never see the package value (Testing notes 7 Nov); kept as a
+        // harmless filler for any template that still quotes it.
+        budget: "as agreed with our team",
       },
     });
   }

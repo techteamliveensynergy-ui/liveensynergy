@@ -43,42 +43,33 @@ export function participationSteps(
   p: Participation,
   extra: { surveyDone?: boolean; hasCode?: boolean; codeWait?: CodeWait | null } = {},
 ): ProgressStep[] {
-  const verified = ["attendance_verified", "reward_released"].includes(p.status);
+  const verified = ["attendance_verified", "reward_released"].includes(p.status) || Boolean(p.attendance_verified_at);
   const rewarded = p.status === "reward_released" || Boolean(extra.hasCode);
   const surveyed = Boolean(extra.surveyDone) || rewarded;
-  // Attendance can be verified at the venue without a ticket upload; a
-  // verified attendee has evidently got past the ticket step.
-  const uploaded =
-    Boolean(p.ticket_proof_url) ||
-    p.status === "ticket_uploaded" ||
-    verified;
 
-  const done = [true, p.selected || verified, uploaded, verified, surveyed, rewarded];
+  // The current model (Testing notes 7 Nov): no selection draw and no ticket
+  // upload — the code comes from the survey (0075), and checking in at the
+  // venue is what puts the event in their Event Passport.
+  const done = [true, surveyed, rewarded, verified];
   const labels: { label: string; hint?: string }[] = [
     { label: "Registered", hint: "You signed up for this event" },
-    { label: "Selected", hint: "The Live·En·Synergy team chooses who takes part — we'll email you" },
-    { label: "Ticket uploaded", hint: "Upload your ticket as proof" },
-    { label: "Attended", hint: "Scan the QR code at the venue" },
-    { label: "Survey", hint: "Answer the event's short survey — the button appears under My events when it opens" },
+    { label: "Survey", hint: "Answer the event's short survey — the button is below when it's open" },
     {
       label: "Discount code",
-      hint: "Released once your survey passes our quality check and the event's discount codes are confirmed — then it's under My rewards",
+      hint: "Released once your survey passes our quality check — then it's under My rewards and we email it to you",
+    },
+    {
+      label: "Checked in",
+      hint: "On the day, scan the QR code at the venue to check in — it adds this event to your Event Passport",
     },
   ];
 
-  // A code is released by the survey (0075), not by selection, ticket or
-  // attendance. So once the survey is done and there is no code, the code step
-  // is what they are waiting on — "Selected" must not read as the blocker
-  // (QA 6 Nov: a held response showed as "selection pending").
+  // Survey done, no code yet: say why (QA 6 Nov).
   if (surveyed && !rewarded && extra.codeWait) {
-    labels[4] = { ...labels[4], hint: extra.codeWait === "review" ? "Done — your response is under review" : "Done" };
-    labels[5] = { ...labels[5], hint: CODE_WAIT_HINT[extra.codeWait] };
+    labels[1] = { ...labels[1], hint: extra.codeWait === "review" ? "Done — your response is under review" : "Done" };
+    labels[2] = { ...labels[2], hint: CODE_WAIT_HINT[extra.codeWait] };
   }
-  // Once a code is issued there is nothing left to wait for: selection, the
-  // ticket and check-in don't gate the code (it comes from the survey), so an
-  // earlier step left undone mustn't read as "next" beside a "Code issued"
-  // badge (QA 9 Nov: "Code issued" + "Next: the team chooses who takes part").
-  const firstPending = rewarded ? -1 : surveyed ? 5 : done.indexOf(false);
+  const firstPending = done.indexOf(false);
 
   return labels.map((l, i) => ({
     ...l,
@@ -123,8 +114,8 @@ export function ParticipationProgress({
   if (rejected) {
     return (
       <p className="rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink-soft)]">
-        You weren&apos;t selected for the reward this time — thanks for
-        registering.
+        This registration wasn&apos;t accepted — thanks for your interest.
+        Questions? Message the Live·En·Synergy team.
       </p>
     );
   }

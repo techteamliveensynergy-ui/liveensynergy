@@ -8,8 +8,6 @@ import {
   participationBadge,
   participationSteps, type CodeWait } from "@/components/dashboard/ParticipationProgress";
 import { signedUrlFor } from "@/lib/storage";
-import { FileDrop } from "@/components/ui/FileDrop";
-import { ATTACHMENT_HINT, MAX_ATTACHMENT_BYTES } from "@/lib/upload-limits";
 import type { Participation, SponsoredEvent } from "@/lib/types";
 import { platformLabel } from "@/lib/discount-codes";
 import { loadAudienceProgress } from "@/lib/data/audience-progress";
@@ -17,9 +15,8 @@ import { eventCapacity, isCancelledEvent, waitlistedMessage } from "@/lib/event-
 import { leaveWaitlist } from "../discover/actions";
 import { SURVEY_HELD_FOR_REVIEW_MESSAGE, SURVEY_RECEIVED_MESSAGE, SURVEY_UNDER_REVIEW_MESSAGE } from "@/lib/survey-capacity";
 import { formatEventDateTime } from "@/lib/event-time";
-import { addDays, formatDateTime, UK_TIME_ZONE } from "@/lib/format";
+import { formatDateTime, UK_TIME_ZONE } from "@/lib/format";
 import {
-  uploadTicketProof,
   provideConsent,
   withdrawParticipation,
 } from "./actions";
@@ -116,8 +113,8 @@ export default async function ParticipationsPage({
           which read as the button having done nothing. */}
       {notice === "registered" && (
         <p className="mb-5 rounded-lg bg-[var(--color-sage)] px-4 py-3 text-sm text-[var(--color-olive-deep)]">
-          ✓ You&apos;re registered. Buy your ticket, then come back here and add
-          your ticket reference so your attendance can be verified.
+          ✓ You&apos;re registered. Next: answer the event&apos;s short survey below — your
+          discount code follows once your response passes our check.
         </p>
       )}
       {notice === "waitlisted" && (
@@ -209,6 +206,47 @@ export default async function ParticipationsPage({
           </ul>
         </div>
       )}
+
+      {/* Event Passport (Testing notes 7 Nov): every event they've checked in
+          at, newest first. Check-in = scanning the venue QR (or the artist
+          confirming them), recorded as attendance_verified_at. */}
+      {(() => {
+        const stamps = allRows
+          .filter((r) => r.attendance_verified_at || ["attendance_verified", "reward_released"].includes(r.status))
+          .sort((a, b) => String(b.attendance_verified_at ?? "").localeCompare(String(a.attendance_verified_at ?? "")));
+        return (
+          <div className="card mb-5 p-5" id="event-passport" data-testid="event-passport">
+            <h2 className="font-semibold">🎫 Your Event Passport</h2>
+            {stamps.length === 0 ? (
+              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                Check in at an event — scan the QR code at the venue on the day — and it appears here.
+              </p>
+            ) : (
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {stamps.map((r) => (
+                  <li
+                    key={r.id}
+                    className="rounded-full border border-black/10 bg-[var(--color-mist)] px-3 py-1 text-sm"
+                    title={r.attendance_verified_at ? `Checked in ${formatDateTime(r.attendance_verified_at)}` : "Checked in"}
+                  >
+                    <span className="font-medium">{r.sponsored_events?.name ?? "Event"}</span>
+                    {r.sponsored_events?.event_date && (
+                      <span className="text-[var(--color-ink-soft)]">
+                        {" · "}
+                        {formatEventDateTime({
+                          date: r.sponsored_events.event_date,
+                          time: null,
+                          timeZone: r.sponsored_events.timezone,
+                        })}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="mb-5 flex flex-wrap gap-2">
         <TabLink
@@ -326,9 +364,7 @@ export default async function ParticipationsPage({
                     {ev.reward_rules}
                     {ev.participation_deadline && (
                       <span className="mt-1 block text-xs text-[var(--color-ink-soft)]">
-                        Participation deadline: {formatDateTime(ev.participation_deadline)}
-                        {" · "}Selection to be confirmed by:{" "}
-                        {formatDateTime(addDays(ev.participation_deadline, 7))}
+                        Register by: {formatDateTime(ev.participation_deadline)}
                       </span>
                     )}
                   </div>
@@ -429,42 +465,12 @@ export default async function ParticipationsPage({
                   );
                 })()}
 
-                {/* Not yet selected — nothing to do until the sponsor confirms who's in. */}
-                {p.status === "registered" && !p.selected && !surveyDone(p) && !codeByParticipation.has(p.id) && (
+                {/* Registered, survey not answered yet (Testing notes 7 Nov: no draw or
+                    ticket upload any more — the survey is the next step). */}
+                {p.status === "registered" && !surveyDone(p) && !codeByParticipation.has(p.id) && (
                   <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
-                    ⏳ You&apos;re registered. We&apos;ll email you if you&apos;re
-                    selected for the reward — it&apos;ll also show here.
+                    ⏳ You&apos;re registered — answer the survey above to get your discount code.
                   </p>
-                )}
-
-                {/* Next step — only relevant once selection is confirmed. */}
-                {p.status === "registered" && p.selected && (
-                  <form action={uploadTicketProof} className="mt-4 space-y-3">
-                    <input type="hidden" name="id" value={p.id} />
-                    <div>
-                      <p className="field-label">
-                        Next Step: upload your ticket proof if and after your
-                        selection has been confirmed
-                      </p>
-                      {p.selected_at && (
-                        <p className="field-hint">
-                          Upload by {formatDateTime(addDays(p.selected_at, 7))}
-                        </p>
-                      )}
-                    </div>
-                    <FileDrop
-                      name="ticket_file"
-                      accept="image/*,application/pdf"
-                      allowedTypes={null}
-                      maxBytes={MAX_ATTACHMENT_BYTES}
-                      preview={false}
-                      label="Upload your ticket (PDF or photo)"
-                      hint={ATTACHMENT_HINT}
-                    />
-                    <button type="submit" className="btn btn-primary">
-                      Upload ticket
-                    </button>
-                  </form>
                 )}
 
                 {p.status === "ticket_uploaded" && (
@@ -476,7 +482,8 @@ export default async function ParticipationsPage({
 
                 {p.status === "attendance_verified" && !codeByParticipation.has(p.id) && !surveyDone(p) && (
                   <p className="mt-4 text-sm text-[var(--color-purple-deep)]">
-                    🎉 Attendance verified — complete the survey to receive your discount code.
+                    🎉 You&apos;re checked in — this event is now in your Event Passport. Complete the survey to receive
+                    your discount code.
                   </p>
                 )}
 
@@ -495,13 +502,16 @@ export default async function ParticipationsPage({
 
                 {/* Marketing consent. The payout-details consent went with the
                     cash reward (9 Oct standup: rewards are discount codes). */}
-                {p.selected && (
+                {/* Everyone registered can change this — not just "selected"
+                    people (selection is gone; marketing unsubscribe pages point
+                    here to opt back in, 0116). */}
+                {p.status !== "rejected" && (
                   <form
                     action={provideConsent}
                     className="mt-4 grid gap-2 rounded-xl border border-black/10 p-4 text-sm"
                   >
                     <input type="hidden" name="id" value={p.id} />
-                    <p className="font-semibold">You&apos;ve been selected 🎯</p>
+                    <p className="font-semibold">Hear from this event&apos;s partner</p>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -530,31 +540,17 @@ export default async function ParticipationsPage({
           A few quick things to note
         </h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[var(--color-ink-soft)]">
+          <li>Answer each event&apos;s short survey here once it opens — the button appears on the event.</li>
           <li>
-            You&apos;ll be notified by email if you&apos;re selected for the
-            reward — it&apos;ll also show on your Overview page when you log
-            in to the Live·En·Synergy website.
+            We check every response. When yours passes, your discount code shows on the event and under My rewards,
+            and we email it to you.
           </li>
+          <li>Use the code when you buy your ticket on the event&apos;s ticketing site, before it expires.</li>
           <li>
-            Selection happens within one week of the participation deadline.
-            For example, if the participation deadline is 1 Jan 2026,
-            selection is carried out before 8 Jan 2026 and selected
-            participants are informed accordingly. If you don&apos;t hear
-            anything by then, please assume you weren&apos;t selected on that
-            occasion.
+            On the day, remember to check in at the venue by scanning the QR code — every event you check in at is
+            added to your Event Passport above.
           </li>
-          <li>
-            If you&apos;re selected, buy your ticket as you normally would and
-            upload the ticket proof. Your ticket upload window is open for one
-            week (e.g. until 15 Jan 2026) — after that it expires and the spot
-            is offered to someone else.
-          </li>
-          <li>
-            Attend the event and confirm your presence — either by scanning a
-            QR code at the venue, or the artist confirming directly when your
-            ticket is scanned. The method for each event is noted on its event
-            details.
-          </li>
+          <li>Your personal details are never shared with any partner without your consent.</li>
         </ul>
       </div>
     </div>

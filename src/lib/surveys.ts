@@ -43,8 +43,7 @@ export const HIDDEN_FIELD_SOURCES: { value: string; label: string }[] = [
   { value: "profiles.email", label: "Email" },
   { value: "audience_members.phone", label: "Phone" },
   { value: "audience_members.country_of_residence", label: "Country of residence" },
-  { value: "audience_members.gender", label: "Gender" },
-  { value: "audience_members.date_of_birth", label: "Date of birth" },
+  // Gender and date of birth aren't collected any more (Testing notes 7 Nov, GDPR).
 ];
 
 /**

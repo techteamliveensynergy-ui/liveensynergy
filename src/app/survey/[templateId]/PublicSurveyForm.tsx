@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
@@ -111,6 +113,7 @@ function ThankYouScreen({
   /** Their code, or why there isn't one yet. */
   reward?: SurveyRewardOutcome;
 }) {
+  const pathname = usePathname();
   // The reward panel already says "under review" / "held" in its own words;
   // repeating the message above it would say it twice.
   const rewardSaysIt = reward?.status === "pending" && (reward.reason === "review" || reward.reason === "held");
@@ -170,7 +173,7 @@ function ThankYouScreen({
         </>
       ) : (
         <Link
-          href={`/auth/sign-up?role=audience${event ? `&event=${encodeURIComponent(event.reference)}` : ""}`}
+          href={`/auth/sign-up?role=audience${event ? `&event=${encodeURIComponent(event.reference)}` : ""}&redirectTo=${encodeURIComponent(pathname)}`}
           className="btn btn-primary mt-2 w-full"
         >
           Create your account &amp; register
@@ -360,6 +363,7 @@ export function PublicSurveyForm({
     }
   }, [state]);
   const [botToken, setBotToken] = useState<string | null>(null);
+  const [reachedLastStep, setReachedLastStep] = useState(false);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   useEffect(() => {
@@ -725,7 +729,12 @@ export function PublicSurveyForm({
       </div>
 
       <input type="hidden" name="cf-turnstile-response" value={botToken ?? ""} readOnly />
-      <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
+      {/* Stepped surveys start the bot check on the last page: mounted on
+          page one, its token expired part-way through a long survey and the
+          "Verify you are human" box came back (Testing notes 7 Nov). */}
+      {(layoutMode !== "stepped" || reachedLastStep) && (
+        <TurnstileWidget onToken={setBotToken} resetKey={turnstileResetKey} />
+      )}
 
       {layoutMode === "stepped" ? (
         <SteppedQuestions
@@ -734,6 +743,7 @@ export function PublicSurveyForm({
           otherTexts={otherTexts}
           onChange={handleChange}
           onOtherTextChange={handleOtherText}
+          onReachLastStep={() => setReachedLastStep(true)}
           onShown={markShown}
           isPending={isPending || quota.checking}
           footer={

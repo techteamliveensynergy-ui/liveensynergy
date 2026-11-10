@@ -28,6 +28,7 @@ export function SteppedQuestions({
   appearance,
   submitLabel = "Submit survey",
   onStepChange,
+  onReachLastStep,
   notice,
 }: {
   questions: SurveyQuestion[];
@@ -49,6 +50,9 @@ export function SteppedQuestions({
   onStepChange?: () => void;
   /** Shown above the current card, e.g. "codes have run out" (#53). */
   notice?: ReactNode;
+  /** Called when the last step is reached — the bot check starts there, so it
+   *  runs once, fresh, by the submit button (Testing notes 7 Nov). */
+  onReachLastStep?: () => void;
 }) {
   const blocks = useMemo(() => surveyBlocks(questions), [questions]);
   const [index, setIndex] = useState(0);
@@ -69,6 +73,11 @@ export function SteppedQuestions({
     // active step should re-trigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [block?.key]);
+
+  useEffect(() => {
+    if (blocks.length > 0 && index >= blocks.length - 1) onReachLastStep?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, blocks.length]);
 
   useEffect(() => {
     if (firstStepRef.current) {

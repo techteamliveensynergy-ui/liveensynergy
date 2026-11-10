@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
 import { formatDate } from "@/lib/format";
-import { campaignTitle, requestCategoryLabel } from "@/lib/campaign-requests";
+import { campaignTitle, requestAudienceLabel, requestCategoryLabel, requestPackageName } from "@/lib/campaign-requests";
 import { DetailFact as Fact } from "@/components/campaigns/DetailFact";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import { withdrawCampaignIntake } from "../../actions";
@@ -49,6 +49,7 @@ export default async function CampaignRequestPage({
     : { data: null };
   if (!data) notFound();
   const r = data as CampaignIntakeRequest;
+  const packageName = await requestPackageName(supabase, r.package_id);
 
   const { data: campaign } = r.converted_campaign_id
     ? await supabase
@@ -160,18 +161,21 @@ export default async function CampaignRequestPage({
 
         <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Fact label="Campaign description" value={r.description} />
+            <Fact label="Campaign objective and description" value={r.description} />
           </div>
           <Fact
-            label="Budget guidance"
+            label={packageName ? "Budget (custom package)" : "Budget guidance"}
             value={r.budget_expectation_gbp ? `£${Number(r.budget_expectation_gbp).toLocaleString("en-GB")}` : null}
           />
           <Fact label="Categories" value={requestCategoryLabel(r)} />
           <Fact label="Preferred location" value={r.preferred_location} />
           <Fact label="Preferred timeline" value={r.preferred_timeline} />
           <Fact label="Artist / event in mind" value={r.target_name} />
+          <Fact label="Package" value={packageName} />
+          <Fact label="Audience criteria" value={requestAudienceLabel(r)} />
+          <Fact label="Potential campaign questions" value={r.expected_outcomes} />
+          {/* Older requests only (the form no longer asks, 7 Nov). */}
           <Fact label="Reward rules" value={r.reward_rules} />
-          <Fact label="Expected outcomes" value={r.expected_outcomes} />
           <Fact label="Anything else" value={r.additional_info} />
           <Fact
             label="Event you suggested"

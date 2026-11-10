@@ -357,6 +357,12 @@ export function RewardEngineSection({
                       value={tier.value_label}
                       onChange={(e) => set(i, "value_label", e.target.value)}
                     />
+                    {/^\s*\d+([.,]\d+)?\s*$/.test(tier.value_label) && (
+                      <span className="field-hint text-[var(--color-accent)]">
+                        Write it in full, e.g. &ldquo;{tier.value_label.trim()}% off&rdquo; — a bare number is sent to
+                        participants as it is.
+                      </span>
+                    )}
                   </label>
                 </div>
 

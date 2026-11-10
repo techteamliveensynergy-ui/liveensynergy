@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { drainOutbox } from "@/lib/email/drain";
 import { safeAppPath } from "@/lib/notification-links";
 
@@ -154,12 +155,23 @@ export async function notify(
   }
 }
 
-/** Fans an event out to every admin (e.g. "a new campaign needs matching"). */
+/**
+ * Fans an event out to every admin (e.g. "a new campaign needs matching").
+ *
+ * Uses the service client when the caller didn't pass one: the person whose
+ * action triggers this (a brand submitting a request, an artist agreeing…)
+ * can't see admin profiles under RLS, so with their own session the admin list
+ * came back empty and no admin was ever told (Testing notes 7 Nov: "new
+ * campaign request submitted but no notification"). The service client is used
+ * for this fan-out only — reading admin ids/emails and queuing their rows.
+ */
 export async function notifyAdmins(
   input: Omit<NotifyInput, "recipientProfileId">,
   opts: NotifyOptions = {},
 ): Promise<void> {
   try {
+    const service = opts.client ? null : createServiceClient();
+    if (service) opts = { ...opts, client: service };
     const supabase = opts.client ?? (await createClient());
     const { data } = await supabase
       .from("profiles")

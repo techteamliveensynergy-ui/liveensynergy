@@ -34,7 +34,11 @@ export default async function SignInPage({
         <>
           Don&apos;t have an account?{" "}
           <Link
-            href="/auth/sign-up"
+            href={
+              redirectTo && /^\/survey\//.test(redirectTo)
+                ? `/auth/sign-up?role=audience&redirectTo=${encodeURIComponent(redirectTo)}`
+                : "/auth/sign-up"
+            }
             className="font-semibold text-[var(--color-brand)]"
           >
             Create one

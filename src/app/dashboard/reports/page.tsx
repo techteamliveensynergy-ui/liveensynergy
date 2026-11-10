@@ -101,9 +101,9 @@ export default async function BrandReportsPage() {
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">Written survey reports</h2>
         {reports.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-            None published yet. Once enough responses are in, our team writes up what your audience told you — the
-            findings, charts, quotes and recommendations — checks it, and publishes it here. We&apos;ll email you when
-            it&apos;s ready, and you can print it or download it as a Word document.
+            None published yet. Your survey report — what your audience told you, with findings, charts, quotes and
+            recommendations — appears here once enough responses are in. We&apos;ll email you when it&apos;s ready, and
+            you can print it or download it as a Word document.
           </p>
         ) : (
           <ul className="mt-3 space-y-2">

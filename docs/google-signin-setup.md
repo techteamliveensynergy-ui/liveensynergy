@@ -74,3 +74,12 @@ Needs the real provider, so it can't run in CI. After the three steps, on dev:
 4. Register with email + password for an address you control but **don't** open
    the verification link; then "Sign in with Google" with that same address → the
    old password no longer works and the account shows as verified.
+
+## Testing notes 7 Nov: what the tester saw, and the fix
+
+| Seen | Cause | Fix |
+|---|---|---|
+| Google's screen says "continue to `vdghe….supabase.co`" | Google names the address the sign-in returns to, which is Supabase's. | Google Cloud → OAuth consent screen: set **App name** "Live·En·Synergy", the logo, the home page and the privacy link, and submit it for verification (the logo only shows once Google has verified the app). To replace the `supabase.co` address itself, use Supabase's **Custom Domains** add-on (paid), e.g. `auth.<your-domain>`, then update the Authorised redirect URI in Google to the new callback. |
+| After Google sign-in, or a reset link: "localhost refused to connect" | Supabase sends people to its **Site URL** whenever the return address isn't on its **Redirect URLs** list, and the Site URL was still `http://localhost:3000`. | Supabase → Authentication → URL Configuration: **Site URL** = the live site origin; **Redirect URLs** must include `<origin>/auth/callback**` (and the preview origin if you test there). In Vercel, `NEXT_PUBLIC_SITE_URL` = the live origin. The app now also ignores a localhost `NEXT_PUBLIC_SITE_URL` on a deployed site. |
+| Google sign-in didn't ask for the Terms | Before 5 Nov there was no Terms step for Google accounts. | Fixed: a new Google account goes to `/auth/complete` (role, Terms and, for audience, mobile) before the dashboard, onboarding or a survey. |
+| The "reset password" email didn't mention Live·En·Synergy | It was Supabase's default template. | The app now sends its own branded reset email (`account.password_reset`, migration 0117; editable under Admin → Notifications). Its link opens on any device and doesn't depend on the Supabase settings above. Until 0117 is applied, or without `SUPABASE_SERVICE_ROLE_KEY`, Supabase's email is still used, so also set Supabase → Authentication → Emails → Sender name "Live·En·Synergy" (needs custom SMTP, e.g. Resend) and edit the templates' wording. |

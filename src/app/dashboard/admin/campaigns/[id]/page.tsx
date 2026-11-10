@@ -219,7 +219,7 @@ export default async function AdminCampaignPage({
         <p className="whitespace-pre-line text-[var(--color-ink)]">{campaign.description}</p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-xs text-[var(--color-ink-soft)]">Budget (gross)</dt>
+            <dt className="text-xs text-[var(--color-ink-soft)]">Package value</dt>
             <dd className="font-semibold">{money(campaign.budget_gbp)}</dd>
           </div>
           <div>

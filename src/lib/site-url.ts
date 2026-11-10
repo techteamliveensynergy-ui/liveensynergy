@@ -10,7 +10,13 @@ import { headers } from "next/headers";
  */
 export async function siteUrl(): Promise<string> {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/+$/, "");
+  // A localhost value on a deployed site is a config slip that sends every
+  // email link (and Google sign-in's return) to the tester's own machine
+  // (Testing notes 7 Nov) — ignore it there and use the real origin.
+  const deployed = !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "development";
+  if (configured && !(deployed && /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(configured))) {
+    return configured.replace(/\/+$/, "");
+  }
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");

@@ -24,9 +24,12 @@ function Submit() {
 export function ProofUploadSection({
   eventId,
   proofs,
+  canUpload = true,
 }: {
   eventId: string;
   proofs: SponsoredEventProof[];
+  /** Only the artist adds evidence; the brand sees what's been added (Testing notes 7 Nov). */
+  canUpload?: boolean;
 }) {
   const [state, formAction] = useActionState<SponsoredState, FormData>(
     uploadEventProof,
@@ -36,11 +39,19 @@ export function ProofUploadSection({
   return (
     <div className="card p-6">
       <h2 className="text-lg font-semibold">Proof of terms</h2>
-      <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        Add evidence for each social-media post and the onsite branding owed
-        under this partnership — a link or a screenshot, one at a time; add as
-        many as you need. The team reviews each one.
-      </p>
+      {canUpload ? (
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Add evidence for each social-media post and the onsite branding owed
+          under this partnership — a link or a screenshot, one at a time; add as
+          many as you need. The team reviews each one.
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          Your partner artist adds evidence here for each social-media post and
+          the onsite branding agreed in this partnership, and our team reviews
+          each one. {proofs.length === 0 ? "Nothing has been added yet." : ""}
+        </p>
+      )}
 
       {state.error && (
         <p className="mt-3 rounded-lg bg-[var(--color-pink)] px-3 py-2 text-sm text-[var(--color-accent)]">
@@ -48,6 +59,7 @@ export function ProofUploadSection({
         </p>
       )}
 
+      {canUpload && (
       <form action={formAction} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <input type="hidden" name="id" value={eventId} />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -82,6 +94,7 @@ export function ProofUploadSection({
           />
         </div>
       </form>
+      )}
 
       {proofs.length > 0 && (
         <div className="mt-4 space-y-2 border-t border-black/10 pt-4">

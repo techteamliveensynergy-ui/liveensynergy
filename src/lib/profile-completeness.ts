@@ -60,7 +60,6 @@ const FIELDS_BY_ROLE: Record<string, CompletenessField[]> = {
   audience: [
     { key: "full_name", label: "Full name", required: true },
     { key: "phone", label: "Phone number", required: true },
-    { key: "date_of_birth", label: "Date of birth" },
     { key: "postcode", label: "Postcode" },
   ],
 };

@@ -315,7 +315,11 @@ export default async function SponsoredEventPage({
   // campaign's package margin. Rewards are discount codes now.
   const ticketPrice = listing?.ticket_price_gbp ?? null; // discount-cost estimate in the codes panel
   const registeredCount = participations.length;
-  const selectedCount = participations.filter((p) => p.selected).length;
+  // Issued codes, counted from the party view (which hides who holds which).
+  const codesIssuedCount = Math.max(
+    rewardCodes.length,
+    participations.filter((p) => p.status === "reward_released").length,
+  );
   const checkedInCount = participations.filter((p) =>
     ["attendance_verified", "reward_released"].includes(p.status),
   ).length;
@@ -324,7 +328,7 @@ export default async function SponsoredEventPage({
   const checkInQr = locked && isArtist ? await qrCodeDataUrl(checkInUrl) : null;
 
   const proofSection = (isBrand || isArtist) && (
-    <ProofUploadSection eventId={event.id} proofs={proofs} />
+    <ProofUploadSection eventId={event.id} proofs={proofs} canUpload={isArtist} />
   );
   const rewardSection = (
     <RewardEngineDisplay
@@ -494,7 +498,7 @@ export default async function SponsoredEventPage({
             <Stat label="Campaign budget" value={money(event.budget_gbp)} hint="what you committed" />
           )}
           <Stat label="Registered" value={registeredCount.toLocaleString("en-GB")} hint="audience sign-ups" />
-          <Stat label="Selected" value={selectedCount.toLocaleString("en-GB")} hint="chosen in the draw" />
+          <Stat label="Codes issued" value={codesIssuedCount.toLocaleString("en-GB")} hint="to participants" />
           <Stat label="Checked in" value={checkedInCount.toLocaleString("en-GB")} hint="at the venue" />
           <Stat
             label="Participation deadline"
@@ -687,12 +691,12 @@ export default async function SponsoredEventPage({
                   // sponsorship outright, and there's no undo — so it asks
                   // first (3 Aug standup).
                   <ConfirmSubmit
-                    label="I agree to these terms"
+                    label="I agree to partner with this event"
                     pendingLabel="Agreeing…"
                     title={
                       otherPartyAgreed
                         ? "Confirm this sponsorship?"
-                        : "Agree to these terms?"
+                        : "Agree to partner with this event?"
                     }
                     body={
                       otherPartyAgreed ? (
@@ -825,98 +829,27 @@ export default async function SponsoredEventPage({
             )}
           </h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Who takes part is drawn at random by the Live·En·Synergy team once
-            the participation deadline passes — it isn&apos;t picked by hand on
-            either side. Selected attendees check in by scanning the event QR
-            code{isArtist ? " (or you can verify them here)" : ""}, then receive a
-            discount code after the post-event survey.
+            Anyone can register for this event. Each person answers the survey,
+            receives a discount code once their response passes our check, and
+            checks in on the day by scanning the event QR code. You see totals
+            only — who takes part stays private (Testing notes 7 Nov).
           </p>
 
-          {isBrand && !isArtist ? (
-            // Aggregates only for a brand (QA 31 Oct M-01) — no names, no
-            // per-person rows.
-            <dl className="mt-4 grid gap-3 sm:grid-cols-4">
-              {[
-                ["Registered", registeredCount],
-                ["Selected in the draw", selectedCount],
-                ["Checked in", checkedInCount],
-                ["Surveys completed", completedParticipations.size],
-              ].map(([k, v]) => (
-                <div key={k as string} className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
-                  <dt className="text-xs text-[var(--color-ink-soft)]">{k}</dt>
-                  <dd className="mt-0.5 text-lg font-semibold">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : (
-          <>
-          {participations.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
-              No registrations yet.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {participations.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {p.profiles?.full_name ?? `Participant #${p.id.slice(0, 8)}`}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <StatusBadge status={p.status} />
-                      {completedParticipations.has(p.id) && (
-                        <span className="text-xs text-[var(--color-olive-deep)]">
-                          ✓ Survey completed
-                        </span>
-                      )}
-                      {p.selected && (
-                        <span className="text-xs text-[var(--color-olive-deep)]">selected</span>
-                      )}
-                      {p.status === "reward_released" && (
-                        <span className="text-xs text-[var(--color-ink-soft)]">code issued</span>
-                      )}
-                    </div>
-                  </div>
-                  {/* No Select / Reject: the draw is random and run by the
-                      team (10 Aug standup). Verification stays with whoever is
-                      actually at the venue. */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Only before verification — otherwise a released reward
-                        could be regressed back to "attendance verified". */}
-                    {/* Artist only: the 9 Oct brief keeps check-in with the
-                        artist and the audience, and the participations guard
-                        (0061) refuses it from the brand. */}
-                    {isArtist &&
-                      p.selected &&
-                      (p.status === "registered" ||
-                        p.status === "ticket_uploaded") && (
-                        <ParticipationBtn
-                          eventId={event.id}
-                          id={p.id}
-                          op="verify"
-                          label="Verify attendance"
-                        />
-                      )}
-                    {p.status === "attendance_verified" && (
-                      <span className="text-xs text-[var(--color-ink-soft)]">
-                        Checked in — discount code follows the post-event survey
-                      </span>
-                    )}
-                    {!p.selected && p.status !== "rejected" && (
-                      <span className="text-xs text-[var(--color-ink-soft)]">
-                        Awaiting the random draw
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          </>
-          )}
+          {/* Totals only, for the brand and the artist alike (Testing notes
+              7 Nov; brand since QA 31 Oct M-01) — no names, no per-person rows. */}
+          <dl className="mt-4 grid gap-3 sm:grid-cols-4">
+            {[
+              ["Registered", registeredCount],
+              ["Surveys completed", completedParticipations.size],
+              ["Codes issued", codesIssuedCount],
+              ["Checked in", checkedInCount],
+            ].map(([k, v]) => (
+              <div key={k as string} className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
+                <dt className="text-xs text-[var(--color-ink-soft)]">{k}</dt>
+                <dd className="mt-0.5 text-lg font-semibold">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       )}
     </div>

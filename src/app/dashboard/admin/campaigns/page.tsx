@@ -4,7 +4,6 @@ import { ORDER_FORM_STATUS_LABELS, type OrderFormStatus } from "@/lib/order-form
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, StatusBadge } from "@/components/dashboard/ui";
-import { netForCampaign } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { waiveCampaignPayment } from "../marketplace-actions";
 import { CampaignStatusActions } from "./CampaignStatusActions";
@@ -342,7 +341,6 @@ export default async function AdminCampaignsPage({
       ) : (
         <div className="space-y-3">
           {campaigns.map((c) => {
-            const net = netForCampaign(c);
             return (
               <div key={c.id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -373,9 +371,7 @@ export default async function AdminCampaignsPage({
                     </p>
                     <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
                       Ref {c.reference} · £
-                      {Number(c.budget_gbp).toLocaleString("en-GB")} gross
-                      {net != null &&
-                        ` · £${Math.round(net).toLocaleString("en-GB")} net`}
+                      {Number(c.budget_gbp).toLocaleString("en-GB")} package
                       {c.category ? ` · ${c.category}` : ""}
                       {c.preferred_location ? ` · ${c.preferred_location}` : ""}
                       {c.preferred_timeline ? ` · ${c.preferred_timeline}` : ""}

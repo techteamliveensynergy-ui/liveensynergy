@@ -128,8 +128,11 @@ export async function saveOrderForm(
     if (up.url) uploaded.push(up.url);
   }
   const surveyType = str(formData.get("survey_type"));
-  const surveyLink = normaliseUrl(formData.get("draft_survey_link"), "The draft survey link");
+  const surveyLink = normaliseUrl(formData.get("draft_survey_link"), "The pre-event survey link");
   if (surveyLink.error) return { error: surveyLink.error };
+  // Post-event survey (Testing notes 7 Nov) — needs 0117.
+  const postLink = normaliseUrl(formData.get("post_survey_link"), "The post-event survey link");
+  if (postLink.error) return { error: postLink.error };
   const videoLink = normaliseUrl(formData.get("media_video_url"), "The video link");
   if (videoLink.error) return { error: videoLink.error };
 
@@ -156,6 +159,7 @@ export async function saveOrderForm(
     survey_question_count: int(formData.get("survey_question_count")),
     research_questions: str(formData.get("research_questions")),
     draft_survey_link: surveyLink.url,
+    post_survey_link: postLink.url,
     discount_reward: str(formData.get("discount_reward")),
     rewards_available: int(formData.get("rewards_available")),
     redemption_arrangements: str(formData.get("redemption_arrangements")),

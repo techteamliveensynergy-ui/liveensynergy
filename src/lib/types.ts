@@ -334,6 +334,12 @@ export interface CampaignIntakeRequest {
   reward_rules: string | null;
   expected_outcomes: string | null;
   additional_info: string | null;
+  /** The package the brand asked for (0117). Null on older requests. */
+  package_id?: string | null;
+  /** Who they want to hear from (0117): age range (18+) and other criteria. */
+  audience_age_min?: number | null;
+  audience_age_max?: number | null;
+  audience_criteria?: string | null;
   suggested_event_note: string | null;
   suggested_event_url: string | null;
   manager_name: string;

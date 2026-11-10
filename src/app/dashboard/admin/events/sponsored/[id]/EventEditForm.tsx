@@ -123,7 +123,7 @@ export function EventEditForm({
           />
         </Field>
         <Field
-          label="Budget (gross, GBP)"
+          label="Package value (GBP)"
           htmlFor="edit-budget"
           hint={
             fee

@@ -108,21 +108,20 @@ export default async function EventDetailsPage({
         </p>
 
         <h2 className="mt-6 text-lg font-semibold">How it works</h2>
+        {/* The current model (Testing notes 7 Nov) — no draw, no ticket upload.
+            Interim wording until the client's final copy. */}
         <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-[var(--color-ink-soft)]">
-          <li>Register here, then answer the event&apos;s short survey under <strong>My events</strong>.</li>
+          <li>Register here — it takes a minute.</li>
+          <li>Answer the event&apos;s short survey under <strong>My events</strong>.</li>
           <li>
-            Once your answers pass our quality check and the event&apos;s discount codes have been confirmed, your
-            code appears under My events and My rewards, and we email it to you.
+            We check every response. Once yours passes, your discount code appears under My events and My rewards, and
+            we email it to you.
           </li>
-          <li>The Live·En·Synergy team draws who takes part once registration closes.</li>
-          <li>
-            If you&apos;re selected, buy your ticket as you normally would and upload it under{" "}
-            <strong>My events</strong>.
-          </li>
+          <li>Use your code when you buy your ticket on the event&apos;s ticketing site.</li>
           <li>
             {event.attendance_method
-              ? `On the day, check in at the venue: ${event.attendance_method}`
-              : "On the day, scan the QR code at the venue to check in."}
+              ? `On the day, remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport.`
+              : "On the day, remember to check in at the venue by scanning the QR code — it adds the event to your Event Passport."}
           </li>
         </ol>
 
@@ -188,7 +187,6 @@ export default async function EventDetailsPage({
           eventId={event.id}
           eventName={event.name}
           defaultName={member?.full_name ?? profile.full_name ?? ""}
-          defaultDateOfBirth={member?.date_of_birth ?? ""}
           defaultPhone={member?.phone ?? ""}
           defaultPhoneCountryCode={member?.phone_country_code ?? "+44"}
         />

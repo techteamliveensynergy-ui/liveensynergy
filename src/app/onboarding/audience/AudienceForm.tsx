@@ -4,7 +4,6 @@ import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { CountrySelect } from "@/components/ui/CountrySelect";
-import { GenderField } from "@/components/ui/GenderField";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -49,7 +48,7 @@ export function AudienceForm({
 
       <FormSection
         title="Your details"
-        description="We use these to verify your attendance and release your rewards. Your details are never shared without your consent."
+        description="Your personal details are never shared with any partner without your consent."
       >
         <Field label="Full name" htmlFor="full_name" required>
           <input
@@ -74,20 +73,7 @@ export function AudienceForm({
               required
             />
           </Field>
-          <Field label="Date of birth" htmlFor="date_of_birth">
-            <input
-              id="date_of_birth"
-              name="date_of_birth"
-              type="date"
-              className="input"
-              defaultValue={d.date_of_birth ?? ""}
-            />
-          </Field>
-          <GenderField
-            key={`gender-${attempt}`}
-            defaultGender={d.gender}
-            defaultSelfDescribe={d.gender_self_describe}
-          />
+          {/* Date of birth and gender aren't asked (Testing notes 7 Nov, GDPR). */}
           <Field
             label="Country of residence"
             htmlFor="country_of_residence"

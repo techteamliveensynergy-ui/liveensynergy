@@ -8,9 +8,12 @@ export const metadata = { title: "Create your account" };
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string; event?: string }>;
+  searchParams: Promise<{ role?: string; event?: string; redirectTo?: string }>;
 }) {
-  const { role, event } = await searchParams;
+  const { role, event, redirectTo } = await searchParams;
+  // A survey sends people here to make an account (Testing notes 7 Nov): keep
+  // where they came from so the welcome email's link brings them back to it.
+  const surveyReturn = redirectTo && /^\/survey\/[0-9a-f-]{36}$/i.test(redirectTo) ? redirectTo : undefined;
 
   return (
     <AuthShell
@@ -20,7 +23,7 @@ export default async function SignUpPage({
         <>
           Already have an account?{" "}
           <Link
-            href="/auth/sign-in"
+            href={surveyReturn ? `/auth/sign-in?redirectTo=${encodeURIComponent(surveyReturn)}` : "/auth/sign-in"}
             className="font-semibold text-[var(--color-brand)]"
           >
             Sign in
@@ -28,7 +31,7 @@ export default async function SignUpPage({
         </>
       }
     >
-      <SignUpForm initialRole={role} event={event} googleEnabled={googleSignInEnabled()} />
+      <SignUpForm initialRole={role} event={event} returnTo={surveyReturn} googleEnabled={googleSignInEnabled()} />
     </AuthShell>
   );
 }

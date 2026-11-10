@@ -61,3 +61,27 @@ export function campaignLabel(c: { campaign_name?: string | null; reference?: st
   if (name) return ref ? `“${name}” (${ref})` : `“${name}”`;
   return ref ?? "your campaign";
 }
+
+/** "Ages 21–35 · students in London" — the request's audience criteria (0117). */
+export function requestAudienceLabel(r: {
+  audience_age_min?: number | null;
+  audience_age_max?: number | null;
+  audience_criteria?: string | null;
+}): string | null {
+  const min = r.audience_age_min ?? null;
+  const max = r.audience_age_max ?? null;
+  const ages =
+    min !== null && max !== null ? `Ages ${min}–${max}` : min !== null ? `Ages ${min}+` : max !== null ? `Ages 18–${max}` : null;
+  const text = r.audience_criteria?.trim() || null;
+  return [ages, text].filter(Boolean).join(" · ") || null;
+}
+
+/** The package a request asked for, by name (null when none or not found). */
+export async function requestPackageName(
+  supabase: { from: (t: string) => any }, // eslint-disable-line @typescript-eslint/no-explicit-any
+  packageId: string | null | undefined,
+): Promise<string | null> {
+  if (!packageId) return null;
+  const { data } = await supabase.from("campaign_packages").select("name").eq("id", packageId).maybeSingle();
+  return (data as { name?: string } | null)?.name ?? null;
+}
