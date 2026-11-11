@@ -202,6 +202,15 @@ export function OrderFormDocument({
               ["Date", form.event_date ? formatDate(form.event_date) : null],
               ["Venue", form.event_venue],
               ["Location", form.event_location],
+              ["Capacity", form.event_capacity != null ? `${form.event_capacity.toLocaleString("en-GB")} people` : null],
+              [
+                "Event link",
+                form.event_link ? (
+                  <a href={form.event_link} target="_blank" rel="noopener noreferrer" className="underline">
+                    {displayUrl(form.event_link)}
+                  </a>
+                ) : null,
+              ],
             ]}
           />
         </Slide>

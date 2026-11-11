@@ -67,7 +67,7 @@ export default async function AdminOrderFormPage({
       supabase.from("campaign_order_forms").select("*").eq("campaign_id", id).maybeSingle<CampaignOrderForm>(),
       supabase
         .from("event_listings")
-        .select("id, reference, name, event_date, venue_name, city, country, owner_profile_id, status")
+        .select("id, reference, name, event_date, venue_name, city, country, owner_profile_id, status, capacity, ticket_buy_url")
         .order("event_date", { ascending: true, nullsFirst: false }),
       supabase.from("campaign_packages").select("id, name, price_gbp").order("sort_order"),
       supabase
@@ -107,6 +107,8 @@ export default async function AdminOrderFormPage({
     owner_profile_id: l.owner_profile_id,
     owner_name: ownerName(l.owner_profile_id),
     status: l.status,
+    capacity: (l.capacity as number | null) ?? null,
+    ticket_url: (l.ticket_buy_url as string | null) ?? null,
   }));
 
   const b = campaign.brands;

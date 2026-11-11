@@ -207,6 +207,11 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
                 ? `Enter the code at checkout${redemptionLabel(ev.tiers) ? ` on ${redemptionLabel(ev.tiers)}` : ""} when you buy your ticket.`
                 : "Enter the code at checkout when you buy your ticket.",
             ],
+            // Interim wording (retest 25 / standup 10 Nov) until Sakshi's final copy.
+            [
+              "Check in and build your Event Passport",
+              "On the day, remember to check in at the venue by scanning the event QR code. Every event you check in at is added to your Event Passport.",
+            ],
           ].map(([title, body], i) => (
             <li key={title} className="flex gap-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] text-sm font-semibold text-[var(--color-les-ink)]">

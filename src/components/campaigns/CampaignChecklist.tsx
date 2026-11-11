@@ -86,12 +86,23 @@ export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
     items.push({
       key: "event",
       state: "awaited",
-      text: `Event suggested: ${e.name} — awaiting ${waitingOn || "confirmation"} to agree`,
+      text: `Event suggested: ${e.name} — ${
+        unpaid
+          ? `${e.brand_agreed ? "brand agreed; " : "awaiting the brand; "}the artist sees it once paid`
+          : `awaiting ${waitingOn || "confirmation"} to agree`
+      }`,
     });
   } else if (open.length > 1) {
-    items.push({ key: "event", state: "awaited", text: `${open.length} events suggested — the brand and artist need to agree on one together` });
+    items.push({
+      key: "event",
+      state: "awaited",
+      text: unpaid
+        ? `${open.length} events suggested — the brand can review them now; artists see them once paid`
+        : `${open.length} events suggested — the brand and artist need to agree on one together`,
+    });
   } else if (unpaid) {
-    items.push({ key: "event", state: "later", text: "Event — once paid" });
+    // Suggesting before payment (client, 11 Nov).
+    items.push({ key: "event", state: "awaited", text: "No event suggested yet — you can suggest events now (artists see them once paid)" });
   } else {
     items.push({ key: "event", state: "awaited", text: "No event suggested yet — awaiting you" });
   }

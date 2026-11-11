@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import { Field } from "@/components/ui/Field";
 import { PhoneInput } from "@/components/ui/PhoneInput";
-import { CountrySelect } from "@/components/ui/CountrySelect";
 import { FormSection } from "@/components/OnboardingShell";
 import {
   ErrorBanner,
@@ -73,34 +72,9 @@ export function AudienceForm({
               required
             />
           </Field>
-          {/* Date of birth and gender aren't asked (Testing notes 7 Nov, GDPR). */}
-          <Field
-            label="Country of residence"
-            htmlFor="country_of_residence"
-            hint="Start typing to search the list."
-          >
-            <CountrySelect
-              key={`country-${attempt}`}
-              defaultValue={d.country_of_residence}
-            />
-          </Field>
+          {/* No date of birth, gender, country, address or postcode (Testing notes
+              7 Nov, retest 11 Nov): name and phone are all we need. */}
         </div>
-        <Field label="Address" htmlFor="address">
-          <textarea
-            id="address"
-            name="address"
-            className="textarea"
-            defaultValue={d.address ?? ""}
-          />
-        </Field>
-        <Field label="Postcode" htmlFor="postcode">
-          <input
-            id="postcode"
-            name="postcode"
-            className="input"
-            defaultValue={d.postcode ?? ""}
-          />
-        </Field>
       </FormSection>
 
       {/* --- Not yet built. Flows still to be decided — see docs/PLATFORM.md.

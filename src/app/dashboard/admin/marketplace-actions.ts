@@ -130,14 +130,15 @@ export async function matchCampaign(
   ]);
 
   if (!campaign) return { error: "Campaign not found." };
-  // The database refuses this too (sponsored_events trigger, 0049) — this is the
-  // friendly version of the same rule.
-  if (campaign.status === "awaiting_payment") {
-    return {
-      error:
-        "This campaign is awaiting payment, so it can't be matched yet. Mark its invoice paid or waive payment first.",
-    };
+  if (campaign.status !== "awaiting_payment" && campaign.status !== "in_progress") {
+    return { error: "This campaign is closed or completed — events can't be suggested against it." };
   }
+  // Suggesting before payment (client, 11 Nov): the brand can look at the
+  // events and agree to one while the invoice is outstanding. The artist sees
+  // nothing — no proposal, no notification, listing not marked — until the
+  // campaign is paid or waived; 0118 hides the rows from them and notifies
+  // them at that moment.
+  const unpaid = campaign.status === "awaiting_payment";
 
   const listings = (listingRows ?? []) as {
     id: string;
@@ -207,13 +208,17 @@ export async function matchCampaign(
     .eq("id", campaign.id)
     .is("matched_listing_id", null);
 
-  await supabase
-    .from("event_listings")
-    .update({ status: "matched" })
-    .in(
-      "id",
-      listings.map((l) => l.id),
-    );
+  // The artist's listing is marked "matched" only once they can see why
+  // (after payment — 0118 does it then for a pre-payment suggestion).
+  if (!unpaid) {
+    await supabase
+      .from("event_listings")
+      .update({ status: "matched" })
+      .in(
+        "id",
+        listings.map((l) => l.id),
+      );
+  }
 
   const budgetLabel =
     budget != null ? `£${Number(budget).toLocaleString("en-GB")}` : undefined;
@@ -242,7 +247,8 @@ export async function matchCampaign(
     });
   }
 
-  for (const listing of listings) {
+  // Artists hear about it once the campaign is paid (0118's trigger).
+  for (const listing of unpaid ? [] : listings) {
     const proposal = createdByListing.get(listing.id);
     await notify({
       eventKey: "offer.proposal_received",
@@ -290,7 +296,8 @@ export async function matchCampaign(
       });
     }
 
-    for (const listing of listings) {
+    // Not relayed to artists before payment — they can't see the campaign yet.
+    for (const listing of unpaid ? [] : listings) {
       const conversationId = await getOrCreateSupportConversation({
         userProfileId: listing.owner_profile_id,
         adminProfileId: userId,

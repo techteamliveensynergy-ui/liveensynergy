@@ -172,10 +172,10 @@ export default async function CampaignRequestPage({
           <Fact label="Preferred timeline" value={r.preferred_timeline} />
           <Fact label="Artist / event in mind" value={r.target_name} />
           <Fact label="Package" value={packageName} />
-          <Fact label="Audience criteria" value={requestAudienceLabel(r)} />
+          {/* Older requests have free-text "reward rules" instead of age range
+              and criteria (retest 11 Nov): shown under the new name. */}
+          <Fact label="Audience criteria" value={requestAudienceLabel(r) ?? r.reward_rules} />
           <Fact label="Potential campaign questions" value={r.expected_outcomes} />
-          {/* Older requests only (the form no longer asks, 7 Nov). */}
-          <Fact label="Reward rules" value={r.reward_rules} />
           <Fact label="Anything else" value={r.additional_info} />
           <Fact
             label="Event you suggested"

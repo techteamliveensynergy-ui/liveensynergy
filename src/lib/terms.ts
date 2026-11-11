@@ -53,7 +53,7 @@ export const PARTY_TERMS: Record<PartyTerms["key"], PartyTerms> = {
     key: "audience",
     party: "Audience Members",
     points: [
-      "The details you give us — name, contact details, date of birth — are your own and are accurate. One account per person.",
+      "The details you give us — name and contact details — are your own and are accurate. One account per person.",
       "Rewards are only released after your attendance is verified, in line with each event's reward rules. Being selected isn't a guarantee of payment.",
       "Ticket proof you upload is genuine and yours. Sharing a check-in QR code with someone who isn't at the venue, or repeatedly not turning up after being selected, can suspend your account.",
       "Your personal details are never sold, and are only shared with a sponsor where you've explicitly consented.",

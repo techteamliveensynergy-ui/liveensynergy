@@ -114,10 +114,11 @@ export default async function SponsoredEventPage({
       event.campaign_id
         ? supabase
             .from("campaigns")
-            .select("package_participant_count")
+            .select("package_participant_count, status")
             .eq("id", event.campaign_id)
             .maybeSingle<{
               package_participant_count: number | null;
+              status: string;
             }>()
         : Promise.resolve({ data: null }),
       supabase
@@ -263,6 +264,20 @@ export default async function SponsoredEventPage({
   // no artist_display_name. Read through the public views — `artists` is
   // owner-only under RLS, so the brand would get nothing from the table.
   let actName: string | null = event.artist_display_name || (isArtist ? artistDetails?.name ?? null : null);
+  // The brand can look at who the artist is before choosing — and before
+  // paying (client, 11 Nov): their public profile, artist or organiser.
+  let actProfileHref: string | null = null;
+  if (isBrand && event.artist_profile_id) {
+    const [{ data: pa }, { data: po }] = await Promise.all([
+      supabase.from("public_artist_profiles").select("profile_id").eq("profile_id", event.artist_profile_id).maybeSingle(),
+      supabase.from("public_organiser_profiles").select("profile_id").eq("profile_id", event.artist_profile_id).maybeSingle(),
+    ]);
+    actProfileHref = pa
+      ? `/artists/${event.artist_profile_id}`
+      : po
+        ? `/organisers/${event.artist_profile_id}`
+        : null;
+  }
   if (!actName && event.artist_profile_id) {
     const [{ data: a }, { data: o }] = await Promise.all([
       supabase
@@ -524,10 +539,18 @@ export default async function SponsoredEventPage({
         <h2 className="text-lg font-semibold">Event details</h2>
         <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Detail label="Event name" value={event.name} />
-          <Detail
-            label="Artist / act"
-            value={actName}
-          />
+          <div>
+            <Detail label="Artist / act" value={actName} />
+            {actProfileHref && (
+              <Link
+                href={actProfileHref}
+                target="_blank"
+                className="mt-1 inline-block text-sm font-semibold text-[var(--color-brand-dark)] underline"
+              >
+                View artist profile ↗
+              </Link>
+            )}
+          </div>
           <Detail
             label={event.start_time ? "Date & time" : "Date"}
             value={formatEventDateTime(
@@ -658,6 +681,14 @@ export default async function SponsoredEventPage({
             {event.status === "withdrawn"
               ? "This proposal was withdrawn — the partner confirmed a different event for the same campaign."
               : "This partnership is confirmed — both parties have agreed. To change anything, contact the Live·En·Synergy team."}
+          </p>
+        )}
+
+        {/* Chosen before payment (client, 11 Nov): the artist isn't asked yet. */}
+        {isBrand && !locked && campaignRow?.status === "awaiting_payment" && (
+          <p className="mt-2 rounded-lg bg-[var(--color-gold)]/40 px-4 py-3 text-sm text-[var(--color-ink)]">
+            You can agree to this event now. The artist is asked to confirm once your invoice is paid — registration
+            and the survey open after that.
           </p>
         )}
 

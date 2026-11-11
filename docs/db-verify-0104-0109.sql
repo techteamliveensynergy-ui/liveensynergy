@@ -17,6 +17,7 @@
 --   0113_email_button_settings.sql (admins choose which emails carry the action button)
 --   0114 / 0115 (groups K, L) and 0116_marketing_campaigns.sql (group M: marketing email)
 --   0117_testing_notes_0711.sql (group N: Testing notes 7 Nov)
+--   0118_suggest_events_before_payment.sql (group O: events suggested before payment)
 --
 -- Reading the result:
 --   - every row PASS                -> all three are applied.
@@ -291,7 +292,23 @@ with checks (grp, ord, name, expected, actual) as (
                 where event_key = 'account.password_reset' and channel = 'email'), false)::text),
   ('N. 0117 testing notes', 5, 'artist emails no longer quote the package value', '0',
      (select count(*) from public.notification_templates
-       where event_key in ('sponsorship.confirmed','offer.proposal_received') and body like '%{{budget}}%')::text)
+       where event_key in ('sponsorship.confirmed','offer.proposal_received') and body like '%{{budget}}%')::text),
+
+  -- ---- O. 0118: suggest events before payment -----------------------------
+  ('O. 0118 suggest before payment', 1, 'functions + triggers exist', '5',
+     ((select count(distinct proname) from pg_proc where pronamespace = 'public'::regnamespace
+         and proname in ('sponsored_event_campaign_unpaid','campaign_paid_reveal_suggestions','sponsored_event_artist_waits_for_payment'))
+      + (select count(*) from pg_trigger where not tgisinternal
+           and tgname in ('sponsored_events_artist_waits_for_payment','campaigns_paid_reveal_suggestions')))::text),
+  ('O. 0118 suggest before payment', 2, 'party policy hides unpaid suggestions from the artist', 'true',
+     coalesce((select qual like '%sponsored_event_campaign_unpaid%' from pg_policies
+                where schemaname = 'public' and tablename = 'sponsored_events' and policyname = 'sponsored_events: parties or admin'), false)::text),
+  ('O. 0118 suggest before payment', 3, 'unpaid check not callable signed-out', 'false',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'sponsored_event_campaign_unpaid'), true)::text),
+  ('O. 0118 suggest before payment', 4, 'order form event capacity + link columns', '2',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and table_name = 'campaign_order_forms' and column_name in ('event_capacity','event_link'))::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result
