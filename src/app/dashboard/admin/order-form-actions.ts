@@ -133,6 +133,8 @@ export async function saveOrderForm(
   // Post-event survey (Testing notes 7 Nov) — needs 0117.
   const postLink = normaliseUrl(formData.get("post_survey_link"), "The post-event survey link");
   if (postLink.error) return { error: postLink.error };
+  const eventLink = normaliseUrl(formData.get("event_link"), "The event link");
+  if (eventLink.error) return { error: eventLink.error };
   const videoLink = normaliseUrl(formData.get("media_video_url"), "The video link");
   if (videoLink.error) return { error: videoLink.error };
 
@@ -153,6 +155,8 @@ export async function saveOrderForm(
     event_reference: str(formData.get("event_reference")),
     event_date: str(formData.get("event_date")),
     event_venue: str(formData.get("event_venue")),
+    event_capacity: int(formData.get("event_capacity")),
+    event_link: eventLink.url,
     event_location: str(formData.get("event_location")),
     approx_participants: int(formData.get("approx_participants")),
     survey_type: surveyType && (SURVEY_TYPES as string[]).includes(surveyType) ? (surveyType as SurveyType) : null,

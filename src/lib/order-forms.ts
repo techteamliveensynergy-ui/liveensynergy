@@ -32,6 +32,9 @@ export interface CampaignOrderForm {
   event_date: string | null;
   event_venue: string | null;
   event_location: string | null;
+  /** Linked event's capacity and event / ticket link (0118). */
+  event_capacity?: number | null;
+  event_link?: string | null;
   approx_participants: number | null;
   survey_type: SurveyType | null;
   survey_question_count: number | null;

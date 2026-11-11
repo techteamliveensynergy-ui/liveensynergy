@@ -589,9 +589,6 @@ export async function saveAudience(
     "full_name",
     "phone",
     "phone_country_code",
-    "country_of_residence",
-    "address",
-    "postcode",
   ]) {
     submitted[field] = String(formData.get(field) ?? "");
   }
@@ -618,11 +615,9 @@ export async function saveAudience(
       full_name: fullName,
       phone,
       phone_country_code: countryCode,
-      // No date of birth or gender (Testing notes 7 Nov, GDPR) — not asked,
-      // not written; anything stored earlier is left as it was.
-      country_of_residence: str(formData.get("country_of_residence")),
-      address: str(formData.get("address")),
-      postcode: str(formData.get("postcode")),
+      // No date of birth, gender, country, address or postcode (Testing notes
+      // 7 Nov, retest 11 Nov, GDPR) — not asked, not written; anything stored
+      // earlier is left as it was.
     },
     { onConflict: "profile_id" },
   );

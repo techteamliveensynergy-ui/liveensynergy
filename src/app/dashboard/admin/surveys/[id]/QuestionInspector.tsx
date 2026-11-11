@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Field } from "@/components/ui/Field";
 import {
   HIDDEN_FIELD_SOURCES,
+  RETIRED_HIDDEN_FIELD_SOURCES,
   OTHER_CAPABLE_TYPES,
   questionSpec,
   type SurveyQuestionDraft,
@@ -521,7 +522,13 @@ export function QuestionInspector({
       {spec.configFields.map((field) => {
         const selectOptions =
           field.name === "profile_field"
-            ? HIDDEN_FIELD_SOURCES
+            ? [
+                ...HIDDEN_FIELD_SOURCES,
+                // Shown only when this question already uses a retired field.
+                ...RETIRED_HIDDEN_FIELD_SOURCES.filter(
+                  (r) => r.value === (question.config as Record<string, unknown>).profile_field,
+                ),
+              ]
             : (field.options ?? []).map((o) => ({ value: o, label: o }));
         const rawValue = (question.config as Record<string, unknown>)[field.name];
 

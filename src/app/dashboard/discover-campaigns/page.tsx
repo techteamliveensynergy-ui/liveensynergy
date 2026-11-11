@@ -169,7 +169,7 @@ export default async function DiscoverCampaignsPage({
                 {c.expected_outcomes && (
                   <div className="mt-3 rounded-xl bg-[var(--color-mist)] px-3 py-2 text-sm">
                     <span className="font-semibold text-[var(--color-brand-dark)]">
-                      Expected outcomes:
+                      What the brand wants to learn:
                     </span>{" "}
                     <span className="text-[var(--color-ink-soft)]">
                       {c.expected_outcomes}

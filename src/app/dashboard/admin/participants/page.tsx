@@ -9,13 +9,15 @@ import { EventFilterSelect } from "./EventFilterSelect";
 
 export const metadata = { title: "Participants · Admin" };
 
-const STATUSES = [
-  "registered",
-  "ticket_uploaded",
-  "attendance_verified",
-  "reward_released",
-  "rejected",
-];
+// The current model (Testing notes 7 Nov / retest 11 Nov): no selection and no
+// ticket upload — registered, checked in, code issued. Old rows keep their
+// stored status; "rejected" is no longer a step, so it isn't offered.
+const STATUSES = ["registered", "attendance_verified", "reward_released"];
+const STATUS_LABEL: Record<string, string> = {
+  registered: "registered",
+  attendance_verified: "checked in",
+  reward_released: "code issued",
+};
 
 interface Row {
   id: string;
@@ -120,22 +122,12 @@ export default async function AdminParticipantsPage({
         <Link
           href={link({})}
           className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            !sp.status && !sp.selected
+            !sp.status
               ? "bg-[var(--color-brand)] text-white"
               : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
           }`}
         >
           All
-        </Link>
-        <Link
-          href={link({ selected: "yes" })}
-          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-            sp.selected === "yes"
-              ? "bg-[var(--color-brand)] text-white"
-              : "border border-black/10 bg-white text-[var(--color-ink)] hover:bg-[var(--color-mist)]"
-          }`}
-        >
-          Selected
         </Link>
         {STATUSES.map((s) => (
           <Link
@@ -147,7 +139,7 @@ export default async function AdminParticipantsPage({
                 : "border border-black/10 bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-mist)]"
             }`}
           >
-            {s === "reward_released" ? "code issued" : s.replace(/_/g, " ")}
+            {STATUS_LABEL[s] ?? s.replace(/_/g, " ")}
           </Link>
         ))}
       </div>
@@ -173,11 +165,6 @@ export default async function AdminParticipantsPage({
                     {r.profiles?.full_name ?? "Unnamed"}
                   </Link>
                   <StatusBadge status={r.status} />
-                  {r.selected && (
-                    <span className="text-xs text-[var(--color-olive-deep)]">
-                      selected
-                    </span>
-                  )}
                 </div>
                 <p className="truncate text-sm text-[var(--color-ink-soft)]">
                   {r.profiles?.email ?? "—"}

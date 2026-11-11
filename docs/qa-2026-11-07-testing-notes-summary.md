@@ -103,3 +103,28 @@ The request form changes:
   4. Audience: My events shows the new tracker and Event Passport. The code email shows "Your code" and "Offer" on separate lines.
   5. Artist: the participants panel shows totals only, and the "partnership live" email has no amount.
   6. "Forgot password": the email is from Live·En·Synergy and its link opens the new-password page on a phone too.
+
+---
+
+## Retest 11 Nov — what was still open, and what changed (0118)
+
+The tester's retest (11 Nov, after PR #103) listed what was left. **Migration 0118**, apply before deploying; verify group O.
+
+| Retest item | What changed |
+|---|---|
+| **15 / 42 / 43 — suggest events before payment** (the main fix) | The team can now suggest events **as soon as the brief arrives**, while the invoice is unpaid. **The brand sees the suggestions** (event, date, **who the artist is**, a link to the artist's public profile) on its live campaign and can open each and agree to one. **The artist sees nothing** and can't agree until the campaign is paid or waived; at that moment each suggested artist is notified and their listing is marked matched. Registration, surveys and codes still wait for payment. Enforced in the database (not just hidden in the page). |
+| 13 — "Budget (GBP)" label on admin Create a campaign | Now "Package value (GBP)". |
+| 18 / 49 — linked event details on the order form | The order form now carries the event's **capacity** and **event / ticket link**, filled from the listing when the team picks the event (editable) and shown to the brand. |
+| 23 — sign-up terms mention date of birth | Removed from the Audience terms. The other old-model lines in those terms (selection, ticket proof) are legal copy still to be finalised. |
+| 25 — public "How it works" has no check-in / Event Passport step | Added a fifth step (interim wording until Sakshi's copy). |
+| 27 — admin Participants still has old filter pills | Pills are now All / Registered / Checked in / Code issued; "selected" tags are gone. |
+| 53 — profile still asks Country, Address, Postcode | Removed from the audience form and the save (saving no longer touches stored values) and from "profile complete". Survey hidden fields for country, gender and date of birth are no longer offered, but a survey that already has one still saves. |
+| Older campaigns show "Reward rules" / "Expected outcomes" | The brand's pages now say "Audience criteria" / "What participants receive" / "Potential campaign questions". The artist's campaign card says "What the brand wants to learn". |
+| Admin Decline on a change request (SPE-00034) stays Pending | Nothing to change in code — the fix is already on `main` (702a352). The preview needs a redeploy; then retest. |
+| 14 — no post-event link in the brand's order form | The link is shown when set; COF-00016 simply had none. Not a bug. |
+| 24 — same banner on event cards | Test data (six QA events have no artwork). Not a bug. |
+
+Still your decision / not code:
+- **Order form only after both parties accept** (part of 43). It conflicts with the flow above: the invoice, and so payment, follows the order form, and the artist is only asked after payment. I left it as is; say if you want the order form held back until the artist has confirmed.
+- Erasing date-of-birth / gender values already stored.
+- The Google consent-screen host and the Supabase Site URL are dashboard settings (see `docs/google-signin-setup.md`).

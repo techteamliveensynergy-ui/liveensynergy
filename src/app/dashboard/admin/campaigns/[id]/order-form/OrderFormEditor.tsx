@@ -21,6 +21,8 @@ export interface ListingOption {
   owner_profile_id: string;
   owner_name: string;
   status: string;
+  capacity: number | null;
+  ticket_url: string | null;
 }
 
 function Buttons({ disabledSend }: { disabledSend: boolean }) {
@@ -80,6 +82,8 @@ export function OrderFormEditor({
     event_date: v(initial.event_date),
     event_venue: v(initial.event_venue),
     event_location: v(initial.event_location),
+    event_capacity: v(initial.event_capacity ?? null),
+    event_link: v(initial.event_link ?? null),
   });
   const partnerListings = listings.filter((l) => l.owner_profile_id === partnerId);
 
@@ -99,6 +103,8 @@ export function OrderFormEditor({
       event_date: l.event_date ?? "",
       event_venue: l.venue ?? "",
       event_location: l.location ?? "",
+      event_capacity: l.capacity != null ? String(l.capacity) : "",
+      event_link: l.ticket_url ?? "",
     });
   }
 
@@ -221,6 +227,8 @@ export function OrderFormEditor({
               ["event_reference", "Event ID"],
               ["event_venue", "Venue"],
               ["event_location", "Location"],
+              ["event_capacity", "Event capacity (people)"],
+              ["event_link", "Event / ticket link"],
             ] as const
           ).map(([key, label]) => (
             <Field key={key} label={label} htmlFor={key}>

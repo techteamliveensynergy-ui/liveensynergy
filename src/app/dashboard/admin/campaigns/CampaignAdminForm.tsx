@@ -138,7 +138,7 @@ export function CampaignAdminForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Budget (GBP)"
+            label="Package value (GBP)"
             htmlFor="budget_gbp"
             hint={
               selectedPackage && !selectedPackage.is_custom_price

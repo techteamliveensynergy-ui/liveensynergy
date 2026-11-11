@@ -599,16 +599,17 @@ export default async function AdminCampaignsPage({
                     campaign could sit at "in progress" while already carrying
                     a confirmed or completed partnership, and suggesting more
                     against it creates a conflict nobody can accept (0022). */}
-                {c.status === "in_progress" && !isSettled(c.id) ? (
+                {(c.status === "in_progress" || c.status === "awaiting_payment") && !isSettled(c.id) ? (
                   <div className="mt-4 border-t border-black/10 pt-4">
+                    {c.status === "awaiting_payment" && (
+                      <p className="mb-3 rounded-lg bg-[var(--color-gold)]/40 px-3 py-2 text-sm text-[var(--color-ink)]">
+                        Awaiting payment — you can suggest events now and the brand can review and agree to one.
+                        Artists aren&apos;t shown or told anything until the invoice is paid or payment is waived;
+                        then each suggested artist is notified automatically.
+                      </p>
+                    )}
                     <MatchForm campaignId={c.id} listings={listings} />
                   </div>
-                ) : c.status === "awaiting_payment" ? (
-                  <p className="mt-4 border-t border-black/10 pt-4 text-sm text-[var(--color-ink-soft)]">
-                    Awaiting payment — hidden from artists and can&apos;t be
-                    matched until its invoice is marked paid or payment is
-                    waived.
-                  </p>
                 ) : (
                   isSettled(c.id) && (
                     <p className="mt-4 border-t border-black/10 pt-4 text-sm text-[var(--color-ink-soft)]">

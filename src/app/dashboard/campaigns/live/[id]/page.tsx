@@ -17,7 +17,7 @@ import { CAMPAIGN_COLUMNS } from "@/lib/campaign-columns";
 
 export const metadata = { title: "Campaign" };
 
-type EventRow = CampaignEventRow & { reference: string; event_date: string | null };
+type EventRow = CampaignEventRow & { reference: string; event_date: string | null; artist_display_name?: string | null; artist_profile_id?: string | null };
 
 interface OrderFormRow {
   id: string;
@@ -64,7 +64,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
     await Promise.all([
       supabase
         .from("sponsored_events")
-        .select("id, name, reference, campaign_id, status, event_date, reward_codes_confirmed_at")
+        .select("id, name, reference, campaign_id, status, event_date, reward_codes_confirmed_at, artist_display_name, artist_profile_id")
         .eq("campaign_id", c.id)
         .order("created_at", { ascending: true }),
       // A brand never sees a draft invoice (RLS since 0047; filtered here too).
@@ -205,11 +205,18 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
           <h2 className="font-display text-lg font-semibold">Events</h2>
           {visibleEvents.length === 0 ? (
             <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-              {c.status === "awaiting_payment"
-                ? "Once the campaign is paid, our team matches it with a fitting artist or event — it will appear here."
-                : "Our team is lining up a fitting artist or event — proposals will appear here."}
+              Our team is lining up fitting events for this campaign — suggestions appear here for you to look at
+              {c.status === "awaiting_payment" ? ", even before the invoice is paid" : ""}.
             </p>
           ) : (
+            <>
+            {c.status === "awaiting_payment" && (
+              // Suggesting before payment (client, 11 Nov).
+              <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
+                Have a look at the suggested events and agree to the one you&apos;d like. The artist is asked to confirm
+                once the invoice is paid, and registration opens after that.
+              </p>
+            )}
             <ul className="mt-3 space-y-2">
               {visibleEvents.map((e) => (
                 <li key={e.id}>
@@ -219,6 +226,10 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
                   >
                     <span>
                       <span className="font-semibold">{e.name}</span>
+                      {/* Who the artist is, to compare suggestions (client, 11 Nov). */}
+                      {e.artist_display_name && (
+                        <span className="text-[var(--color-ink)]"> · with {e.artist_display_name}</span>
+                      )}
                       <span className="text-[var(--color-ink-soft)]">
                         {" "}
                         · {e.reference}
@@ -230,6 +241,7 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
                 </li>
               ))}
             </ul>
+            </>
           )}
         </section>
 
@@ -324,8 +336,8 @@ export default async function BrandCampaignPage({ params }: { params: Promise<{ 
           <Fact label="Location" value={c.preferred_location} />
           <Fact label="Timeline" value={c.preferred_timeline} />
           <Fact label="Artist / event in mind" value={c.target_name} />
-          <Fact label="Reward rules" value={c.reward_rules} />
-          <Fact label="Expected outcomes" value={c.expected_outcomes} />
+          <Fact label="What participants receive" value={c.reward_rules} />
+          <Fact label="Potential campaign questions" value={c.expected_outcomes} />
           <Fact label="Anything else" value={c.additional_info} />
           <Fact
             label="Event you suggested"

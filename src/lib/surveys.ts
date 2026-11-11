@@ -42,8 +42,18 @@ export const HIDDEN_FIELD_SOURCES: { value: string; label: string }[] = [
   { value: "profiles.full_name", label: "Full name" },
   { value: "profiles.email", label: "Email" },
   { value: "audience_members.phone", label: "Phone" },
-  { value: "audience_members.country_of_residence", label: "Country of residence" },
-  // Gender and date of birth aren't collected any more (Testing notes 7 Nov, GDPR).
+];
+
+/**
+ * Profile fields we no longer collect (Testing notes 7 Nov / retest 11 Nov,
+ * GDPR): not offered for a new hidden field, but a survey that already has one
+ * must still validate and save, so they stay accepted. They simply fill in
+ * empty for anyone registered since.
+ */
+export const RETIRED_HIDDEN_FIELD_SOURCES: { value: string; label: string }[] = [
+  { value: "audience_members.country_of_residence", label: "Country of residence (no longer collected)" },
+  { value: "audience_members.gender", label: "Gender (no longer collected)" },
+  { value: "audience_members.date_of_birth", label: "Date of birth (no longer collected)" },
 ];
 
 /**
@@ -436,7 +446,10 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
   }
   if (d.type === "hidden_field") {
     const source = d.config.profile_field;
-    if (!source || !HIDDEN_FIELD_SOURCES.some((s) => s.value === source)) {
+    if (
+      !source ||
+      ![...HIDDEN_FIELD_SOURCES, ...RETIRED_HIDDEN_FIELD_SOURCES].some((s) => s.value === source)
+    ) {
       return "Pick which profile field this hidden field maps to.";
     }
   }
