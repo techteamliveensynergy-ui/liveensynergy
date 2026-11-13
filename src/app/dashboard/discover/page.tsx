@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -199,12 +200,7 @@ export default async function DiscoverPage({
                 {(() => {
                   const art = eventImage(l.image_url, l.category);
                   return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={art.src}
-                      alt={art.alt}
-                      className="h-36 w-full object-cover"
-                    />
+                    <EventBanner src={art.src} alt={art.alt} className="h-36 w-full" />
                   );
                 })()}
                 <div className="flex flex-1 flex-col p-5">
@@ -363,12 +359,7 @@ export default async function DiscoverPage({
               {(() => {
                 const art = eventImage(e.banner_url || artworkById.get(e.id), e.event_listings?.category);
                 return (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={art.src}
-                    alt={art.alt}
-                    className="h-36 w-full object-cover"
-                  />
+                  <EventBanner src={art.src} alt={art.alt} className="h-36 w-full" />
                 );
               })()}
               <div className="flex flex-1 flex-col p-5">

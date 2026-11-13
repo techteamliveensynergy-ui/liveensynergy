@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/profile";
@@ -65,8 +66,7 @@ export default async function EventViewPage({
       )}
 
       <div className="card overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image.src} alt={image.alt} className="h-56 w-full object-cover md:h-72" />
+        <EventBanner src={image.src} alt={image.alt} className="h-56 w-full md:h-72" />
         <div className="p-6">
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-ink-soft)]">
             <StatusBadge status={l.status} />

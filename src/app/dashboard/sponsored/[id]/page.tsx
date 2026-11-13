@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -497,12 +498,7 @@ export default async function SponsoredEventPage({
       )}
 
       {event.banner_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={event.banner_url}
-          alt=""
-          className="h-48 w-full rounded-2xl object-cover"
-        />
+        <EventBanner src={event.banner_url} className="h-48 w-full rounded-2xl" />
       )}
 
       {/* Sponsorship management */}
