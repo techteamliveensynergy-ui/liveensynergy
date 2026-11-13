@@ -324,7 +324,14 @@ with checks (grp, ord, name, expected, actual) as (
                 where p.pronamespace = 'public'::regnamespace and p.proname = 'set_partner_marketing_all'), true)::text),
   ('P. 0119 partner marketing', 5, 'unsubscribe-all clears the flag', 'true',
      coalesce((select prosrc like '%partner_marketing_all = false%' from pg_proc
-                where pronamespace = 'public'::regnamespace and proname = 'marketing_unsubscribe'), false)::text)
+                where pronamespace = 'public'::regnamespace and proname = 'marketing_unsubscribe'), false)::text),
+
+  -- ---- Q. 0120: brand link on the public event page ------------------------
+  ('Q. 0120 brand link', 1, 'function exists', '1',
+     (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_event_brand_profile')::text),
+  ('Q. 0120 brand link', 2, 'callable signed-out (public page)', 'true',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'public_event_brand_profile'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

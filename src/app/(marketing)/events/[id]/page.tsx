@@ -58,6 +58,13 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
   const ev = await getPublicEvent(supabase, id);
   if (!ev) notFound();
 
+  // The brand's public profile, when it has one (0120). A database without
+  // 0120 simply shows the name without a link.
+  const { data: brandProfileId } = ev.brand
+    ? await supabase.rpc("public_event_brand_profile", { p_id: id })
+    : { data: null };
+  const brandHref = typeof brandProfileId === "string" ? `/brands/${brandProfileId}` : null;
+
   const cta = await surveyCta(supabase, ev);
   const page = ev.page;
   const when = formatEventDateTime(
@@ -84,7 +91,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             {ev.category && <span className="chip">{ev.category}</span>}
             {page?.subcategory && <span className="chip">{page.subcategory}</span>}
           </div>
-          <PartnerLine ev={ev} />
+          <PartnerLine ev={ev} brandHref={brandHref} />
           <div>
             {ev.campaign_name && (
               <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
@@ -141,7 +148,14 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
       <Section title="About the research campaign">
         {ev.brand && (
           <p className="text-sm text-[var(--color-ink-soft)]">
-            This research is supported by <strong className="text-[var(--color-ink)]">{ev.brand.name}</strong>
+            This research is supported by{" "}
+            {brandHref ? (
+              <Link href={brandHref} className="font-bold text-[var(--color-ink)] underline">
+                {ev.brand.name}
+              </Link>
+            ) : (
+              <strong className="text-[var(--color-ink)]">{ev.brand.name}</strong>
+            )}
             {ev.artist_name ? (
               <>
                 , separately from the event&apos;s organiser, <strong className="text-[var(--color-ink)]">{ev.artist_name}</strong>
@@ -174,6 +188,11 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             )}
             <div className="min-w-0 text-sm">
               <p className="font-semibold text-[var(--color-ink)]">{ev.brand.name}</p>
+              {brandHref && (
+                <Link href={brandHref} className="mt-0.5 inline-block text-[var(--color-brand-dark)] underline">
+                  View {ev.brand.name}&apos;s profile
+                </Link>
+              )}
               {ev.brand.description && <p className="mt-1 text-[var(--color-ink-soft)]">{ev.brand.description}</p>}
               {ev.brand.website_url && (
                 <a
@@ -359,12 +378,22 @@ function ParticipationFaq({ ev }: { ev: PublicEvent }) {
   );
 }
 
-function PartnerLine({ ev }: { ev: PublicEvent }) {
+/** The brand's name/logo, linking to its public profile when there is one. */
+function BrandLink({ href, className, children }: { href: string | null; className?: string; children: ReactNode }) {
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <Link href={href} className={`${className ?? ""} group`}>
+      {children}
+    </Link>
+  );
+}
+
+function PartnerLine({ ev, brandHref }: { ev: PublicEvent; brandHref: string | null }) {
   if (!ev.brand && !ev.artist_name) return null;
   return (
     <div className="flex flex-wrap items-center gap-3">
       {ev.brand && (
-        <span className="flex items-center gap-2">
+        <BrandLink href={brandHref} className="flex items-center gap-2">
           {ev.brand.logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={ev.brand.logo_url} alt="" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5 ring-1 ring-black/10" />
@@ -373,7 +402,7 @@ function PartnerLine({ ev }: { ev: PublicEvent }) {
             <span className="block text-xs text-[var(--color-ink-soft)]">Research partner</span>
             <span className="font-semibold text-[var(--color-ink)]">{ev.brand.name}</span>
           </span>
-        </span>
+        </BrandLink>
       )}
       {ev.brand && ev.artist_name && <span className="text-xl text-[var(--color-ink-soft)]">×</span>}
       {ev.artist_name && (
