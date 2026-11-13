@@ -6,6 +6,7 @@ import { BrandForm } from "@/app/onboarding/brand/BrandForm";
 import { ArtistForm } from "@/app/onboarding/artist/ArtistForm";
 import { EventForm } from "@/app/onboarding/event/EventForm";
 import { AudienceForm } from "@/app/onboarding/audience/AudienceForm";
+import { PartnerMarketingCard } from "./PartnerMarketingCard";
 
 export const metadata = { title: "Profile" };
 
@@ -82,7 +83,12 @@ export default async function ProfilePage() {
         <EventForm mode="profile" defaults={record ?? undefined} />
       )}
       {role === "audience" && (
-        <AudienceForm mode="profile" defaults={record ?? undefined} />
+        <>
+          <PartnerMarketingCard
+            defaultOn={(record as { partner_marketing_all?: boolean } | null)?.partner_marketing_all === true}
+          />
+          <AudienceForm mode="profile" defaults={record ?? undefined} />
+        </>
       )}
     </div>
   );
