@@ -86,19 +86,33 @@ export async function uploadTicketProof(formData: FormData) {
   redirect("/dashboard/participations?notice=upload-success");
 }
 
-/** Audience records consent and that they've supplied payout details. */
+/**
+ * The partner newsletter & promotions tick. It is one choice for every partner
+ * brand (0119): ticking turns it on for all the events they are in and the
+ * ones they join later. It is only shown while off; switching it off is in the
+ * profile. If 0119 isn't applied yet this falls back to the old per-event tick
+ * so the screen keeps working.
+ */
 export async function provideConsent(formData: FormData) {
   const { supabase, userId } = await requireUser();
   const id = str(formData.get("id"));
   if (!id) return;
+  const on = formData.get("newsletter_opt_in") ? true : false;
+
+  if (on) {
+    const { data, error } = await supabase.rpc("set_partner_marketing_all", { p_on: true });
+    if (!error && (data as { ok?: boolean } | null)?.ok) {
+      revalidatePath("/dashboard/participations");
+      revalidatePath("/dashboard/profile");
+      return;
+    }
+  }
 
   await supabase
     .from("participations")
     // Newsletter only. bank_details_provided belonged to the cash payout and
     // is left as recorded; the form no longer offers it.
-    .update({
-      newsletter_opt_in: formData.get("newsletter_opt_in") ? true : false,
-    })
+    .update({ newsletter_opt_in: on })
     .eq("id", id)
     .eq("audience_profile_id", userId);
 

@@ -41,6 +41,15 @@ export default async function ParticipationsPage({
     .order("created_at", { ascending: false });
   const allRows = (data ?? []) as Row[];
 
+  // One opt-in for every partner brand (0119). Once on, the tick is hidden here
+  // and turned off in the profile. A database without 0119 reads as "off".
+  const { data: marketingRow } = await supabase
+    .from("audience_members")
+    .select("partner_marketing_all")
+    .eq("profile_id", profile.id)
+    .maybeSingle<{ partner_marketing_all: boolean }>();
+  const partnerMarketingAll = marketingRow?.partner_marketing_all === true;
+
   // "Past" is keyed on the event date, not the participation status — a reward
   // can still be outstanding on an event that has already happened, and that's
   // exactly what someone checking their history is looking for.
@@ -505,13 +514,23 @@ export default async function ParticipationsPage({
                 {/* Everyone registered can change this — not just "selected"
                     people (selection is gone; marketing unsubscribe pages point
                     here to opt back in, 0116). */}
-                {p.status !== "rejected" && (
+                {p.status !== "rejected" && partnerMarketingAll && (
+                  <p className="mt-4 rounded-xl border border-black/10 p-4 text-sm text-[var(--color-ink-soft)]">
+                    You&apos;re signed up for newsletters &amp; promotions from our partner brands. You can turn that
+                    off any time in your{" "}
+                    <Link href="/dashboard/profile#partner-marketing" className="underline">
+                      profile
+                    </Link>
+                    .
+                  </p>
+                )}
+                {p.status !== "rejected" && !partnerMarketingAll && (
                   <form
                     action={provideConsent}
                     className="mt-4 grid gap-2 rounded-xl border border-black/10 p-4 text-sm"
                   >
                     <input type="hidden" name="id" value={p.id} />
-                    <p className="font-semibold">Hear from this event&apos;s partner</p>
+                    <p className="font-semibold">Hear from our partner brands</p>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -519,9 +538,12 @@ export default async function ParticipationsPage({
                         defaultChecked={p.newsletter_opt_in}
                         className="h-4 w-4"
                       />
-                      Sign me up for the partner&apos;s newsletter &amp;
-                      promotions
+                      Sign me up for newsletters &amp; promotions from all Live·En·Synergy partner brands
                     </label>
+                    <p className="text-xs text-[var(--color-ink-soft)]">
+                      One choice for every brand whose events you join. Turn it off any time in your profile, or with
+                      the unsubscribe link in any email.
+                    </p>
                     <div>
                       <button type="submit" className="btn btn-ghost text-sm">
                         Save preferences

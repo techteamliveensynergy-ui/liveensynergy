@@ -308,7 +308,23 @@ with checks (grp, ord, name, expected, actual) as (
                 where p.pronamespace = 'public'::regnamespace and p.proname = 'sponsored_event_campaign_unpaid'), true)::text),
   ('O. 0118 suggest before payment', 4, 'order form event capacity + link columns', '2',
      (select count(*) from information_schema.columns where table_schema = 'public'
-        and table_name = 'campaign_order_forms' and column_name in ('event_capacity','event_link'))::text)
+        and table_name = 'campaign_order_forms' and column_name in ('event_capacity','event_link'))::text),
+
+  -- ---- P. 0119: one partner-marketing choice for all brands ----------------
+  ('P. 0119 partner marketing', 1, 'flag column exists', '1',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and table_name = 'audience_members' and column_name = 'partner_marketing_all')::text),
+  ('P. 0119 partner marketing', 2, 'function + inherit trigger exist', '2',
+     (select count(distinct proname) from pg_proc where pronamespace = 'public'::regnamespace
+         and proname in ('set_partner_marketing_all','participations_inherit_partner_marketing'))::text),
+  ('P. 0119 partner marketing', 3, 'inherit trigger is attached', '1',
+     (select count(*) from pg_trigger where not tgisinternal and tgname = 'participations_inherit_partner_marketing')::text),
+  ('P. 0119 partner marketing', 4, 'switch not callable signed-out', 'false',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'set_partner_marketing_all'), true)::text),
+  ('P. 0119 partner marketing', 5, 'unsubscribe-all clears the flag', 'true',
+     coalesce((select prosrc like '%partner_marketing_all = false%' from pg_proc
+                where pronamespace = 'public'::regnamespace and proname = 'marketing_unsubscribe'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

@@ -52,7 +52,7 @@ export default async function UnsubscribePage({
           Account emails (sign-in links, your discount codes, event updates) still reach you.
         </p>
         <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
-          Changed your mind? Tick &ldquo;Partner newsletter &amp; promotions&rdquo; on the event under My events.
+          Changed your mind? Turn on &ldquo;Newsletters &amp; promotions from partner brands&rdquo; in your profile.
         </p>
       </Shell>
     );
