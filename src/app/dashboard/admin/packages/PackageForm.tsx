@@ -140,21 +140,6 @@ export function PackageForm({ pkg }: { pkg?: CampaignPackage }) {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Platform margin (GBP)"
-            htmlFor="platform_margin_gbp"
-            hint="What the platform keeps from this package's price — the rest becomes the partnership's reward pool."
-          >
-            <input
-              id="platform_margin_gbp"
-              name="platform_margin_gbp"
-              type="number"
-              min={0}
-              step="0.01"
-              className="input"
-              defaultValue={d?.platform_margin_gbp ?? 0}
-            />
-          </Field>
           <Field label="Sort order" htmlFor="sort_order">
             <input
               id="sort_order"

@@ -128,3 +128,22 @@ Still your decision / not code:
 - **Order form only after both parties accept** (part of 43). It conflicts with the flow above: the invoice, and so payment, follows the order form, and the artist is only asked after payment. I left it as is; say if you want the order form held back until the artist has confirmed.
 - Erasing date-of-birth / gender values already stored.
 - The Google consent-screen host and the Supabase Site URL are dashboard settings (see `docs/google-signin-setup.md`).
+
+---
+
+## Platform margin audit — every portal (13 Nov)
+
+Client ask: the platform margin tied to packages must be gone from every place in the platform. The 7 Nov round had removed the box from admin Create a campaign and the gross/net wording; this was a sweep of all four portals plus the public site.
+
+| Portal | Found | Now |
+|---|---|---|
+| **Audience** | Nothing. | — |
+| **Brand** | Repository → **"Pricing structure"**: the old platform service fee (£315 flat or 9% + VAT, "the remainder funds audience rewards"). | Removed; the page subtitle no longer says "pricing". No margin, gross or net is shown anywhere else on brand pages. |
+| **Artist** | The same Repository block. | Removed. The package value is not shown to artists (7 Nov). |
+| **Admin** | **Packages:** a "Platform margin (GBP)" field, "margin £X" on every package, and a subtitle about it. **Event page:** a "Platform fee" tile and a "Service fee … for rewards" hint on Package value. **Reward codes:** "(… with 10% admin margin)" after the maximum-discount estimate. Two error messages named the margin. | All removed or reworded. Editing a package no longer touches its stored margin; a new package takes the default (0). |
+| **Public site** | Terms page §3 "Platform fees" (£315 / 9%). | **Left alone** — legal copy still to be finalised. |
+
+Deliberately kept (not visible to anyone):
+- The stored margin on existing packages and campaigns. It is a historical snapshot and still backs two admin-side guards. Invoices use the package price plus VAT, so it never reaches a brand's invoice.
+- The fallback invoice mode that would print a "Platform service fee" line is switched off (`INVOICE.vatMode = on_top_of_package`). Any invoice already issued under an older mode keeps its frozen lines.
+- The artist's own "Gross revenue" box on the payment split is their ticket-sales report, unrelated to the platform margin.

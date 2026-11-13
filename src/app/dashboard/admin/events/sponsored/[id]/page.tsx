@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/dashboard/ui";
-import { computePlatformFee } from "@/lib/constants";
 import { formatDate, formatDateTime, ukDayKey, ukLocalInputValue } from "@/lib/format";
 import { codesDeadlineState } from "@/lib/codes-deadline";
 import type { Participation, SponsoredEventCancellationRequest } from "@/lib/types";
@@ -383,7 +382,6 @@ export default async function AdminSponsoredDetailPage({
   const codesIssued = rewardCodes.filter((c) => c.status !== "void").length;
   const codesRedeemed = rewardCodes.filter((c) => c.status === "redeemed").length;
 
-  const fee = event.budget_gbp != null ? computePlatformFee(Number(event.budget_gbp)) : null;
   const pct = (n: number) => (registered ? Math.round((n / registered) * 100) : 0);
 
   const ticketPrice = event.event_listings?.ticket_price_gbp ?? null;
@@ -440,7 +438,7 @@ export default async function AdminSponsoredDetailPage({
       )}
 
       {/* Money */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {[
           {
             label: "Package value",
@@ -456,11 +454,6 @@ export default async function AdminSponsoredDetailPage({
             label: "Codes redeemed",
             value: codesRedeemed.toLocaleString("en-GB"),
             tint: "bg-[var(--color-lavender)]",
-          },
-          {
-            label: "Platform fee",
-            value: fee ? `£${Math.round(fee.feeIncVat).toLocaleString("en-GB")}` : "—",
-            tint: "bg-[#fbeadd]",
           },
         ].map((s) => (
           <div

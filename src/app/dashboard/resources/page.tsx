@@ -8,7 +8,6 @@ import { BrandFileUpload } from "./BrandFileUpload";
 import { deleteBrandFile, setBrandFileVisibility } from "./actions";
 import { PageHeader } from "@/components/dashboard/ui";
 import { FAQS } from "@/lib/faqs";
-import { PLATFORM_FEE } from "@/lib/constants";
 
 export const metadata = { title: "Repository" };
 
@@ -110,7 +109,7 @@ export default async function ResourcesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Repository"
-        subtitle="Guides, policies and pricing — everything about how Live·En·Synergy works, in one place."
+        subtitle="Guides and policies — everything about how Live·En·Synergy works, in one place."
       />
 
       {role === "brand" && (
@@ -221,40 +220,6 @@ export default async function ResourcesPage() {
           {GUIDES.map((r) => (
             <ResourceCard key={r.title} resource={r} />
           ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
-          Pricing structure
-        </h2>
-        <div className="card p-6">
-          <p className="text-sm text-[var(--color-ink-soft)]">
-            Live·En·Synergy charges a single service fee on the partnership
-            budget — whichever of these two is higher:
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
-              <p className="font-display text-2xl font-semibold">
-                £{PLATFORM_FEE.minFlatGbp}
-              </p>
-              <p className="text-xs text-[var(--color-ink-soft)]">
-                minimum flat fee, + VAT
-              </p>
-            </div>
-            <div className="rounded-xl bg-[var(--color-mist)] px-4 py-3">
-              <p className="font-display text-2xl font-semibold">
-                {Math.round(PLATFORM_FEE.percentage * 100)}%
-              </p>
-              <p className="text-xs text-[var(--color-ink-soft)]">
-                of the partnership budget, + VAT
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
-            The remainder is what&apos;s available to fund audience rewards. You
-            see the exact split before submitting a campaign.
-          </p>
         </div>
       </section>
 
