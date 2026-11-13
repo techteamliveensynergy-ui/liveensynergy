@@ -18,7 +18,7 @@ export function EventBanner({ src, alt = "", className = "h-40 w-full" }: { src:
         src={src}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 -z-10 h-full w-full scale-110 object-cover blur-xl"
+        className="absolute inset-0 -z-10 h-full w-full scale-125 object-cover blur-xl"
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={alt} className="h-full w-full object-contain" />
