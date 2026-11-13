@@ -64,7 +64,6 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
   const pendingCount = rows.filter((r) =>
     ["registered", "ticket_uploaded"].includes(r.status),
   ).length;
-  const selectedCount = rows.filter((r) => r.selected).length;
   // Rewards are discount codes (9 Oct standup); a participation reaches
   // reward_released when its code is issued.
   // A code released by the survey (0075) leaves the row at
@@ -95,13 +94,12 @@ export async function AudienceHome({ profile }: { profile: Profile }) {
         </p>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <MetricTile
           label="Events registered (participated)"
           value={rows.length}
           tint="bg-[var(--color-sage)]"
         />
-        <MetricTile label="Selected in the draw" value={selectedCount} tint="bg-[var(--color-mint)]" />
         <MetricTile
           label="Verified attendance at events"
           value={verifiedCount}
