@@ -30,7 +30,7 @@ Each note was read together with its screenshot.
 
 The request form changes:
 - "Campaign objective and description" replaces "Campaign description".
-- **"Potential campaign questions"** replaces "Expected outcomes" and now sits right under the objective.
+- **"Potential campaign questions"** replaces "Expected outcomes" and sits where the old Expected outcomes box was: after the campaign image, directly above the audience criteria (moved there on 13 Nov at the client's request; wording unchanged).
 - **Package** (from the admin-managed packages) replaces the typed budget. An amount is asked only for the custom package.
 - "Preferred reward rules" (where the "random 50 people" wording was) is removed. **"Any specific audience criteria"** replaces it, with an **age range (18+)**.
 
