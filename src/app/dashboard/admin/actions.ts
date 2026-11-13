@@ -295,7 +295,8 @@ function packagePayload(formData: FormData) {
     price_gbp: numOrNull(formData.get("price_gbp")),
     min_price_gbp: numOrNull(formData.get("min_price_gbp")),
     price_increment_gbp: numOrNull(formData.get("price_increment_gbp")),
-    platform_margin_gbp: num(formData.get("platform_margin_gbp")),
+    // The package margin is no longer edited here (client, retest 11 Nov): new
+    // packages take the column default (0) and an edit leaves the stored value.
     sort_order: num(formData.get("sort_order")),
   };
 }

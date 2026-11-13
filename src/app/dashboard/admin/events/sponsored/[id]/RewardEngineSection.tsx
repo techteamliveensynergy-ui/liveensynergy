@@ -14,7 +14,6 @@ import {
   estimateTierCost,
   platformLabel,
   REDEMPTION_PLATFORMS,
-  REWARD_ADMIN_MARGIN,
 } from "@/lib/discount-codes";
 import {
   generatePoolCodes,
@@ -474,9 +473,7 @@ export function RewardEngineSection({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-ink-soft)]">
                   <span>
                     {est
-                      ? `Maximum discount if every code is used: ${money(est.base)} (${money(est.withMargin)} with ${Math.round(
-                          REWARD_ADMIN_MARGIN * 100,
-                        )}% admin margin)`
+                      ? `Maximum discount if every code is used: ${money(est.base)}`
                       : tier.participant_cap
                         ? "Add a value (and a ticket price on the listing, for %) to see the cost."
                         : "Uncapped — no worst-case cost."}

@@ -116,7 +116,7 @@ export async function saveOrderForm(
   }
   const margin = campaign.package_platform_margin_gbp != null ? Number(campaign.package_platform_margin_gbp) : null;
   if (fee != null && margin != null && fee <= margin) {
-    return { error: `The campaign fee must be more than the platform margin (${formatGbp(margin)}).` };
+    return { error: `The campaign fee must be more than ${formatGbp(margin)} for this package.` };
   }
 
   // --- Media (large imagery for the brand's review screen)

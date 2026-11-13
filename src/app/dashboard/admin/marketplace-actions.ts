@@ -759,7 +759,7 @@ export async function createCampaignFromAdmin(
   // for the reward pool isn't viable, package price or not.
   const net = netForCampaign(money);
   if (net == null || net <= 0) {
-    return { error: "This budget leaves nothing available for partnership after the platform margin." };
+    return { error: "This budget is too small to run a campaign on." };
   }
 
   const { data: created, error } = await supabase

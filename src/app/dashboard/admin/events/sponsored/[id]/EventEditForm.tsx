@@ -5,7 +5,7 @@ import { ukLocalInputValue } from "@/lib/format";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
-import { computePlatformFee, EVENT_CATEGORIES } from "@/lib/constants";
+import { EVENT_CATEGORIES } from "@/lib/constants";
 import { useState } from "react";
 import {
   adminUpdateSponsoredEvent,
@@ -55,7 +55,6 @@ export function EventEditForm({
     {},
   );
   const [budget, setBudget] = useState<number | "">(event.budget_gbp ?? "");
-  const fee = budget !== "" && budget > 0 ? computePlatformFee(Number(budget)) : null;
 
   return (
     <form action={formAction} className="mt-4 space-y-4">
@@ -125,14 +124,6 @@ export function EventEditForm({
         <Field
           label="Package value (GBP)"
           htmlFor="edit-budget"
-          hint={
-            fee
-              ? `Service fee £${fee.feeIncVat.toLocaleString("en-GB", { maximumFractionDigits: 0 })} inc. VAT · £${Math.max(
-                  0,
-                  fee.availableForSponsorship,
-                ).toLocaleString("en-GB", { maximumFractionDigits: 0 })} for rewards`
-              : "Changing this re-derives what's left for rewards."
-          }
         >
           <input
             id="edit-budget"

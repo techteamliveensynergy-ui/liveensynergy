@@ -21,7 +21,7 @@ export default async function AdminPackagesPage() {
     <div>
       <PageHeader
         title="Packages"
-        subtitle="Manage campaign tiers, their price, and the platform margin each one carries."
+        subtitle="Manage campaign tiers and their price."
         action={
           <Link href="/dashboard/admin/packages/new" className="btn btn-primary">
             + New package
@@ -57,7 +57,6 @@ export default async function AdminPackagesPage() {
                 {p.is_custom_price
                   ? `Multiples of £${p.price_increment_gbp?.toLocaleString("en-GB")}`
                   : `${p.participant_count} participants`}
-                {" · "}margin £{p.platform_margin_gbp.toLocaleString("en-GB")}
               </p>
               {p.description && (
                 <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
