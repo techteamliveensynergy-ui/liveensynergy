@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateTime } from "@/lib/event-time";
@@ -115,8 +116,7 @@ export default async function EventsPage({
                   href={`/events/${e.id}`}
                   className="les-lift block rounded-3xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-3 hover:border-[var(--color-les-lime)]"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image.src} alt={image.alt} className="h-40 w-full rounded-2xl object-cover" />
+                  <EventBanner src={image.src} alt={image.alt} className="h-40 w-full rounded-2xl" />
                   <div className="space-y-2 p-3">
                     {(e.brand_name || e.artist_name) && (
                       <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]">

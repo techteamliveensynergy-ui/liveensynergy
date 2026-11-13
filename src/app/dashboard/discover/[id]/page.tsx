@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -93,12 +94,7 @@ export default async function EventDetailsPage({
           .join(" · ")}
       />
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={artwork.src}
-        alt={artwork.alt}
-        className="h-56 w-full rounded-2xl object-cover"
-      />
+      <EventBanner src={artwork.src} alt={artwork.alt} className="h-56 w-full rounded-2xl" />
 
       <div className="card p-6">
         <h2 className="text-lg font-semibold">What you get</h2>

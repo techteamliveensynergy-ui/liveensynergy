@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import Link from "next/link";
 import { Marquee } from "@/components/site/Marquee";
 import { FinalCta } from "@/components/site/FinalCta";
@@ -210,8 +211,7 @@ export default async function HomePage() {
                       href={`/events/${e.id}`}
                       className="les-lift block overflow-hidden rounded-2xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] hover:border-[var(--color-les-lime)]"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image.src} alt={image.alt} className="h-44 w-full object-cover" />
+                      <EventBanner src={image.src} alt={image.alt} className="h-44 w-full" />
                       <div className="space-y-2 p-5">
                         {(e.brand_name || e.artist_name) && (
                           <p className="flex items-center gap-2 text-sm font-bold text-[var(--color-les-lime)]">

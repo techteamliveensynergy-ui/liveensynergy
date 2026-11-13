@@ -1,3 +1,4 @@
+import { EventBanner } from "@/components/EventBanner";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -76,8 +77,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
 
       {/* 1. Hero */}
       <section className="mt-4 overflow-hidden rounded-3xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={art.src} alt={art.alt || ev.name} className="h-56 w-full object-cover md:h-72" />
+        <EventBanner src={art.src} alt={art.alt || ev.name} className="h-56 w-full md:h-72" />
         <div className="space-y-4 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-2">
             {ended ? <span className="chip">Event ended</span> : <span className="chip">Live research campaign</span>}
