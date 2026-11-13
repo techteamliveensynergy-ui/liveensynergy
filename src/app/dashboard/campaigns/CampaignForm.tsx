@@ -178,20 +178,6 @@ export function CampaignForm({
         </Field>
 
         <Field
-          label="Potential campaign questions"
-          htmlFor="expected_outcomes"
-          hint="What you'd like to learn from the event audience. Our team turns these into the survey — rough questions are fine."
-        >
-          <textarea
-            id="expected_outcomes"
-            name="expected_outcomes"
-            className="textarea"
-            placeholder="For example: “Had you heard of us before the event? Would you try our new drink? What would make you buy it?”"
-            defaultValue={d?.expected_outcomes ?? ""}
-          />
-        </Field>
-
-        <Field
           label="Package"
           htmlFor="package_id"
           hint="The package you're interested in. Our team confirms the details with you before anything is invoiced."
@@ -274,6 +260,20 @@ export function CampaignForm({
           />
         </Field>
 
+
+        <Field
+          label="Potential campaign questions"
+          htmlFor="expected_outcomes"
+          hint="What you'd like to learn from the event audience. Our team turns these into the survey — rough questions are fine."
+        >
+          <textarea
+            id="expected_outcomes"
+            name="expected_outcomes"
+            className="textarea"
+            placeholder="For example: “Had you heard of us before the event? Would you try our new drink? What would make you buy it?”"
+            defaultValue={d?.expected_outcomes ?? ""}
+          />
+        </Field>
 
         <Field
           label="Any specific audience criteria"
