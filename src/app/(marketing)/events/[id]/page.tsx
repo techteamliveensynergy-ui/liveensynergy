@@ -229,7 +229,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ id
             // Interim wording (retest 25 / standup 10 Nov) until Sakshi's final copy.
             [
               "Check in and build your Event Passport",
-              "On the day, remember to check in at the venue by scanning the event QR code. Every event you check in at is added to your Event Passport.",
+              "On the day, remember to check in at the venue by scanning the event QR code. Every event you check in at is added to your Event Passport. Check-in is only open on the day of the event.",
             ],
           ].map(([title, body], i) => (
             <li key={title} className="flex gap-3">

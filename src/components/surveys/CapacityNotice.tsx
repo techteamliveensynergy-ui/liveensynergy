@@ -12,9 +12,8 @@ import {
 /**
  * The notice above a survey form once places run low (#34, 19 Oct; 2 Nov):
  *   90%      a warning that codes may run out,
- *   100%     the quota is filled — no code is guaranteed, fill it in at your
- *            own discretion (the 10% buffer keeps taking responses),
- *   limit    the participant limit is reached; responses are reviewed.
+ *   100%     the participant limit is reached (there is no extra buffer since
+ *            0122): no code is guaranteed, responses are reviewed.
  * Renders nothing below 90%.
  */
 export function CapacityNotice({ capacity }: { capacity: SurveyCapacityState | null }) {

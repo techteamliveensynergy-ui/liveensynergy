@@ -55,11 +55,11 @@ function StatusCard({
 const RESULT_MESSAGES: Record<string, { title: string; body: string }> = {
   too_early: {
     title: "Check-in isn't open yet",
-    body: "Check-in opens the day before the event. Scan the code again when you're at the venue.",
+    body: "Check-in is only open on the day of the event. Scan the code again when you're at the venue on the day.",
   },
   too_late: {
     title: "Check-in has closed",
-    body: "Check-in closes the day after the event. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
+    body: "Check-in is only open on the day of the event, and that day has passed. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
   },
   wrong_event: {
     title: "This code is for a different event",

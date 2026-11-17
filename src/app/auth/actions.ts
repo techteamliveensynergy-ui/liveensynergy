@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
 import { siteUrl } from "@/lib/site-url";
-import { sendPasswordResetEmail } from "@/lib/password-reset";
+import { sendPasswordResetEmail, sendSignInLinkEmail } from "@/lib/password-reset";
 import { ROLE_LABELS, SIGNUP_ROLE_OPTIONS, type Role, type SignupRole } from "@/lib/constants";
 import { TERMS_VERSION } from "@/lib/terms";
 import { notify, notifyAdmins } from "@/lib/notifications";
@@ -255,9 +255,12 @@ export async function signIn(
 }
 
 /**
- * Sends the sign-up confirmation email again. Always answers the same way so
- * it can't be used to discover which addresses have accounts. Supabase rate-
- * limits these per address on its side as well.
+ * "Send a new confirmation link" for someone whose sign-up was never
+ * confirmed (an account from before our own confirmation step). Sends OUR
+ * branded sign-in link — opening it proves the inbox is theirs, signs them in
+ * and carries on to profile set-up — never Supabase's unbranded email. Always
+ * answers the same way so it can't be used to discover which addresses have
+ * accounts; ours is limited to one a minute per account.
  */
 export async function resendConfirmation(
   _prev: AuthState,
@@ -266,17 +269,11 @@ export async function resendConfirmation(
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { error: "Please enter your email address." };
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email,
-    options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` },
-  });
-  if (error && (error.code === "over_email_send_rate_limit" || /rate|too many|seconds/i.test(error.message))) {
-    return { error: "We've just sent one — please wait a minute before asking for another." };
+  if ((await sendSignInLinkEmail(email.toLowerCase(), "/onboarding")) === "unavailable") {
+    return { error: "We couldn't send the link just now. Please try again in a few minutes." };
   }
   return {
-    message: `If ${email} is waiting to be confirmed, a new confirmation link is on its way. Check your spam folder too.`,
+    message: `If ${email} has an account waiting to be confirmed, a new link is on its way. Check your spam folder too.`,
   };
 }
 
@@ -347,16 +344,10 @@ export async function requestPasswordReset(
     return { error: "That email address doesn't look right." };
   }
 
-  // Our own branded email (works on any device, no Supabase redirect
-  // settings involved); Supabase's email only where that isn't set up yet.
-  if ((await sendPasswordResetEmail(email.toLowerCase())) === "fallback") {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${await siteUrl()}/auth/callback?next=/auth/reset-password`,
-    });
-    if (error) {
-      return { error: error.message };
-    }
+  // Our own branded email (works on any device, no Supabase redirect settings
+  // involved). Never Supabase's unbranded one: if ours can't go out we say so.
+  if ((await sendPasswordResetEmail(email.toLowerCase())) === "unavailable") {
+    return { error: "We couldn't send the reset email just now. Please try again in a few minutes." };
   }
 
   // Don't reveal whether the email exists.
