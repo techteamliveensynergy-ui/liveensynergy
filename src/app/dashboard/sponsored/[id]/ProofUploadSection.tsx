@@ -40,11 +40,13 @@ export function ProofUploadSection({
     uploadEventProof,
     {},
   );
-  // The brand sees the evidence itself (the link or the screenshot), not only
-  // that something was added (Testing notes 15 Nov: "where will the brand see
-  // it?"). A proof the team rejected is the artist's to redo, so it isn't shown
-  // to the brand.
-  const visible = canUpload ? proofs : proofs.filter((p) => p.status !== "rejected");
+  // The brand sees the evidence itself (the link or the screenshot) once the
+  // team has approved it (Testing notes 15 Nov + 16 Nov standup: "brands could
+  // not view the approved social media proofs"). Unreviewed and rejected ones
+  // are the artist's and the team's business; the brand just sees how many are
+  // waiting.
+  const visible = canUpload ? proofs : proofs.filter((p) => p.status === "approved");
+  const awaitingReview = canUpload ? 0 : proofs.filter((p) => p.status === "submitted").length;
 
   return (
     <div className="card p-6">
@@ -59,7 +61,9 @@ export function ProofUploadSection({
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           Your partner artist adds evidence here for each social-media post and
           the onsite branding agreed in this partnership, and our team reviews
-          each one. {visible.length === 0 ? "Nothing has been added yet." : ""}
+          each one — you'll see the approved ones here.
+          {visible.length === 0 && awaitingReview === 0 ? " Nothing has been added yet." : ""}
+          {awaitingReview > 0 ? ` ${awaitingReview} awaiting our team's review.` : ""}
         </p>
       )}
 

@@ -25,7 +25,7 @@ import { EventEditForm } from "./EventEditForm";
 import { ProofsSection } from "./ProofsSection";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
-import { InvoiceSection } from "./InvoiceSection";
+import { InvoiceSection, type ArtistInvoiceInfo } from "./InvoiceSection";
 import { PublicPageSection } from "./PublicPageSection";
 import { FulfilmentFormSection } from "./FulfilmentFormSection";
 import type { FulfilmentForm, FulfilmentPrefill } from "@/lib/fulfilment";
@@ -336,6 +336,29 @@ export default async function AdminSponsoredDetailPage({
   const salesReports = (reportRows ?? []) as TicketSalesReport[];
   const changeRequests = (changeRows ?? []) as SponsoredEventChangeRequest[];
   const invoices = (invoiceRows ?? []) as Invoice[];
+
+  // What the artist did about their own invoice (0121): files they uploaded for
+  // this partnership, and whether they asked the team to draft it.
+  const [{ data: artistInvRows }, { data: artistInvReq }] = await Promise.all([
+    supabase
+      .from("artist_files")
+      .select("id, title, file_name, file_path")
+      .eq("sponsored_event_id", id)
+      .eq("kind", "invoice")
+      .order("created_at", { ascending: false }),
+    supabase.from("artist_invoice_requests").select("sponsored_event_id").eq("sponsored_event_id", id).maybeSingle(),
+  ]);
+  const artistInvoice: ArtistInvoiceInfo = {
+    draftRequested: !!artistInvReq,
+    files: await Promise.all(
+      ((artistInvRows ?? []) as { id: string; title: string; file_name: string; file_path: string }[]).map(async (r) => ({
+        id: r.id,
+        title: r.title,
+        file_name: r.file_name,
+        href: await signedUrlFor(r.file_path, 60 * 60, { downloadName: r.file_name }),
+      })),
+    ),
+  };
 
   const participantsRaw = (partRows ?? []) as Row[];
   const participants = await Promise.all(
@@ -711,7 +734,7 @@ export default async function AdminSponsoredDetailPage({
         }}
       />
 
-      <InvoiceSection eventId={event.id} invoices={invoices} />
+      <InvoiceSection eventId={event.id} invoices={invoices} artistInvoice={artistInvoice} />
 
       {/* Admin override of the deal's details. The parties themselves can't
           touch a confirmed partnership, so this is the only route to moving a

@@ -331,7 +331,20 @@ with checks (grp, ord, name, expected, actual) as (
      (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_event_brand_profile')::text),
   ('Q. 0120 brand link', 2, 'callable signed-out (public page)', 'true',
      coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p
-                where p.pronamespace = 'public'::regnamespace and p.proname = 'public_event_brand_profile'), false)::text)
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'public_event_brand_profile'), false)::text),
+
+  -- ---- R. 0121: artist files + invoice choice -------------------------------
+  ('R. 0121 artist files', 1, 'tables exist with RLS on', '2',
+     (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relname in ('artist_files', 'artist_invoice_requests') and c.relrowsecurity)::text),
+  ('R. 0121 artist files', 2, 'artist can read own files only (no brand/anon grant)', 'false',
+     coalesce(has_table_privilege('anon', 'public.artist_files', 'SELECT'), true)::text),
+  ('R. 0121 artist files', 3, 'notification events seeded', '3',
+     (select count(*) from public.notification_events
+       where key in ('admin.artist_file_added', 'admin.invoice_draft_requested', 'artist.file_from_team'))::text),
+  ('R. 0121 artist files', 4, 'each has in-app + email templates', '6',
+     (select count(*) from public.notification_templates
+       where event_key in ('admin.artist_file_added', 'admin.invoice_draft_requested', 'artist.file_from_team'))::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result
