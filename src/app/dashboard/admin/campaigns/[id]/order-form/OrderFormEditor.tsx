@@ -254,7 +254,7 @@ export function OrderFormEditor({
         </div>
       </FormSection>
 
-      <FormSection title="Research" description="Shown to the brand, not the artist. Approx. participants also sets the survey's response cap (+10% buffer) unless the survey sets its own.">
+      <FormSection title="Research" description="Shown to the brand, not the artist. Approx. participants also sets the survey's response cap unless the survey sets its own.">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Approx. number of participants" htmlFor="approx_participants">
             <input id="approx_participants" name="approx_participants" type="number" min={1} className="input" defaultValue={v(initial.approx_participants)} />

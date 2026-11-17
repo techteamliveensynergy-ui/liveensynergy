@@ -228,7 +228,7 @@ export default async function SurveyResultsPage({
           value={limit ? formatPct(pct(counted, limit)) : "—"}
           hint={
             limit
-              ? `${counted} of ${limit}${template.expected_participants ? ` (${template.expected_participants} expected + buffer)` : " (from the order form)"}${capacity?.is_full ? " · closed" : ""}`
+              ? `${counted} of ${limit}${template.expected_participants ? ` (${template.expected_participants} expected)` : " (from the order form)"}${capacity?.is_full ? " · closed" : ""}`
               : "No target — set expected participants on the survey or the order form"
           }
         />

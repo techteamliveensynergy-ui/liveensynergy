@@ -324,7 +324,47 @@ with checks (grp, ord, name, expected, actual) as (
                 where p.pronamespace = 'public'::regnamespace and p.proname = 'set_partner_marketing_all'), true)::text),
   ('P. 0119 partner marketing', 5, 'unsubscribe-all clears the flag', 'true',
      coalesce((select prosrc like '%partner_marketing_all = false%' from pg_proc
-                where pronamespace = 'public'::regnamespace and proname = 'marketing_unsubscribe'), false)::text)
+                where pronamespace = 'public'::regnamespace and proname = 'marketing_unsubscribe'), false)::text),
+
+  -- ---- Q. 0120: brand link on the public event page ------------------------
+  ('Q. 0120 brand link', 1, 'function exists', '1',
+     (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_event_brand_profile')::text),
+  ('Q. 0120 brand link', 2, 'callable signed-out (public page)', 'true',
+     coalesce((select has_function_privilege('anon', p.oid, 'EXECUTE') from pg_proc p
+                where p.pronamespace = 'public'::regnamespace and p.proname = 'public_event_brand_profile'), false)::text),
+
+  -- ---- R. 0121: artist files + invoice choice -------------------------------
+  ('R. 0121 artist files', 1, 'tables exist with RLS on', '2',
+     (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relname in ('artist_files', 'artist_invoice_requests') and c.relrowsecurity)::text),
+  ('R. 0121 artist files', 2, 'artist can read own files only (no brand/anon grant)', 'false',
+     coalesce(has_table_privilege('anon', 'public.artist_files', 'SELECT'), true)::text),
+  ('R. 0121 artist files', 3, 'notification events seeded', '3',
+     (select count(*) from public.notification_events
+       where key in ('admin.artist_file_added', 'admin.invoice_draft_requested', 'artist.file_from_team'))::text),
+  ('R. 0121 artist files', 4, 'each has in-app + email templates', '6',
+     (select count(*) from public.notification_templates
+       where event_key in ('admin.artist_file_added', 'admin.invoice_draft_requested', 'artist.file_from_team'))::text),
+
+  -- ---- S. 0122: our own sign-in email + no survey buffer --------------------
+  ('S. 0122 sign-in link + cap', 1, 'sign-in link email template carries the link', 'true',
+     coalesce((select body ~ '\{\{\s*(sign_in_link|link)\s*\}\}' from public.notification_templates
+                where event_key = 'account.sign_in_link' and channel = 'email'), false)::text),
+  ('S. 0122 sign-in link + cap', 2, 'survey limit ignores the buffer', 'true',
+     coalesce((select prosrc not like '%response_buffer_pct%' from pg_proc
+                where pronamespace = 'public'::regnamespace and proname = 'survey_response_limit'), false)::text),
+  ('S. 0122 sign-in link + cap', 3, 'new surveys default to no buffer', '0',
+     coalesce((select column_default from information_schema.columns
+                where table_schema = 'public' and table_name = 'survey_templates' and column_name = 'response_buffer_pct'), '?')),
+  ('S. 0122 sign-in link + cap', 4, 'auth_links exists, RLS on, nobody but the service role can read it', 'true,false,false',
+     coalesce((select c.relrowsecurity::text || ',' || has_table_privilege('anon', 'public.auth_links', 'SELECT')::text
+                      || ',' || has_table_privilege('authenticated', 'public.auth_links', 'SELECT')::text
+                 from pg_class c where c.relname = 'auth_links' and c.relnamespace = 'public'::regnamespace), 'missing')),
+
+  -- ---- T. 0123: check-in only on the event day ------------------------------
+  ('T. 0123 check-in window', 1, 'check-in no longer allows the day before / after', 'true',
+     coalesce((select prosrc not like '%event_date - 1%' and prosrc not like '%event_date + 1%' from pg_proc
+                where pronamespace = 'public'::regnamespace and proname = 'confirm_attendance'), false)::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

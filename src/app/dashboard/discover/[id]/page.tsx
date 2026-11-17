@@ -116,8 +116,8 @@ export default async function EventDetailsPage({
           <li>Use your code when you buy your ticket on the event&apos;s ticketing site.</li>
           <li>
             {event.attendance_method
-              ? `On the day, remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport.`
-              : "On the day, remember to check in at the venue by scanning the QR code — it adds the event to your Event Passport."}
+              ? `On the day, remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport. Check-in is only open on the day of the event.`
+              : "On the day, remember to check in at the venue by scanning the QR code — it adds the event to your Event Passport. Check-in is only open on the day of the event."}
           </li>
         </ol>
 

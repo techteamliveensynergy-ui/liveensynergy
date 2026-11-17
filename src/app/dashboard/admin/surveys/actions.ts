@@ -90,15 +90,14 @@ function brandingFields(formData: FormData) {
 }
 
 /**
- * Response cap (GitHub #8, 0056): expected participants + a buffer %. Blank
- * expected = fall back to the campaign order form's figure (or no cap).
+ * Response cap (GitHub #8, 0056; no buffer since 0122): the expected
+ * participants. Blank = fall back to the campaign order form's figure (or no
+ * cap). The old buffer column is no longer set from the form.
  */
 function capFields(formData: FormData) {
   const expected = Number(String(formData.get("expected_participants") ?? "").trim());
-  const buffer = Number(String(formData.get("response_buffer_pct") ?? "").trim());
   return {
     expected_participants: Number.isInteger(expected) && expected > 0 ? expected : null,
-    response_buffer_pct: Number.isInteger(buffer) && buffer >= 0 && buffer <= 100 ? buffer : 10,
   };
 }
 

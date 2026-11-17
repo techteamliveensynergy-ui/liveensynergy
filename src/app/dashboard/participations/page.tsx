@@ -570,7 +570,7 @@ export default async function ParticipationsPage({
           <li>Use the code when you buy your ticket on the event&apos;s ticketing site, before it expires.</li>
           <li>
             On the day, remember to check in at the venue by scanning the QR code — every event you check in at is
-            added to your Event Passport above.
+            added to your Event Passport above. Check-in is only open on the day of the event.
           </li>
           <li>Your personal details are never shared with any partner without your consent.</li>
         </ul>

@@ -20,8 +20,8 @@ import {
 import type { SurveyQuestion } from "@/lib/types";
 import type { SurveyRewardOutcome } from "@/lib/survey-reward";
 import { EMAIL_NOT_VERIFIED_MESSAGE, isEmailNotVerifiedError } from "@/lib/survey-verify";
-import { siteUrl } from "@/lib/site-url";
 import { sendVerificationEmail } from "@/lib/email-verification";
+import { sendSignInLinkEmail } from "@/lib/password-reset";
 import { rewardOutcomeFor } from "@/lib/survey-reward-lookup";
 import { ROLE_LABELS } from "@/lib/constants";
 
@@ -660,7 +660,7 @@ export async function surveyAvailability(templateId: string): Promise<SurveyAvai
   ]);
   if (!codes.error && codes.data === "exhausted") return "codes_out";
   if (capacity?.is_full) return "full";
-  // 100% of the expected participants, still inside the buffer (2 Nov).
+  // 100% of the expected participants (2 Nov; no buffer since 0122).
   if (capacity && atQuota(capacity)) return "quota_reached";
   if (capacity?.nearly_full) return "nearly_full";
   return "open";
@@ -812,11 +812,10 @@ export async function emailSurveySignInLink(
     return { error: "Too many attempts. Please wait a few minutes and try again." };
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteUrl()}/auth/callback?next=/survey/${templateId}`,
-  });
-  if (error && (error.code === "over_email_send_rate_limit" || /rate|too many|seconds/i.test(error.message))) {
-    return { error: "We've just sent one — please wait a minute before asking for another." };
+  // Our own branded email — never Supabase's. The link signs them in and
+  // returns them to this survey.
+  if ((await sendSignInLinkEmail(email, `/survey/${templateId}`)) === "unavailable") {
+    return { error: "We couldn't send the link just now. Please try again in a few minutes." };
   }
   return {
     message: `If ${email} has an account, a sign-in link is on its way — open it in this browser and you'll come straight back to the survey. Check your spam folder too.`,

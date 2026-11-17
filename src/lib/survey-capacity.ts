@@ -1,10 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Survey response cap (GitHub #8, migration 0056). A survey stops taking
- * responses at expected participants + buffer; the database enforces it on
- * insert, and pages check first so respondents see "closed" instead of a form
- * they can't submit.
+ * Survey response cap (GitHub #8, migration 0056). The limit is the expected
+ * number of participants — no buffer on top since 0122 (17 Nov). Past it
+ * responses are held for review (0083), not refused.
  */
 
 export const SURVEY_CLOSED_TITLE = "This survey has now closed";
@@ -53,11 +52,10 @@ export const SURVEY_RECEIVED_MESSAGE = "Thanks - your survey response has been r
 
 /**
  * 2 Nov standup follow-up: the QUOTA stage. At 100% of the expected
- * participants the survey is still open (the buffer — `response_buffer_pct`,
- * 10% by default — keeps taking responses and processing them normally), but a
- * discount code can't be promised any more. The page says so (CapacityNotice),
- * and the submit step asks the respondent to confirm (SubmitQuotaDialog).
- * Past the buffer, responses are held for review (0083) — SURVEY_OVER_CAPACITY_*.
+ * participants a discount code can't be promised any more. Until 0122 a 10%
+ * buffer sat between this and the limit; now they are the same point, so the
+ * limit notice (SURVEY_OVER_CAPACITY_*) is what respondents see, and responses
+ * past it are held for review (0083).
  */
 export const SURVEY_QUOTA_TITLE = "The participant quota has been filled";
 export const SURVEY_QUOTA_BODY =

@@ -6,6 +6,9 @@ import { ATTACHMENT_HINT } from "@/lib/upload-limits";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { BrandFileUpload } from "./BrandFileUpload";
 import { deleteBrandFile, setBrandFileVisibility } from "./actions";
+import { ArtistFileUpload } from "./ArtistFileUpload";
+import { deleteArtistFile, deleteArtistFileAsAdmin } from "./artist-file-actions";
+import { ARTIST_FILE_KIND_LABEL, type ArtistFileKind } from "@/lib/artist-files";
 import { PageHeader } from "@/components/dashboard/ui";
 import { FAQS } from "@/lib/faqs";
 
@@ -77,6 +80,19 @@ interface BrandFileRow {
   created_at: string;
 }
 
+interface ArtistFileRow {
+  id: string;
+  artist_profile_id: string;
+  uploaded_by: string;
+  kind: ArtistFileKind;
+  title: string;
+  description: string | null;
+  file_path: string;
+  file_name: string;
+  size_bytes: number | null;
+  created_at: string;
+}
+
 const kb = (n: number | null) =>
   n == null ? "" : n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 
@@ -102,6 +118,30 @@ export default async function ResourcesPage() {
     ((brandRows ?? []) as { profile_id: string; brand_name: string | null }[]).map((b) => [b.profile_id, b.brand_name ?? "Brand"]),
   );
   const linkFor = new Map(files.map((f, i) => [f.id, links[i]]));
+
+  // Artist files (0121): an artist's own (bank details, invoices, agreements)
+  // and what the team added for them. RLS returns an artist their own rows and
+  // an admin every row; brands never get any.
+  const showArtistFiles = role === "artist" || role === "event" || role === "admin";
+  const { data: artistFileData } = showArtistFiles
+    ? await supabase.from("artist_files").select("*").order("created_at", { ascending: false })
+    : { data: [] };
+  const artistFiles = (artistFileData ?? []) as ArtistFileRow[];
+  const artistLinks = await Promise.all(
+    artistFiles.map((f) => signedUrlFor(f.file_path, 60 * 60, { downloadName: f.file_name })),
+  );
+  const artistLinkFor = new Map(artistFiles.map((f, i) => [f.id, artistLinks[i]]));
+  const artistIds = [...new Set(artistFiles.map((f) => f.artist_profile_id))];
+  const { data: artistProfiles } =
+    role === "admin"
+      ? await supabase.from("profiles").select("id, full_name, email").in("role", ["artist", "event"]).order("full_name")
+      : { data: [] };
+  const artistOptions = ((artistProfiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).map((a) => ({
+    id: a.id,
+    name: `${a.full_name?.trim() || a.email || "Artist"}${a.email && a.full_name ? ` (${a.email})` : ""}`,
+  }));
+  const artistName = new Map(artistOptions.map((a) => [a.id, a.name]));
+  void artistIds;
   const byBrand = new Map<string, BrandFileRow[]>();
   for (const f of files) byBrand.set(f.brand_profile_id, [...(byBrand.get(f.brand_profile_id) ?? []), f]);
 
@@ -156,6 +196,116 @@ export default async function ResourcesPage() {
                           className="btn btn-ghost text-xs text-[var(--color-accent)]"
                           title={`Delete “${f.title}”?`}
                           points={["The file is removed for you, our team and your partners. This can't be undone."]}
+                          confirmLabel="Delete it"
+                          danger
+                          pendingLabel="Deleting…"
+                        />
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
+
+      {(role === "artist" || role === "event") && (
+        <section id="my-files-artist">
+          <h2 className="mb-1 font-display text-lg font-semibold text-[var(--color-ink)]">My files</h2>
+          <p className="mb-3 text-sm text-[var(--color-ink-soft)]">
+            Upload your bank details and any other documents the team needs — a bank letter or statement, an invoice, an
+            agreement. Only you and the Live·En·Synergy team can open them; brands never see them. Please upload bank
+            details as a file, not typed in a message.
+          </p>
+          <div className="card space-y-4 p-5">
+            <ArtistFileUpload hint={ATTACHMENT_HINT} />
+            {artistFiles.length === 0 ? (
+              <p className="text-sm text-[var(--color-ink-soft)]">No files yet.</p>
+            ) : (
+              <ul className="divide-y divide-black/5">
+                {artistFiles.map((f) => (
+                  <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--color-ink)]">
+                        {f.title}{" "}
+                        <span className="chip text-[11px]">{ARTIST_FILE_KIND_LABEL[f.kind] ?? f.kind}</span>
+                        {f.uploaded_by !== f.artist_profile_id && <span className="chip ml-1 text-[11px]">Added by our team</span>}
+                      </p>
+                      <p className="text-xs text-[var(--color-ink-soft)]">
+                        {f.file_name}
+                        {f.size_bytes ? ` · ${kb(f.size_bytes)}` : ""} · {formatDate(f.created_at)}
+                      </p>
+                      {f.description && <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{f.description}</p>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {artistLinkFor.get(f.id) && (
+                        <a href={artistLinkFor.get(f.id)!} className="btn btn-ghost text-xs">
+                          Download
+                        </a>
+                      )}
+                      {f.uploaded_by === f.artist_profile_id && (
+                        <form action={deleteArtistFile}>
+                          <input type="hidden" name="id" value={f.id} />
+                          <ConfirmSubmitButton
+                            label="Delete"
+                            className="btn btn-ghost text-xs text-[var(--color-accent)]"
+                            title={`Delete “${f.title}”?`}
+                            points={["The file is removed for you and for our team. This can't be undone."]}
+                            confirmLabel="Delete it"
+                            danger
+                            pendingLabel="Deleting…"
+                          />
+                        </form>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
+
+      {role === "admin" && (
+        <section id="artist-files">
+          <h2 className="mb-1 font-display text-lg font-semibold text-[var(--color-ink)]">Artist files</h2>
+          <p className="mb-3 text-sm text-[var(--color-ink-soft)]">
+            Bank details, invoices and agreements artists have uploaded — and a place to add a document for an artist
+            (they get a notification and can open it from their Repository).
+          </p>
+          <div className="card space-y-4 p-5">
+            <ArtistFileUpload hint={ATTACHMENT_HINT} artists={artistOptions} />
+            {artistFiles.length === 0 ? (
+              <p className="text-sm text-[var(--color-ink-soft)]">No artist files yet.</p>
+            ) : (
+              <ul className="divide-y divide-black/5">
+                {artistFiles.map((f) => (
+                  <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--color-ink)]">
+                        {f.title} <span className="chip text-[11px]">{ARTIST_FILE_KIND_LABEL[f.kind] ?? f.kind}</span>
+                      </p>
+                      <p className="text-xs text-[var(--color-ink-soft)]">
+                        {artistName.get(f.artist_profile_id) ?? "Artist"} · {f.file_name}
+                        {f.size_bytes ? ` · ${kb(f.size_bytes)}` : ""} · {formatDate(f.created_at)}
+                        {f.uploaded_by !== f.artist_profile_id ? " · added by the team" : ""}
+                      </p>
+                      {f.description && <p className="mt-0.5 text-sm text-[var(--color-ink-soft)]">{f.description}</p>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {artistLinkFor.get(f.id) && (
+                        <a href={artistLinkFor.get(f.id)!} className="btn btn-ghost text-xs">
+                          Download
+                        </a>
+                      )}
+                      <form action={deleteArtistFileAsAdmin}>
+                        <input type="hidden" name="id" value={f.id} />
+                        <ConfirmSubmitButton
+                          label="Delete"
+                          className="btn btn-ghost text-xs text-[var(--color-accent)]"
+                          title={`Delete “${f.title}”?`}
+                          points={["The file is removed for the artist and the team. This can't be undone."]}
                           confirmLabel="Delete it"
                           danger
                           pendingLabel="Deleting…"
