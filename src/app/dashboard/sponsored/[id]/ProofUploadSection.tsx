@@ -12,6 +12,11 @@ const LABELS: Record<string, string> = {
   onsite_branding: "Onsite branding",
 };
 
+/** A screenshot upload (stored image) rather than a link to a post. */
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url);
+}
+
 function Submit() {
   const { pending } = useFormStatus();
   return (
@@ -35,6 +40,11 @@ export function ProofUploadSection({
     uploadEventProof,
     {},
   );
+  // The brand sees the evidence itself (the link or the screenshot), not only
+  // that something was added (Testing notes 15 Nov: "where will the brand see
+  // it?"). A proof the team rejected is the artist's to redo, so it isn't shown
+  // to the brand.
+  const visible = canUpload ? proofs : proofs.filter((p) => p.status !== "rejected");
 
   return (
     <div className="card p-6">
@@ -49,7 +59,7 @@ export function ProofUploadSection({
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           Your partner artist adds evidence here for each social-media post and
           the onsite branding agreed in this partnership, and our team reviews
-          each one. {proofs.length === 0 ? "Nothing has been added yet." : ""}
+          each one. {visible.length === 0 ? "Nothing has been added yet." : ""}
         </p>
       )}
 
@@ -96,16 +106,32 @@ export function ProofUploadSection({
       </form>
       )}
 
-      {proofs.length > 0 && (
+      {visible.length > 0 && (
         <div className="mt-4 space-y-2 border-t border-black/10 pt-4">
-          {proofs.map((p) => (
+          {visible.map((p) => (
             <div
               key={p.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-black/10 px-3 py-2 text-sm"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 px-3 py-2 text-sm"
             >
-              <span>
-                {LABELS[p.proof_type] ?? p.proof_type}
-                {p.description ? ` — ${p.description}` : ""}
+              <span className="flex min-w-0 items-center gap-3">
+                {isImageUrl(p.url) && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.url} alt="" className="h-12 w-12 shrink-0 rounded-md border border-black/10 object-cover" />
+                )}
+                <span className="min-w-0">
+                  <span className="block">
+                    {LABELS[p.proof_type] ?? p.proof_type}
+                    {p.description ? ` — ${p.description}` : ""}
+                  </span>
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[var(--color-brand)] underline"
+                  >
+                    {isImageUrl(p.url) ? "Open screenshot" : "Open the post"} ↗
+                  </a>
+                </span>
               </span>
               <span className="rounded-full bg-[var(--color-mist)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--color-ink-soft)]">
                 {p.status}
