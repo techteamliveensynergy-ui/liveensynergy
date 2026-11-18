@@ -3,7 +3,7 @@
 import type { FieldProps } from "./types";
 import { OptionRow } from "./OptionRow";
 import { OtherInput } from "./OtherInput";
-import { offersOther, otherLabel, SURVEY_OTHER_VALUE } from "@/lib/surveys";
+import { offersOther, otherLabel, SURVEY_OTHER_VALUE, shownOptions } from "@/lib/surveys";
 
 /** Fixed by position, not by option value/label — a Likert question's icons
  *  never change even when an admin edits the option text they sit under. */
@@ -20,7 +20,7 @@ const LIKERT_STYLE: readonly { emoji: string; bg: string }[] = [
  *  preset (config.display_style === "likert"), which renders as five
  *  face-icon tiles instead. */
 export function ChoiceField({ question, value, onChange, otherText = "", onOtherTextChange }: FieldProps) {
-  const options = question.options ?? [];
+  const options = shownOptions(question);
   const other = offersOther(question);
   const otherChosen = other && value === SURVEY_OTHER_VALUE;
   const otherBox = otherChosen && onOtherTextChange && (
