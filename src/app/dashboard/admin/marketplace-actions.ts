@@ -9,6 +9,7 @@ import {
   TEAM_SENDER_NAME,
 } from "@/lib/constants";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { ARTIST_NEXT_STEP_PREPARING } from "@/lib/agreement-copy";
 import { getOrCreateSupportConversation } from "@/lib/data/messaging";
 import { rewardGateFor, rewardGatesForEvent } from "@/lib/data/reward-gate";
 import {
@@ -264,6 +265,7 @@ export async function matchCampaign(
         // Artists never see the package value (Testing notes 7 Nov); kept as a
         // harmless filler for any template that still quotes it.
         budget: "as agreed with our team",
+        next_step: ARTIST_NEXT_STEP_PREPARING,
       },
     });
   }

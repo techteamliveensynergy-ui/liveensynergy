@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { signedUrlFor } from "@/lib/storage";
 import { Logo } from "@/components/ui/Logo";
 import { OrderFormDocument } from "@/components/order-forms/OrderFormDocument";
 import { formatDateTime } from "@/lib/format";
@@ -102,6 +103,7 @@ export default async function OrderFormPage({
           sections={ALL_SECTIONS}
           campaignReference={form.campaigns?.reference}
           packageName={form.campaign_packages?.name ?? null}
+          attachmentUrl={await signedUrlFor(form.attachment_path, 60 * 60, { downloadName: form.attachment_name })}
         />
 
         {form.status === "approved" ? (

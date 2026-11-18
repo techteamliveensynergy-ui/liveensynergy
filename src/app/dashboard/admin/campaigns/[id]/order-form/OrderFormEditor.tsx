@@ -318,6 +318,28 @@ export function OrderFormEditor({
       </FormSection>
 
       <FormSection
+        title="Data Protection Agreement"
+        description="Shown to the brand on the order form once it's sent (never to the artist). Write or paste the arrangement, and attach one file if there is one (for example a signed agreement)."
+      >
+        <textarea id="dpa_details" name="dpa_details" rows={4} className="textarea" defaultValue={v(initial.dpa_details)} aria-label="Data Protection Agreement" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Field label="Attachment (one file)" htmlFor="attachment">
+            <input id="attachment" name="attachment" type="file" className="input" />
+          </Field>
+          {initial.attachment_name && (
+            <div className="text-sm">
+              <p className="field-label">Current attachment</p>
+              <p className="mt-1">{initial.attachment_name}</p>
+              <label className="mt-1 inline-flex items-center gap-2 text-xs text-[var(--color-ink-soft)]">
+                <input type="checkbox" name="attachment_remove" value="1" /> Remove it
+              </label>
+              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Choosing a new file replaces it.</p>
+            </div>
+          )}
+        </div>
+      </FormSection>
+
+      <FormSection
         title="Images & video for the brand"
         description="Shown large, like presentation slides, on the brand's review screen. Up to 8 images."
       >

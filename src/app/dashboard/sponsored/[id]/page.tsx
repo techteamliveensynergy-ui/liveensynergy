@@ -728,6 +728,20 @@ export default async function SponsoredEventPage({
           <AgreeCard label="Artist agreed" agreed={event.artist_agreed} />
         </div>
 
+        {/* Where the agreement stands and what happens next, in words — the two
+            cards above alone only say "Pending" (Testing notes 15 Nov). */}
+        {!locked && (isBrand || isArtist) && (
+          <p className="mt-3 rounded-lg bg-[var(--color-mist)] px-4 py-3 text-sm text-[var(--color-ink)]" data-testid="agreement-next-step">
+            {agreementNextStep({
+              viewer: isBrand ? "brand" : "artist",
+              brandAgreed: event.brand_agreed,
+              artistAgreed: event.artist_agreed,
+              campaignUnpaid: campaignRow?.status === "awaiting_payment",
+              formReady: !!fulfilment?.ready_at,
+            })}
+          </p>
+        )}
+
         {(isBrand || isArtist) && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {!locked && isArtist && !myAgreed && (
@@ -961,6 +975,33 @@ function Detail({
       </dd>
     </div>
   );
+}
+
+function agreementNextStep(p: {
+  viewer: "brand" | "artist";
+  brandAgreed: boolean;
+  artistAgreed: boolean;
+  campaignUnpaid: boolean;
+  formReady: boolean;
+}): string {
+  if (p.viewer === "brand") {
+    if (p.brandAgreed && !p.artistAgreed) {
+      return p.campaignUnpaid
+        ? "You've agreed to this event. The artist is asked to confirm once your invoice is paid."
+        : "You've agreed to this event. Now waiting for the artist: they confirm after reviewing their fulfilment form, which our team is preparing. We'll tell you when they have.";
+    }
+    if (!p.brandAgreed && p.artistAgreed) return "The artist has agreed to this event. Review the details and agree to make the partnership live.";
+    if (!p.brandAgreed) return "Review the details and agree if you'd like to partner with this event.";
+    return "You've both agreed.";
+  }
+  if (p.brandAgreed && !p.artistAgreed) {
+    return p.formReady
+      ? "The brand has agreed. Review your fulfilment form below and confirm to make the partnership live."
+      : "The brand has agreed. Our team is preparing your fulfilment form — we'll notify you as soon as it's ready to review and confirm. Nothing for you to do yet.";
+  }
+  if (!p.brandAgreed && p.artistAgreed) return "You've agreed. Now waiting for the brand to agree.";
+  if (!p.brandAgreed) return "The brand hasn't agreed yet. We'll tell you as soon as they do.";
+  return "You've both agreed.";
 }
 
 function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {

@@ -763,6 +763,10 @@ export interface SurveyQuestionConfig {
   step?: number;
   min_label?: string;
   max_label?: string;
+  /** scale only — one label per point, comma-separated and in order (e.g.
+   *  "Poor, Fair, Good, Very good, Excellent"). Valid only when the count
+   *  matches the number of points; otherwise the min/max labels are used. */
+  step_labels?: string;
   /** scale only — when set, an extra opt-out tile is rendered at the end of
    *  the scale with this as its label, emitting SCALE_NA_VALUE
    *  ("__na__", src/lib/surveys.ts). Absent/empty hides it entirely, so
