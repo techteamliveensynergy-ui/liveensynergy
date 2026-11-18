@@ -1,6 +1,6 @@
 "use client";
 
-import { offersOther, otherLabel, SURVEY_OTHER_VALUE } from "@/lib/surveys";
+import { offersOther, otherLabel, SURVEY_OTHER_VALUE, shownOptions } from "@/lib/surveys";
 import { OtherInput } from "./OtherInput";
 import type { FieldProps } from "./types";
 
@@ -14,7 +14,7 @@ export function DropdownField({ question, value, onChange, otherText = "", onOth
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">Choose…</option>
-        {(question.options ?? []).map((o) => (
+        {shownOptions(question).map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
