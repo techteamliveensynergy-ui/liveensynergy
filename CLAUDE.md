@@ -113,6 +113,15 @@ Pushing to `origin` updates nothing anyone can see.
 git push liveensynergy HEAD:main
 ```
 
+**Merge to `main` only from the `techteamliveensynergy-ui` GitHub account.** Vercel's
+Hobby plan blocks a deployment whose commit comes from any other account ("Deployment
+Blocked — the commit author did not have contributing access to the project"), and the
+merge commit is authored by whoever clicks Merge (PR #110 was merged as `Ketankham` and
+its production deployment risked being blocked). After merging, open Vercel → Deployments
+→ Production: the newest one must say **Ready** for the merge commit. If it says Blocked,
+*Redeploy* on that row won't help — land a new commit (a small PR) merged from the right
+account; Vercel builds the whole of `main`, so the earlier changes ship with it.
+
 Vercel deploys code; it does **not** run migrations. Those are applied by hand,
 so a push can ship code querying columns production doesn't have yet — apply the
 migration *before* pushing the code, and log it in `docs/database-migrations.md`

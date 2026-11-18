@@ -782,6 +782,11 @@ A push is not a deploy. Confirm the new build is actually serving:
       smoke test.
 - [ ] If a migration went out with it, exercise the feature that uses the new
       columns once.
+- [ ] On Vercel → Deployments → Production, the newest deployment says **Ready**
+      for your merge commit. "Blocked — the commit author did not have
+      contributing access" means it was merged from a GitHub account Vercel's
+      Hobby plan doesn't allow (only `techteamliveensynergy-ui` is); Redeploy
+      won't clear it — merge a new commit from the right account.
 - [ ] Reply on the GitHub issue with what shipped and how to verify, so the
       client checks the right thing.
 
