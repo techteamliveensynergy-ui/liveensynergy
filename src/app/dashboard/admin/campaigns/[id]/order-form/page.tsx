@@ -1,3 +1,4 @@
+import { signedUrlFor } from "@/lib/storage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -206,6 +207,7 @@ export default async function AdminOrderFormPage({
             sections={ALL_SECTIONS}
             campaignReference={campaign.reference}
             packageName={packageName}
+            attachmentUrl={await signedUrlFor(formRow?.attachment_path, 60 * 60, { downloadName: formRow?.attachment_name })}
           />
         </div>
       ) : (

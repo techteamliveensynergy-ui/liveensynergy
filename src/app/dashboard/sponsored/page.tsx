@@ -184,12 +184,12 @@ function SponsoredCard({ event: e }: { event: SponsoredEvent }) {
         <span
           className={`rounded-full px-2 py-0.5 ${e.brand_agreed ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
         >
-          Brand {e.brand_agreed ? "✓" : "…"}
+          {e.brand_agreed ? "Brand agreed ✓" : "Brand: waiting"}
         </span>
         <span
           className={`rounded-full px-2 py-0.5 ${e.artist_agreed ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
         >
-          Artist {e.artist_agreed ? "✓" : "…"}
+          {e.artist_agreed ? "Artist agreed ✓" : "Artist: waiting"}
         </span>
       </div>
     </Link>

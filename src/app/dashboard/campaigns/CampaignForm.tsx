@@ -12,6 +12,7 @@ import { ARTIST_CATEGORIES } from "@/lib/constants";
 import type { CampaignIntakeRequest } from "@/lib/types";
 import type { FormDraft } from "@/lib/drafts";
 import { SaveDraftButton } from "@/components/ui/SaveDraftButton";
+import { UnsavedChangesGuard } from "@/components/ui/UnsavedChangesGuard";
 import {
   submitCampaignIntake,
   updateCampaignIntake,
@@ -126,6 +127,15 @@ export function CampaignForm({
 
   return (
     <form action={formAction} className="space-y-6">
+      {/* Clicking another page (the Repository, say) mid-form used to lose
+          everything typed, with no warning (Testing notes 15 Nov). */}
+      <UnsavedChangesGuard
+        message={
+          editing
+            ? "You have changes to this request that aren't saved yet. Leave without saving them?"
+            : "You have details in this request that aren't sent or saved yet. Leave without saving? (Use “Save draft” to keep them.)"
+        }
+      />
       {editing && <input type="hidden" name="id" value={intake!.id} />}
       <ErrorBanner error={state.error} />
 

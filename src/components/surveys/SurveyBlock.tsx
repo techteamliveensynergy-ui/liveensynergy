@@ -4,7 +4,7 @@ import { useId, type ReactNode } from "react";
 import { QuestionMedia } from "@/components/surveys/QuestionMedia";
 import { SurveyQuestionCard } from "@/components/surveys/SurveyQuestionCard";
 import { ScaleField } from "@/app/dashboard/surveys/[templateId]/fields/ScaleField";
-import { offersOther, type SurveyBlock as Block } from "@/lib/surveys";
+import { offersOther, scaleStepLabels, type SurveyBlock as Block } from "@/lib/surveys";
 import {
   accentColorVars,
   cardBackgroundStyle,
@@ -46,6 +46,9 @@ function RatingGroupCard({
   const first = block.questions[0];
   const size = first.config.question_size ?? appearance?.questionFontSize ?? "md";
   const prompt = first.config.group_prompt || "Please rate each of the following";
+  // One label per point (e.g. Poor … Excellent), shown once above the rows
+  // instead of repeated under every row's tiles.
+  const legendLabels = scaleStepLabels(first.config);
 
   return (
     <div
@@ -63,6 +66,23 @@ function RatingGroupCard({
           </h2>
           {first.help_text && <p className="survey-help">{first.help_text}</p>}
           <div className="survey-answer divide-y divide-black/10">
+            {legendLabels && (
+              <div className="hidden gap-4 pb-2 sm:grid sm:grid-cols-[minmax(7rem,13rem)_1fr]" aria-hidden>
+                <span />
+                <div
+                  className="grid items-start gap-1.5 sm:gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${legendLabels.length}, minmax(0, 3.5rem))${first.config.na_label ? " auto" : ""}`,
+                  }}
+                >
+                  {legendLabels.map((l, i) => (
+                    <span key={i} className="break-words text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))]">
+                      {l}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {block.questions.map((q) => (
               <div
                 key={q.id}
@@ -82,7 +102,12 @@ function RatingGroupCard({
                     </>
                   )}
                 </p>
-                <ScaleField question={q} value={values[q.id] ?? null} onChange={(v) => onChange(q.id, v)} />
+                <ScaleField
+                  question={q}
+                  value={values[q.id] ?? null}
+                  onChange={(v) => onChange(q.id, v)}
+                  hideLabels={legendLabels !== null}
+                />
               </div>
             ))}
           </div>

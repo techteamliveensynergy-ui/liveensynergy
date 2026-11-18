@@ -364,7 +364,24 @@ with checks (grp, ord, name, expected, actual) as (
   -- ---- T. 0123: check-in only on the event day ------------------------------
   ('T. 0123 check-in window', 1, 'check-in no longer allows the day before / after', 'true',
      coalesce((select prosrc not like '%event_date - 1%' and prosrc not like '%event_date + 1%' from pg_proc
-                where pronamespace = 'public'::regnamespace and proname = 'confirm_attendance'), false)::text)
+                where pronamespace = 'public'::regnamespace and proname = 'confirm_attendance'), false)::text),
+
+  -- ---- U. 0124: brand agreed + next steps -----------------------------------
+  ('U. 0124 brand agreed', 1, 'brand-agreed notifications seeded with in-app + email templates', '4',
+     (select count(*) from public.notification_templates
+       where event_key in ('sponsorship.brand_agreed', 'admin.brand_agreed'))::text),
+  ('U. 0124 brand agreed', 2, 'proposal wording ends with a next step', '0',
+     (select count(*) from public.notification_templates
+       where event_key = 'offer.proposal_received' and body not like '%{{next_step}}%')::text),
+  ('U. 0124 brand agreed', 3, 'payment trigger sends brand_agreed', 'true',
+     coalesce((select prosrc like '%sponsorship.brand_agreed%' from pg_proc
+                where pronamespace = 'public'::regnamespace and proname = 'campaign_paid_reveal_suggestions'), false)::text),
+
+  -- ---- V. 0125: order form DPA + attachment ---------------------------------
+  ('V. 0125 order form DPA', 1, 'order form columns exist', '4',
+     (select count(*) from information_schema.columns where table_schema = 'public'
+        and table_name = 'campaign_order_forms'
+        and column_name in ('dpa_details', 'attachment_path', 'attachment_name', 'attachment_size'))::text)
 )
 select grp as "group", name as "check", expected, actual,
        case when expected = actual then 'PASS' else 'FAIL' end as result

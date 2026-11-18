@@ -114,6 +114,12 @@ export const SURVEY_QUESTION_TYPES: readonly SurveyQuestionSpec[] = [
       { name: "min_label", label: "Label at minimum", type: "text" },
       { name: "max_label", label: "Label at maximum", type: "text" },
       {
+        name: "step_labels",
+        label: "Label for every point (optional)",
+        type: "text",
+        hint: "One label per point, separated by commas and in order — e.g. “Poor, Fair, Good, Very good, Excellent” for a 1–5 scale. Needs exactly one label per point; when it does, it replaces the minimum / maximum labels.",
+      },
+      {
         name: "na_label",
         label: '"Not applicable" option label',
         type: "text",
@@ -327,6 +333,32 @@ export function newLikertQuestionDraft(): SurveyQuestionDraft {
   return base;
 }
 
+/** The points of a scale, min..max by step (the same walk the field renders). */
+export function scalePoints(config: { min?: number; max?: number; step?: number }): number[] {
+  const min = config.min ?? 1;
+  const max = config.max ?? 5;
+  const rawStep = config.step ?? 1;
+  const step = rawStep > 0 && (max - min) % rawStep === 0 ? rawStep : 1;
+  const points: number[] = [];
+  for (let v = min; v <= max; v += step) points.push(v);
+  return points;
+}
+
+/** The comma-separated labels an admin typed, trimmed ("a, b,, c" → a, b, c). */
+function parseStepLabels(text: string | undefined | null): string[] {
+  return (text ?? "").split(",").map((l) => l.trim()).filter(Boolean);
+}
+
+/**
+ * One label per point (0125 era, Testing notes 15 Nov: "rating matrix —
+ * labelling 5 steps"), or null when none are set or the count doesn't match the
+ * points (then the minimum / maximum labels apply as before).
+ */
+export function scaleStepLabels(config: { min?: number; max?: number; step?: number; step_labels?: string }): string[] | null {
+  const labels = parseStepLabels(config.step_labels);
+  return labels.length > 0 && labels.length === scalePoints(config).length ? labels : null;
+}
+
 /**
  * Settings a rating group's rows always share (FB-00028) — editing one on
  * any row applies it to every row, so the scale, its labels and the card's
@@ -340,6 +372,7 @@ export const RATING_GROUP_SHARED_KEYS: readonly (keyof SurveyQuestionConfig)[] =
   "step",
   "min_label",
   "max_label",
+  "step_labels",
   "na_label",
   "question_size",
   "font_family",
@@ -442,6 +475,13 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
     }
     if (step <= 0 || (max - min) % step !== 0) {
       return "Step must divide evenly into the range (e.g. min 1, max 10, step 1).";
+    }
+    if (d.type === "scale" && parseStepLabels(d.config.step_labels).length > 0) {
+      const points = scalePoints(d.config).length;
+      const given = parseStepLabels(d.config.step_labels).length;
+      if (given !== points) {
+        return `Point labels: give one label for each of the ${points} points (you have ${given}), separated by commas — or clear the field.`;
+      }
     }
   }
   if (d.type === "hidden_field") {

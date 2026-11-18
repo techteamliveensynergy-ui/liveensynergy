@@ -47,6 +47,11 @@ export interface CampaignOrderForm {
   redemption_arrangements: string | null;
   social_media_details: string | null;
   other_details: string | null;
+  /** Data Protection Agreement box + one attachment (0125). Absent before 0125 is applied. */
+  dpa_details?: string | null;
+  attachment_path?: string | null;
+  attachment_name?: string | null;
+  attachment_size?: number | null;
   media_image_urls: string[];
   media_video_url: string | null;
   campaign_package_id: string | null;
@@ -91,6 +96,7 @@ export type OrderFormSection =
   | "benefit"
   | "social"
   | "other"
+  | "data_protection"
   | "media"
   | "commercial";
 
@@ -105,6 +111,7 @@ export const ALL_SECTIONS: OrderFormSection[] = [
   "benefit",
   "social",
   "other",
+  "data_protection",
   "commercial",
 ];
 

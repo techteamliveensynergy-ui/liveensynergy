@@ -132,11 +132,14 @@ export function OrderFormDocument({
   sections,
   campaignReference,
   packageName,
+  attachmentUrl,
 }: {
   form: Doc;
   sections: OrderFormSection[];
   campaignReference?: string | null;
   packageName?: string | null;
+  /** A signed link to the form's one attachment (0125), when the viewer may open it. */
+  attachmentUrl?: string | null;
 }) {
   const has = (s: OrderFormSection) => sections.includes(s);
   const images = form.media_image_urls ?? [];
@@ -252,6 +255,27 @@ export function OrderFormDocument({
       {has("other") && form.other_details && (
         <Slide eyebrow="Any other details" title="Notes">
           <p className="whitespace-pre-line text-lg leading-relaxed sm:text-xl">{form.other_details}</p>
+        </Slide>
+      )}
+
+      {has("data_protection") && (form.dpa_details || form.attachment_name) && (
+        <Slide eyebrow="Data protection" title="Data Protection Agreement">
+          {form.dpa_details && (
+            <p className="whitespace-pre-line text-lg leading-relaxed sm:text-xl">{form.dpa_details}</p>
+          )}
+          {form.attachment_name && (
+            <p className={`text-lg ${form.dpa_details ? "mt-6" : ""}`}>
+              <span className="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--color-ink-soft)]">Attachment</span>
+              <br />
+              {attachmentUrl ? (
+                <a href={attachmentUrl} className="font-semibold text-[var(--color-brand-dark)] underline">
+                  {form.attachment_name}
+                </a>
+              ) : (
+                form.attachment_name
+              )}
+            </p>
+          )}
         </Slide>
       )}
 

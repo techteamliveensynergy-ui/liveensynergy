@@ -1,9 +1,18 @@
 "use client";
 
-import { SCALE_NA_VALUE } from "@/lib/surveys";
+import { SCALE_NA_VALUE, scaleStepLabels } from "@/lib/surveys";
 import type { FieldProps } from "./types";
 
-export function ScaleField({ question, value, onChange }: FieldProps) {
+export function ScaleField({
+  question,
+  value,
+  onChange,
+  hideLabels = false,
+}: FieldProps & {
+  /** A rating group shows the point labels once, above its rows, from a tablet
+   *  up; on a phone (no room for a legend) each row keeps its own. */
+  hideLabels?: boolean;
+}) {
   const min = question.config.min ?? 1;
   const max = question.config.max ?? 5;
   const rawStep = question.config.step ?? 1;
@@ -20,6 +29,7 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
   // 5th point of a 1–5 scale onto a second line on a phone. Longer scales
   // (e.g. 0–10) keep wrapping.
   const fits = points.length <= 7;
+  const stepLabels = scaleStepLabels(question.config);
   return (
     <div
       className={fits ? "grid items-start gap-1.5 sm:gap-2" : "flex flex-wrap items-start gap-2"}
@@ -34,7 +44,13 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
       {points.map((pt, i) => {
         const isFirst = i === 0;
         const isLast = i === points.length - 1;
-        const label = isFirst ? question.config.min_label : isLast ? question.config.max_label : undefined;
+        const label = stepLabels
+          ? stepLabels[i]
+          : isFirst
+            ? question.config.min_label
+            : isLast
+              ? question.config.max_label
+              : undefined;
         return (
           <label
             key={pt}
@@ -61,7 +77,11 @@ export function ScaleField({ question, value, onChange }: FieldProps) {
                 sits next to the value it describes even once the points
                 wrap onto a second line on a narrow screen. */}
             {label && (
-              <span className="w-full break-words text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))] [hyphens:auto]">
+              <span
+                className={`w-full break-words text-center text-[0.7em] leading-tight text-[var(--survey-body-color,var(--color-ink-soft))] [hyphens:auto] ${
+                  hideLabels ? "sm:hidden" : ""
+                }`}
+              >
                 {label}
               </span>
             )}

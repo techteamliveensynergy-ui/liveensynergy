@@ -43,6 +43,15 @@ export function OnboardingSubmit({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
+      {/* First-time set-up used to lose everything typed if you clicked another
+          page (the Repository, say) before saving (Testing notes 15 Nov). */}
+      <UnsavedChangesGuard
+        message={
+          draftSlot
+            ? "You have details here that aren't saved yet. Leave without saving? (Use “Save and finish later” to keep them.)"
+            : undefined
+        }
+      />
       {draftSlot}
       <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? "Saving…" : label}

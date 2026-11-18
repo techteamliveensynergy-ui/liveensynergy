@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/profile";
 import { notify } from "@/lib/notifications";
-import { uploadImage } from "@/lib/storage";
+import { uploadImage, uploadPrivateFile } from "@/lib/storage";
 import { normaliseUrl } from "@/lib/urls";
 import { draftCampaignInvoice } from "@/lib/billing-server";
 import { formatGbp } from "@/lib/billing";
@@ -79,9 +79,16 @@ export async function saveOrderForm(
 
   const { data: existing } = await supabase
     .from("campaign_order_forms")
-    .select("id, status, media_image_urls")
+    .select("id, status, media_image_urls, attachment_path, attachment_name, attachment_size")
     .eq("campaign_id", campaignId)
-    .maybeSingle<{ id: string; status: string; media_image_urls: string[] }>();
+    .maybeSingle<{
+      id: string;
+      status: string;
+      media_image_urls: string[];
+      attachment_path?: string | null;
+      attachment_name?: string | null;
+      attachment_size?: number | null;
+    }>();
   if (existing?.status === "approved") {
     return { error: "This order form has been approved by the brand, so it can no longer be changed." };
   }
@@ -127,6 +134,27 @@ export async function saveOrderForm(
     if (up.error) return { error: `Image upload failed: ${up.error}` };
     if (up.url) uploaded.push(up.url);
   }
+
+  // --- The one attachment (0125): keep it, replace it, or remove it. The
+  // original file name is kept for the download. A database without 0125 simply
+  // never has the columns, so nothing here is written then.
+  let attachment: { attachment_path: string | null; attachment_name: string | null; attachment_size: number | null } | null =
+    existing && "attachment_path" in existing
+      ? {
+          attachment_path: existing.attachment_path ?? null,
+          attachment_name: existing.attachment_name ?? null,
+          attachment_size: existing.attachment_size ?? null,
+        }
+      : null;
+  const newAttachment = formData.get("attachment");
+  const removeAttachment = formData.get("attachment_remove") === "1";
+  if (newAttachment instanceof File && newAttachment.size > 0) {
+    const up = await uploadPrivateFile(newAttachment, "order-form-files", { supabase, userId });
+    if (up.error || !up.path) return { error: `Attachment upload failed: ${up.error ?? "try again"}` };
+    attachment = { attachment_path: up.path, attachment_name: newAttachment.name.slice(0, 255), attachment_size: newAttachment.size };
+  } else if (removeAttachment) {
+    attachment = { attachment_path: null, attachment_name: null, attachment_size: null };
+  }
   const surveyType = str(formData.get("survey_type"));
   const surveyLink = normaliseUrl(formData.get("draft_survey_link"), "The pre-event survey link");
   if (surveyLink.error) return { error: surveyLink.error };
@@ -169,6 +197,8 @@ export async function saveOrderForm(
     redemption_arrangements: str(formData.get("redemption_arrangements")),
     social_media_details: str(formData.get("social_media_details")),
     other_details: str(formData.get("other_details")),
+    ...(formData.has("dpa_details") ? { dpa_details: str(formData.get("dpa_details")) } : {}),
+    ...(attachment ?? {}),
     media_image_urls: [...keep, ...uploaded].slice(0, 8),
     media_video_url: videoLink.url,
     campaign_package_id: str(formData.get("campaign_package_id")),

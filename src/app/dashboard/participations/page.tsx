@@ -224,35 +224,19 @@ export default async function ParticipationsPage({
           .filter((r) => r.attendance_verified_at || ["attendance_verified", "reward_released"].includes(r.status))
           .sort((a, b) => String(b.attendance_verified_at ?? "").localeCompare(String(a.attendance_verified_at ?? "")));
         return (
-          <div className="card mb-5 p-5" id="event-passport" data-testid="event-passport">
-            <h2 className="font-semibold">🎫 Your Event Passport</h2>
-            {stamps.length === 0 ? (
+          <div className="card mb-5 flex flex-wrap items-center justify-between gap-3 p-5" id="event-passport" data-testid="event-passport">
+            <div>
+              <h2 className="font-semibold">🎫 Your Event Passport</h2>
               <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-                Check in at an event — scan the QR code at the venue on the day — and it appears here.
+                {stamps.length === 0
+                  ? "Check in at an event on the day by scanning the QR code at the venue, and it's stamped here."
+                  : `${stamps.length} event${stamps.length === 1 ? "" : "s"} checked in.`}{" "}
+                Check-in is only open on the day of the event.
               </p>
-            ) : (
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {stamps.map((r) => (
-                  <li
-                    key={r.id}
-                    className="rounded-full border border-black/10 bg-[var(--color-mist)] px-3 py-1 text-sm"
-                    title={r.attendance_verified_at ? `Checked in ${formatDateTime(r.attendance_verified_at)}` : "Checked in"}
-                  >
-                    <span className="font-medium">{r.sponsored_events?.name ?? "Event"}</span>
-                    {r.sponsored_events?.event_date && (
-                      <span className="text-[var(--color-ink-soft)]">
-                        {" · "}
-                        {formatEventDateTime({
-                          date: r.sponsored_events.event_date,
-                          time: null,
-                          timeZone: r.sponsored_events.timezone,
-                        })}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            </div>
+            <Link href="/dashboard/passport" className="btn btn-ghost text-sm">
+              View my Event Passport
+            </Link>
           </div>
         );
       })()}

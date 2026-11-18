@@ -74,6 +74,7 @@ const BY_ROLE: Record<Role, NavItem[]> = {
   audience: [
     { href: "/dashboard/discover", label: "Discover events", icon: "🔎" },
     { href: "/dashboard/participations", label: "My events", icon: "🎟️" },
+    { href: "/dashboard/passport", label: "Event Passport", icon: "🎫" },
     { href: "/dashboard/rewards", label: "My rewards", icon: "🎁" },
   ],
   // Admin order follows the Admin Portal brief (9 Oct). Admin gets its own

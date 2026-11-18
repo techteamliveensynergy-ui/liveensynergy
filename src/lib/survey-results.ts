@@ -11,7 +11,7 @@
  * are live while a survey is open and settle as the review queue is worked.
  */
 
-import { otherLabel, SCALE_NA_VALUE, SURVEY_OTHER_VALUE } from "./surveys";
+import { otherLabel, SCALE_NA_VALUE, scaleStepLabels, SURVEY_OTHER_VALUE } from "./surveys";
 import type { SurveyQuestion, SurveyQuestionType } from "./types";
 
 export interface SurveyTemplateStats {
@@ -165,7 +165,15 @@ export function scaleBars(q: Pick<SurveyQuestion, "config">, counts: Record<stri
   if (Number.isFinite(min) && Number.isFinite(max) && max >= min && (max - min) / step <= 100) {
     for (let v = min; v <= max + 1e-9; v += step) keys.push(String(Number(v.toFixed(4))));
   }
-  const bars = keys.map((k) => ({ key: k, label: k, count: counts[k] ?? 0, share: pct(counts[k] ?? 0, base) }));
+  // With a label for every point (e.g. "Poor … Excellent") the bars carry it:
+  // "4 · Very good" rather than a bare "4".
+  const stepLabels = scaleStepLabels(q.config ?? {});
+  const bars = keys.map((k, i) => ({
+    key: k,
+    label: stepLabels?.[i] ? `${k} · ${stepLabels[i]}` : k,
+    count: counts[k] ?? 0,
+    share: pct(counts[k] ?? 0, base),
+  }));
   for (const [k, count] of Object.entries(counts)) {
     if (!keys.includes(k) && count > 0) bars.push({ key: k, label: k, count, share: pct(count, base) });
   }

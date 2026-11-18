@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { netForCampaign, SPONSORED_ASSET_SLOTS } from "@/lib/constants";
 import { notify, notifyAdmins } from "@/lib/notifications";
+import { artistNextStep, BRAND_NEXT_STEP } from "@/lib/agreement-copy";
 import { createServiceClient } from "@/lib/supabase/service";
 import { uploadImage, uploadPrivateFile } from "@/lib/storage";
 import { DEFAULT_TIMEZONE, eventStartInstant } from "@/lib/event-time";
@@ -215,22 +216,46 @@ export async function createSponsoredEvent(
   const recipientProfileId = initiatedByBrand ? artistProfileId : brandProfileId;
 
   if (recipientProfileId) {
-    await notify({
-      eventKey: "offer.proposal_received",
-      recipientProfileId,
-      link: `/dashboard/sponsored/${created.id}`,
-      variables: {
-        event_name: name,
-        // Templates quote the reference (0023). Tokens that don't resolve are
-        // left visible as "{{budget}}", so every one gets a real fallback
-        // rather than being left undefined.
-        reference: created.reference,
-        budget:
-          budget != null && !initiatedByBrand
-            ? `£${budget.toLocaleString("en-GB")}`
-            : "as agreed with our team",
-      },
-    });
+    if (initiatedByBrand) {
+      // The brand proposed (so it has agreed): tell the artist, and what comes
+      // next — the fulfilment form first (0124).
+      const { data: brandRow } = await supabase
+        .from("brands")
+        .select("brand_name")
+        .eq("id", brandId)
+        .maybeSingle<{ brand_name: string }>();
+      await notify({
+        eventKey: "sponsorship.brand_agreed",
+        recipientProfileId,
+        link: `/dashboard/sponsored/${created.id}`,
+        variables: {
+          brand_name: brandRow?.brand_name ?? "A brand",
+          event_name: name,
+          reference: created.reference,
+          next_step: artistNextStep(false),
+        },
+      });
+      await notifyAdmins({
+        eventKey: "admin.brand_agreed",
+        link: `/dashboard/admin/events/sponsored/${created.id}`,
+        variables: { brand_name: brandRow?.brand_name ?? "A brand", event_name: name, reference: created.reference },
+      });
+    } else {
+      await notify({
+        eventKey: "offer.proposal_received",
+        recipientProfileId,
+        link: `/dashboard/sponsored/${created.id}`,
+        variables: {
+          event_name: name,
+          // Templates quote the reference (0023). Tokens that don't resolve are
+          // left visible as "{{budget}}", so every one gets a real fallback
+          // rather than being left undefined.
+          reference: created.reference,
+          budget: budget != null ? `£${budget.toLocaleString("en-GB")}` : "as agreed with our team",
+          next_step: BRAND_NEXT_STEP,
+        },
+      });
+    }
   }
 
   revalidatePath("/dashboard/sponsored");
@@ -355,6 +380,57 @@ export async function toggleAgreement(formData: FormData) {
           notifyOpts,
         );
       }
+    } else if (
+      result.outcome === "agreed" &&
+      brandProfileId === userId
+    ) {
+      // The brand agreed first. The artist is told what happens next — unless
+      // the campaign is still unpaid, when they can't see the event yet (0118;
+      // the payment trigger tells them then). The team is told either way: it's
+      // their cue to prepare the fulfilment form.
+      const { data: ev } = await reader
+        .from("sponsored_events")
+        .select("campaign_id")
+        .eq("id", id)
+        .maybeSingle<{ campaign_id: string | null }>();
+      let unpaid = false;
+      if (ev?.campaign_id) {
+        const { data: camp } = await reader
+          .from("campaigns")
+          .select("status")
+          .eq("id", ev.campaign_id)
+          .maybeSingle<{ status: string }>();
+        unpaid = camp?.status === "awaiting_payment";
+      }
+      if (full.artist_profile_id && !unpaid) {
+        const { data: form } = await reader
+          .from("sponsored_event_fulfilment")
+          .select("ready_at")
+          .eq("sponsored_event_id", id)
+          .maybeSingle<{ ready_at: string | null }>();
+        await notify(
+          {
+            eventKey: "sponsorship.brand_agreed",
+            recipientProfileId: full.artist_profile_id,
+            link: `/dashboard/sponsored/${id}`,
+            variables: {
+              brand_name: full.brands?.brand_name ?? "The brand",
+              event_name: full.name,
+              reference: full.reference,
+              next_step: artistNextStep(!!form?.ready_at),
+            },
+          },
+          notifyOpts,
+        );
+      }
+      await notifyAdmins(
+        {
+          eventKey: "admin.brand_agreed",
+          link: `/dashboard/admin/events/sponsored/${id}`,
+          variables: { brand_name: full.brands?.brand_name ?? "The brand", event_name: full.name, reference: full.reference },
+        },
+        notifyOpts,
+      );
     } else if (
       result.outcome === "agreed" &&
       full.artist_profile_id === userId &&
