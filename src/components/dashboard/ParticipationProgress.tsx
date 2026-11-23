@@ -60,7 +60,7 @@ export function participationSteps(
     },
     {
       label: "Checked in",
-      hint: "On the day, scan the QR code at the venue to check in — it adds this event to your Event Passport",
+      hint: "On the day, tap Check in here when you're at the venue (or scan the QR code there) — it adds this event to your Event Passport",
     },
   ];
 

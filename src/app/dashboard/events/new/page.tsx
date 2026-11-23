@@ -3,6 +3,7 @@ import { requireRole, profileCompleteness } from "@/lib/profile";
 import { PageHeader } from "@/components/dashboard/ui";
 import { ProfileCompleteness } from "@/components/dashboard/ProfileCompleteness";
 import { ListingForm } from "../ListingForm";
+import { placesEnabled } from "@/lib/places";
 
 export const metadata = { title: "New event" };
 
@@ -28,7 +29,7 @@ export default async function NewEventPage() {
       ) : (
         <>
           <ProfileCompleteness completeness={completeness} className="mb-5" />
-          <ListingForm />
+          <ListingForm placesEnabled={placesEnabled()} />
         </>
       )}
     </div>

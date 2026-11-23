@@ -16,6 +16,8 @@ import { leaveWaitlist } from "../discover/actions";
 import { SURVEY_HELD_FOR_REVIEW_MESSAGE, SURVEY_RECEIVED_MESSAGE, SURVEY_UNDER_REVIEW_MESSAGE } from "@/lib/survey-capacity";
 import { formatEventDateTime } from "@/lib/event-time";
 import { formatDateTime, UK_TIME_ZONE } from "@/lib/format";
+import { DEFAULT_CHECKIN_RADIUS_M, formatMiles, hasVenueLocation, todayIn } from "@/lib/venue";
+import { CheckInButton } from "./CheckInButton";
 import {
   provideConsent,
   withdrawParticipation,
@@ -217,8 +219,9 @@ export default async function ParticipationsPage({
       )}
 
       {/* Event Passport (Testing notes 7 Nov): every event they've checked in
-          at, newest first. Check-in = scanning the venue QR (or the artist
-          confirming them), recorded as attendance_verified_at. */}
+          at, newest first. Check-in = the in-app button at the venue (0126),
+          the venue QR, or the artist/team confirming them — recorded as
+          attendance_verified_at. */}
       {(() => {
         const stamps = allRows
           .filter((r) => r.attendance_verified_at || ["attendance_verified", "reward_released"].includes(r.status))
@@ -229,7 +232,7 @@ export default async function ParticipationsPage({
               <h2 className="font-semibold">🎫 Your Event Passport</h2>
               <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
                 {stamps.length === 0
-                  ? "Check in at an event on the day by scanning the QR code at the venue, and it's stamped here."
+                  ? "Check in at an event on the day — tap Check in here when you're at the venue, or scan the QR code there — and it's stamped here."
                   : `${stamps.length} event${stamps.length === 1 ? "" : "s"} checked in.`}{" "}
                 Check-in is only open on the day of the event.
               </p>
@@ -348,6 +351,36 @@ export default async function ParticipationsPage({
                     ticketIsImage={isImagePath(p.ticket_proof_url)}
                   />
                 </div>
+
+                {/* In-app check-in (0126): on the event's own day, at the venue. */}
+                {(() => {
+                  if (!ev || isCancelledEvent(ev)) return null;
+                  if (!["confirmed", "completed"].includes(String(ev.status))) return null;
+                  if (!["registered", "ticket_uploaded"].includes(p.status) || p.attendance_verified_at) return null;
+                  const radius = ev.checkin_radius_m ?? DEFAULT_CHECKIN_RADIUS_M;
+                  const today = todayIn(ev.timezone);
+                  if (ev.event_date && ev.event_date > today) {
+                    return (
+                      <p className="mt-4 text-sm text-[var(--color-ink-soft)]">
+                        📍 On the day, check in here when you&apos;re at the venue
+                        {hasVenueLocation(ev) ? ` (within ${formatMiles(radius)})` : ""} — or scan the QR code there.
+                      </p>
+                    );
+                  }
+                  if (ev.event_date && ev.event_date < today) return null;
+                  if (!hasVenueLocation(ev)) {
+                    return (
+                      <p className="mt-4 rounded-xl bg-[var(--color-mist)] px-4 py-3 text-sm">
+                        📍 It&apos;s event day! Scan the QR code at the venue to check in.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="mt-4">
+                      <CheckInButton participationId={p.id} radiusM={radius} eventDate={ev.event_date} />
+                    </div>
+                  );
+                })()}
 
                 {ev?.reward_rules && (
                   <div className="mt-3 rounded-xl bg-[var(--color-mist)] px-3 py-2 text-sm">
@@ -553,8 +586,9 @@ export default async function ParticipationsPage({
           </li>
           <li>Use the code when you buy your ticket on the event&apos;s ticketing site, before it expires.</li>
           <li>
-            On the day, remember to check in at the venue by scanning the QR code — every event you check in at is
-            added to your Event Passport above. Check-in is only open on the day of the event.
+            On the day, check in when you&apos;re at the venue: tap <strong>Check in</strong> on the event here (your
+            phone shares its location once), or scan the QR code at the venue. Every event you check in at is added to
+            your Event Passport above. Check-in is only open on the day of the event.
           </li>
           <li>Your personal details are never shared with any partner without your consent.</li>
         </ul>

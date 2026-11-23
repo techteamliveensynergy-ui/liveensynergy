@@ -140,3 +140,80 @@ export async function withdrawParticipation(formData: FormData) {
     .is("selected", false);
   revalidatePath("/dashboard/participations");
 }
+
+export type LocationCheckInResult = {
+  result:
+    | "verified"
+    | "already"
+    | "too_far"
+    | "low_accuracy"
+    | "invalid_location"
+    | "no_venue"
+    | "too_early"
+    | "too_late"
+    | "event_not_live"
+    | "not_registered"
+    | "not_found"
+    | "rate_limited"
+    | "signed_out"
+    | "error";
+  distance_m?: number | null;
+  radius_m?: number | null;
+  accuracy_m?: number | null;
+  max_accuracy_m?: number | null;
+  event_date?: string | null;
+};
+
+/**
+ * In-app check-in (0126): the phone's location goes to check_in_at_location(),
+ * which decides — distance to the venue, precision of the reading, the event's
+ * own day — and records the attempt. Called directly from <CheckInButton>, not
+ * as a form action, because the location is only known in the browser.
+ */
+export async function checkInWithLocation(
+  participationId: string,
+  lat: number,
+  lng: number,
+  accuracy: number,
+): Promise<LocationCheckInResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { result: "signed_out" };
+  if (!/^[0-9a-f-]{36}$/i.test(String(participationId))) return { result: "not_found" };
+
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const { data, error } = await supabase.rpc("check_in_at_location", {
+    p_participation_id: participationId,
+    p_lat: num(lat),
+    p_lng: num(lng),
+    p_accuracy_m: num(accuracy),
+  });
+  if (error || !data) {
+    console.error("[checkInWithLocation] rpc failed", error?.message);
+    return { result: "error" };
+  }
+  const out = data as LocationCheckInResult & { event_name?: string };
+
+  if (out.result === "verified") {
+    await notify({
+      eventKey: "participation.verified",
+      recipientProfileId: user.id,
+      link: "/dashboard/participations",
+      variables: { event_name: out.event_name ?? "your event" },
+    });
+  }
+  if (out.result === "verified" || out.result === "already") {
+    revalidatePath("/dashboard/participations");
+    revalidatePath("/dashboard");
+  }
+  return {
+    result: out.result,
+    distance_m: out.distance_m ?? null,
+    radius_m: out.radius_m ?? null,
+    accuracy_m: out.accuracy_m ?? null,
+    max_accuracy_m: out.max_accuracy_m ?? null,
+    event_date: out.event_date ?? null,
+  };
+}

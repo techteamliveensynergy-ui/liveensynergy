@@ -53,7 +53,10 @@ export default async function PassportPage() {
       <div className="card mb-6 p-5 text-sm text-[var(--color-ink-soft)]" data-testid="passport-howto">
         <p className="font-semibold text-[var(--color-ink)]">How you get a stamp</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>On the day of the event, scan the QR code displayed at the venue.</li>
+          <li>
+            On the day of the event, at the venue: tap <strong className="text-[var(--color-ink)]">Check in</strong> on
+            the event under My events (your phone shares its location once), or scan the QR code displayed there.
+          </li>
           <li>
             <strong className="text-[var(--color-ink)]">Check-in is only open on the day of the event</strong> — it
             won&apos;t work before or after.
