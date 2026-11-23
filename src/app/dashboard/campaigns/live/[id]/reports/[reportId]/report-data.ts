@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalysisFigures } from "@/lib/analysis/figures";
 import { uniqueCharts, type AnalysisNarrative } from "@/lib/analysis/narrative";
 import { formatDate } from "@/lib/format";
+import { suppressSmallGroups } from "@/lib/analysis/campaign-report";
 
 export interface BrandReport {
   id: string;
@@ -22,6 +23,9 @@ export async function loadBrandReport(supabase: SupabaseClient, reportId: string
   const { data, error } = await supabase.rpc("brand_analysis_report", { p_report_id: reportId });
   if (error || !data) return null;
   const report = data as BrandReport;
+  // A demographic group under 5 people shows "<5" on the brand's copy, on
+  // the page and in the Word download alike (0127).
+  if (report.figures) report.figures = suppressSmallGroups(report.figures);
   if (report.narrative?.sections) {
     report.narrative = { ...report.narrative, sections: uniqueCharts(report.narrative.sections) };
   }

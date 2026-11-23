@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { kickSurveyReports } from "@/lib/survey-reports/kick";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminOrNull, requireAdmin } from "@/lib/profile";
@@ -441,8 +442,28 @@ export async function archiveSurveyTemplate(formData: FormData) {
   const id = str(formData.get("id"));
   if (!id) return;
   await supabase.from("survey_templates").update({ status: "archived" }).eq("id", id);
+  // An archived survey has closed: its report starts now (0127).
+  kickSurveyReports();
   revalidatePath("/dashboard/admin/surveys");
   revalidatePath(`/dashboard/admin/surveys/${id}`);
+}
+
+/**
+ * "Generate report now" (0127): queue a Campaign Performance Report for this
+ * survey whether or not it has closed — for a survey that closed before
+ * automatic reports existed, a re-run, or a report while it's still open.
+ */
+export async function requestSurveyReport(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  const back = `/dashboard/admin/surveys/${id}/results`;
+  const { data, error } = await supabase.rpc("request_survey_report", { p_template_id: id });
+  const result = error ? "error" : String((data as { result?: string } | null)?.result ?? "error");
+  if (error) console.error("[requestSurveyReport] rpc failed", error.message);
+  if (result === "queued") kickSurveyReports();
+  revalidatePath(back);
+  redirect(`${back}?report=${encodeURIComponent(result)}#auto-report`);
 }
 
 export async function unarchiveSurveyTemplate(formData: FormData) {
