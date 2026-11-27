@@ -23,6 +23,7 @@ import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
 import { EventEditForm } from "./EventEditForm";
 import { ProofsSection } from "./ProofsSection";
+import { AgreementStatus } from "@/components/campaigns/AgreementStatus";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection, type ArtistInvoiceInfo } from "./InvoiceSection";
@@ -554,25 +555,8 @@ export default async function AdminSponsoredDetailPage({
           budget, terms — use Edit event details below.
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div
-            className={`rounded-xl px-4 py-3 text-sm ${
-              event.brand_agreed
-                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
-                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
-            }`}
-          >
-            Brand agreed · {event.brand_agreed ? "✓" : "Pending"}
-          </div>
-          <div
-            className={`rounded-xl px-4 py-3 text-sm ${
-              event.artist_agreed
-                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
-                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
-            }`}
-          >
-            Artist agreed · {event.artist_agreed ? "✓" : "Pending"}
-          </div>
+        <div className="mt-4">
+          <AgreementStatus brandAgreed={event.brand_agreed} artistAgreed={event.artist_agreed} />
         </div>
 
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">

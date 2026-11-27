@@ -718,8 +718,8 @@ export default async function SponsoredEventPage({
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <AgreeCard label="Brand agreed" agreed={event.brand_agreed} />
-          <AgreeCard label="Artist agreed" agreed={event.artist_agreed} />
+          <AgreeCard label="Brand" agreed={event.brand_agreed} />
+          <AgreeCard label="Artist" agreed={event.artist_agreed} />
         </div>
 
         {/* Where the agreement stands and what happens next, in words — the two
@@ -1004,7 +1004,7 @@ function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {
       className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${agreed ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
     >
       <span className="font-medium">{label}</span>
-      <span>{agreed ? "✓ Agreed" : "Pending"}</span>
+      <span className="font-semibold">{agreed ? "✓ Confirmed" : "Awaiting"}</span>
     </div>
   );
 }

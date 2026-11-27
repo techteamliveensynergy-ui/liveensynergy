@@ -63,3 +63,33 @@ drop trigger if exists artist_files_invoice_by_artist_only on public.artist_file
 create trigger artist_files_invoice_by_artist_only
   before insert on public.artist_files
   for each row execute function public.artist_files_invoice_by_artist_only();
+
+-- ---------------------------------------------------------------------------
+-- Testing notes 15 Nov: "Artist does not know if one of their events has been
+-- pitched". The team can suggest an event to a brand before the campaign is paid
+-- (0118), and the artist can't see it until then — but they should hear that
+-- their event has been put forward. offer.event_pitched is that heads-up: no
+-- brand name, no budget (those come with the proposal once the campaign is paid).
+-- ---------------------------------------------------------------------------
+insert into public.notification_events (key, name, description, category, audience, variables, sort_order) values
+  ('offer.event_pitched', 'Your event has been put forward',
+   'The team suggested an artist''s event to a brand for a campaign. A heads-up only — the details come once the campaign is paid.',
+   'artist', 'The artist / organiser', '{user_name,event_name}', 142)
+on conflict (key) do nothing;
+
+insert into public.notification_settings (event_key)
+select key from public.notification_events where key = 'offer.event_pitched'
+on conflict (event_key) do nothing;
+
+insert into public.notification_templates (event_key, channel, subject, body)
+select v.event_key, v.channel, v.subject, v.body
+  from (values
+    ('offer.event_pitched', 'in_app', '{{event_name}} has been put forward to a brand',
+     'Our team has put {{event_name}} forward to a brand for a campaign. Nothing for you to do yet — we''ll tell you as soon as there''s a proposal to review.'),
+    ('offer.event_pitched', 'email', '{{event_name}} has been put forward to a brand · Live·En·Synergy',
+     'Hi {{user_name}},' || chr(10) || chr(10) ||
+     'Good news: our team has put {{event_name}} forward to a brand for a campaign.' || chr(10) || chr(10) ||
+     'There''s nothing for you to do yet. If the brand goes ahead, we''ll send you the partnership details and the next steps, and tell you what to do then.' || chr(10) || chr(10) ||
+     '— The Live·En·Synergy team')
+  ) as v(event_key, channel, subject, body)
+ where not exists (select 1 from public.notification_templates t where t.event_key = v.event_key and t.channel = v.channel);

@@ -248,7 +248,21 @@ export async function matchCampaign(
     });
   }
 
-  // Artists hear about it once the campaign is paid (0118's trigger).
+  // Before payment the artist can't see the partnership (0118), but they are told
+  // their event has been put forward — no brand name or budget yet (0126). The
+  // full proposal follows once the campaign is paid (0118's trigger).
+  if (unpaid) {
+    for (const listing of listings) {
+      await notify({
+        eventKey: "offer.event_pitched",
+        recipientProfileId: listing.owner_profile_id,
+        link: "/dashboard/events",
+        variables: { event_name: listing.name },
+      });
+    }
+  }
+
+  // Artists get the full proposal once the campaign is paid (0118's trigger).
   for (const listing of unpaid ? [] : listings) {
     const proposal = createdByListing.get(listing.id);
     await notify({

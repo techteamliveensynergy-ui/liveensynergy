@@ -1,4 +1,5 @@
 import { sponsorshipStatus } from "@/lib/event-safety";
+import { AgreementStatus } from "@/components/campaigns/AgreementStatus";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -433,10 +434,12 @@ export default async function AdminCampaignPage({
                     {s.reference}
                     {s.artist_display_name ? ` · ${s.artist_display_name}` : ""}
                     {s.event_date ? ` · ${formatDate(s.event_date)}` : ""}
-                    {s.status === "in_progress"
-                      ? ` · brand ${s.brand_agreed ? "agreed" : "to agree"}, artist ${s.artist_agreed ? "agreed" : "to agree"}`
-                      : ""}
                   </span>
+                  {s.status === "in_progress" && (
+                    <span className="mt-1 block">
+                      <AgreementStatus brandAgreed={s.brand_agreed} artistAgreed={s.artist_agreed} size="sm" />
+                    </span>
+                  )}
                 </span>
                 <StatusBadge status={sponsorshipStatus(s)} />
               </li>
