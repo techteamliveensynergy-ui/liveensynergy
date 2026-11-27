@@ -212,7 +212,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
           label="Requests in review"
           value={requests.length}
           hint="with our team"
-          tint="bg-[#faf5ee]"
+          tint="bg-[var(--color-mist)]"
         />
         <MetricTile
           label="Active campaigns"
@@ -234,7 +234,7 @@ export async function BrandHome({ profile }: { profile: Profile }) {
               ? "no invoices due"
               : `${openInvoices.length} invoice${openInvoices.length === 1 ? "" : "s"}`
           }
-          tint="bg-[#fbeadd]"
+          tint="bg-[var(--color-pink)]"
         />
       </div>
 
