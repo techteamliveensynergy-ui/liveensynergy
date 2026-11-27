@@ -31,6 +31,10 @@ export interface ExportRow {
   country: string | null;
   /** From the Demographics preset question (0130). */
   income_band: string | null;
+  /** Arrived after the participant limit (0083) — an "extra" response (0131). */
+  over_limit?: boolean | null;
+  /** The respondent holds a code for this survey's campaign (0131). */
+  got_code?: boolean | null;
   answers: Record<string, unknown>;
   answer_seconds: Record<string, number>;
 }
@@ -52,20 +56,30 @@ export async function loadExportQuestions(client: SupabaseClient, templateId: st
   return ((data ?? []) as ExportQuestion[]).filter((q) => !q.config?.demographic);
 }
 
-export function responsesHeader(questions: ExportQuestion[]): string {
+/** `admin`: the admin's own download, which also marks the extra responses (0131).
+ *  The automatic report's file leaves them out, so the brand never sees them. */
+export interface ExportColumnOptions {
+  admin?: boolean;
+}
+
+const yesNo = (v: boolean | null | undefined) => (v == null ? "" : v ? "Yes" : "No");
+
+export function responsesHeader(questions: ExportQuestion[], opts: ExportColumnOptions = {}): string {
   return csvRow([
     "Respondent ID", "Person ID", "Source", "Started", "Submitted", "Time taken (seconds)",
     "Questions answered", "Questions total", "Quality status", "Quality score",
+    ...(opts.admin ? ["Over the limit (extra)", "Got a code"] : []),
     "Age band", "Gender", "Country", "Income band",
     ...questions.map(questionLabel),
     ...questions.map((_q, i) => `Q${i + 1} time (seconds)`),
   ]);
 }
 
-export function responsesRow(r: ExportRow, questions: ExportQuestion[]): string {
+export function responsesRow(r: ExportRow, questions: ExportQuestion[], opts: ExportColumnOptions = {}): string {
   return csvRow([
     r.reference, r.person_key, r.source, csvDateTime(r.started_at), csvDateTime(r.submitted_at),
     r.duration_seconds, r.questions_answered, questions.length, r.quality_status, r.quality_score,
+    ...(opts.admin ? [yesNo(r.over_limit), yesNo(r.got_code)] : []),
     r.age_band, r.gender, r.country, r.income_band ?? "",
     // "<id>:other" carries the typed "Other" text (survey_export_rows, 0065).
     ...questions.map((q) => answerToText(q, r.answers[q.id], r.answers[`${q.id}:other`])),

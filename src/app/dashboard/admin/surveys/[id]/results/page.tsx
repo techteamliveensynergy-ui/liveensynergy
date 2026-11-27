@@ -97,6 +97,16 @@ export default async function SurveyResultsPage({
     ]);
   if (!template) notFound();
 
+  // Extra responses (0131): over the participant limit, and who has / hasn't got
+  // a code. Without 0131 the call errors and the tiles stay hidden.
+  const { data: codeSummaryRows } = await supabase.rpc("survey_code_summary", { p_template_id: id });
+  const codeSummary = ((codeSummaryRows ?? []) as {
+    within_limit: number;
+    over_limit: number;
+    with_code: number;
+    without_code: number;
+  }[])[0];
+
   const questions = (questionRows ?? []) as Question[];
   const stats = { ...EMPTY_TEMPLATE_STATS, ...(tStats ?? {}) };
   const qStats = new Map(((qStatRows ?? []) as SurveyQuestionStats[]).map((s) => [s.question_id, s]));
@@ -352,6 +362,23 @@ export default async function SurveyResultsPage({
           hint={`${stats.review_count} in review · ${stats.pending_count} pending · ${stats.reject_count} rejected`}
         />
       </div>
+
+      {codeSummary && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2" data-testid="extra-responses">
+          <MetricTile
+            label="Extra responses (over the limit)"
+            value={codeSummary.over_limit}
+            tint={codeSummary.over_limit > 0 ? "bg-[var(--color-gold)]" : undefined}
+            hint={`${codeSummary.within_limit} within the limit. The download marks each one: “Over the limit (extra)” Yes / No.`}
+          />
+          <MetricTile
+            label="Got a code"
+            value={codeSummary.with_code}
+            tint={codeSummary.without_code > 0 ? "bg-[var(--color-pink)]" : undefined}
+            hint={`${codeSummary.without_code} without a code. The download marks each one: “Got a code” Yes / No.`}
+          />
+        </div>
+      )}
 
       {counted === 0 ? (
         <EmptyState
