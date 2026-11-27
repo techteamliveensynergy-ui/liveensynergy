@@ -44,6 +44,7 @@
   --color-les-cream: #f2efe4;
   --color-les-muted: #a7b2a2;
   --font-poster: var(--font-big-shoulders), var(--font-display);
+  --font-wordmark: var(--font-barrio), var(--font-display);
 }
 
 :root {
@@ -483,6 +484,28 @@ h4,
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.68rem;
+}
+
+/* Sign-in and sign-up (client, 27 Nov): the dark theme on the auth screens. The
+   blanket border colour above would flatten a selected option's brand border,
+   so put the lime back on it (more specific than ".les-site *"). */
+.les-auth .border-\[var\(--color-brand\)\] {
+  border-color: var(--color-les-lime);
+}
+.les-auth h1,
+.les-auth h2 {
+  font-family: var(--font-poster);
+  letter-spacing: -0.01em;
+}
+/* Dashboard navigation (client, 27 Nov): the sidebar and the phone top bar are
+   dark with lime accents; the working area stays light. */
+.les-chrome {
+  color: var(--color-les-cream);
+}
+.font-wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 @layer components {

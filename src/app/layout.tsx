@@ -45,6 +45,17 @@ const bigShoulders = localFont({
   fallback: ["Impact", "Arial Narrow", "sans-serif"],
 });
 
+// The Live·En·Synergy wordmark (client, 27 Nov: "Live En Synergy font — Barrio").
+// Self-hosted like the others; used only for the logo and a few brand moments.
+const barrio = localFont({
+  src: "../../node_modules/@fontsource/barrio/files/barrio-latin-400-normal.woff2",
+  weight: "400",
+  variable: "--font-barrio",
+  display: "swap",
+  adjustFontFallback: false,
+  fallback: ["Impact", "Arial Narrow", "sans-serif"],
+});
+
 const playfairDisplay = localFont({
   src: [
     {
@@ -77,7 +88,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${albertSans.variable} ${dmSans.variable} ${playfairDisplay.variable} ${bigShoulders.variable}`}
+      className={`${albertSans.variable} ${dmSans.variable} ${playfairDisplay.variable} ${bigShoulders.variable} ${barrio.variable}`}
     >
       <body>{children}</body>
     </html>

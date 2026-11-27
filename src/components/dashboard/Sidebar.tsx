@@ -68,8 +68,8 @@ export function Sidebar({
           onClick={() => setOpen(false)}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
             isActive(item.href)
-              ? "bg-[var(--color-brand)] text-white"
-              : "text-[var(--color-ink-soft)] hover:bg-[var(--color-mist)]"
+              ? "bg-[var(--color-les-lime)] text-[var(--color-les-ink)]"
+              : "text-[var(--color-les-muted)] hover:bg-[var(--color-les-panel)] hover:text-[var(--color-les-cream)]"
           }`}
         >
           <span aria-hidden>{item.icon}</span>
@@ -78,8 +78,8 @@ export function Sidebar({
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                 isActive(item.href)
-                  ? "bg-white/25 text-white"
-                  : "bg-[var(--color-brand)] text-white"
+                  ? "bg-black/15 text-[var(--color-les-ink)]"
+                  : "bg-[var(--color-les-lime)] text-[var(--color-les-ink)]"
               }`}
               aria-label={`${unreadCount} unread`}
             >
@@ -109,14 +109,14 @@ export function Sidebar({
   }) {
     const inner = (
       <>
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-ink)] font-serif text-base italic text-white">
+        <div className="font-wordmark grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-les-lime)] text-lg text-[var(--color-les-ink)]">
           {name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
+          <p className="truncate text-[13px] font-semibold text-[var(--color-les-cream)]">
             {name}
           </p>
-          <p className="truncate text-[11px] text-[var(--color-ink-soft)]">
+          <p className="truncate text-[11px] text-[var(--color-les-muted)]">
             {subtitle}
           </p>
         </div>
@@ -124,7 +124,7 @@ export function Sidebar({
     );
 
     const base =
-      "flex items-center gap-2.5 rounded-2xl border border-black/10 bg-[var(--color-mist)] p-2.5";
+      "flex items-center gap-2.5 rounded-2xl border border-[var(--color-les-line)] bg-[var(--color-les-panel)] p-2.5";
 
     if (!href) return <div className={base}>{inner}</div>;
 
@@ -133,12 +133,12 @@ export function Sidebar({
         href={href}
         onClick={onNavigate}
         title={`View ${name}'s public profile`}
-        className={`${base} transition hover:border-[var(--color-brand)]/50 hover:bg-[var(--color-gold)]/25`}
+        className={`${base} transition hover:border-[var(--color-les-lime)]/60`}
       >
         {inner}
         <span
           aria-hidden
-          className="ml-auto shrink-0 text-xs text-[var(--color-ink-soft)]"
+          className="ml-auto shrink-0 text-xs text-[var(--color-les-muted)]"
         >
           ↗
         </span>
@@ -147,9 +147,9 @@ export function Sidebar({
   }
 
   const account = (
-    <div className="border-t border-black/10 p-4">
-      <p className="truncate text-sm font-semibold">{userName}</p>
-      <p className="truncate text-xs text-[var(--color-ink-soft)]">
+    <div className="border-t border-[var(--color-les-line)] p-4">
+      <p className="truncate text-sm font-semibold text-[var(--color-les-cream)]">{userName}</p>
+      <p className="truncate text-xs text-[var(--color-les-muted)]">
         {userEmail}
       </p>
       <form action="/auth/sign-out" method="post" className="mt-3">
@@ -163,8 +163,8 @@ export function Sidebar({
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-black/10 bg-white px-4 py-3 md:hidden">
-        <Logo />
+      <div className="les-site les-chrome flex items-center justify-between border-b border-[var(--color-les-line)] px-4 py-3 md:hidden">
+        <Logo light />
         <button
           type="button"
           aria-label="Toggle navigation"
@@ -185,12 +185,12 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-black/10 bg-white shadow-[2px_0_12px_-6px_rgba(44,36,34,0.18)] transition-transform md:sticky md:top-0 md:z-auto md:h-screen md:shrink-0 md:translate-x-0 ${
+        className={`les-site les-chrome fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[var(--color-les-line)] transition-transform md:sticky md:top-0 md:z-auto md:h-screen md:shrink-0 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4">
-          <Logo />
+        <div className="flex items-center justify-between px-5 py-5">
+          <Logo light />
         </div>
         <div className="px-5 pb-4">
           {workspaceName ? (
