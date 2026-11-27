@@ -15,6 +15,8 @@ function Submit() {
 }
 
 const KINDS = Object.entries(ARTIST_FILE_KIND_LABEL);
+// The team never adds an invoice for an artist.
+const TEAM_KINDS = KINDS.filter(([k]) => k !== "invoice");
 
 /**
  * Upload to an artist's files (0121). On an artist's own Repository it adds a
@@ -57,7 +59,7 @@ export function ArtistFileUpload({
         <label className="text-sm">
           <span className="field-label">What is it?</span>
           <select name="kind" className="select mt-1" defaultValue="bank_details">
-            {KINDS.map(([value, label]) => (
+            {(artists ? TEAM_KINDS : KINDS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

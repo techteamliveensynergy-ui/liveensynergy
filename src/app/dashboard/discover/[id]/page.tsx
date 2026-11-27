@@ -1,4 +1,5 @@
 import { EventBanner } from "@/components/EventBanner";
+import { CHECKIN_RULE_SHORT } from "@/lib/checkin-copy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";

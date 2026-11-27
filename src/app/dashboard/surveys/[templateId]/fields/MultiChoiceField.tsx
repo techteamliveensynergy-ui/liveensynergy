@@ -3,10 +3,10 @@
 import type { FieldProps } from "./types";
 import { OptionRow } from "./OptionRow";
 import { OtherInput } from "./OtherInput";
-import { offersOther, otherLabel, SURVEY_OTHER_VALUE } from "@/lib/surveys";
+import { offersOther, otherLabel, SURVEY_OTHER_VALUE, shownOptions } from "@/lib/surveys";
 
 export function MultiChoiceField({ question, value, onChange, otherText = "", onOtherTextChange }: FieldProps) {
-  const options = question.options ?? [];
+  const options = shownOptions(question);
   const selected = Array.isArray(value) ? value : [];
   const other = offersOther(question);
   const otherChosen = other && selected.includes(SURVEY_OTHER_VALUE);

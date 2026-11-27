@@ -226,14 +226,6 @@ export default async function AdminPage() {
     { label: "Registered", n: participations.length },
     { label: "Took a survey", n: surveyParticipations },
     {
-      label: "Proof uploaded",
-      n: participations.filter((p) =>
-        ["ticket_uploaded", "attendance_verified", "reward_released"].includes(
-          p.status,
-        ),
-      ).length,
-    },
-    {
       label: "Checked in",
       n: participations.filter((p) =>
         ["attendance_verified", "reward_released"].includes(p.status),

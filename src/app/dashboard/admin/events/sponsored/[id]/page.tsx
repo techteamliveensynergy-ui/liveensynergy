@@ -41,6 +41,7 @@ function checkinMethodLabel(p: { checkin_method?: string | null; checkin_distanc
   }
 }
 import { ProofsSection } from "./ProofsSection";
+import { AgreementStatus } from "@/components/campaigns/AgreementStatus";
 import { RewardEngineSection } from "./RewardEngineSection";
 import { ChangeRequestsSection } from "./ChangeRequestsSection";
 import { InvoiceSection, type ArtistInvoiceInfo } from "./InvoiceSection";
@@ -361,18 +362,14 @@ export default async function AdminSponsoredDetailPage({
   const invoices = (invoiceRows ?? []) as Invoice[];
 
   // What the artist did about their own invoice (0121): files they uploaded for
-  // this partnership, and whether they asked the team to draft it.
-  const [{ data: artistInvRows }, { data: artistInvReq }] = await Promise.all([
-    supabase
-      .from("artist_files")
-      .select("id, title, file_name, file_path")
-      .eq("sponsored_event_id", id)
-      .eq("kind", "invoice")
-      .order("created_at", { ascending: false }),
-    supabase.from("artist_invoice_requests").select("sponsored_event_id").eq("sponsored_event_id", id).maybeSingle(),
-  ]);
+  // this partnership. The team never drafts one on their behalf.
+  const { data: artistInvRows } = await supabase
+    .from("artist_files")
+    .select("id, title, file_name, file_path")
+    .eq("sponsored_event_id", id)
+    .eq("kind", "invoice")
+    .order("created_at", { ascending: false });
   const artistInvoice: ArtistInvoiceInfo = {
-    draftRequested: !!artistInvReq,
     files: await Promise.all(
       ((artistInvRows ?? []) as { id: string; title: string; file_name: string; file_path: string }[]).map(async (r) => ({
         id: r.id,
@@ -416,11 +413,17 @@ export default async function AdminSponsoredDetailPage({
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = await qrCodeDataUrl(checkInUrl);
 
+  // The venue's map point for location check-in (0127). A database without the
+  // columns just errors here and the field stays hidden.
+  const { data: geoRow, error: geoError } = await supabase
+    .from("sponsored_events")
+    .select("venue_lat, venue_lng")
+    .eq("id", id)
+    .maybeSingle<{ venue_lat: number | null; venue_lng: number | null }>();
+  const venuePoint = geoError ? undefined : { lat: geoRow?.venue_lat ?? null, lng: geoRow?.venue_lng ?? null };
+
   // Funnel
   const registered = participants.length;
-  const proofed = participants.filter((p) =>
-    ["ticket_uploaded", "attendance_verified", "reward_released"].includes(p.status),
-  ).length;
   const verified = participants.filter((p) =>
     ["attendance_verified", "reward_released"].includes(p.status),
   ).length;
@@ -519,10 +522,9 @@ export default async function AdminSponsoredDetailPage({
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
           Funnel
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {[
             { label: "Registered", n: registered, p: 100 },
-            { label: "Proof uploaded", n: proofed, p: pct(proofed) },
             { label: "Verified", n: verified, p: pct(verified) },
             { label: "Rewarded", n: rewarded, p: pct(rewarded) },
           ].map((s) => (
@@ -585,25 +587,8 @@ export default async function AdminSponsoredDetailPage({
           budget, terms — use Edit event details below.
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div
-            className={`rounded-xl px-4 py-3 text-sm ${
-              event.brand_agreed
-                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
-                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
-            }`}
-          >
-            Brand agreed · {event.brand_agreed ? "✓" : "Pending"}
-          </div>
-          <div
-            className={`rounded-xl px-4 py-3 text-sm ${
-              event.artist_agreed
-                ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]"
-                : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"
-            }`}
-          >
-            Artist agreed · {event.artist_agreed ? "✓" : "Pending"}
-          </div>
+        <div className="mt-4">
+          <AgreementStatus brandAgreed={event.brand_agreed} artistAgreed={event.artist_agreed} />
         </div>
 
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -794,6 +779,7 @@ export default async function AdminSponsoredDetailPage({
                 reward_rules: event.reward_rules,
                 branding_guidelines: event.branding_guidelines,
                 attendance_method: event.attendance_method,
+                venue_point: venuePoint,
                 ticket_price_gbp: event.event_listings?.ticket_price_gbp ?? null,
                 capacity: event.event_listings?.capacity ?? null,
                 category: event.event_listings?.category ?? null,

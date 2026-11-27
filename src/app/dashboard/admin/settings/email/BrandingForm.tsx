@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { EMAIL_FONTS, DEFAULT_HEADER_BG, DEFAULT_HEADER_TEXT, type EmailBranding } from "@/lib/email/branding";
+import { RichTextField } from "@/components/admin/RichTextField";
 import { saveEmailBranding, sendBrandingTest, type BrandingState } from "./actions";
 
 function Submit({ label, pending: pendingLabel, className = "btn btn-primary" }: { label: string; pending: string; className?: string }) {
@@ -27,6 +28,7 @@ function Notice({ state }: { state: BrandingState }) {
 export function BrandingForm({ branding }: { branding: EmailBranding }) {
   const [state, action] = useActionState<BrandingState, FormData>(saveEmailBranding, {});
   const [testState, testAction] = useActionState<BrandingState>(sendBrandingTest, {});
+  const [footer, setFooter] = useState(branding.footer_text ?? "");
 
   return (
     <div className="space-y-6">
@@ -76,21 +78,26 @@ export function BrandingForm({ branding }: { branding: EmailBranding }) {
           </span>
         </label>
 
-        <label className="block text-sm">
-          <span className="field-label">Footer text</span>
-          <textarea
+        <div className="block text-sm">
+          <label htmlFor="footer_text" className="field-label">
+            Footer
+          </label>
+          <RichTextField
+            id="footer_text"
             name="footer_text"
+            value={footer}
+            onChange={setFooter}
             rows={4}
-            maxLength={1000}
-            defaultValue={branding.footer_text ?? ""}
-            className="textarea mt-1"
+            maxLength={2000}
             placeholder={"Live En Synergy Ltd · Registered in England and Wales, company no. …\nRegistered office: …"}
+            className="textarea mt-1"
           />
           <span className="field-hint">
-            Company name, registered office and company number are expected on UK business email. Plain text only —
-            it appears above the notification-settings line in every email, and in the plain-text version too.
+            Company name, registered office and company number are expected on UK business email. Select words and press
+            Link to make them a hyperlink (privacy policy, website, an email address); Bold, Italic, lists, buttons and dividers are there too. It appears above the
+            notification-settings line in every email; the plain-text version shows each link as “words (address)”.
           </span>
-        </label>
+        </div>
 
         <div className="flex justify-end">
           <Submit label="Save branding" pending="Saving…" />

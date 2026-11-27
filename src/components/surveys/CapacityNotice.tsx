@@ -30,14 +30,14 @@ export function CapacityNotice({ capacity }: { capacity: SurveyCapacityState | n
       role="status"
       data-testid="capacity-notice"
       data-stage={over ? "limit" : quota ? "quota" : "nearly_full"}
-      className={`mb-5 rounded-xl px-4 py-3 text-sm ${
+      className={`mb-5 rounded-xl px-5 py-4 text-base leading-relaxed ${
         over || quota
           ? "bg-[var(--color-pink)] text-[var(--color-accent)]"
           : "bg-[var(--color-gold)]/40 text-[var(--color-ink)]"
       }`}
     >
-      <p className="font-semibold">{title}</p>
-      <p className="mt-0.5">{body}</p>
+      <p className="text-lg font-semibold">{title}</p>
+      <p className="mt-1">{body}</p>
     </div>
   );
 }

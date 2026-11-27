@@ -31,9 +31,16 @@ export async function confirmAttendance(formData: FormData) {
   const participationId = String(formData.get("participation_id") ?? "");
   if (!participationId) redirect(`/attend/${token}`);
 
+  const num = (k: string) => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v && Number.isFinite(Number(v)) ? Number(v) : null;
+  };
   const { data, error } = await supabase.rpc("confirm_attendance", {
     p_token: token,
     p_participation_id: participationId,
+    p_lat: num("lat"),
+    p_lng: num("lng"),
+    p_accuracy: num("accuracy"),
   });
   const result =
     error || !data ? "error" : String((data as { result?: string }).result ?? "error");
@@ -54,4 +61,49 @@ export async function confirmAttendance(formData: FormData) {
   revalidatePath(`/attend/${token}`);
   revalidatePath("/dashboard/participations");
   redirect(result === "verified" || result === "already" ? `/attend/${token}` : `/attend/${token}?result=${result}`);
+}
+
+/**
+ * The in-app "Check in" button on My events: no QR code, so the venue must have
+ * a location and the person must be within its radius (0127) — nothing else
+ * proves they're there.
+ */
+export async function confirmAttendanceInApp(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const participationId = String(formData.get("participation_id") ?? "");
+  if (!user) redirect(`/auth/sign-in?redirectTo=/dashboard/check-in/${participationId}`);
+  if (!participationId) redirect("/dashboard/participations");
+
+  const num = (k: string) => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v && Number.isFinite(Number(v)) ? Number(v) : null;
+  };
+  const { data, error } = await supabase.rpc("confirm_attendance", {
+    p_token: null,
+    p_participation_id: participationId,
+    p_lat: num("lat"),
+    p_lng: num("lng"),
+    p_accuracy: num("accuracy"),
+  });
+  const result = error || !data ? "error" : String((data as { result?: string }).result ?? "error");
+  if (error) console.error("[confirmAttendanceInApp] rpc failed", error.message);
+
+  if (result === "verified") {
+    await notify({
+      eventKey: "participation.verified",
+      recipientProfileId: user.id,
+      link: "/dashboard/participations",
+      variables: { event_name: (data as { event_name?: string }).event_name ?? "your event" },
+    });
+  }
+  revalidatePath(`/dashboard/check-in/${participationId}`);
+  revalidatePath("/dashboard/participations");
+  redirect(
+    result === "verified" || result === "already"
+      ? `/dashboard/check-in/${participationId}`
+      : `/dashboard/check-in/${participationId}?result=${result}`,
+  );
 }

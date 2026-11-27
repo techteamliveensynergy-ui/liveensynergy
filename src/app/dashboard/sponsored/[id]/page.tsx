@@ -307,22 +307,16 @@ export default async function SponsoredEventPage({
         .maybeSingle<FulfilmentForm>()
     : { data: null };
 
-  // The artist's invoice (0121): what they uploaded for this partnership and
-  // whether they asked the team to draft it. A database without 0121 reads as
-  // "nothing yet" (the queries just return no rows).
+  // The artist's invoice (0121): what they uploaded for this partnership. A
+  // database without 0121 reads as "nothing yet" (the query just returns no rows).
   let invoiceFiles: InvoiceFile[] = [];
-  let invoiceDraftRequested = false;
   if (isArtist) {
-    const [{ data: invRows }, { data: reqRow }] = await Promise.all([
-      supabase
-        .from("artist_files")
-        .select("id, title, file_name, file_path, created_at")
-        .eq("sponsored_event_id", event.id)
-        .eq("kind", "invoice")
-        .order("created_at", { ascending: false }),
-      supabase.from("artist_invoice_requests").select("sponsored_event_id").eq("sponsored_event_id", event.id).maybeSingle(),
-    ]);
-    invoiceDraftRequested = !!reqRow;
+    const { data: invRows } = await supabase
+      .from("artist_files")
+      .select("id, title, file_name, file_path, created_at")
+      .eq("sponsored_event_id", event.id)
+      .eq("kind", "invoice")
+      .order("created_at", { ascending: false });
     invoiceFiles = await Promise.all(
       ((invRows ?? []) as { id: string; title: string; file_name: string; file_path: string; created_at: string }[]).map(
         async (r) => ({
@@ -708,7 +702,7 @@ export default async function SponsoredEventPage({
       {isArtist && proofSection}
 
       {isArtist && (event.status === "confirmed" || event.status === "completed") && (
-        <ArtistInvoiceCard eventId={event.id} uploaded={invoiceFiles} draftRequested={invoiceDraftRequested} />
+        <ArtistInvoiceCard eventId={event.id} uploaded={invoiceFiles} />
       )}
 
       {/* Terms & agreement */}
@@ -735,8 +729,8 @@ export default async function SponsoredEventPage({
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <AgreeCard label="Brand agreed" agreed={event.brand_agreed} />
-          <AgreeCard label="Artist agreed" agreed={event.artist_agreed} />
+          <AgreeCard label="Brand" agreed={event.brand_agreed} />
+          <AgreeCard label="Artist" agreed={event.artist_agreed} />
         </div>
 
         {/* Where the agreement stands and what happens next, in words — the two
@@ -1022,7 +1016,7 @@ function AgreeCard({ label, agreed }: { label: string; agreed: boolean }) {
       className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${agreed ? "bg-[var(--color-sage)] text-[var(--color-olive-deep)]" : "bg-[var(--color-mint)] text-[var(--color-ink-soft)]"}`}
     >
       <span className="font-medium">{label}</span>
-      <span>{agreed ? "✓ Agreed" : "Pending"}</span>
+      <span className="font-semibold">{agreed ? "✓ Confirmed" : "Awaiting"}</span>
     </div>
   );
 }

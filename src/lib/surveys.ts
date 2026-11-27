@@ -463,6 +463,9 @@ export function questionProblem(d: SurveyQuestionDraft): string | null {
       return `"${SURVEY_OTHER_VALUE}" is reserved for the Other option — rename that option.`;
     }
   }
+  if (offersOther(d) && d.options.some((o) => duplicatesOther(o.label, d.config))) {
+    return `Remove the typed “Other” option — “${otherLabel(d.config)}” is already added automatically (with a box to say what).`;
+  }
   if (d.type === "attention_check" && !d.config.expected_answer) {
     return "Set the expected answer for the attention check.";
   }
@@ -504,7 +507,18 @@ export function questionProblemAt(drafts: SurveyQuestionDraft[], i: number): str
     questionProblem(d) ??
     logicProblem(
       d,
-      drafts.slice(i + 1).map((x) => x.key),
+      // Later questions a jump may land on. A rating group is one card, so a
+      // jump into its middle would show a half group and skip its first rows
+      // (audit, 18 Nov): only a group's first row is a valid target — the
+      // builder's dropdown already offers only those; this catches a rule left
+      // pointing into a group after rows were reordered or grouped.
+      drafts
+        .slice(i + 1)
+        .filter((x, n, rest) => {
+          const prev = n === 0 ? drafts[i] : rest[n - 1];
+          return !(x.type === "scale" && x.config.group_id && prev?.config.group_id === x.config.group_id);
+        })
+        .map((x) => x.key),
     )
   );
 }
@@ -579,6 +593,23 @@ export function offersOther(q: { type: SurveyQuestionType; config: SurveyQuestio
   return OTHER_CAPABLE_TYPES.includes(q.type) && q.config.allow_other === true && q.config.display_style !== "likert";
 }
 
+/** An authored option that just says "Other" while the question already adds its own "Other — please specify". */
+function duplicatesOther(label: string | undefined, config: SurveyQuestionConfig): boolean {
+  const l = (label ?? "").trim().toLowerCase();
+  return l !== "" && (l === "other" || l === otherLabel(config).trim().toLowerCase());
+}
+
+/**
+ * The options a respondent is shown. When the question switches on "Other —
+ * please specify" (which adds its own, with a text box), an option someone also
+ * typed as plain "Other" would list it twice (audit, 18 Nov: Q2 of a live
+ * survey), so that typed one is left out.
+ */
+export function shownOptions(q: Pick<SurveyQuestion, "type" | "config" | "options">) {
+  const options = q.options ?? [];
+  return offersOther(q) ? options.filter((o) => !duplicatesOther(o.label, q.config)) : options;
+}
+
 /**
  * What a respondent sees as one card (one step, in stepped layout): a single
  * question, or a rating group — consecutive scale questions sharing a
@@ -620,6 +651,40 @@ export function blockProblem(
     if (offersOther(q) && choseOther(v) && !(otherTexts[q.id] ?? "").trim()) {
       return `Please say what "${otherLabel(q.config)}" is.`;
     }
+    // The limits the full check enforces at the very end (validateAnswers):
+    // checked here too, so a rule like "choose at least 3" stops the person on
+    // the question itself instead of surfacing pages later, where it reads as
+    // the survey getting stuck. Only for an answer that is there (an optional
+    // question may still be skipped).
+    if (!isAnswerEmpty(v)) {
+      const limit = answerLimitProblem(q, v);
+      if (limit) return limit;
+    }
+  }
+  return null;
+}
+
+/** Selection counts, ranking completeness, number range and text length — in the respondent's words. */
+function answerLimitProblem(q: SurveyQuestion, v: SurveyAnswerValue): string | null {
+  if (Array.isArray(v)) {
+    const min = q.config.min_select;
+    const max = q.config.max_select;
+    if (q.type === "ranking" && v.length !== (q.options ?? []).length) return "Please rank every option.";
+    if (min != null && v.length < min) {
+      return `Please choose at least ${min} option${min === 1 ? "" : "s"} (you've chosen ${v.length}).`;
+    }
+    if (max != null && v.length > max) {
+      return `Please choose no more than ${max} option${max === 1 ? "" : "s"} (you've chosen ${v.length}).`;
+    }
+    return null;
+  }
+  if (typeof v === "number") {
+    if (q.config.min != null && v < q.config.min) return `Please enter ${q.config.min} or more.`;
+    if (q.config.max != null && v > q.config.max) return `Please enter ${q.config.max} or less.`;
+    return null;
+  }
+  if (typeof v === "string" && (!q.options || q.options.length === 0) && q.config.max_length != null && v.length > q.config.max_length) {
+    return `Please keep this to ${q.config.max_length} characters or fewer.`;
   }
   return null;
 }

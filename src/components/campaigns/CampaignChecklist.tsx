@@ -88,7 +88,7 @@ export function campaignChecklist(f: CampaignChecklistFacts): ChecklistItem[] {
       state: "awaited",
       text: `Event suggested: ${e.name} — ${
         unpaid
-          ? `${e.brand_agreed ? "brand agreed; " : "awaiting the brand; "}the artist sees it once paid`
+          ? `${e.brand_agreed ? "✓ the brand has confirmed it; " : "awaiting the brand to confirm; "}the artist sees it once paid`
           : `awaiting ${waitingOn || "confirmation"} to agree`
       }`,
     });

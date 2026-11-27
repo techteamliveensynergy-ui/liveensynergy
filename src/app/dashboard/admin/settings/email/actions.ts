@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/profile";
 import { uploadImage } from "@/lib/storage";
 import { contrastRatio, EMAIL_FONTS, loadEmailBranding, renderEmailText, type EmailFontKey } from "@/lib/email/branding";
 import { renderEmailHtml } from "@/lib/email/layout";
+import { richLinkProblem } from "@/lib/email/rich-text";
 import { sendViaResend } from "@/lib/email/resend";
 import { SAMPLE_EMAIL } from "./sample";
 
@@ -38,7 +39,9 @@ export async function saveEmailBranding(_prev: BrandingState, formData: FormData
   const fontRaw = String(formData.get("font") ?? "system");
   const font: EmailFontKey = fontRaw in EMAIL_FONTS ? (fontRaw as EmailFontKey) : "system";
   const footer = String(formData.get("footer_text") ?? "").trim();
-  if (footer.length > 1000) return { error: "Keep the footer text under 1,000 characters." };
+  if (footer.length > 2000) return { error: "Keep the footer under 2,000 characters." };
+  const footerLink = richLinkProblem(footer);
+  if (footerLink) return { error: footerLink };
 
   const patch: Record<string, string | null> = {
     header_bg: headerBg,

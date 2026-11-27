@@ -115,7 +115,7 @@ export async function deleteArtistFile(formData: FormData) {
   revalidatePath("/dashboard/resources");
 }
 
-/** The team adds a file for an artist (a contract, a draft invoice). Admin only. */
+/** The team adds a file for an artist (a contract or other document — never an invoice). Admin only. */
 export async function addArtistFileForArtist(_prev: ArtistFileState, formData: FormData): Promise<ArtistFileState> {
   const { supabase, user, role } = await requireUser();
   if (!user) return { error: "Please sign in again." };
@@ -124,6 +124,8 @@ export async function addArtistFileForArtist(_prev: ArtistFileState, formData: F
   const artistId = String(formData.get("artist_profile_id") ?? "").trim();
   const file = formData.get("file");
   const kind = kindOf(formData.get("kind"));
+  // An invoice is the artist's own document: the team never creates or uploads one on their behalf.
+  if (kind === "invoice") return { error: "The team can't add an invoice for an artist — artists upload their own." };
   const title = String(formData.get("title") ?? "").trim() || (file instanceof File ? file.name : "");
   const description = String(formData.get("description") ?? "").trim() || null;
   if (!artistId) return { error: "Choose the artist this file is for." };
@@ -182,36 +184,4 @@ export async function deleteArtistFileAsAdmin(formData: FormData) {
   // uploader's folder); an artist's object is left for the storage policy.
   if (row?.file_path && row.uploaded_by === user.id) await supabase.storage.from("private-uploads").remove([row.file_path]);
   revalidatePath("/dashboard/resources");
-}
-
-/** "Please draft my invoice" for a partnership (0121). Artist only; once per partnership. */
-export async function requestInvoiceDraft(_prev: ArtistFileState, formData: FormData): Promise<ArtistFileState> {
-  const { supabase, user, role, name } = await requireUser();
-  if (!user) return { error: "Please sign in again." };
-  if (role !== "artist" && role !== "event") return { error: "Only artist and organiser accounts can ask for this." };
-  const eventId = String(formData.get("event_id") ?? "").trim();
-  if (!eventId) return { error: "Missing partnership." };
-
-  const { data: ev } = await supabase
-    .from("sponsored_events")
-    .select("name, reference")
-    .eq("id", eventId)
-    .eq("artist_profile_id", user.id)
-    .maybeSingle<{ name: string; reference: string | null }>();
-  if (!ev) return { error: "We couldn't find that partnership." };
-
-  const { error } = await supabase
-    .from("artist_invoice_requests")
-    .insert({ sponsored_event_id: eventId, artist_profile_id: user.id });
-  if (error) {
-    if (error.code === "23505") return { message: "You've already asked — the team will be in touch." };
-    return { error: "We couldn't send that just now. Please try again." };
-  }
-  await notifyAdmins({
-    eventKey: "admin.invoice_draft_requested",
-    link: `/dashboard/admin/events/sponsored/${eventId}`,
-    variables: { artist_name: name ?? "An artist", event_name: ev.name, reference: ev.reference ?? "" },
-  });
-  revalidatePath(`/dashboard/sponsored/${eventId}`);
-  return { message: "Sent — the team will draft your invoice and send it to you." };
 }

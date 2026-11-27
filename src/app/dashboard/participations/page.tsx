@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CHECKIN_RULE, CHECKIN_RULE_SHORT } from "@/lib/checkin-copy";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/dashboard/ui";
@@ -218,6 +219,36 @@ export default async function ParticipationsPage({
         </div>
       )}
 
+      {/* In-app check-in (0127): events that are open now or opening within 24 hours. */}
+      {(() => {
+        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+        const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+        const ready = allRows.filter(
+          (r) =>
+            r.selected &&
+            ["registered", "ticket_uploaded"].includes(r.status) &&
+            r.sponsored_events?.event_date &&
+            (r.sponsored_events.event_date === today || r.sponsored_events.event_date === tomorrow),
+        );
+        if (ready.length === 0) return null;
+        return (
+          <div className="card mb-5 p-5" data-testid="check-in-now">
+            <h2 className="font-semibold">📍 Check in</h2>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{CHECKIN_RULE}</p>
+            <ul className="mt-3 divide-y divide-black/5 text-sm">
+              {ready.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="font-medium">{r.sponsored_events?.name}</span>
+                  <Link href={`/dashboard/check-in/${r.id}`} className="btn btn-primary text-sm">
+                    Check in
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
+
       {/* Event Passport (Testing notes 7 Nov): every event they've checked in
           at, newest first. Check-in = the in-app button at the venue (0126),
           the venue QR, or the artist/team confirming them — recorded as
@@ -234,7 +265,7 @@ export default async function ParticipationsPage({
                 {stamps.length === 0
                   ? "Check in at an event on the day — tap Check in here when you're at the venue, or scan the QR code there — and it's stamped here."
                   : `${stamps.length} event${stamps.length === 1 ? "" : "s"} checked in.`}{" "}
-                Check-in is only open on the day of the event.
+                {CHECKIN_RULE_SHORT}
               </p>
             </div>
             <Link href="/dashboard/passport" className="btn btn-ghost text-sm">

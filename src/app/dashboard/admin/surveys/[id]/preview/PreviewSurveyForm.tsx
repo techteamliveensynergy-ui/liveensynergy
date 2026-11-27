@@ -92,6 +92,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
   if (finished) {
     return (
       <SurveySlide
+        logoUrl={footerLogoUrl}
+        logoName={footerBrandName}
         className="survey-scope"
         style={{ ...typographyVars(typography), ...cardBackgroundStyle(appearance), ...accentColorVars(accentColor) }}
       >
@@ -122,6 +124,8 @@ export function PreviewSurveyForm({ questions, template }: { questions: SurveyQu
         coverMediaUrl={coverMediaUrl}
         coverMediaType={coverMediaType}
         accentColor={accentColor}
+        logoUrl={footerLogoUrl}
+        logoName={footerBrandName}
         requireResidency={true}
         footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
         typography={typography}

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/Logo";
 import { formatEventDateTime } from "@/lib/event-time";
+import { CheckInButton } from "@/components/attend/CheckInButton";
+import { CHECKIN_RESULT_MESSAGES } from "@/lib/checkin-copy";
 import { confirmAttendance } from "./actions";
 
 export const metadata = { title: "Confirm attendance" };
@@ -108,7 +110,7 @@ export default async function AttendPage({
 
   const { data: event } = await supabase
     .from("sponsored_events")
-    .select("id, name, event_date, start_time, timezone")
+    .select("id, name, event_date, start_time, timezone, venue_lat, venue_lng")
     .eq("attendance_qr_token", token)
     .maybeSingle();
 
@@ -202,7 +204,7 @@ export default async function AttendPage({
     );
   }
 
-  const refused = result ? RESULT_MESSAGES[result] : undefined;
+  const refused = result ? CHECKIN_RESULT_MESSAGES[result] : undefined;
 
   return (
     <Shell>
@@ -217,13 +219,11 @@ export default async function AttendPage({
         title="Confirm you're here"
         body={`Tap below to confirm you're attending ${event.name}${when ? ` (${when})` : ""}. Once you're checked in, the post-event survey unlocks in My events — complete it to receive your discount code.`}
       />
-      <form action={confirmAttendance} className="mt-6">
-        <input type="hidden" name="token" value={token} />
-        <input type="hidden" name="participation_id" value={participation.id} />
-        <button type="submit" className="btn btn-primary w-full">
-          Confirm my attendance
-        </button>
-      </form>
+      <CheckInButton
+        action={confirmAttendance}
+        fields={{ token, participation_id: participation.id }}
+        needsLocation={event.venue_lat != null && event.venue_lng != null}
+      />
     </Shell>
   );
 }

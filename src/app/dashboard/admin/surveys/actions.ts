@@ -404,6 +404,22 @@ export async function publishSurveyTemplate(_prev: SurveyState, formData: FormDa
     return { error: "This survey has no saved questions. Add questions and click “Save changes” before publishing." };
   }
 
+  // A rating-group row still named "Item 3" is the builder's placeholder, left
+  // behind (audit, 18 Nov: a live survey). Name it or delete it first.
+  const { data: groupRows } = await supabase
+    .from("survey_questions")
+    .select("prompt, config")
+    .eq("template_id", id)
+    .eq("type", "scale");
+  const placeholder = ((groupRows ?? []) as { prompt: string | null; config: { group_id?: string } | null }[]).find(
+    (r) => r.config?.group_id && /^item\s*\d+$/i.test((r.prompt ?? "").trim()),
+  );
+  if (placeholder) {
+    return {
+      error: `A rating row is still called “${(placeholder.prompt ?? "").trim()}” — that's a placeholder. Rename it or delete the row, save, then publish.`,
+    };
+  }
+
   const { count: conflicting } = await supabase
     .from("survey_templates")
     .select("id", { count: "exact", head: true })

@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { neutraliseMarkup } from "@/lib/email/rich-text";
 import { createServiceClient } from "@/lib/supabase/service";
 import { drainOutbox } from "@/lib/email/drain";
 import { safeAppPath } from "@/lib/notification-links";
@@ -55,7 +56,7 @@ export function renderTemplate(
   if (!template) return "";
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, key: string) => {
     const v = variables[key];
-    return v === undefined || v === null || v === "" ? match : String(v);
+    return v === undefined || v === null || v === "" ? match : neutraliseMarkup(String(v));
   });
 }
 

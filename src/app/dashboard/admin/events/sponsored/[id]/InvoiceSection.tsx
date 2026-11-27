@@ -4,7 +4,6 @@ import type { Invoice } from "@/lib/types";
 /** What the artist did about their own invoice (0121). */
 export interface ArtistInvoiceInfo {
   files: { id: string; title: string; file_name: string; href: string | null }[];
-  draftRequested: boolean;
 }
 
 export function InvoiceSection({
@@ -29,14 +28,9 @@ export function InvoiceSection({
           Draft invoice
         </Link>
       </div>
-      {artistInvoice && (artistInvoice.draftRequested || artistInvoice.files.length > 0) && (
+      {artistInvoice && artistInvoice.files.length > 0 && (
         <div className="mt-3 rounded-xl bg-[var(--color-mist)] p-3 text-sm">
           <p className="font-semibold">The artist&apos;s invoice</p>
-          {artistInvoice.draftRequested && (
-            <p className="mt-1 text-[var(--color-ink-soft)]">
-              The artist asked the team to draft their invoice — use &ldquo;Draft invoice&rdquo; above.
-            </p>
-          )}
           {artistInvoice.files.map((f) => (
             <p key={f.id} className="mt-1">
               {f.title} <span className="text-xs text-[var(--color-ink-soft)]">· {f.file_name}</span>{" "}

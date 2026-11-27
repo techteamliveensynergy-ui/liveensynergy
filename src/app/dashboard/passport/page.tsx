@@ -58,8 +58,8 @@ export default async function PassportPage() {
             the event under My events (your phone shares its location once), or scan the QR code displayed there.
           </li>
           <li>
-            <strong className="text-[var(--color-ink)]">Check-in is only open on the day of the event</strong> — it
-            won&apos;t work before or after.
+            <strong className="text-[var(--color-ink)]">Check-in opens 24 hours before the event</strong> and closes at
+            the end of the event day. You need to be within about 0.3 miles of the venue.
           </li>
           <li>You need to be registered for the event first (see My events).</li>
         </ul>

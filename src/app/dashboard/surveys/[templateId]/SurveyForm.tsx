@@ -227,6 +227,8 @@ export function SurveyForm({
         coverMediaUrl={coverMediaUrl}
         coverMediaType={coverMediaType}
         accentColor={accentColor}
+        logoUrl={footerLogoUrl}
+        logoName={footerBrandName}
         requireResidency={false}
         footer={footer}
         typography={typography}
