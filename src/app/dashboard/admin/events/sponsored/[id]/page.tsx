@@ -390,6 +390,15 @@ export default async function AdminSponsoredDetailPage({
   const checkInUrl = attendUrl(event.attendance_qr_token);
   const checkInQr = await qrCodeDataUrl(checkInUrl);
 
+  // The venue's map point for location check-in (0127). A database without the
+  // columns just errors here and the field stays hidden.
+  const { data: geoRow, error: geoError } = await supabase
+    .from("sponsored_events")
+    .select("venue_lat, venue_lng")
+    .eq("id", id)
+    .maybeSingle<{ venue_lat: number | null; venue_lng: number | null }>();
+  const venuePoint = geoError ? undefined : { lat: geoRow?.venue_lat ?? null, lng: geoRow?.venue_lng ?? null };
+
   // Funnel
   const registered = participants.length;
   const verified = participants.filter((p) =>
@@ -747,6 +756,7 @@ export default async function AdminSponsoredDetailPage({
                 reward_rules: event.reward_rules,
                 branding_guidelines: event.branding_guidelines,
                 attendance_method: event.attendance_method,
+                venue_point: venuePoint,
                 ticket_price_gbp: event.event_listings?.ticket_price_gbp ?? null,
                 capacity: event.event_listings?.capacity ?? null,
                 category: event.event_listings?.category ?? null,

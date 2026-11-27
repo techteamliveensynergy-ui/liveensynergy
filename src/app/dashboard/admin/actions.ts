@@ -477,6 +477,26 @@ export async function adminUpdateSponsoredEvent(
     budget_gbp: budget,
   };
 
+  // The venue's map point for location check-in (0127). Only written when the
+  // page could read the columns (geo_enabled), so a database without 0127 still
+  // saves everything else. Blank clears it; "lat, lng" sets it.
+  if (str(formData.get("geo_enabled")) === "1") {
+    const raw = str(formData.get("venue_point"));
+    if (!raw) {
+      patch.venue_lat = null;
+      patch.venue_lng = null;
+    } else {
+      const m = raw.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+      const lat = m ? Number(m[1]) : NaN;
+      const lng = m ? Number(m[2]) : NaN;
+      if (!m || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return { error: "The venue map point should look like 51.5080, -0.1281 (latitude, then longitude)." };
+      }
+      patch.venue_lat = lat;
+      patch.venue_lng = lng;
+    }
+  }
+
   // Changing the budget has to re-derive what's left to pay out: net of the
   // platform fee, less whatever has already been released.
   if (budget !== current.budget_gbp) {

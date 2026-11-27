@@ -32,6 +32,8 @@ export interface EventEditDefaults {
   category: string | null;
   /** Null when the sponsorship has no listing behind it. */
   listing_name: string | null;
+  /** The venue's map point for location check-in (0127). `undefined` = the database doesn't have the columns yet. */
+  venue_point?: { lat: number | null; lng: number | null };
 }
 
 /**
@@ -99,6 +101,26 @@ export function EventEditForm({
             defaultValue={event.venue_details ?? ""}
           />
         </Field>
+        {event.venue_point && (
+          <Field
+            label="Venue map point (for check-in)"
+            htmlFor="edit-venue-point"
+            hint="Latitude, longitude — in Google Maps right-click the venue and click the numbers to copy them. Once set, audience check-in only works within about 0.3 miles of it, and the in-app Check in button turns on. Leave blank for QR-only check-in with no location rule."
+          >
+            <input type="hidden" name="geo_enabled" value="1" />
+            <input
+              id="edit-venue-point"
+              name="venue_point"
+              className="input"
+              placeholder="51.5080, -0.1281"
+              defaultValue={
+                event.venue_point.lat != null && event.venue_point.lng != null
+                  ? `${event.venue_point.lat}, ${event.venue_point.lng}`
+                  : ""
+              }
+            />
+          </Field>
+        )}
         <Field label="Location" htmlFor="edit-location">
           <input
             id="edit-location"

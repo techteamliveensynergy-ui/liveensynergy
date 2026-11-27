@@ -1,4 +1,5 @@
 import { EventBanner } from "@/components/EventBanner";
+import { CHECKIN_RULE_SHORT } from "@/lib/checkin-copy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/profile";
@@ -116,8 +117,8 @@ export default async function EventDetailsPage({
           <li>Use your code when you buy your ticket on the event&apos;s ticketing site.</li>
           <li>
             {event.attendance_method
-              ? `On the day, remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport. Check-in is only open on the day of the event.`
-              : "On the day, remember to check in at the venue by scanning the QR code — it adds the event to your Event Passport. Check-in is only open on the day of the event."}
+              ? `Remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport. ${CHECKIN_RULE_SHORT}`
+              : `Remember to check in at the venue — scan the QR code or tap Check in in My events. It adds the event to your Event Passport. ${CHECKIN_RULE_SHORT}`}
           </li>
         </ol>
 
