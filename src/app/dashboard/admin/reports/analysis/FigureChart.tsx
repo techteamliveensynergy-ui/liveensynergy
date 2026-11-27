@@ -45,11 +45,19 @@ export function FigureChart({ column, compact = false }: { column: ColumnFigures
               <span className="h-3 rounded-full bg-[var(--color-mist)]">
                 <span
                   className="block h-3 rounded-full bg-[var(--color-brand)]"
-                  style={{ width: `${Math.min(100, c.pct)}%`, printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
+                  style={{ width: `${c.masked ? 0 : Math.min(100, c.pct)}%`, printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
                 />
               </span>
               <span className="text-right tabular-nums">
-                {c.pct}% <span className="text-[var(--color-ink-soft)]">({c.count})</span>
+                {c.masked ? (
+                  <span className="text-[var(--color-ink-soft)]" title="Fewer than 5 people — not shown, so nobody can be singled out">
+                    &lt;5
+                  </span>
+                ) : (
+                  <>
+                    {c.pct}% <span className="text-[var(--color-ink-soft)]">({c.count})</span>
+                  </>
+                )}
               </span>
             </li>
           ))}

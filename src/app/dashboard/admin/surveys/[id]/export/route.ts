@@ -12,31 +12,15 @@ import {
   scaleBars,
   type SurveyQuestionStats,
 } from "@/lib/survey-results";
-import type { SurveyQuestion } from "@/lib/types";
+import {
+  EXPORT_BATCH as BATCH,
+  responsesHeader,
+  responsesRow,
+  type ExportQuestion as Question,
+  type ExportRow,
+} from "@/lib/survey-export";
 
 export const dynamic = "force-dynamic";
-
-type Question = Pick<SurveyQuestion, "id" | "order_index" | "type" | "prompt" | "options" | "config">;
-
-interface ExportRow {
-  respondent_no: number;
-  reference: string;
-  person_key: string;
-  source: string;
-  started_at: string;
-  submitted_at: string;
-  duration_seconds: number;
-  questions_answered: number;
-  quality_status: string;
-  quality_score: number | null;
-  age_band: string | null;
-  gender: string | null;
-  country: string | null;
-  answers: Record<string, unknown>;
-  answer_seconds: Record<string, number>;
-}
-
-const BATCH = 500;
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || "survey";
@@ -82,7 +66,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
   if (logError) console.error("audit log write failed (survey.export)", logError.message);
   const questions = (questionRows ?? []) as Question[];
-  const qLabel = (q: Question, i: number) => `Q${i + 1}. ${questionTitle(q) || QUESTION_TYPE_LABELS[q.type]}`;
 
   const date = new Date().toISOString().slice(0, 10);
   const filename = `${slug(template.title)}-${file}${includeRejected ? "-incl-rejected" : ""}-${date}.csv`;
@@ -138,13 +121,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         chunk += CSV_BOM;
         chunk +=
           file === "responses"
-            ? csvRow([
-                "Respondent ID", "Person ID", "Source", "Started", "Submitted", "Time taken (seconds)",
-                "Questions answered", "Questions total", "Quality status", "Quality score",
-                "Age band", "Gender", "Country",
-                ...questions.map(qLabel),
-                ...questions.map((q, i) => `Q${i + 1} time (seconds)`),
-              ])
+            ? responsesHeader(questions)
             : csvRow([
                 "Respondent ID", "Person ID", "Submitted", "Quality status", "Question no", "Question",
                 "Type", "Answer", "Time on question (seconds)",
@@ -165,14 +142,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const rows = (data ?? []) as ExportRow[];
       for (const r of rows) {
         if (file === "responses") {
-          chunk += csvRow([
-            r.reference, r.person_key, r.source, csvDateTime(r.started_at), csvDateTime(r.submitted_at),
-            r.duration_seconds, r.questions_answered, questions.length, r.quality_status, r.quality_score,
-            r.age_band, r.gender, r.country,
-            // "<id>:other" carries the typed "Other" text (survey_export_rows, 0065).
-            ...questions.map((q) => answerToText(q, r.answers[q.id], r.answers[`${q.id}:other`])),
-            ...questions.map((q) => r.answer_seconds[q.id] ?? ""),
-          ]);
+          chunk += responsesRow(r, questions);
         } else {
           questions.forEach((q, i) => {
             if (!(q.id in r.answers)) return;

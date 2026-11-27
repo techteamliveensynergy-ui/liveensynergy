@@ -117,7 +117,7 @@ export default async function EventDetailsPage({
           <li>
             {event.attendance_method
               ? `On the day, remember to check in at the venue (${event.attendance_method}) — it adds the event to your Event Passport. Check-in is only open on the day of the event.`
-              : "On the day, remember to check in at the venue by scanning the QR code — it adds the event to your Event Passport. Check-in is only open on the day of the event."}
+              : "On the day, check in when you're at the venue: tap Check in on the event under My events, or scan the QR code there — it adds the event to your Event Passport. Check-in is only open on the day of the event."}
           </li>
         </ol>
 

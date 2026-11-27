@@ -8,7 +8,7 @@ export default function PrivacyPage() {
       <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
         <LegalTabs active="/privacy" />
         <p className="les-eyebrow mt-6">
-          Last updated · 16 October 2026
+          Last updated · 23 November 2026
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[var(--color-ink)] md:text-4xl">
           Privacy Policy
@@ -39,6 +39,19 @@ export default function PrivacyPage() {
           </section>
           <section>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
+              Checking in at an event
+            </h2>
+            <p className="mt-2">
+              When you tap &ldquo;Check in&rdquo; at an event, your phone shares its location with us once, only
+              then, and only if you allow it — to confirm you&apos;re near the venue on the day. We store how far
+              you were from the venue and, for 90 days, your location rounded to about 100 metres, so our team can
+              review a check-in if something looks wrong; after 90 days the location is deleted. The brand and
+              the artist never see it. You can always check in by scanning the QR code at the venue instead, which
+              doesn&apos;t use your location.
+            </p>
+          </section>
+          <section>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink)]">
               Surveys and analysis
             </h2>
             <p className="mt-2">
@@ -56,8 +69,10 @@ export default function PrivacyPage() {
             <p className="mt-2">
               We rely on a small number of providers to run the platform, each handling only what it needs:
               Supabase (secure database and sign-in), Vercel (hosting), Resend (sending our emails), Stripe
-              (brand invoices and payments), Cloudflare Turnstile (protecting surveys from bots) and OpenAI
-              (survey write-ups, as above). We don&apos;t sell your data.
+              (brand invoices and payments), Cloudflare Turnstile (protecting surveys from bots), OpenAI
+              (survey write-ups, as above), Google Maps Platform (finding an event&apos;s venue when artists
+              and our team set it up — no attendee data is sent) and OpenStreetMap (venue map previews for
+              artists and our team). We don&apos;t sell your data.
             </p>
           </section>
           <section>

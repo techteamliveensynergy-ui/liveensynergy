@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { kickSurveyReports } from "@/lib/survey-reports/kick";
 import { redirect } from "next/navigation";
 import {
   netSponsorshipBudget,
@@ -417,6 +418,10 @@ export async function changeCampaignStatus(formData: FormData) {
     withdrawn: { id: string; reference: string | null; name: string; artist_profile_id: string | null }[];
     cancelled_invoices: { id: string; reference: string; status: string }[];
   };
+
+  // Completed / closed: the campaign's surveys stop taking responses, so their
+  // reports start now rather than at the next 15-minute sweep (0127).
+  if (result.to === "completed" || result.to === "closed") kickSurveyReports();
 
   const brandProfileId = campaign!.brands?.profile_id;
   if (brandProfileId) {

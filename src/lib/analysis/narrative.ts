@@ -109,7 +109,17 @@ const SCHEMA = {
 
 export class AnalysisError extends Error {}
 
-export async function writeNarrative(ctx: AnalysisContext, figures: AnalysisFigures): Promise<AnalysisNarrative> {
+/**
+ * One structured call to the OpenAI Responses API: a system + user prompt in,
+ * JSON matching `schema` out. Shared by the playground report and the
+ * automatic Campaign Performance Report (0127).
+ */
+export async function requestStructured<T>(
+  system: string,
+  user: string,
+  name: string,
+  schema: Record<string, unknown>,
+): Promise<T> {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) throw new AnalysisError("OpenAI isn't set up yet (OPENAI_API_KEY).");
 
@@ -121,10 +131,10 @@ export async function writeNarrative(ctx: AnalysisContext, figures: AnalysisFigu
       // Don't keep the request on OpenAI's side for later retrieval.
       store: false,
       input: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt(ctx, figures) },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
-      text: { format: { type: "json_schema", name: "survey_report", schema: SCHEMA, strict: true } },
+      text: { format: { type: "json_schema", name, schema, strict: true } },
     }),
     signal: AbortSignal.timeout(240_000),
   });
@@ -144,12 +154,20 @@ export async function writeNarrative(ctx: AnalysisContext, figures: AnalysisFigu
   const text = body?.output_text ?? parts.find((p) => p.type === "output_text")?.text;
   if (!text) throw new AnalysisError("OpenAI returned no report.");
 
-  let parsed: AnalysisNarrative;
   try {
-    parsed = JSON.parse(text) as AnalysisNarrative;
+    return JSON.parse(text) as T;
   } catch {
     throw new AnalysisError("OpenAI's report couldn't be read.");
   }
+}
+
+export async function writeNarrative(ctx: AnalysisContext, figures: AnalysisFigures): Promise<AnalysisNarrative> {
+  const parsed = await requestStructured<AnalysisNarrative>(
+    SYSTEM_PROMPT,
+    userPrompt(ctx, figures),
+    "survey_report",
+    SCHEMA as unknown as Record<string, unknown>,
+  );
   // Charts may only point at figures we computed.
   const ids = new Set(figures.columns.map((c) => c.id));
   parsed.sections = uniqueCharts(

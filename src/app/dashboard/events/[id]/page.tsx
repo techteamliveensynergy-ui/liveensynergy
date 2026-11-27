@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/ui";
 import type { EventListing } from "@/lib/types";
 import { ListingForm } from "../ListingForm";
+import { placesEnabled } from "@/lib/places";
 
 export const metadata = { title: "Edit event" };
 
@@ -34,7 +35,7 @@ export default async function EditEventPage({
       >
         ← Back to my events
       </Link>
-      <ListingForm listing={data as EventListing} />
+      <ListingForm listing={data as EventListing} placesEnabled={placesEnabled()} />
     </div>
   );
 }

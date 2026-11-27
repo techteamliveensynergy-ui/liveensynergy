@@ -20,7 +20,7 @@ import {
   type SurveyTemplateStats,
 } from "@/lib/survey-results";
 import type { SurveyQuestion } from "@/lib/types";
-import { recalculateSurveyResults } from "../../actions";
+import { recalculateSurveyResults, requestSurveyReport } from "../../actions";
 import { skipDescription } from "@/lib/survey-logic";
 import { BarRow, QuestionResultCard } from "@/components/surveys/QuestionResultCard";
 import { campaignLabel } from "@/lib/campaign-requests";
@@ -63,7 +63,7 @@ export default async function SurveyResultsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ recalculated?: string }>;
+  searchParams: Promise<{ recalculated?: string; report?: string }>;
 }) {
   await requireRole(["admin"]);
   const { id } = await params;
@@ -148,6 +148,43 @@ export default async function SurveyResultsPage({
     ),
   );
 
+  // Automatic Campaign Performance Reports for this survey (0127). A database
+  // without 0127 reads as "none yet".
+  const [{ data: jobRows }, { data: autoReports }] = await Promise.all([
+    supabase
+      .from("survey_report_jobs")
+      .select("id, status, outcome, close_reason, closed_at, hold_until, last_error, report_id, created_at")
+      .eq("template_id", id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("analysis_reports")
+      .select("id, title, status, row_count, shared_with_brand_at, created_at")
+      .eq("survey_template_id", id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  const jobs = (jobRows ?? []) as {
+    id: string;
+    status: string;
+    outcome: string | null;
+    close_reason: string;
+    closed_at: string;
+    hold_until: string | null;
+    last_error: string | null;
+    report_id: string | null;
+    created_at: string;
+  }[];
+  const reports = (autoReports ?? []) as {
+    id: string;
+    title: string;
+    status: string;
+    row_count: number;
+    shared_with_brand_at: string | null;
+    created_at: string;
+  }[];
+  const pendingJob = jobs.find((j) => j.status === "queued" || j.status === "running");
+
   const avgDuration = averageSeconds(Number(stats.duration_sum_seconds), stats.duration_count);
   const typical = medianBucket(stats.duration_buckets ?? {});
   const limit = capacity?.response_limit ?? null;
@@ -215,6 +252,78 @@ export default async function SurveyResultsPage({
             Download including rejected (audit)
           </a>
         </p>
+      </section>
+
+      {/* Campaign Performance Report (0127): made automatically when this
+          survey closes, as a draft for the team to review before the brand
+          sees it. */}
+      <section id="auto-report" className="card mb-6 scroll-mt-24 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">Campaign Performance Report</h2>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-soft)]">
+              Made automatically when this survey closes, from the anonymised responses file (passed responses
+              only) and the campaign, brand and event details. It arrives as a draft: read it through, then publish
+              it to the brand from the report page.
+            </p>
+          </div>
+          {template.campaigns && (
+            <form action={requestSurveyReport}>
+              <input type="hidden" name="id" value={template.id} />
+              <button type="submit" className="btn btn-ghost text-sm" disabled={Boolean(pendingJob)}>
+                {pendingJob ? "Report on its way…" : "Generate report now"}
+              </button>
+            </form>
+          )}
+        </div>
+        {sp.report && (
+          <p
+            role="status"
+            className={`mt-3 rounded-lg px-3 py-2 text-sm ${sp.report === "queued" ? "bg-[var(--color-sage)]/60 text-[var(--color-olive-deep)]" : "bg-[var(--color-gold)]/40"}`}
+          >
+            {sp.report === "queued"
+              ? "Started — the report usually takes a few minutes. You'll get a notification when it's ready."
+              : sp.report === "already_queued"
+                ? "A report for this survey is already on its way."
+                : sp.report === "no_campaign"
+                  ? "This survey isn't linked to a campaign, so there's nothing to report on for a brand."
+                  : "The report couldn't be started. Please try again."}
+          </p>
+        )}
+        {pendingJob && (
+          <p className="mt-3 text-sm text-[var(--color-ink-soft)]" data-testid="report-pending">
+            {pendingJob.status === "running"
+              ? "Being generated now."
+              : pendingJob.hold_until && new Date(pendingJob.hold_until) > new Date() && stats.review_count > 0
+                ? `Waiting for the ${stats.review_count} response${stats.review_count === 1 ? "" : "s"} held for review — the report starts as soon as they're decided, or on ${formatDateTime(pendingJob.hold_until)} without them.`
+                : "Queued — it starts within 15 minutes."}
+            {pendingJob.last_error ? ` Last attempt: ${pendingJob.last_error}` : ""}
+          </p>
+        )}
+        {reports.length > 0 ? (
+          <ul className="mt-3 divide-y divide-black/5 text-sm">
+            {reports.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <Link href={`/dashboard/admin/reports/analysis/${r.id}`} className="font-medium text-[var(--color-brand-dark)] underline">
+                  {r.title}
+                </Link>
+                <span className="text-xs text-[var(--color-ink-soft)]">
+                  {r.row_count} responses · {formatDateTime(r.created_at)} ·{" "}
+                  {r.shared_with_brand_at ? "published to the brand" : "draft — needs review"}
+                  {r.status === "figures_only" ? " · figures only" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          !pendingJob && (
+            <p className="mt-3 text-sm text-[var(--color-ink-soft)]">
+              {jobs[0]?.outcome === "empty"
+                ? "This survey closed with no passed responses, so no report was made."
+                : "No report yet."}
+            </p>
+          )
+        )}
       </section>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

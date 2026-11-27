@@ -424,6 +424,11 @@ export interface EventListing {
   status: ListingStatus;
   /** Archived by its owner (0114): hidden from their list, kept for history. */
   archived_at?: string | null;
+  /** Venue as coordinates, for in-app check-in (0126). Picked with Google Places. */
+  venue_address?: string | null;
+  venue_place_id?: string | null;
+  venue_lat?: number | null;
+  venue_lng?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -443,6 +448,13 @@ export interface SponsoredEvent {
   timezone: string;
   venue_details: string | null;
   location: string | null;
+  /** Venue coordinates (0126): copied from the listing, correctable by an admin. */
+  venue_address?: string | null;
+  venue_place_id?: string | null;
+  venue_lat?: number | null;
+  venue_lng?: number | null;
+  /** In-app check-in works within this distance of the venue (0126, default 2 miles). */
+  checkin_radius_m?: number;
   artist_display_name: string | null;
   budget_gbp: number | null;
   remaining_budget_gbp: number | null;
@@ -653,9 +665,16 @@ export interface Participation {
   no_show: boolean;
   no_show_marked_at: string | null;
   terms_accepted_at: string | null;
+  /** How they were checked in (0126); null for check-ins before it. */
+  checkin_method?: CheckinMethod | null;
+  /** Metres from the venue at a location check-in (never their coordinates). */
+  checkin_distance_m?: number | null;
+  checkin_accuracy_m?: number | null;
   created_at: string;
   updated_at: string;
 }
+
+export type CheckinMethod = "location" | "qr" | "artist" | "admin";
 
 /** `support` threads are with the Live-En-Synergy team rather than a partner. */
 export type ConversationKind = "partner" | "support";
