@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AttentionCard, AttentionLegend } from "@/components/dashboard/AttentionCard";
 import { requireRole } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, MetricTile, StatusBadge } from "@/components/dashboard/ui";
@@ -159,7 +160,7 @@ export default async function AdminPage() {
       label: "Campaigns to match",
       count: needsMatching.length,
       href: "/dashboard/admin/campaigns?stage=needs_matching",
-      tint: "bg-[var(--color-gold)]",
+      status: "needs_us" as const,
     },
     {
       label: "Fulfilment forms to set up",
@@ -167,13 +168,13 @@ export default async function AdminPage() {
       href: formsToSetUp[0]
         ? `/dashboard/admin/events/sponsored/${formsToSetUp[0].id}#fulfilment`
         : "/dashboard/admin/events?tab=sponsored",
-      tint: "bg-[var(--color-gold)]",
+      status: "needs_us" as const,
     },
     {
       label: "Codes & artist steps",
       count: artistPending.artistEvents + artistPending.teamOnlyEvents,
       href: "/dashboard/admin/artist-pending",
-      tint: artistPending.overdueEvents ? "bg-[var(--color-pink)]" : "bg-[var(--color-gold)]",
+      status: (artistPending.overdueEvents ? "overdue" : "needs_us") as "overdue" | "needs_us",
       hint: artistPending.overdueEvents
         ? `${artistPending.overdueEvents} past the codes deadline`
         : artistPending.peopleWaiting
@@ -188,37 +189,37 @@ export default async function AdminPage() {
       label: "Awaiting agreement",
       count: awaitingAgreement.length,
       href: "/dashboard/admin/events?tab=sponsored",
-      tint: "bg-[var(--color-lavender)]",
+      status: "waiting" as const,
     },
     {
       label: "Awaiting payment",
       count: awaitingPayment.length,
       href: "/dashboard/admin/campaigns?status=awaiting_payment",
-      tint: "bg-[var(--color-lavender)]",
+      status: "waiting" as const,
     },
     {
       label: "Surveys awaiting review",
       count: surveysToReview,
       href: "/dashboard/admin/surveys/responses?status=review",
-      tint: "bg-[var(--color-gold)]",
+      status: "needs_us" as const,
     },
     {
       label: "Open enquiries",
       count: openEnquiries.length,
       href: "/dashboard/admin/enquiries?filter=open",
-      tint: "bg-[var(--color-pink)]",
+      status: "needs_us" as const,
     },
     {
       label: "New campaign requests",
       count: newRequests,
       href: "/dashboard/admin/campaigns/intake",
-      tint: "bg-[var(--color-mint)]",
+      status: "needs_us" as const,
     },
     {
       label: "Checked in, no code yet",
       count: verifiedUnrewarded.length,
       href: "/dashboard/admin/participants?status=attendance_verified",
-      tint: "bg-[var(--color-sage)]",
+      status: "needs_us" as const,
     },
   ];
 
@@ -248,24 +249,20 @@ export default async function AdminPage() {
 
       {/* Needs attention */}
       <section>
-        <h2 className="mb-3 font-display text-lg font-semibold text-[var(--color-ink)]">
-          Needs attention
-        </h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">Needs attention</h2>
+          <AttentionLegend />
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {attention.map((a) => (
-            <Link
+            <AttentionCard
               key={a.label}
+              label={a.label}
+              count={a.count}
               href={a.href}
-              className={`rounded-2xl border border-black/10 p-5 shadow-sm transition hover:-translate-y-0.5 ${a.tint}`}
-            >
-              <p className="font-display text-3xl font-semibold text-[var(--color-ink)]">
-                {a.count}
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-ink)]/75">{a.label}</p>
-              {"hint" in a && a.hint && (
-                <p className="mt-0.5 text-xs font-medium text-[var(--color-accent)]">{a.hint}</p>
-              )}
-            </Link>
+              status={a.status}
+              hint={"hint" in a ? a.hint : undefined}
+            />
           ))}
         </div>
       </section>
