@@ -24,8 +24,8 @@ interface Stamp {
 /**
  * The audience's Event Passport as its own page (Testing notes 15 Nov: "event
  * passport to be a separate thing in the audience portal"). One stamp per event
- * they checked in at — by scanning the venue's QR code, which is only open on
- * the day of the event — newest first.
+ * they checked in at — in the app or by scanning the venue's QR code, open from
+ * 24 hours before the event to the end of its day — newest first.
  */
 export default async function PassportPage() {
   const { profile } = await requireRole(["audience"]);
@@ -54,12 +54,12 @@ export default async function PassportPage() {
         <p className="font-semibold text-[var(--color-ink)]">How you get a stamp</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
-            On the day of the event, at the venue: tap <strong className="text-[var(--color-ink)]">Check in</strong> on
+            At the venue: tap <strong className="text-[var(--color-ink)]">Check in</strong> on
             the event under My events (your phone shares its location once), or scan the QR code displayed there.
           </li>
           <li>
             <strong className="text-[var(--color-ink)]">Check-in opens 24 hours before the event</strong> and closes at
-            the end of the event day. You need to be within about 0.3 miles of the venue.
+            the end of the event day. For in-app check-in you need to be within about 0.3 miles of the venue.
           </li>
           <li>You need to be registered for the event first (see My events).</li>
         </ul>

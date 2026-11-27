@@ -502,6 +502,77 @@ h4,
 .les-chrome {
   color: var(--color-les-cream);
 }
+/* Dashboard pages (client, 27 Nov: "apply dark theme to dashboard pages too").
+   Used with .les-site on the dashboard root: that re-points ink/mist/brand and
+   darkens .card/.btn/.input; this adds the pastel status tokens (so chips and
+   banners stay readable) and the few hard-coded light colours. Survey previews
+   inside the builder keep their own light card (.survey-scope, restored below). */
+.les-dash {
+  --color-sage: #172a1b;
+  --color-mint: #11261f;
+  --color-pink: #2e1519;
+  --color-olive: #35450f;
+  --color-gold: #5a4710; /* dark amber: gold panels and tints carry cream text */
+  --color-olive-deep: #c8e66a;
+  --color-accent: #ff7b93;
+  --color-purple: #2b2347;
+  --color-role-brand: #0f2f2b;
+  --color-role-artist: #3a1b16;
+  --color-role-audience: #26330f;
+}
+.les-dash .bg-white {
+  background-color: var(--color-les-panel);
+}
+/* Lime and cream fills carry dark text, whatever the markup says. */
+.les-dash [class*="bg-[var(--color-brand)]"][class*="text-white"],
+.les-dash [class*="bg-[var(--color-ink)]"] {
+  color: var(--color-les-ink);
+}
+.les-dash .shadow-sm,
+.les-dash .shadow-md,
+.les-dash .shadow {
+  box-shadow: none;
+}
+/* A survey card shown inside the dashboard (builder preview) is light, as respondents see it. */
+.les-dash .survey-scope {
+  --color-ink: #2c2422;
+  --color-ink-soft: #6f6360;
+  --color-mist: #fcf7f0;
+  --color-brand: #ed9a4e;
+  --color-brand-dark: #e08a39;
+  --color-lavender: #edebf2;
+  --color-purple-deep: #8b76c2;
+  --color-sage: #dee2c6;
+  --color-mint: #ecf3f2;
+  --color-pink: #ffecf1;
+  --color-accent: #a02c4a;
+  --color-olive-deep: #4f6b15;
+  --color-gold: #f6e092;
+  color: #504644;
+}
+.les-dash .survey-scope .card,
+.les-dash .survey-scope.card {
+  background-color: #ffffff;
+  border-color: rgba(44, 36, 34, 0.1);
+}
+.les-dash .survey-scope h1,
+.les-dash .survey-scope h2 {
+  font-family: var(--font-display);
+}
+.les-dash .survey-scope * {
+  border-color: rgba(44, 36, 34, 0.1);
+}
+.les-dash .survey-scope .btn-primary {
+  background: #ed9a4e;
+  color: #ffffff;
+}
+.les-dash .survey-scope .input,
+.les-dash .survey-scope .textarea,
+.les-dash .survey-scope .select {
+  background: #ffffff;
+  color: #2c2422;
+  border-color: rgba(44, 36, 34, 0.15);
+}
 .font-wordmark {
   font-family: var(--font-wordmark);
   font-weight: 400;

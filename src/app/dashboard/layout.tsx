@@ -96,7 +96,7 @@ export default async function DashboardLayout({
 
 
   return (
-    <div className="min-h-screen bg-[var(--color-mist)] md:flex">
+    <div className="les-site les-dash min-h-screen bg-[var(--color-mist)] md:flex">
       <Sidebar
         nav={nav}
         roleLabel={ROLE_LABELS[profile.role]}

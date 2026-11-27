@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/Logo";
 import { formatEventDateTime } from "@/lib/event-time";
-import { CheckInButton } from "@/components/attend/CheckInButton";
-import { CHECKIN_RESULT_MESSAGES } from "@/lib/checkin-copy";
 import { confirmAttendance } from "./actions";
 
 export const metadata = { title: "Confirm attendance" };
@@ -57,11 +55,11 @@ function StatusCard({
 const RESULT_MESSAGES: Record<string, { title: string; body: string }> = {
   too_early: {
     title: "Check-in isn't open yet",
-    body: "Check-in is only open on the day of the event. Scan the code again when you're at the venue on the day.",
+    body: "Check-in opens 24 hours before the event. Scan the code again when you're at the venue, once it's open.",
   },
   too_late: {
     title: "Check-in has closed",
-    body: "Check-in is only open on the day of the event, and that day has passed. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
+    body: "Check-in closed at the end of the event day, and that has passed. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
   },
   wrong_event: {
     title: "This code is for a different event",
@@ -110,7 +108,7 @@ export default async function AttendPage({
 
   const { data: event } = await supabase
     .from("sponsored_events")
-    .select("id, name, event_date, start_time, timezone, venue_lat, venue_lng")
+    .select("id, name, event_date, start_time, timezone")
     .eq("attendance_qr_token", token)
     .maybeSingle();
 
@@ -204,7 +202,7 @@ export default async function AttendPage({
     );
   }
 
-  const refused = result ? CHECKIN_RESULT_MESSAGES[result] : undefined;
+  const refused = result ? RESULT_MESSAGES[result] : undefined;
 
   return (
     <Shell>
@@ -219,11 +217,13 @@ export default async function AttendPage({
         title="Confirm you're here"
         body={`Tap below to confirm you're attending ${event.name}${when ? ` (${when})` : ""}. Once you're checked in, the post-event survey unlocks in My events — complete it to receive your discount code.`}
       />
-      <CheckInButton
-        action={confirmAttendance}
-        fields={{ token, participation_id: participation.id }}
-        needsLocation={event.venue_lat != null && event.venue_lng != null}
-      />
+      <form action={confirmAttendance} className="mt-6">
+        <input type="hidden" name="token" value={token} />
+        <input type="hidden" name="participation_id" value={participation.id} />
+        <button type="submit" className="btn btn-primary w-full">
+          Confirm my attendance
+        </button>
+      </form>
     </Shell>
   );
 }
