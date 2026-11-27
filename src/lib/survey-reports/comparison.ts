@@ -10,7 +10,7 @@ import type { ComparisonItem, ReportComparison } from "@/lib/analysis/campaign-r
  * same people tracked; the report says so.
  */
 
-const DEMOGRAPHIC = new Set(["age band", "gender", "country"]);
+const DEMOGRAPHIC = new Set(["age band", "gender", "country", "income band"]);
 
 export function normaliseQuestion(name: string): string {
   return name

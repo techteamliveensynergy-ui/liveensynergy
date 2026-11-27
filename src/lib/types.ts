@@ -776,6 +776,9 @@ export interface SurveyQuestionOption {
 }
 
 /** Per-type settings; every key optional, only the ones the type declares are read. */
+/** The demographics a survey can ask (client, 27 Nov). */
+export type SurveyDemographic = "age" | "gender" | "country" | "income";
+
 export interface SurveyQuestionConfig {
   min?: number;
   max?: number;
@@ -806,6 +809,10 @@ export interface SurveyQuestionConfig {
   sensitive_ack?: { flags: string[]; reason: string; at: string };
   /** hidden_field — which profile field this question copies at submit time. */
   profile_field?: string;
+  /** A demographic question from the builder's Demographics preset (client,
+   *  27 Nov). Its answer fills the export's Age band / Gender / Country /
+   *  Income band column (survey_export_rows, 0130) instead of a question column. */
+  demographic?: SurveyDemographic;
   /** Universal, any question type — an image (uploaded to the media bucket)
    *  or an embedded video link (YouTube/Vimeo/Loom), shown above the prompt
    *  by default (see media_position). Always renders when set; the

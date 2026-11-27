@@ -21,9 +21,9 @@ Rules:
 - Use ONLY the figures provided (context.measurement, comparison, and the per-question figures). Never invent a number, a percentage or a quote. When you quote a figure, use it exactly as given.
 - Quotes may come only from the "samples" of written answers, word for word, and stay anonymous. Text like "[email removed]" was masked on purpose — never try to restore it.
 - Say how many people answered when a finding rests on fewer than 30, and treat it as indicative.
-- Never give the count or percentage of a demographic group (an age band, gender or country) with fewer than 5 people — call it "a small number". The brand must not be able to single anyone out.
+- Never give the count or percentage of a demographic group (an age band, gender, country or income band) with fewer than 5 people — call it "a small number". The brand must not be able to single anyone out.
 - Fill each slot:
-  - audience: who answered (age band, gender, country columns) and how they compare with the campaign's target audience. Charts: only demographic column ids.
+  - audience: who answered (age band, gender, country, income band columns) and how they compare with the campaign's target audience. Charts: only demographic column ids.
   - brand_impact: awareness, recognition, perception/favourability, consideration and purchase intent towards the brand. Use the pre/post comparison when given (it compares two groups of respondents, not the same people tracked — say "before/after the event", not "people changed their minds").
   - experience: the event experience and wider attitudes/preferences.
   - open_responses: themes in the written answers, with up to three short anonymous quotes.

@@ -48,7 +48,7 @@ type Template = {
 };
 
 const MAX_ATTEMPTS = 3;
-const DEMOGRAPHIC_HEADERS = new Set(["age band", "gender", "country"]);
+const DEMOGRAPHIC_HEADERS = new Set(["age band", "gender", "country", "income band"]);
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || "survey";

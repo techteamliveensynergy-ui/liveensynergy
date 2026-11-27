@@ -22,13 +22,14 @@ import {
 } from "@dnd-kit/sortable";
 import { ErrorBanner } from "@/components/onboarding/parts";
 import { DirtyStateGuard } from "@/components/ui/DirtyStateGuard";
-import type { SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
+import type { SurveyDemographic, SurveyQuestionType, SurveyTemplateLayoutMode } from "@/lib/types";
 import {
   firstQuestionProblem,
   newRatingGroupDrafts,
   newRatingGroupRow,
   RATING_GROUP_SHARED_KEYS,
   newLikertQuestionDraft,
+  newDemographicDraft,
   newQuestionDraft,
   questionSpec,
   type ContradictionRuleDraft,
@@ -114,6 +115,16 @@ export function SurveyBuilder({
 
   function addLikertQuestion() {
     insertQuestion(newLikertQuestionDraft());
+  }
+
+  /** Demographics preset (client, 27 Nov): each kind once per survey, appended in order. */
+  function addDemographics(kinds: SurveyDemographic[]) {
+    const have = new Set(questions.map((q) => q.config.demographic).filter(Boolean));
+    const rows = kinds.filter((k) => !have.has(k)).map(newDemographicDraft);
+    if (!rows.length) return;
+    setQuestions((prev) => [...prev, ...rows]);
+    setSelectedKey(rows[0].key);
+    setDirty(true);
   }
 
   function addRatingGroup() {
@@ -260,6 +271,8 @@ export function SurveyBuilder({
             onAdd={(type) => addQuestion(type)}
             onAddLikert={addLikertQuestion}
             onAddRatingGroup={addRatingGroup}
+            onAddDemographics={addDemographics}
+            demographicsPresent={questions.map((q) => q.config.demographic).filter((d): d is SurveyDemographic => !!d)}
             disabled={!editable}
           />
 
