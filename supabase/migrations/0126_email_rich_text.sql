@@ -36,3 +36,30 @@ begin
   return v_out;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Client (27 Nov): "Not allowed to draft invoice on artist behalf."
+-- The artist's invoice is theirs: they upload it; the team never drafts or adds
+-- one for them. (1) The "please draft it for me" request (0121) is closed: no
+-- more inserts (existing rows stay readable). (2) A trigger refuses an
+-- `artist_files` row of kind 'invoice' that someone other than the artist adds.
+-- ---------------------------------------------------------------------------
+drop policy if exists "artist_invoice_requests: artist insert" on public.artist_invoice_requests;
+revoke insert on public.artist_invoice_requests from authenticated;
+
+create or replace function public.artist_files_invoice_by_artist_only()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.kind = 'invoice' and new.uploaded_by is distinct from new.artist_profile_id then
+    raise exception 'INVOICE_BY_ARTIST_ONLY' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists artist_files_invoice_by_artist_only on public.artist_files;
+create trigger artist_files_invoice_by_artist_only
+  before insert on public.artist_files
+  for each row execute function public.artist_files_invoice_by_artist_only();

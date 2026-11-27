@@ -134,9 +134,9 @@ function SubmitQuotaDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="card w-full max-w-md p-6 text-left">
-        <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">{title}</h2>
-        <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{body}</p>
+      <div className="card w-full max-w-lg p-7 text-left">
+        <h2 className="font-display text-2xl font-semibold text-[var(--color-ink)]">{title}</h2>
+        <p className="mt-3 text-base leading-relaxed text-[var(--color-ink-soft)]">{body}</p>
         {/* type="button" throughout: this renders inside the survey's <form>. */}
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button type="button" className="btn btn-ghost" onClick={onCancel}>

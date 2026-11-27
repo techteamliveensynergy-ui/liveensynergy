@@ -338,18 +338,14 @@ export default async function AdminSponsoredDetailPage({
   const invoices = (invoiceRows ?? []) as Invoice[];
 
   // What the artist did about their own invoice (0121): files they uploaded for
-  // this partnership, and whether they asked the team to draft it.
-  const [{ data: artistInvRows }, { data: artistInvReq }] = await Promise.all([
-    supabase
-      .from("artist_files")
-      .select("id, title, file_name, file_path")
-      .eq("sponsored_event_id", id)
-      .eq("kind", "invoice")
-      .order("created_at", { ascending: false }),
-    supabase.from("artist_invoice_requests").select("sponsored_event_id").eq("sponsored_event_id", id).maybeSingle(),
-  ]);
+  // this partnership. The team never drafts one on their behalf.
+  const { data: artistInvRows } = await supabase
+    .from("artist_files")
+    .select("id, title, file_name, file_path")
+    .eq("sponsored_event_id", id)
+    .eq("kind", "invoice")
+    .order("created_at", { ascending: false });
   const artistInvoice: ArtistInvoiceInfo = {
-    draftRequested: !!artistInvReq,
     files: await Promise.all(
       ((artistInvRows ?? []) as { id: string; title: string; file_name: string; file_path: string }[]).map(async (r) => ({
         id: r.id,
@@ -395,9 +391,6 @@ export default async function AdminSponsoredDetailPage({
 
   // Funnel
   const registered = participants.length;
-  const proofed = participants.filter((p) =>
-    ["ticket_uploaded", "attendance_verified", "reward_released"].includes(p.status),
-  ).length;
   const verified = participants.filter((p) =>
     ["attendance_verified", "reward_released"].includes(p.status),
   ).length;
@@ -496,10 +489,9 @@ export default async function AdminSponsoredDetailPage({
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink)]">
           Funnel
         </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {[
             { label: "Registered", n: registered, p: 100 },
-            { label: "Proof uploaded", n: proofed, p: pct(proofed) },
             { label: "Verified", n: verified, p: pct(verified) },
             { label: "Rewarded", n: rewarded, p: pct(rewarded) },
           ].map((s) => (

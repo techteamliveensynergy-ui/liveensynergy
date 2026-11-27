@@ -307,22 +307,16 @@ export default async function SponsoredEventPage({
         .maybeSingle<FulfilmentForm>()
     : { data: null };
 
-  // The artist's invoice (0121): what they uploaded for this partnership and
-  // whether they asked the team to draft it. A database without 0121 reads as
-  // "nothing yet" (the queries just return no rows).
+  // The artist's invoice (0121): what they uploaded for this partnership. A
+  // database without 0121 reads as "nothing yet" (the query just returns no rows).
   let invoiceFiles: InvoiceFile[] = [];
-  let invoiceDraftRequested = false;
   if (isArtist) {
-    const [{ data: invRows }, { data: reqRow }] = await Promise.all([
-      supabase
-        .from("artist_files")
-        .select("id, title, file_name, file_path, created_at")
-        .eq("sponsored_event_id", event.id)
-        .eq("kind", "invoice")
-        .order("created_at", { ascending: false }),
-      supabase.from("artist_invoice_requests").select("sponsored_event_id").eq("sponsored_event_id", event.id).maybeSingle(),
-    ]);
-    invoiceDraftRequested = !!reqRow;
+    const { data: invRows } = await supabase
+      .from("artist_files")
+      .select("id, title, file_name, file_path, created_at")
+      .eq("sponsored_event_id", event.id)
+      .eq("kind", "invoice")
+      .order("created_at", { ascending: false });
     invoiceFiles = await Promise.all(
       ((invRows ?? []) as { id: string; title: string; file_name: string; file_path: string; created_at: string }[]).map(
         async (r) => ({
@@ -697,7 +691,7 @@ export default async function SponsoredEventPage({
       {isArtist && proofSection}
 
       {isArtist && (event.status === "confirmed" || event.status === "completed") && (
-        <ArtistInvoiceCard eventId={event.id} uploaded={invoiceFiles} draftRequested={invoiceDraftRequested} />
+        <ArtistInvoiceCard eventId={event.id} uploaded={invoiceFiles} />
       )}
 
       {/* Terms & agreement */}

@@ -3,11 +3,7 @@
 import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { ATTACHMENT_HINT } from "@/lib/upload-limits";
-import {
-  requestInvoiceDraft,
-  uploadArtistFile,
-  type ArtistFileState,
-} from "@/app/dashboard/resources/artist-file-actions";
+import { uploadArtistFile, type ArtistFileState } from "@/app/dashboard/resources/artist-file-actions";
 
 function Submit({ label, pending: pendingLabel }: { label: string; pending: string }) {
   const { pending } = useFormStatus();
@@ -27,19 +23,16 @@ export interface InvoiceFile {
 }
 
 /**
- * How the artist gets paid-invoice paperwork sorted for this partnership
- * (0121): upload their own invoice, or ask the team to draft it. Either way
- * the team is notified. Bank details live in the artist's files in the
- * Repository, not here.
+ * The artist's own invoice for this partnership (0121): they upload it, the
+ * team is told. The team never drafts or uploads an invoice on an artist's
+ * behalf. Bank details live in the artist's files in the Repository.
  */
 export function ArtistInvoiceCard({
   eventId,
   uploaded,
-  draftRequested,
 }: {
   eventId: string;
   uploaded: InvoiceFile[];
-  draftRequested: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [uploadState, uploadAction] = useActionState<ArtistFileState, FormData>(async (prev, fd) => {
@@ -47,21 +40,20 @@ export function ArtistInvoiceCard({
     if (result.message) formRef.current?.reset();
     return result;
   }, {});
-  const [draftState, draftAction] = useActionState<ArtistFileState, FormData>(requestInvoiceDraft, {});
 
   return (
     <div id="invoice" className="card p-6">
       <h2 className="text-lg font-semibold">Your invoice</h2>
       <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        Send us an invoice for this partnership either way: upload your own, or ask the team to draft one for you. Add
-        your bank details under <strong>Repository → My files</strong>.
+        Upload your own invoice for this partnership. We can&apos;t draft or send an invoice on your behalf. Add your
+        bank details under <strong>Repository → My files</strong>.
       </p>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4">
         <form ref={formRef} action={uploadAction} className="space-y-3 rounded-xl bg-[var(--color-mist)] p-4">
           <input type="hidden" name="event_id" value={eventId} />
           <input type="hidden" name="kind" value="invoice" />
-          <p className="text-sm font-semibold">I&apos;ll upload my own invoice</p>
+          <p className="text-sm font-semibold">Upload your invoice</p>
           <label className="block text-sm">
             <span className="field-label">Invoice file</span>
             <input name="file" type="file" required className="input mt-1" />
@@ -80,23 +72,6 @@ export function ArtistInvoiceCard({
           </div>
         </form>
 
-        <form action={draftAction} className="space-y-3 rounded-xl bg-[var(--color-mist)] p-4">
-          <input type="hidden" name="event_id" value={eventId} />
-          <p className="text-sm font-semibold">Please draft it for me</p>
-          <p className="text-sm text-[var(--color-ink-soft)]">
-            The team prepares the invoice from the agreed terms and sends it to you.
-          </p>
-          {draftRequested || draftState.message ? (
-            <p className="text-sm text-[var(--color-olive-deep)]">
-              {draftState.message ?? "You've asked the team to draft it — they'll be in touch."}
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <Submit label="Ask the team to draft it" pending="Sending…" />
-              {draftState.error && <span className="text-sm text-[var(--color-accent)]">{draftState.error}</span>}
-            </div>
-          )}
-        </form>
       </div>
 
       {uploaded.length > 0 && (
