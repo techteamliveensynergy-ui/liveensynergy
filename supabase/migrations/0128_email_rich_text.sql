@@ -1,4 +1,4 @@
--- 0126 — hyperlinks and bold in email bodies and the footer (client, 27 Nov).
+-- 0128 — hyperlinks and bold in email bodies and the footer (client, 27 Nov).
 -- Admins can now write [text](https://…), **bold**, *italic*, headings, bullets, buttons and dividers in an email body and in the
 -- branding footer (src/lib/email/rich-text.ts). Two database-side changes:
 --  1. The footer limit goes from 1,000 to 2,000 characters — link syntax costs characters.

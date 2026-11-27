@@ -480,7 +480,7 @@ export default async function SponsoredEventPage({
       {notice === "checkin-failed" && (
         <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]" role="alert">
           {reason === "too_early"
-            ? "Check-in opens on the day of the event."
+            ? "Check-in opens 24 hours before the event."
             : reason === "event_not_live"
               ? "This event isn't confirmed, so nobody can be checked in yet."
               : reason === "not_registered"

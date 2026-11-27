@@ -10,8 +10,10 @@
 
 export const METRES_PER_MILE = 1609.344;
 
-/** Default check-in radius: 2 miles (client, 23 Nov). Matches the column default. */
-export const DEFAULT_CHECKIN_RADIUS_M = 3219;
+/** Default check-in radius: 0.3 miles (client, 27 Nov; was 2 miles on 23 Nov). Matches the column default (0129). */
+export const DEFAULT_CHECKIN_RADIUS_M = 483;
+/** How long before the start check-in opens (client, 27 Nov). Keep in step with the SQL in 0129. */
+export const CHECKIN_OPENS_HOURS_BEFORE = 24;
 /** What an admin may set, in miles — the database allows 150 m – 50 km. */
 export const MIN_CHECKIN_RADIUS_MILES = 0.1;
 export const MAX_CHECKIN_RADIUS_MILES = 30;
@@ -135,4 +137,42 @@ export function todayIn(timeZone: string | null | undefined): string {
   } catch {
     return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
   }
+}
+
+/** The wall-clock "now" in an IANA zone as YYYY-MM-DDTHH:mm. */
+function zonedNowLocal(timeZone: string | null | undefined): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timeZone || "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/**
+ * Where an event is in its check-in window: opens 24 hours before it starts
+ * (00:00 when no start time is set) and closes at the end of its day, in the
+ * event's own zone. The database makes the real decision; this only decides what
+ * the screen offers. Returns "open" for an event with no date.
+ */
+export function checkInWindow(ev: {
+  event_date: string | null;
+  start_time: string | null;
+  timezone: string | null;
+}): { state: "early" | "open" | "closed"; opensAtLocal: string | null } {
+  if (!ev.event_date) return { state: "open", opensAtLocal: null };
+  const now = zonedNowLocal(ev.timezone);
+  const [y, m, d] = ev.event_date.split("-").map(Number);
+  const [hh, mm] = (ev.start_time ?? "00:00").split(":").map(Number);
+  // Naive local arithmetic: only used to subtract 24 h and format back.
+  const opens = new Date(Date.UTC(y, m - 1, d, hh || 0, mm || 0) - CHECKIN_OPENS_HOURS_BEFORE * 3_600_000);
+  const iso = opens.toISOString().slice(0, 16);
+  if (now.slice(0, 10) > ev.event_date) return { state: "closed", opensAtLocal: iso };
+  if (now < iso) return { state: "early", opensAtLocal: iso };
+  return { state: "open", opensAtLocal: iso };
 }

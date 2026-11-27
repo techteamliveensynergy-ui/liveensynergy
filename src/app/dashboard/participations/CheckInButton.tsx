@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkInWithLocation, type LocationCheckInResult } from "./actions";
-import { formatMiles } from "@/lib/venue";
+import { DEFAULT_CHECKIN_RADIUS_M, formatMiles } from "@/lib/venue";
 
 type Phase = "idle" | "locating" | "checking" | "done";
 
@@ -63,7 +63,7 @@ function message(r: LocationCheckInResult, eventDate?: string | null): { title: 
       return {
         title: "You're not at the venue yet",
         body: `Your phone puts you about ${formatMiles(r.distance_m ?? 0)} from the venue — check-in works within ${formatMiles(
-          r.radius_m ?? 3219,
+          r.radius_m ?? DEFAULT_CHECKIN_RADIUS_M,
         )}. If you are at the venue, wait a moment and try again (your phone may still be finding you), or scan the QR code at the venue.`,
       };
     case "low_accuracy":
@@ -81,12 +81,12 @@ function message(r: LocationCheckInResult, eventDate?: string | null): { title: 
     case "too_early":
       return {
         title: "Check-in isn't open yet",
-        body: `Check-in is only open on the day of the event${eventDate ? ` (${eventDate})` : ""}. Try again when you're at the venue on the day.`,
+        body: `Check-in opens 24 hours before the event${eventDate ? ` (${eventDate})` : ""}. Try again when you're at the venue, once it's open.`,
       };
     case "too_late":
       return {
         title: "Check-in has closed",
-        body: "Check-in is only open on the day of the event, and that day has passed. If you attended and couldn't check in, message the Live·En·Synergy team.",
+        body: "Check-in closed at the end of the event day, and that has passed. If you attended and couldn't check in, message the Live·En·Synergy team.",
       };
     case "event_not_live":
       return { title: "This event isn't open for check-in", body: "Check My events for updates." };
