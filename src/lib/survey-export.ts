@@ -29,6 +29,8 @@ export interface ExportRow {
   age_band: string | null;
   gender: string | null;
   country: string | null;
+  /** From the Demographics preset question (0130). */
+  income_band: string | null;
   answers: Record<string, unknown>;
   answer_seconds: Record<string, number>;
 }
@@ -45,14 +47,16 @@ export async function loadExportQuestions(client: SupabaseClient, templateId: st
     .eq("template_id", templateId)
     .neq("type", "hidden_field")
     .order("order_index");
-  return (data ?? []) as ExportQuestion[];
+  // A Demographics preset question is its own column (Age band … Income band),
+  // filled by survey_export_rows (0130) — not repeated as a question column.
+  return ((data ?? []) as ExportQuestion[]).filter((q) => !q.config?.demographic);
 }
 
 export function responsesHeader(questions: ExportQuestion[]): string {
   return csvRow([
     "Respondent ID", "Person ID", "Source", "Started", "Submitted", "Time taken (seconds)",
     "Questions answered", "Questions total", "Quality status", "Quality score",
-    "Age band", "Gender", "Country",
+    "Age band", "Gender", "Country", "Income band",
     ...questions.map(questionLabel),
     ...questions.map((_q, i) => `Q${i + 1} time (seconds)`),
   ]);
@@ -62,7 +66,7 @@ export function responsesRow(r: ExportRow, questions: ExportQuestion[]): string 
   return csvRow([
     r.reference, r.person_key, r.source, csvDateTime(r.started_at), csvDateTime(r.submitted_at),
     r.duration_seconds, r.questions_answered, questions.length, r.quality_status, r.quality_score,
-    r.age_band, r.gender, r.country,
+    r.age_band, r.gender, r.country, r.income_band ?? "",
     // "<id>:other" carries the typed "Other" text (survey_export_rows, 0065).
     ...questions.map((q) => answerToText(q, r.answers[q.id], r.answers[`${q.id}:other`])),
     ...questions.map((q) => r.answer_seconds[q.id] ?? ""),

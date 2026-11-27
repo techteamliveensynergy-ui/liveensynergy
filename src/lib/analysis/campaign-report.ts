@@ -81,7 +81,7 @@ export interface CampaignReportMeta {
   cover: ReportCover;
   measurement: ReportMeasurement;
   comparison: ReportComparison | null;
-  /** Figure column ids that are demographics (age band, gender, country). */
+  /** Figure column ids that are demographics (age band, gender, country, income band). */
   demographic_columns: string[];
   /** Data notes worked out in code (held/rejected responses left out, etc.). */
   notes: string[];

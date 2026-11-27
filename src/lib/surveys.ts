@@ -1,4 +1,5 @@
 import type {
+  SurveyDemographic,
   SurveyAnswerValue,
   SurveyContradictionRule,
   SurveyQualitySignalKey,
@@ -330,6 +331,63 @@ export function newLikertQuestionDraft(): SurveyQuestionDraft {
     { label: "Strongly agree", value: "strongly_agree" },
   ];
   base.config = { display_style: "likert" };
+  return base;
+}
+
+/**
+ * Demographic questions (client, 27 Nov: "gender, country, age range and income
+ * range need to be in the survey results"). Answered inside the survey — never
+ * taken from the profile, which no longer collects them (7 Nov). Each is a
+ * required single choice with "Prefer not to say", so nobody has to share it;
+ * the export and the automatic report read them into their own columns and the
+ * brand only ever sees totals (groups under 5 masked).
+ */
+const OPT = (label: string) => ({ label, value: label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") });
+export const DEMOGRAPHIC_PRESETS: Record<
+  SurveyDemographic,
+  { label: string; prompt: string; options: string[] }
+> = {
+  age: {
+    label: "Age range",
+    prompt: "Which age range are you in?",
+    options: [...AGE_RANGE_OPTIONS, "Prefer not to say"],
+  },
+  gender: {
+    label: "Gender",
+    prompt: "How do you describe your gender?",
+    options: ["Woman", "Man", "Non-binary", "Another gender", "Prefer not to say"],
+  },
+  country: {
+    label: "Country",
+    prompt: "Where do you live?",
+    options: ["England", "Scotland", "Wales", "Northern Ireland", "Outside the UK", "Prefer not to say"],
+  },
+  income: {
+    label: "Income range",
+    prompt: "What is your annual personal income, before tax?",
+    options: [
+      "Under £15,000",
+      "£15,000 – £24,999",
+      "£25,000 – £39,999",
+      "£40,000 – £59,999",
+      "£60,000 – £99,999",
+      "£100,000 or more",
+      "Prefer not to say",
+    ],
+  },
+};
+export const DEMOGRAPHIC_ORDER: SurveyDemographic[] = ["age", "gender", "country", "income"];
+export const DEMOGRAPHIC_HELP =
+  "Used only in anonymised totals — never with your name. Choose “Prefer not to say” if you'd rather not.";
+
+export function newDemographicDraft(kind: SurveyDemographic): SurveyQuestionDraft {
+  const preset = DEMOGRAPHIC_PRESETS[kind];
+  const base = newQuestionDraft("single_choice");
+  base.prompt = preset.prompt;
+  base.help_text = DEMOGRAPHIC_HELP;
+  base.options = preset.options.map(OPT);
+  base.config = { demographic: kind };
+  base.required = true;
   return base;
 }
 

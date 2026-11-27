@@ -1,5 +1,7 @@
 "use client";
 
+import { DEMOGRAPHIC_ORDER, DEMOGRAPHIC_PRESETS } from "@/lib/surveys";
+import type { SurveyDemographic } from "@/lib/types";
 import { useDraggable } from "@dnd-kit/core";
 import { SURVEY_QUESTION_TYPES } from "@/lib/surveys";
 import type { SurveyQuestionType } from "@/lib/types";
@@ -45,13 +47,19 @@ export function QuestionPalette({
   onAdd,
   onAddLikert,
   onAddRatingGroup,
+  onAddDemographics,
+  demographicsPresent,
   disabled,
 }: {
   onAdd: (type: SurveyQuestionType) => void;
   onAddLikert: () => void;
   onAddRatingGroup: () => void;
+  /** Adds the given demographic questions (each once per survey). */
+  onAddDemographics: (kinds: SurveyDemographic[]) => void;
+  demographicsPresent: SurveyDemographic[];
   disabled: boolean;
 }) {
+  const missing = DEMOGRAPHIC_ORDER.filter((k) => !demographicsPresent.includes(k));
   return (
     <div className="space-y-2">
       <h3 className="field-label">Question types</h3>
@@ -95,6 +103,43 @@ export function QuestionPalette({
           </span>
         </span>
       </button>
+
+      <h3 className="field-label pt-2">Demographics</h3>
+      <p className="field-hint">
+        Required questions with “Prefer not to say”. They fill the Age band, Gender, Country and Income band columns
+        in results, exports and reports — always anonymised.
+      </p>
+      <button
+        type="button"
+        disabled={disabled || missing.length === 0}
+        onClick={() => onAddDemographics(missing)}
+        className="card flex w-full items-start gap-2 p-3 text-left text-sm"
+      >
+        <span className="text-lg" aria-hidden>
+          👥
+        </span>
+        <span>
+          <span className="block font-medium">
+            {missing.length === 0 ? "All demographics added" : `Add ${missing.length === 4 ? "all four" : "the rest"}`}
+          </span>
+          <span className="block text-xs text-[var(--color-ink-soft)]">Age range, gender, country, income range.</span>
+        </span>
+      </button>
+      <div className="grid grid-cols-2 gap-2">
+        {DEMOGRAPHIC_ORDER.map((k) => (
+          <button
+            key={k}
+            type="button"
+            disabled={disabled || demographicsPresent.includes(k)}
+            onClick={() => onAddDemographics([k])}
+            className="btn btn-ghost justify-center !px-2 !py-1.5 text-xs"
+            title={demographicsPresent.includes(k) ? "Already in this survey" : `Add ${DEMOGRAPHIC_PRESETS[k].label}`}
+          >
+            {demographicsPresent.includes(k) ? "✓ " : "+ "}
+            {DEMOGRAPHIC_PRESETS[k].label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
