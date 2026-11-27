@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { richToText } from "./rich-text";
 
 /**
  * The admin-editable wrapper around every email (GitHub #66, 0093). Every
@@ -62,7 +63,8 @@ export function renderEmailText(
   branding: EmailBranding = {},
   action?: { label: string; url: string } | null,
 ): string {
-  const footer = branding.footer_text?.trim();
-  const withAction = action ? `${body}\n\n${action.label}: ${action.url}` : body;
+  const footer = branding.footer_text?.trim() ? richToText(branding.footer_text.trim()) : "";
+  const plainBody = richToText(body);
+  const withAction = action ? `${plainBody}\n\n${action.label}: ${action.url}` : plainBody;
   return footer ? `${withAction}\n\n--\n${footer}` : withAction;
 }

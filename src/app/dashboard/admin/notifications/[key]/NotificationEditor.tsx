@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
+import { RichTextField } from "@/components/admin/RichTextField";
+import { richBlocksToHtml } from "@/lib/email/rich-text";
 import { saveNotification, type NotificationAdminState } from "../actions";
 
 /** Same substitution rule as the server-side renderer in lib/notifications.ts. */
@@ -272,12 +274,13 @@ export function NotificationEditor({
               />
             </Field>
             <Field label="Body" htmlFor="email_body">
-              <textarea
+              <RichTextField
                 id="email_body"
                 name="email_body"
-                className="textarea min-h-[10rem]"
                 value={emailBody}
-                onChange={(e) => setEmailBody(e.target.value)}
+                onChange={setEmailBody}
+                rows={8}
+                className="textarea min-h-[10rem]"
               />
             </Field>
           </div>
@@ -301,9 +304,17 @@ export function NotificationEditor({
                 {render(emailSubject, sample) || "(no subject)"}
               </p>
             </div>
-            <div className="whitespace-pre-wrap px-4 py-4 text-sm leading-relaxed text-[var(--color-ink)]">
-              {render(emailBody, sample)}
-            </div>
+            <div
+              className="px-4 py-4 text-sm leading-relaxed text-[var(--color-ink)]"
+              dangerouslySetInnerHTML={{
+                __html: richBlocksToHtml(render(emailBody, sample), {
+                  p: "margin:0 0 12px;",
+                  link: "color:#e8590c;text-decoration:underline;",
+                  buttonBg: "#e8590c",
+                  buttonFg: "#ffffff",
+                }),
+              }}
+            />
             {button && !emailBody.includes("{{link}}") && (
               <div className="px-4 pb-4">
                 <span className="inline-block rounded-[10px] bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white">

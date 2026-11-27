@@ -1,5 +1,6 @@
 "use server";
 
+import { richLinkProblem } from "@/lib/email/rich-text";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/profile";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -76,6 +77,9 @@ export async function saveNotification(
     ({ error: settingsError } = await supabase.from("notification_settings").update(base).eq("event_key", eventKey));
   }
   if (settingsError) return { error: settingsError.message };
+
+  const linkProblem = richLinkProblem(str(formData.get("email_body")));
+  if (linkProblem) return { error: linkProblem };
 
   const templates = [
     {

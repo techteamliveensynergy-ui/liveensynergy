@@ -12,6 +12,7 @@ import "server-only";
 
 import { DEFAULT_HEADER_BG, DEFAULT_HEADER_TEXT, EMAIL_FONTS, type EmailBranding } from "./branding";
 import type { EmailAction } from "@/lib/notification-links";
+import { richBlocksToHtml } from "./rich-text";
 
 const BRAND = "#e8590c"; // --color-brand
 const INK = "#1c1917"; // --color-ink
@@ -67,21 +68,24 @@ export function renderEmailHtml(
   const header = branding.logo_url
     ? `<img src="${escapeHtml(branding.logo_url)}" alt="Live En Synergy" width="160" style="display:block;max-width:160px;height:auto;border:0;">`
     : "Live&middot;En&middot;Synergy";
+  // Footer and body: plain text with optional links, bold/italic, headings, bullets,
+  // buttons and dividers (rich-text.ts) — escaped first, so nothing typed can inject HTML.
   const footerText = branding.footer_text?.trim()
-    ? `<p style="margin:0 0 8px;">${escapeHtml(branding.footer_text.trim()).replace(/\n/g, "<br>")}</p>`
+    ? richBlocksToHtml(branding.footer_text.trim(), {
+        p: "margin:0 0 8px;",
+        link: `color:${INK_SOFT};text-decoration:underline;`,
+        buttonBg: BRAND,
+        buttonFg: "#ffffff",
+        linkify: linkifyOwnOrigin,
+      })
     : "";
-  const paragraphs = input.body
-    .replace(/\r\n/g, "\n")
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map(
-      (p) =>
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${INK};">${linkifyOwnOrigin(
-          escapeHtml(p),
-        ).replace(/\n/g, "<br>")}</p>`,
-    )
-    .join("");
+  const paragraphs = richBlocksToHtml(input.body, {
+    p: `margin:0 0 16px;font-size:15px;line-height:1.6;color:${INK};`,
+    link: `color:${BRAND};`,
+    buttonBg: BRAND,
+    buttonFg: "#ffffff",
+    linkify: linkifyOwnOrigin,
+  });
 
   // The notification's link as a button, so the email says what to do AND takes
   // you straight there. The URL is repeated underneath for clients that block
