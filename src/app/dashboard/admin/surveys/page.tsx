@@ -42,6 +42,16 @@ export default async function AdminSurveysPage() {
       templates.map(async (t) => [t.id, await surveyCapacity(supabase, t.id)] as const),
     ),
   );
+  // Extra responses per survey (0131): over the limit, and without a code.
+  const extras = new Map(
+    await Promise.all(
+      templates.map(async (t) => {
+        const { data } = await supabase.rpc("survey_code_summary", { p_template_id: t.id });
+        const row = ((data ?? []) as { over_limit: number; without_code: number }[])[0];
+        return [t.id, row ?? null] as const;
+      }),
+    ),
+  );
   const questionCounts = new Map<string, number>();
   for (const q of questionRows ?? []) {
     questionCounts.set(q.template_id, (questionCounts.get(q.template_id) ?? 0) + 1);
@@ -95,6 +105,20 @@ export default async function AdminSurveysPage() {
                       {cap.responses} response{cap.responses === 1 ? "" : "s"}
                       {cap.response_limit != null ? ` received · limit ${cap.response_limit}` : " received · no limit"}
                       {cap.is_full ? " · closed" : ""}
+                    </p>
+                  );
+                })()}
+                {(() => {
+                  const x = extras.get(t.id);
+                  if (!x || (x.over_limit === 0 && x.without_code === 0)) return null;
+                  return (
+                    <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                      {x.over_limit > 0 && (
+                        <span className="chip bg-[var(--color-gold)]">{x.over_limit} extra (over the limit)</span>
+                      )}
+                      {x.without_code > 0 && (
+                        <span className="chip bg-[var(--color-pink)]">{x.without_code} without a code</span>
+                      )}
                     </p>
                   );
                 })()}

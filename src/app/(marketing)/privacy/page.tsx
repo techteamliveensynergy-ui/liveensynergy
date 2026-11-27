@@ -43,7 +43,7 @@ export default function PrivacyPage() {
             </h2>
             <p className="mt-2">
               When you tap &ldquo;Check in&rdquo; at an event, your phone shares its location with us once, only
-              then, and only if you allow it — to confirm you&apos;re near the venue on the day. We store how far
+              then, and only if you allow it — to confirm you&apos;re near the venue around the time of the event (check-in opens 24 hours before it starts). We store how far
               you were from the venue and, for 90 days, your location rounded to about 100 metres, so our team can
               review a check-in if something looks wrong; after 90 days the location is deleted. The brand and
               the artist never see it. You can always check in by scanning the QR code at the venue instead, which
@@ -60,6 +60,13 @@ export default function PrivacyPage() {
               use OpenAI&apos;s service to summarise them. Before anything is sent, names, email addresses,
               phone numbers and other identifying columns are removed; OpenAI receives the worked-out figures
               and a sample of written answers, and does not use them to train its models.
+            </p>
+            <p className="mt-2">
+              Some surveys also ask your age range, gender, the country you live in and your income range. Each of
+              these offers &ldquo;Prefer not to say&rdquo;, so you never have to share them. We use them only to
+              describe who took part in totals (for example, how many people were aged 25&ndash;34) — never next
+              to your name. A brand never sees your individual answers, and any group of fewer than five people is
+              hidden from what they see, so nobody can be singled out.
             </p>
           </section>
           <section>

@@ -121,7 +121,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         chunk += CSV_BOM;
         chunk +=
           file === "responses"
-            ? responsesHeader(questions)
+            ? responsesHeader(questions, { admin: true })
             : csvRow([
                 "Respondent ID", "Person ID", "Submitted", "Quality status", "Question no", "Question",
                 "Type", "Answer", "Time on question (seconds)",
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const rows = (data ?? []) as ExportRow[];
       for (const r of rows) {
         if (file === "responses") {
-          chunk += responsesRow(r, questions);
+          chunk += responsesRow(r, questions, { admin: true });
         } else {
           questions.forEach((q, i) => {
             if (!(q.id in r.answers)) return;

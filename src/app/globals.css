@@ -573,6 +573,14 @@ h4,
   color: #2c2422;
   border-color: rgba(44, 36, 34, 0.15);
 }
+/* Needs-attention cards (AttentionCard): ".les-site *" sets every border to the
+   line colour, so the overdue border and the hover need a more specific rule. */
+.les-site .attn-overdue {
+  border-color: var(--color-les-coral);
+}
+.les-site .attn-card:hover {
+  border-color: var(--color-les-lime);
+}
 .font-wordmark {
   font-family: var(--font-wordmark);
   font-weight: 400;
