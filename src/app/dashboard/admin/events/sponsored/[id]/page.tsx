@@ -22,6 +22,24 @@ import { attendUrl } from "@/lib/attendance";
 import { qrCodeDataUrl } from "@/lib/qr";
 import { signedUrlFor } from "@/lib/storage";
 import { EventEditForm } from "./EventEditForm";
+import { placesEnabled } from "@/lib/places";
+import { DEFAULT_CHECKIN_RADIUS_M, formatMiles, hasVenueLocation, mapsLink } from "@/lib/venue";
+
+/** " · in app, 0.2 miles away" — how a check-in was made (0126). */
+function checkinMethodLabel(p: { checkin_method?: string | null; checkin_distance_m?: number | null }): string {
+  switch (p.checkin_method) {
+    case "location":
+      return ` · in app${p.checkin_distance_m != null ? `, ${formatMiles(p.checkin_distance_m)} from the venue` : ""}`;
+    case "qr":
+      return " · QR scan";
+    case "artist":
+      return " · by the artist";
+    case "admin":
+      return " · by the team";
+    default:
+      return "";
+  }
+}
 import { ProofsSection } from "./ProofsSection";
 import { AgreementStatus } from "@/components/campaigns/AgreementStatus";
 import { RewardEngineSection } from "./RewardEngineSection";
@@ -160,6 +178,11 @@ export default async function AdminSponsoredDetailPage({
       timezone: string;
       venue_details: string | null;
       location: string | null;
+      venue_address?: string | null;
+      venue_place_id?: string | null;
+      venue_lat?: number | null;
+      venue_lng?: number | null;
+      checkin_radius_m?: number;
       budget_gbp: number | null;
       remaining_budget_gbp: number | null;
       reward_rules: string | null;
@@ -761,7 +784,15 @@ export default async function AdminSponsoredDetailPage({
                 capacity: event.event_listings?.capacity ?? null,
                 category: event.event_listings?.category ?? null,
                 listing_name: event.event_listings?.name ?? null,
+                venue: {
+                  venue_address: event.venue_address ?? null,
+                  venue_place_id: event.venue_place_id ?? null,
+                  venue_lat: event.venue_lat ?? null,
+                  venue_lng: event.venue_lng ?? null,
+                },
+                checkin_radius_m: event.checkin_radius_m ?? null,
               }}
+              placesEnabled={placesEnabled()}
             />
           </>
         )}
@@ -773,10 +804,30 @@ export default async function AdminSponsoredDetailPage({
           Attendance check-in
         </h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Pass this QR code or link on to the artist (e.g. via Messages) so
-          they can display it at the venue — attendees scan it to confirm
-          their own attendance instead of needing manual verification.
+          Attendees check in from My events on the day, when their phone is
+          near the venue. The QR code is the fallback when location doesn&apos;t
+          work (no signal, location turned off): pass it on to the artist (e.g.
+          via Messages) to display at the venue — scanning it checks people in
+          without needing their location.
         </p>
+        {hasVenueLocation(event) ? (
+          <p className="mt-3 rounded-lg bg-[var(--color-sage)]/50 px-3 py-2 text-sm" data-testid="checkin-area">
+            📍 In-app check-in: within{" "}
+            <strong>{formatMiles(event.checkin_radius_m ?? DEFAULT_CHECKIN_RADIUS_M)}</strong> of{" "}
+            {event.venue_address || "the pinned venue"} ·{" "}
+            <a href={mapsLink(event) ?? "#"} target="_blank" rel="noopener noreferrer" className="underline">
+              check the pin ↗
+            </a>
+          </p>
+        ) : (
+          <p className="mt-3 rounded-lg bg-[var(--color-gold)]/40 px-3 py-2 text-sm" role="alert" data-testid="checkin-area-missing">
+            ⚠ No venue location set, so attendees can&apos;t check in from the app — only by scanning the QR.{" "}
+            <a href="#venue-location" className="font-semibold underline">
+              Set the venue location
+            </a>{" "}
+            in the event details above.
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -807,10 +858,10 @@ export default async function AdminSponsoredDetailPage({
         </h2>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
           Everyone registered for this event. Discount codes are issued
-          automatically when a survey response passes; people check in by
-          scanning the QR code at the venue. There is no selection step
-          (Testing notes 7 Nov) — use &ldquo;Mark checked in&rdquo; only if
-          someone&apos;s scan didn&apos;t work.
+          automatically when a survey response passes; people check in at the
+          venue from the app (location) or by scanning the QR code. There is no
+          selection step (Testing notes 7 Nov) — use &ldquo;Mark checked
+          in&rdquo; only if neither worked for someone.
         </p>
 
         {/* Same "form unmounts on success, so report through the URL instead"
@@ -855,7 +906,7 @@ export default async function AdminSponsoredDetailPage({
                   <p className="truncate text-xs text-[var(--color-ink-soft)]">
                     {p.profiles?.email ?? "—"}
                     {p.attendance_verified_at
-                      ? ` · verified ${formatDateTime(p.attendance_verified_at)}`
+                      ? ` · checked in ${formatDateTime(p.attendance_verified_at)}${checkinMethodLabel(p)}`
                       : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]/70">

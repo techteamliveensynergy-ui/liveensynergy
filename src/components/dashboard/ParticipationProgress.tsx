@@ -60,7 +60,7 @@ export function participationSteps(
     },
     {
       label: "Checked in",
-      hint: "Check in at the venue (scan the QR code, or tap Check in in My events) — it adds this event to your Event Passport. Opens 24 hours before, within about 0.3 miles of the venue.",
+      hint: "On the day, tap Check in here when you're at the venue (or scan the QR code there) — it adds this event to your Event Passport",
     },
   ];
 

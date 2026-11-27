@@ -621,13 +621,18 @@ export async function markCompleted(formData: FormData) {
 // --- Organiser-side participant management --------------------------------
 
 /**
- * Verifies a participant's attendance.
+ * The artist checks a participant in by hand (only `op=verify`).
  *
- * Two things are deliberately absent. Releasing the reward is admin-only
- * (3 Aug standup). And so, now, is *selection*: who gets a reward is settled by
- * a random draw the team runs, not by a brand or an artist picking names
- * (10 Aug standup) — so `select` and `reject` have no branch here at all.
- * Posting either does nothing, because the control being hidden in the UI isn't
+ * Not on any screen at the moment: since Testing notes 7 Nov the artist sees
+ * totals only, never individual attendees, so manual check-in is the team's
+ * ("Mark checked in" on the admin event page). Kept correct for when it comes
+ * back: it goes through artist_check_in_participant() (0126), which checks the
+ * caller is this event's artist and no longer requires `selected` (retired on
+ * 7 Nov) — the old direct update was refused by the participations guard for
+ * everyone registered since, and nothing on screen said so.
+ *
+ * Selection and rejection have no branch here at all: who takes part isn't
+ * the brand's or the artist's decision, and a hidden control isn't
  * authorisation.
  */
 export async function updateParticipation(formData: FormData) {
@@ -635,48 +640,34 @@ export async function updateParticipation(formData: FormData) {
   const id = str(formData.get("id"));
   const eventId = str(formData.get("event_id"));
   const op = str(formData.get("op"));
-  if (!id || !op) return;
+  if (!id || op !== "verify") return;
 
-  const patch: Record<string, unknown> = {};
-  switch (op) {
-    case "verify":
-      patch.status = "attendance_verified";
-      patch.attendance_verified_at = new Date().toISOString();
-      break;
-    default:
-      return;
+  const { data, error } = await supabase.rpc("artist_check_in_participant", {
+    p_participation_id: id,
+  });
+  const out = (data ?? {}) as { result?: string; event_name?: string; audience_profile_id?: string };
+  if (error) console.error("[updateParticipation] rpc failed", error.message);
+  const result = error ? "error" : (out.result ?? "error");
+
+  if (result === "verified" && out.audience_profile_id) {
+    await notify({
+      eventKey: "participation.verified",
+      recipientProfileId: out.audience_profile_id,
+      link: "/dashboard/participations",
+      variables: { event_name: out.event_name ?? "your event" },
+    }, (() => {
+      // The attendee's email isn't readable from the artist's session.
+      const client = createServiceClient();
+      return client ? { client } : {};
+    })());
   }
 
-  await supabase.from("participations").update(patch).eq("id", id);
-
-  // Tell the participant what just happened to them.
-  const NOTIFY_BY_OP: Record<string, string> = {
-    verify: "participation.verified",
-  };
-  const eventKey = NOTIFY_BY_OP[op];
-  if (eventKey) {
-    const { data: participation } = await supabase
-      .from("participations")
-      .select("audience_profile_id, sponsored_events(name)")
-      .eq("id", id)
-      .maybeSingle<{
-        audience_profile_id: string;
-        sponsored_events: { name: string } | null;
-      }>();
-
-    if (participation) {
-      await notify({
-        eventKey,
-        recipientProfileId: participation.audience_profile_id,
-        link: "/dashboard/participations",
-        variables: {
-          event_name: participation.sponsored_events?.name ?? "your event",
-        },
-      });
+  if (eventId) {
+    revalidatePath(`/dashboard/sponsored/${eventId}`);
+    if (result !== "verified" && result !== "already") {
+      redirect(`/dashboard/sponsored/${eventId}?notice=checkin-failed&reason=${encodeURIComponent(result)}`);
     }
   }
-
-  if (eventId) revalidatePath(`/dashboard/sponsored/${eventId}`);
 }
 
 // --- New-model additions: proofs, change requests, artist reports, rewards -

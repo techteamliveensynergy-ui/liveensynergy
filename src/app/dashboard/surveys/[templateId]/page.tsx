@@ -26,7 +26,7 @@ const LOCKED_REASONS: Record<string, { title: string; body: string }> = {
   },
   awaiting_attendance: {
     title: "This survey opens once your attendance is verified",
-    body: "You're selected — check in with the QR code at the venue on the day. As soon as your attendance is verified the survey opens under My events, and we'll let you know.",
+    body: "Check in at the venue on the day — tap Check in on the event under My events, or scan the QR code there. As soon as you're checked in the survey opens under My events, and we'll let you know.",
   },
   rejected: {
     title: "This survey isn't open to you",

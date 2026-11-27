@@ -9,6 +9,7 @@ import { assessProfile } from "@/lib/profile-completeness";
 import { normaliseUrl } from "@/lib/urls";
 import { DEFAULT_TIMEZONE } from "@/lib/event-time";
 import { listingErrorMessage } from "@/lib/event-safety";
+import { venueFromForm } from "@/lib/venue";
 
 export interface ListingState {
   error?: string;
@@ -44,10 +45,13 @@ function listingPayload(formData: FormData) {
     formData.get("ticket_buy_url"),
     "The ticket buying link",
   );
+  // The venue's coordinates (0126) — what in-app check-in measures from.
+  const { venue, error: venueError } = venueFromForm(formData);
 
   return {
-    error: ticket.error,
+    error: ticket.error ?? venueError,
     payload: {
+      ...venue,
       name: str(formData.get("name")),
       event_date: str(formData.get("event_date")),
       start_time: str(formData.get("start_time")),

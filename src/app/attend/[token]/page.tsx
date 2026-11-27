@@ -53,6 +53,43 @@ function StatusCard({
  * self-confirm their attendance, instead of the organiser verifying each
  * person by hand — see `attendance_qr_token` on `sponsored_events`.
  */
+// Why a check-in was refused (confirm_attendance(), migrations 0061 → 0126).
+const RESULT_MESSAGES: Record<string, { title: string; body: string }> = {
+  too_early: {
+    title: "Check-in isn't open yet",
+    body: "Check-in is only open on the day of the event. Scan the code again when you're at the venue on the day.",
+  },
+  too_late: {
+    title: "Check-in has closed",
+    body: "Check-in is only open on the day of the event, and that day has passed. If you attended and couldn't check in, message the Live·En·Synergy team from My events.",
+  },
+  wrong_event: {
+    title: "This code is for a different event",
+    body: "The QR code you scanned doesn't match your registration. Make sure you're scanning the code shown at your event.",
+  },
+  // A database without 0126 still answers this; same advice.
+  not_selected: {
+    title: "Your registration can't be checked in yet",
+    body: "Ask the artist at the venue to check you in, or message the Live·En·Synergy team from My events.",
+  },
+  not_registered: {
+    title: "Your registration isn't active",
+    body: "This registration can't be checked in. Check My events for updates, or message the Live·En·Synergy team.",
+  },
+  event_not_live: {
+    title: "This event isn't open for check-in",
+    body: "The event isn't confirmed for check-in. Check My events for updates.",
+  },
+  not_found: {
+    title: "We couldn't find your registration",
+    body: "Make sure you're signed in with the account you registered with.",
+  },
+  error: {
+    title: "Something went wrong",
+    body: "Your check-in didn't go through. Please try again in a moment.",
+  },
+};
+
 export default async function AttendPage({
   params,
   searchParams,
@@ -109,7 +146,7 @@ export default async function AttendPage({
 
   const { data: participation } = await supabase
     .from("participations")
-    .select("id, status, selected")
+    .select("id, status")
     .eq("sponsored_event_id", event.id)
     .eq("audience_profile_id", user.id)
     .maybeSingle();
@@ -150,13 +187,15 @@ export default async function AttendPage({
     );
   }
 
-  if (participation.status === "rejected" || !participation.selected) {
+  // Selection was retired on 7 Nov — every registration can check in (0126).
+  // Only a rejected (older, pre-7 Nov) registration can't.
+  if (participation.status === "rejected") {
     return (
       <Shell>
         <StatusCard
           icon="⏳"
-          title="Not yet selected for this event"
-          body="Attendance check-in opens once you've been selected. If you're at the venue, enjoy the show — check My events for updates."
+          title="This registration wasn't accepted"
+          body="This registration can't be checked in. If you think that's wrong, message the Live·En·Synergy team from My events."
         />
         <Link href="/dashboard/participations" className="btn btn-ghost mt-6 w-full">
           Go to my events

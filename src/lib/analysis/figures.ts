@@ -148,8 +148,10 @@ export interface ColumnFigures {
   name: string;
   kind: ColumnKind;
   answered: number;
-  /** choice / multi / number-with-few-values: label → count, largest first. */
-  counts?: { label: string; count: number; pct: number }[];
+  /** choice / multi / number-with-few-values: label → count, largest first.
+   *  `masked`: a demographic group under 5 people on the brand's copy — shown
+   *  as "<5" (campaign-report.ts, suppressSmallGroups). */
+  counts?: { label: string; count: number; pct: number; masked?: boolean }[];
   /** number */
   mean?: number;
   median?: number;
@@ -164,6 +166,9 @@ export interface AnalysisFigures {
   columns: ColumnFigures[];
   dropped: string[];
   skipped: string[];
+  /** Automatic Campaign Performance Report (0127): cover, measurement and
+   *  pre/post comparison, all computed in code. Absent on playground reports. */
+  report?: import("./campaign-report").CampaignReportMeta;
 }
 
 const round = (n: number, dp = 1) => Math.round(n * 10 ** dp) / 10 ** dp;

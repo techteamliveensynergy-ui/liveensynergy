@@ -18,6 +18,7 @@ import { notify } from "@/lib/notifications";
 import { requireAdmin } from "@/lib/profile";
 import { isValidEmail, validateVatNumber } from "@/lib/billing";
 import { ukLocalInputToIso } from "@/lib/format";
+import { radiusFromForm, venueFromForm } from "@/lib/venue";
 
 export interface AdminState {
   error?: string;
@@ -461,6 +462,12 @@ export async function adminUpdateSponsoredEvent(
   const name = str(formData.get("name"));
   if (!name) return { error: "Event name is required." };
 
+  // In-app check-in (0126): the venue pin and the radius around it.
+  const { venue, error: venueError } = venueFromForm(formData);
+  if (venueError) return { error: venueError };
+  const radius = radiusFromForm(formData);
+  if (radius.error) return { error: radius.error };
+
   const budget = numOrNull(formData.get("budget_gbp"));
 
   const patch: Record<string, unknown> = {
@@ -475,6 +482,8 @@ export async function adminUpdateSponsoredEvent(
     branding_guidelines: str(formData.get("branding_guidelines")),
     attendance_method: str(formData.get("attendance_method")),
     budget_gbp: budget,
+    ...venue,
+    ...(radius.metres != null ? { checkin_radius_m: radius.metres } : {}),
   };
 
   // The venue's map point for location check-in (0127). Only written when the

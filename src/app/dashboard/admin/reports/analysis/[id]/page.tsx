@@ -8,6 +8,7 @@ import { deleteAnalysisReport, shareAnalysisReport } from "../actions";
 import { formatDateTime } from "@/lib/format";
 import { loadReport, reportSubtitle } from "./report-data";
 import { PrintButton } from "./PrintButton";
+import { CLOSE_REASON_LABELS } from "@/lib/analysis/campaign-report";
 
 export const metadata = { title: "Analysis report · Admin" };
 
@@ -45,6 +46,34 @@ export default async function AnalysisReportPage({
           </a>
         </div>
       </div>
+
+      {report.source === "auto" && (
+        <div className="no-print card p-5 text-sm" data-testid="auto-report-info">
+          <p className="font-semibold">
+            {report.shared_with_brand_at ? "Automatic report — published" : "Automatic report — draft, needs review"}
+          </p>
+          <p className="mt-1 text-[var(--color-ink-soft)]">
+            Generated when the survey closed
+            {report.figures.report ? ` (${CLOSE_REASON_LABELS[report.figures.report.cover.close_reason] ?? report.figures.report.cover.close_reason})` : ""}
+            {report.report_version && report.report_version > 1 ? `, version ${report.report_version}` : ""}, from the anonymised
+            responses (passed only) and the campaign, brand and event details. Every number is counted in code; the AI
+            wrote the words around them. Check it reads right before publishing it to the brand.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a href={`/dashboard/admin/reports/analysis/${report.id}/inputs?file=csv`} className="btn btn-ghost text-sm">
+              Input: responses.csv
+            </a>
+            <a href={`/dashboard/admin/reports/analysis/${report.id}/inputs?file=json`} className="btn btn-ghost text-sm">
+              Input: context.json
+            </a>
+            {report.survey_template_id && (
+              <Link href={`/dashboard/admin/surveys/${report.survey_template_id}/results#auto-report`} className="btn btn-ghost text-sm">
+                Survey results
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {report.error && (
         <p className="no-print rounded-xl bg-[var(--color-gold)]/40 px-4 py-3 text-sm">{report.error}</p>

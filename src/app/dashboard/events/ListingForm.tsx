@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { Field } from "@/components/ui/Field";
 import { UrlInput, URL_HINT } from "@/components/ui/UrlInput";
@@ -11,6 +11,8 @@ import { IMAGE_HINT } from "@/lib/upload-limits";
 import { EVENT_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/event-time";
 import { EVENT_CATEGORIES, BUDGET_RANGES } from "@/lib/constants";
 import type { EventListing } from "@/lib/types";
+import { VenuePicker } from "@/components/ui/VenuePicker";
+import type { PlaceDetails } from "@/lib/places";
 import {
   createListing,
   updateListing,
@@ -26,7 +28,14 @@ function Submit({ label }: { label: string }) {
   );
 }
 
-export function ListingForm({ listing }: { listing?: EventListing }) {
+export function ListingForm({
+  listing,
+  placesEnabled = false,
+}: {
+  listing?: EventListing;
+  /** Google Places is configured (GOOGLE_MAPS_API_KEY) — otherwise coordinates by hand. */
+  placesEnabled?: boolean;
+}) {
   const editing = Boolean(listing);
   const action = editing ? updateListing : createListing;
   const [state, formAction] = useActionState<ListingState, FormData>(
@@ -34,9 +43,26 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
     {},
   );
   const d = listing;
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Picking a venue fills the text fields people read: city and country always
+  // (they follow the venue), the venue name only if it's still empty.
+  function fillFromPlace(p: PlaceDetails) {
+    const form = formRef.current;
+    if (!form) return;
+    const set = (name: string, value: string | null, onlyIfEmpty = false) => {
+      const el = form.elements.namedItem(name);
+      if (!(el instanceof HTMLInputElement) || !value) return;
+      if (onlyIfEmpty && el.value.trim()) return;
+      el.value = value;
+    };
+    set("venue_name", p.name, true);
+    set("city", p.city);
+    set("country", p.country);
+  }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form ref={formRef} action={formAction} className="space-y-6">
       {editing && <input type="hidden" name="id" value={listing!.id} />}
       <ErrorBanner error={state.error} />
 
@@ -138,6 +164,17 @@ export function ListingForm({ listing }: { listing?: EventListing }) {
             hint={IMAGE_HINT}
             currentUrl={d?.image_url ?? null}
             label="Drag your event artwork here, or click to browse"
+          />
+        </Field>
+        <Field
+          label="Venue location"
+          htmlFor="venue-search"
+          hint="Attendees check in from the app on the day when they're near this spot, so pick the exact venue and check the pin on the map."
+        >
+          <VenuePicker
+            placesEnabled={placesEnabled}
+            initial={d}
+            onPick={fillFromPlace}
           />
         </Field>
         <Field label="Venue name" htmlFor="venue_name">

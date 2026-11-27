@@ -10,11 +10,12 @@ import { notify } from "@/lib/notifications";
  * code (or follows the link) the artist displays at the venue and confirms
  * it's them, in place of the organiser having to verify each attendee by hand.
  *
- * The check itself lives in `confirm_attendance()` (migration 0061): it
- * compares the scanned token with the participation's own event, requires
- * the person to be selected, opens 24 hours before the event until the end of
- * its day (in the event's time zone) and, when the venue has a location (0127),
- * requires the person to be within its radius. Before 0061 this action updated
+ * The check itself lives in `confirm_attendance()` (0061, 0123, 0126): it
+ * compares the scanned token with the participation's own event and only
+ * opens on the event's own day (in its time zone). It no longer asks for
+ * `selected` — selection was retired on 7 Nov (0126). The QR is the fallback
+ * for the in-app location check-in on My events, so it needs no location: the
+ * code being at the venue is the proof. Before 0061 this action updated
  * whatever participation id the form posted, so check-in worked from home and
  * for any event. A direct update is now refused by the participations guard.
  */

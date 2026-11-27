@@ -17,6 +17,9 @@ interface ReportRow {
   row_count: number;
   status: "complete" | "figures_only";
   created_at: string;
+  /** 'auto' = made when a survey closed (0127); absent before 0127. */
+  source?: "manual" | "auto";
+  shared_with_brand_at?: string | null;
   campaigns: { reference: string; campaign_name: string | null } | null;
 }
 
@@ -38,7 +41,8 @@ export default async function AnalysisPlaygroundPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("analysis_reports")
-      .select("id, title, row_count, status, created_at, campaigns(reference, campaign_name)")
+      // "*" so a database without 0127's `source` still lists its reports.
+      .select("*, campaigns(reference, campaign_name)")
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
@@ -58,7 +62,7 @@ export default async function AnalysisPlaygroundPage() {
       </Link>
       <PageHeader
         title="Analysis playground"
-        subtitle="Upload survey results, pick the campaign, and get a written report with charts — downloadable as PDF or Word."
+        subtitle="Campaign Performance Reports appear here automatically when a survey closes, as drafts to review. You can also upload survey results yourself, pick the campaign, and get a written report with charts — downloadable as PDF or Word."
       />
 
       <NewReportForm campaigns={campaigns} aiReady={isAnalysisConfigured()} />
@@ -71,9 +75,20 @@ export default async function AnalysisPlaygroundPage() {
           <ul className="card divide-y divide-black/5">
             {reports.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
-                <Link href={`/dashboard/admin/reports/analysis/${r.id}`} className="font-semibold underline">
-                  {r.title}
-                </Link>
+                <span className="flex flex-wrap items-center gap-2">
+                  <Link href={`/dashboard/admin/reports/analysis/${r.id}`} className="font-semibold underline">
+                    {r.title}
+                  </Link>
+                  {r.source === "auto" && (
+                    <span className="chip bg-[var(--color-lavender)] text-xs">Automatic</span>
+                  )}
+                  {r.source === "auto" && !r.shared_with_brand_at && (
+                    <span className="chip bg-[var(--color-gold)]/50 text-xs">Draft — needs review</span>
+                  )}
+                  {r.shared_with_brand_at && (
+                    <span className="chip bg-[var(--color-sage)] text-xs">Published</span>
+                  )}
+                </span>
                 <span className="text-xs text-[var(--color-ink-soft)]">
                   {r.campaigns ? `${campaignLabel(r.campaigns)} · ` : ""}
                   {r.row_count.toLocaleString("en-GB")} responses · {formatDateTime(r.created_at)}

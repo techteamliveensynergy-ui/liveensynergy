@@ -477,6 +477,17 @@ export default async function SponsoredEventPage({
               : "We couldn't record your consent. Please try again, or contact the Live·En·Synergy team."}
         </div>
       )}
+      {notice === "checkin-failed" && (
+        <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]" role="alert">
+          {reason === "too_early"
+            ? "Check-in opens on the day of the event."
+            : reason === "event_not_live"
+              ? "This event isn't confirmed, so nobody can be checked in yet."
+              : reason === "not_registered"
+                ? "That registration can't be checked in."
+                : "We couldn't check that person in. Please try again, or contact the Live·En·Synergy team."}
+        </div>
+      )}
       {notice === "agree-failed" && (
         <div className="rounded-xl bg-[var(--color-pink)] px-4 py-3 text-sm text-[var(--color-accent)]">
           Something went wrong recording your agreement. Please try again, or
@@ -854,10 +865,10 @@ export default async function SponsoredEventPage({
         <div id="check-in" className="card p-6">
           <h2 className="text-lg font-semibold">Attendance check-in</h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Display this QR code at the venue — audience members who scan it
-            (or follow the link) confirm their own attendance, no manual
-            verification needed. Share the image or link with the artist,
-            e.g. by pasting it into your conversation under Messages.
+            Attendees check in from the app on the day when their phone is near
+            the venue. Display this QR code at the venue as well — it&apos;s the
+            fallback for anyone whose location isn&apos;t working (no signal,
+            location turned off): scanning it checks them in.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -901,7 +912,8 @@ export default async function SponsoredEventPage({
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Anyone can register for this event. Each person answers the survey,
             receives a discount code once their response passes our check, and
-            checks in on the day by scanning the event QR code. You see totals
+            checks in on the day at the venue — from the app (their phone shares
+            its location once) or by scanning the event QR code. You see totals
             only — who takes part stays private (Testing notes 7 Nov).
           </p>
 

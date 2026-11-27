@@ -6,6 +6,14 @@ import { Field } from "@/components/ui/Field";
 import { ErrorBanner, SuccessBanner } from "@/components/onboarding/parts";
 import { ConfirmSubmit } from "@/components/ui/ConfirmSubmit";
 import { EVENT_CATEGORIES } from "@/lib/constants";
+import { VenuePicker } from "@/components/ui/VenuePicker";
+import {
+  DEFAULT_CHECKIN_RADIUS_M,
+  MAX_CHECKIN_RADIUS_MILES,
+  MIN_CHECKIN_RADIUS_MILES,
+  metresToMiles,
+  type VenueLocation,
+} from "@/lib/venue";
 import { useState } from "react";
 import {
   adminUpdateSponsoredEvent,
@@ -32,8 +40,9 @@ export interface EventEditDefaults {
   category: string | null;
   /** Null when the sponsorship has no listing behind it. */
   listing_name: string | null;
-  /** The venue's map point for location check-in (0127). `undefined` = the database doesn't have the columns yet. */
-  venue_point?: { lat: number | null; lng: number | null };
+  /** Where in-app check-in measures from, and how far it reaches (0126). */
+  venue: VenueLocation;
+  checkin_radius_m: number | null;
 }
 
 /**
@@ -47,16 +56,22 @@ export interface EventEditDefaults {
 export function EventEditForm({
   event,
   parties,
+  placesEnabled = false,
 }: {
   event: EventEditDefaults;
   /** Shown in the confirmation, so it's clear whose deal is being changed. */
   parties: string;
+  /** Google Places is configured — otherwise the venue is entered as coordinates. */
+  placesEnabled?: boolean;
 }) {
   const [state, formAction] = useActionState<AdminState, FormData>(
     adminUpdateSponsoredEvent,
     {},
   );
   const [budget, setBudget] = useState<number | "">(event.budget_gbp ?? "");
+  const [radiusMiles, setRadiusMiles] = useState<number | "">(
+    metresToMiles(event.checkin_radius_m ?? DEFAULT_CHECKIN_RADIUS_M),
+  );
 
   return (
     <form action={formAction} className="mt-4 space-y-4">
@@ -223,6 +238,39 @@ export function EventEditForm({
             </Field>
           </>
         )}
+      </div>
+
+      {/* In-app check-in (0126): where it measures from and how far it reaches. */}
+      <div id="venue-location" className="scroll-mt-24 space-y-4 rounded-xl border border-black/10 p-4">
+        <Field
+          label="Venue location (for in-app check-in)"
+          htmlFor="edit-venue-search"
+          hint="Attendees can check in from My events on the day when their phone is within the radius of this pin. Without a location they can only check in with the QR code."
+        >
+          <VenuePicker
+            id="edit-venue-search"
+            placesEnabled={placesEnabled}
+            initial={event.venue}
+            radiusM={typeof radiusMiles === "number" ? radiusMiles * 1609.344 : undefined}
+          />
+        </Field>
+        <Field
+          label="Check-in radius (miles)"
+          htmlFor="edit-checkin-radius"
+          hint={`Default 2 miles. Widen it for a festival site or a venue with poor phone signal; ${MIN_CHECKIN_RADIUS_MILES}–${MAX_CHECKIN_RADIUS_MILES} miles.`}
+        >
+          <input
+            id="edit-checkin-radius"
+            name="checkin_radius_miles"
+            type="number"
+            min={MIN_CHECKIN_RADIUS_MILES}
+            max={MAX_CHECKIN_RADIUS_MILES}
+            step={0.1}
+            className="input sm:w-40"
+            value={radiusMiles}
+            onChange={(e) => setRadiusMiles(e.target.value === "" ? "" : Number(e.target.value))}
+          />
+        </Field>
       </div>
 
       <Field label="Reward rules" htmlFor="edit-reward-rules">

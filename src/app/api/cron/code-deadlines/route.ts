@@ -43,7 +43,8 @@ interface DueRow {
  * can't send twice.
  *
  * Also (0114): an event whose discount codes ran out more than 48 hours ago
- * and still has none — the brand is told once.
+ * and still has none — the brand is told once. And (0126): check-in
+ * coordinates older than 90 days are cleared.
  */
 export async function GET(request: NextRequest) {
   if (!authorised(request)) {
@@ -51,6 +52,11 @@ export async function GET(request: NextRequest) {
   }
   const supabase = createServiceClient();
   if (!supabase) return NextResponse.json({ error: "service key not configured" }, { status: 500 });
+
+  // Check-in coordinates are kept 90 days, then cleared (0126). Here because
+  // this route already runs daily; a failure must not stop the reminders.
+  const { data: locationsCleared, error: purgeError } = await supabase.rpc("purge_checkin_locations");
+  if (purgeError) console.error("[code-deadlines] purge_checkin_locations failed", purgeError.message);
 
   const now = Date.now();
   const { data, error } = await supabase
@@ -151,5 +157,11 @@ export async function GET(request: NextRequest) {
     brandsTold += 1;
   }
 
-  return NextResponse.json({ checked: data?.length ?? 0, reminded, alerted, brandsTold });
+  return NextResponse.json({
+    checked: data?.length ?? 0,
+    reminded,
+    alerted,
+    brandsTold,
+    checkinLocationsCleared: typeof locationsCleared === "number" ? locationsCleared : 0,
+  });
 }

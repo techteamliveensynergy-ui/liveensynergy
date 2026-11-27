@@ -54,7 +54,7 @@ export interface ArtistPendingRow {
   artistName: string;
   items: ArtistPendingItem[];
   /** Blockers on our side (never counted against the artist). */
-  waitingOnUs: { text: string; href: string | null; kind: "codes_setup" | "fulfilment" | "open" | "review" }[];
+  waitingOnUs: { text: string; href: string | null; kind: "codes_setup" | "fulfilment" | "open" | "review" | "venue" }[];
   /** Checked in / answered but no live code (only counted while codes are unconfirmed). */
   peopleWaiting: number;
   /** Registered, not yet through to a code. */
@@ -136,6 +136,22 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
     supabase.from("profiles").select("id, full_name").in("id", artistIds),
     eventOpenStates(supabase, events.filter((e) => e.campaign_id).map((e) => e.id)),
   ]);
+
+  // Confirmed events with no venue pin (0126): attendees can't check in from
+  // the app, only with the QR. A separate query so a database without 0126
+  // just reports nothing here instead of emptying the whole tab.
+  const noVenue = new Set<string>();
+  {
+    const confirmedIds = events.filter((e) => e.status === "confirmed").map((e) => e.id);
+    if (confirmedIds.length > 0) {
+      const { data: venueRows, error: venueError } = await supabase
+        .from("sponsored_events")
+        .select("id")
+        .in("id", confirmedIds)
+        .is("venue_lat", null);
+      if (!venueError) for (const r of (venueRows ?? []) as { id: string }[]) noVenue.add(r.id);
+    }
+  }
 
   // Responses held for review on these events' surveys: no code is issued until
   // an admin passes them, so they belong on the same "waiting on us" list
@@ -325,6 +341,14 @@ export async function loadArtistPending(supabase: SupabaseClient): Promise<Artis
             ? `/dashboard/admin/surveys/responses/${held[0]}`
             : "/dashboard/admin/surveys/responses?status=review",
         kind: "review",
+      });
+    }
+
+    if (noVenue.has(e.id)) {
+      waitingOnUs.push({
+        text: "No venue location set — attendees can only check in with the QR code until you pin the venue",
+        href: `${eventHref}#venue-location`,
+        kind: "venue",
       });
     }
 

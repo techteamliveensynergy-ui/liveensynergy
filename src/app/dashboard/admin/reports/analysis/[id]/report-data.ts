@@ -19,6 +19,11 @@ export interface AnalysisReportRow {
   created_at: string;
   /** Published to the campaign's brand (0115). */
   shared_with_brand_at?: string | null;
+  /** 'auto' = generated when a survey closed (0127). */
+  source?: "manual" | "auto";
+  survey_template_id?: string | null;
+  report_version?: number | null;
+  format?: string | null;
   campaigns: { id: string; reference: string; campaign_name: string | null; brands: { brand_name: string } | null } | null;
 }
 

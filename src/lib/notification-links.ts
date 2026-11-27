@@ -33,6 +33,8 @@ const LABELS: [RegExp, string][] = [
   [/^\/dashboard\/sponsored\/[^#?]+#cancellation/, "Open the partnership"],
   [/^\/dashboard\/sponsored\/[^#?]+#fulfilment/, "Review the fulfilment form"],
   [/^\/dashboard\/sponsored/, "Open the partnership"],
+  [/^\/dashboard\/admin\/reports\/analysis\/[^/?#]+/, "Review the report"],
+  [/^\/dashboard\/admin\/surveys\/[^/?#]+\/results/, "Open the survey results"],
   [/^\/dashboard\/admin\/surveys\/responses\/[^/?#]+/, "Review this response"],
   [/^\/dashboard\/admin\/surveys\/responses/, "Open the review queue"],
   [/^\/dashboard\/admin\/events\/sponsored\/[^#?]+#cancellation/, "Review the cancellation request"],

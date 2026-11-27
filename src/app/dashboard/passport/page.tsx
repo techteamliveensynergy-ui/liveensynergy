@@ -53,7 +53,10 @@ export default async function PassportPage() {
       <div className="card mb-6 p-5 text-sm text-[var(--color-ink-soft)]" data-testid="passport-howto">
         <p className="font-semibold text-[var(--color-ink)]">How you get a stamp</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>At the venue, scan the QR code on display — or tap <strong>Check in</strong> in My events.</li>
+          <li>
+            On the day of the event, at the venue: tap <strong className="text-[var(--color-ink)]">Check in</strong> on
+            the event under My events (your phone shares its location once), or scan the QR code displayed there.
+          </li>
           <li>
             <strong className="text-[var(--color-ink)]">Check-in opens 24 hours before the event</strong> and closes at
             the end of the event day. You need to be within about 0.3 miles of the venue.
