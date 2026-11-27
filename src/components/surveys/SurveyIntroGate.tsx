@@ -32,6 +32,8 @@ export function SurveyIntroGate({
   coverMediaUrl,
   coverMediaType,
   accentColor,
+  logoUrl,
+  logoName,
   footer,
   requireResidency,
   onStart,
@@ -46,6 +48,9 @@ export function SurveyIntroGate({
   coverMediaUrl?: string | null;
   coverMediaType?: SurveyMediaType | null;
   accentColor?: string | null;
+  /** The brand's logo: the default picture on the left when there is no cover media. */
+  logoUrl?: string | null;
+  logoName?: string | null;
   footer?: ReactNode;
   /** false for an already-registered/signed-in respondent — residency and
    *  age were already taken at onboarding, so re-asking reads as a mistake. */
@@ -65,6 +70,8 @@ export function SurveyIntroGate({
       mediaUrl={coverMediaUrl}
       mediaType={coverMediaType}
       videoFormat={appearance?.coverVideoFormat}
+      logoUrl={logoUrl}
+      logoName={logoName}
       className="survey-scope"
       style={{ ...typographyVars(typography ?? {}), ...cardBackgroundStyle(appearance) }}
     >

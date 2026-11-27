@@ -95,8 +95,12 @@ function ThankYouScreen({
   typography,
   appearance,
   accentColor,
+  logoUrl,
+  logoName,
 }: {
   message: string | null;
+  logoUrl?: string | null;
+  logoName?: string | null;
   event: PublicSurveyEvent | null;
   isAuthenticated: boolean;
   typography?: SurveyTypography;
@@ -119,6 +123,8 @@ function ThankYouScreen({
   const rewardSaysIt = reward?.status === "pending" && (reward.reason === "review" || reward.reason === "held");
   return (
     <SurveySlide
+      logoUrl={logoUrl}
+      logoName={logoName}
       className="survey-scope"
       style={{ ...typographyVars(typography ?? {}), ...cardBackgroundStyle(appearance), ...accentColorVars(accentColor) }}
     >
@@ -449,6 +455,8 @@ export function PublicSurveyForm({
   if (state.success) {
     return (
       <ThankYouScreen
+        logoUrl={footerLogoUrl}
+        logoName={footerBrandName}
         message={
           state.heldForReview
             ? SURVEY_HELD_FOR_REVIEW_MESSAGE
@@ -475,6 +483,8 @@ export function PublicSurveyForm({
         coverMediaUrl={coverMediaUrl}
         coverMediaType={coverMediaType}
         accentColor={accentColor}
+        logoUrl={footerLogoUrl}
+        logoName={footerBrandName}
         requireResidency={!prefill}
         footer={<SurveyFooter brandName={footerBrandName} tagline={footerTagline} logoUrl={footerLogoUrl} />}
         typography={typography}
